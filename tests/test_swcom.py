@@ -3613,3 +3613,43 @@ def test_a_name_solidworks_refuses_for_a_remade_mate_keeps_its_own_but_a_lost_se
     else:
         assert session.remake_mate("carrymate1", definition, ["a", "b"], "UserFaceCoin") == ("Coincident12", 1)
         assert session._handles["carrymate1"] == {"mate": "Coincident12"}
+
+
+@pytest.mark.parametrize("answers, counts, selected", [
+    ((None,), (0, 1), True),                  # Select4's return not a Boolean, the component selected: by the count
+    ((False, True), (0, 0, 1), True),        # False with nothing selected, then it took
+    ((True,) * 4, (0,) * 5, False),          # True with nothing selected, every time
+])
+def test_a_whole_component_for_a_remade_lock_is_selected_by_the_count(monkeypatch, answers, counts, selected):
+    """The review's A6: fix 5's other path, a whole component (a lock's target) in _select_target, judged by the
+    selection count and retried, as select_by_reference is."""
+    monkeypatch.setattr(swcom.time, "sleep", lambda _seconds: None)
+    answer, count = iter(answers), iter(counts)
+
+    class Data:
+        Mark = 0
+
+    class Manager:
+        CreateSelectData = property(lambda self: Data())
+
+        def GetSelectedObjectCount2(self, mark):
+            return next(count)
+
+    class Doc:
+        SelectionManager = Manager()
+
+    class Component:
+        def Select4(self, append, data, popup):
+            assert data.Mark == 1 and popup is False
+            return next(answer)
+
+    session = swcom.Session.__new__(swcom.Session)
+    session.revision = (34, 0, 0)
+    monkeypatch.setattr(session, "_component", lambda handle: Component(), raising=False)
+    monkeypatch.setattr(session, "_component_name", lambda handle: "Sprocket-1", raising=False)
+    monkeypatch.setattr(session, "_doc", lambda: Doc(), raising=False)
+    if selected:
+        session._select_target("carried1", True)
+    else:
+        with pytest.raises(SolidWorksError, match="Sprocket-1 could not be selected for a mate"):
+            session._select_target("carried1", True)

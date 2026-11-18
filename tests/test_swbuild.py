@@ -811,6 +811,17 @@ class FakeSolidWorks:
             self.frames[self.found[handle]] = put
         for frames in self.frames_by.values():         # W9d: a component new to the assembly stands in every
             frames.setdefault(name, put)               # configuration where it was put, until put there itself
+        if getattr(self, "kept_mates_pull", False):
+            # The review's A8 (a test's knob; never measured): a mate the carry made, not a lock (a put against a lock
+            # holds, W5-DECISIONS), pulls the component just put back to where it stood against a partner not fixed
+            # here, so the read-back below finds it off its frame.
+            for mate in self.mates:
+                rel = getattr(mate, "rel", None)
+                if rel is None or mate.suppressed or mate.kind == "lock" or name not in (mate.a[0], mate.b[0]):
+                    continue
+                other = mate.b[0] if name == mate.a[0] else mate.a[0]
+                if other in self.frames and not self._fixed_here(other):
+                    self.frames[name] = _compose(self.frames[other], rel if name == mate.b[0] else _inverse(rel))
         self._rebuilt(kind)            # Session.place_component's rebuild of its own, after the put
         if self.mates:
             # Session.place_component reads the frame back after that rebuild.
@@ -1163,13 +1174,17 @@ class FakeSolidWorks:
     ORDERLESS_KINDS = ("coincident", "concentric", "parallel")
 
     def _read_ends(self, mate):
-        """A mate's entities in ``MateEntity(i)`` order. For a coincident, concentric or parallel mate SolidWorks gives
-        them in its components' tree order, whatever order they were selected in (the W9d audit, 2026-11-17: the
-        probe's UserFaceCoin, Sprocket-5's face selected first, read Sprocket-5 first; the M9 fixture's, Chain-2's
-        face selected first, read Chain-1 first; every concentric and parallel and every app axis or along coincident
-        read the earlier component first, the assembly's own plane and the layout before any); a distance, angle,
-        gear or lock in its selection order (UserChainDist read Chain-1 before the earlier Sprocket-1, UserGear6 its
-        Sprocket before Sun). Kept to the user's mates and those the carry made again (``remade``), read by W9d's
+        """A mate's entities in ``MateEntity(i)`` order. For a coincident, concentric or parallel mate the fake gives
+        them in its components' tree order (insertion order here), whatever order they were selected in. What was
+        measured (the review of the audit, W9D-REVIEW-A.md): two face-face coincidents tell the readings apart, the
+        probe's UserFaceCoin (Sprocket-5's face selected first, read first) and the M9 fixture's (Chain-2's face
+        selected first, Chain-1 read first), each reading the earlier-inserted component first; that rules out the
+        selection order and the ledger's second-selection-first for a face-face coincident. Every other coincident,
+        concentric and parallel in the logs was selected later component first and read it second, so for concentric
+        and parallel tree order is not told from the ledger's rule; the fake's choice there is a reading, not a
+        measurement. A distance, angle or gear reads in its selection order (UserChainDist read Chain-1 before the
+        earlier Sprocket-1, UserGear6 its Sprocket before Sun); a limit or a lock was never told apart (each selected
+        earlier component first). Kept to the user's mates and those the carry made again (``remade``), read by W9d's
         Session (``read_entity_kinds``); the app's own, and the suites before W9d, read them as selected (as they were
         written). ``tree_order_entities`` False: as selected."""
         ends = (mate.a, mate.b)
@@ -2312,6 +2327,8 @@ class FakeSolidWorks:
         mate = self.mates[-1]
         mate.a, mate.b = ends[0], ends[1]
         mate.remade = True
+        if ends[0][0] in self.frames and ends[1][0] in self.frames:
+            mate.rel = _compose(_inverse(self.frames[ends[0][0]]), self.frames[ends[1][0]])   # b in a's frame, as made
         mate.alignment = definition.alignment
         if word.startswith("limit"):
             mate.limits = tuple((k, v) for k, v in values.items() if k.startswith(("Maximum", "Minimum")))

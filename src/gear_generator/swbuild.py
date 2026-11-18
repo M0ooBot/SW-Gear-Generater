@@ -8212,7 +8212,8 @@ def _carry_states(c: _Carrying) -> None:
                 suppressed_in[name].append(mode)
         if mode and mode != c.first():
             # Ruled (the audit's follow-up): a component fixed in the old assembly was fixed at its insert, in the
-            # first mode; whether that fixed it in every mode is not measured, so each other mode is read.
+            # first mode; whether that fixed it in every mode is not measured, so each other mode is read. No mate of
+            # the user's is made yet, so nothing can pull a put here (unlike the fallback's, _put_and_fix).
             for item in fixed:
                 if not _wanted_suppressed(item.component, mode, c.work, carry):
                     off = _fix_here(c, item)
@@ -8400,13 +8401,15 @@ def _not_found_subjects(c: _Carrying, item: CarryMateItem) -> Tuple[str, ...]:
     return ("entity", "", "")
 
 
-# Kinds whose two entities play the same part, so a remade one is the same mate whichever SolidWorks lists first. For
-# coincident, concentric and parallel SolidWorks lists them in its components' tree order, not the selection's (the W9d
-# audit, 2026-11-17: the probe's UserFaceCoin read its first selection first, the M9 fixture's its second, each the
-# earlier component), and R inserts the carried components in GetComponents' order, which is not the tree's (the first
-# M9 run listed Chain-2 before Chain-1): so such a mate between two carried components can read back the other way
-# round however it is selected. Perpendicular and tangent are as symmetric (their order unmeasured).
-_ORDERLESS_KINDS = ("coincident", "concentric", "parallel", "perpendicular", "tangent")
+# Kinds whose two entities play the same part, so a remade one is the same mate whichever SolidWorks lists first. A
+# face-face coincident is listed earlier-inserted component first, not in selection order (the W9d audit: the probe's
+# UserFaceCoin read its first selection first, the M9 fixture's its second, each the earlier component); for concentric
+# and parallel the logs do not tell that from the ledger's second-selection-first (W9D-REVIEW-A.md). And R inserts the
+# carried components in GetComponents' order, which is not the tree's (the first M9 run listed Chain-2 before
+# Chain-1): so such a mate between two carried components can read back the other way round however it is selected.
+# Perpendicular, tangent and lock are as symmetric (their order where selection and tree disagree unmeasured; the
+# review's A5 for the lock). Whichever reading is true, comparing these without order keeps a good remake.
+_ORDERLESS_KINDS = ("coincident", "concentric", "parallel", "perpendicular", "tangent", "lock")
 
 
 def _read_back(c: _Carrying, handle: str, item: CarryMateItem) -> str:
@@ -8532,13 +8535,17 @@ def _fall_back(c: _Carrying, cluster: int, fell: Tuple[str, Tuple[str, ...]], tr
             kept.append(item.mate.name)
     for key in ("remade", "same_error"):
         setattr(cr, key, [x for x in getattr(cr, key) if x[0] not in deleted])
-    components = []
-    for item in c.plan.components:
-        if cluster >= 0 and item.cluster == cluster and item.component.name in c.handle_of:
-            handle = c.handle_of[item.component.name]
-            sw.place_component(handle, item.frame[0], tuple(float(v) for v in item.frame[1]), kind=ASSEMBLY_TRAIN)
-            sw.fix_component(handle)
-            components.append(c.kept_of[item.component.name])
+    items = [i for i in c.plan.components if cluster >= 0 and i.cluster == cluster and i.component.name in c.handle_of]
+    components = [c.kept_of[i.component.name] for i in items]
+    # The kept user-to-user mates join the cluster's components: each is put while those it is joined to are fixed
+    # where they can be (the review's A8, _put_and_fix).
+    partners: Dict[str, set] = {}
+    for item, _, _ in c.made.get(cluster, []):
+        if item.mate.name in kept:
+            ends = [c.plan_handle[h] for h in _user_targets(item) if h in c.plan_handle]
+            for a in ends:
+                partners.setdefault(a, set()).update(b for b in ends if b != a)
+    _put_and_fix(c, items, partners)
     cr.fixed.append(CarryFallback(tuple(components), tuple(deleted), tuple(kept), fell[0], fell[1]))
     cr.unsaved = True
     c.fallen.add(cluster)
@@ -8550,9 +8557,54 @@ def _fall_back(c: _Carrying, cluster: int, fell: Tuple[str, Tuple[str, ...]], tr
         # app's gears in every mode stops it when nothing of the user's explains what still reads wrong.
         cr.facts.append(f"after {_and(list(components)) or 'the fallback'} fell back, {_and(still)} still "
                         f"{'reads' if len(still) == 1 else 'read'} unable to turn")
-    items = [i for i in c.plan.components if cluster >= 0 and i.cluster == cluster and i.component.name in c.handle_of]
-    _fixed_in_every_mode(c, items, f"after {_and(list(components))} fell back"
-                                   + (f" in {c.showing}" if c.showing else ""))
+    _fixed_in_every_mode(c, items, partners, f"after {_and(list(components))} fell back"
+                                             + (f" in {c.showing}" if c.showing else ""))
+
+
+def _put_and_fix(c: _Carrying, items: Sequence[CarryPlanItem], partners: Mapping[str, Collection[str]]
+                 ) -> Dict[str, Tuple[float, bool]]:
+    """In the mode showing, each of ``items`` not fixed there, or standing off its frame (positions are per
+    configuration), is put at its frame and fixed at once, so that no later put can move it; for those put, by old
+    Name2: how far each stood from its frame (mm) and whether it read fixed already.
+
+    The order (the review's A8). ``place_component`` rebuilds after each put and raises if a mate pulled the component
+    off its frame. The frames keep the old assembly's relative poses, which satisfied every kept user-to-user mate, so
+    a put cannot be pulled by a partner that stands at its own frame: settled. The settled are those fixed at their
+    frames, and each one put; the next put is one whose kept partners are all settled, else one with any settled, else
+    the next in plan order. Two joined components both free and off their frames have no safe order: whichever is
+    put first has the other as a partner off its frame, and whether SolidWorks then pulls the put one back, moves the
+    partner, or holds the put and leaves the mate violated (as against a lock, W5-DECISIONS) is not measured. Putting
+    every one before fixing any would not help: each put is judged after its own rebuild. What would is suppressing the
+    cluster's kept mates in that mode for the puts (the job's own mates) and setting their flags back after: not built.
+    """
+    sw = c.sw
+    pending, settled = [], set()
+    stood: Dict[str, float] = {}
+    for i in items:
+        handle = c.handle_of[i.component.name]
+        frame = sw.component_frame(handle)
+        stood[i.component.name] = max(abs(float(a) - float(b)) for a, b in zip(frame[1], i.frame[1]))
+        fixed = sw.is_fixed(handle)
+        if fixed and stood[i.component.name] <= POSE_TOLERANCE:
+            settled.add(i.component.name)
+        else:
+            pending.append((i, fixed))
+    out: Dict[str, Tuple[float, bool]] = {}
+    while pending:
+        def ready(entry: Tuple[CarryPlanItem, bool], every: bool) -> bool:
+            mine = set(partners.get(entry[0].component.name, ()))
+            return bool(mine) and (mine <= settled if every else bool(mine & settled))
+        entry = next((e for e in pending if ready(e, True)), None) or next((e for e in pending if ready(e, False)),
+                                                                          pending[0])
+        pending.remove(entry)
+        item, fixed = entry
+        handle = c.handle_of[item.component.name]
+        sw.place_component(handle, item.frame[0], tuple(float(v) for v in item.frame[1]), kind=ASSEMBLY_TRAIN)
+        if not fixed:
+            sw.fix_component(handle)
+        settled.add(item.component.name)
+        out[item.component.name] = (stood[item.component.name], fixed)
+    return out
 
 
 def _fix_here(c: _Carrying, item: CarryPlanItem) -> Optional[float]:
@@ -8569,7 +8621,8 @@ def _fix_here(c: _Carrying, item: CarryPlanItem) -> Optional[float]:
     return off
 
 
-def _fixed_in_every_mode(c: _Carrying, items: Sequence[CarryPlanItem], what: str) -> None:
+def _fixed_in_every_mode(c: _Carrying, items: Sequence[CarryPlanItem], partners: Mapping[str, Collection[str]],
+                         what: str) -> None:
     """Ruled (the audit's follow-up): whether one FixComponent fixes a component in every configuration is not
     measured, and a put and a fix act in the mode showing. So, the components just fixed in the mode showing, each
     other mode is shown and each of them not suppressed there read: one that is not fixed there is put at its frame
@@ -8579,15 +8632,17 @@ def _fixed_in_every_mode(c: _Carrying, items: Sequence[CarryPlanItem], what: str
     if not items or not others or not showing:
         return
     had: Dict[str, List[Tuple[str, float]]] = {}
+    moved: Dict[str, List[Tuple[str, float]]] = {}
     for mode in others:
         c.show(mode)
-        for item in items:
-            if _wanted_suppressed(item.component, mode, c.work, c.carry):
-                continue
-            off = _fix_here(c, item)
-            if off is not None:
-                had.setdefault(c.kept_of[item.component.name], []).append((mode, off))
+        here = [i for i in items if not _wanted_suppressed(i.component, mode, c.work, c.carry)]
+        for name, (off, was_fixed) in _put_and_fix(c, here, partners).items():
+            (moved if was_fixed else had).setdefault(c.kept_of[name], []).append((mode, off))
     c.show(showing)
+    for name, read in moved.items():
+        # Positions are per configuration: fixed there, it stood off its frame, and was put back at it.
+        c.result.carry.facts.append(f"{what}: {name} read fixed in {_and([m for m, _ in read])} but "
+                                    f"{max(o for _, o in read):g} mm from its frame there, so it was put back at it")
     _fix_facts(c, [c.kept_of[i.component.name] for i in items], had, showing, what)
 
 

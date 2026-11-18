@@ -772,16 +772,27 @@ def test_a_remade_mate_read_back_otherwise_is_deleted_again_and_named(monkeypatc
 
 
 def test_a_remade_mate_read_back_with_its_entities_swapped_is_made_once_more_reversed(monkeypatch, every_gate):
+    """A distance, whose two entities are not interchangeable (a lock's are: the review's A5), read back the other way
+    round is made once more with its selections reversed."""
     every_gate()
     fake = _old_train()
     _isfile(monkeypatch, fake)
-    fake.kind_swap = {"Lock1"}                                  # SolidWorks keeps the selection the other way
+    gap = fake.user_mate(T_ASM, "UserDist4", kind="distance", a=("gear1-1", "plane1"), b=("Sprocket-1", "plane1"))
+    gap.value = 30.0
+    fake.kind_swap = {"UserDist4"}                              # SolidWorks keeps the selection the other way
     cr = _build_again(fake).carry
-    assert cr.named == [] and [r[0] for r in cr.remade] == ["Lock1"]
-    tried = [a[1] for n, a in fake.calls if n == "remake_mate"]
-    assert tried == [("gear1", "carried1"), ("carried1", "gear1")]
-    lock = fake.mate("Lock1", R2[T_ASM])
-    assert (lock.a[0], lock.b[0]) == ("gear1-1", "carried1-1")
+    assert cr.named == [] and sorted(r[0] for r in cr.remade) == ["Lock1", "UserDist4"]
+    tried = [a[1] for n, a in fake.calls if n == "remake_mate" and a[2] == "UserDist4"]
+    assert [tuple(t.split(":")[1] if t.startswith("ref:") else t.split(":")[0] for t in ts) for ts in tried] == [
+        ("gear1", "carried1"), ("carried1", "gear1")]
+    gap = fake.mate("UserDist4", R2[T_ASM])
+    assert (gap.a[0], gap.b[0]) == ("gear1-1", "carried1-1")
+    # A lock read back the other way round is the same lock (A5): kept at once.
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.kind_swap = {"Lock1"}
+    cr = _build_again(fake).carry
+    assert cr.named == [] and [a[1] for n, a in fake.calls if n == "remake_mate"] == [("gear1", "carried1")]
 
 
 def test_a_lightweight_user_component_is_carried_resolved_and_its_mates_named(monkeypatch, every_gate):
@@ -1792,3 +1803,56 @@ def test_a_component_fixed_in_the_old_assembly_is_read_fixed_in_every_mode(monke
                         "FixComponent in 2H had left it not fixed (0 mm from its frame)"], cr.facts
     else:
         assert said == ["fixed as in TransferCase.SLDASM: carried2-1 fixed in every mode by one FixComponent in 2H"]
+
+
+def test_a_fallback_puts_first_what_is_joined_to_a_fixed_component_so_a_kept_mate_cannot_pull_it(monkeypatch,
+                                                                                                 every_gate):
+    """The review's A8: the fallback puts and fixes each component at once, beginning with one whose kept partners
+    stand settled (Housing-1, fixed in the old assembly at its frame). Here the tie leaves Sprocket-2 5 mm off its frame
+    when its cluster falls back, and a kept coincident pulls a component put while its partner is free (the fake's
+    ``kept_mates_pull``, never measured): put first, Chain-1 (listed first) would be pulled after Sprocket-2, off its
+    frame, and the carry would stop with SolidWorks' sentence."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.user_component(T_ASM, "Housing-1", HOUSING, (I9, (0.0, 0.0, -40.0)), fixed=True)
+    fake.user_component(T_ASM, "Sprocket-2", SPROCKET, (I9, (0.0, 0.0, 50.0)))
+    fake.user_component(T_ASM, "Chain-1", SPROCKET, (I9, (0.0, 0.0, 70.0)))
+    fake.user_mate(T_ASM, "UserH", kind="coincident", a=("Housing-1", "plane1"), b=("Sprocket-2", "plane1"))
+    fake.user_mate(T_ASM, "UserX", kind="coincident", a=("Sprocket-2", "plane2"), b=("Chain-1", "plane2"))
+    fake.user_lock(T_ASM, "Lock3", "gear4-1", "Sprocket-2")
+    fake.listing_order = ["Chain-1"]                  # GetComponents' order: Chain-1 carried first (carried1)
+    fake.locks["Lock3"] = ("gear3", "gear4", "gear3-1", "gear4-1", "gear2", "gear2-1")
+    fake.kept_mates_pull = True
+    original = fake.remake_mate
+
+    def remake(handle, definition, targets, name, ratio=(1.0, 1.0), flip=None):
+        kept = original(handle, definition, targets, name, ratio, flip)
+        if definition.name == "Lock3":                # the tie moved Sprocket-2 (carried4-1) 5 mm
+            rotation, at = fake.frames["carried4-1"]
+            fake.frames["carried4-1"] = (rotation, (at[0], at[1], at[2] + 5.0))
+        return kept
+    monkeypatch.setattr(fake, "remake_mate", remake)
+    cr = _build_again(fake).carry
+    assert cr.stopped == "", cr.stopped
+    (fell,) = cr.fixed
+    assert fell.why == swbuild.FELL_TIE and set(fell.kept) == {"UserH", "UserX"} and fell.deleted == ("Lock3",)
+    puts = [a[0] for n, a in fake.calls if n == "place_component" and a[0] in ("carried1", "carried4")]
+    assert puts[-2:] == ["carried4", "carried1"]      # Sprocket-2 (its partner Housing-1 settled), then Chain-1
+    assert cr.moved == []
+
+
+def test_a_fallen_component_fixed_in_another_mode_but_off_its_frame_there_is_put_back(monkeypatch, every_gate,
+                                                                                      mode_findings):
+    """Positions are per configuration (POSITIONS_PER_CONFIGURATION): one FixComponent fixing in every mode (the knob
+    False) leaves a component fixed where it stood in each; one standing off its frame there is put back at it, said."""
+    every_gate()
+
+    def tweak(fake):
+        fake.remake_codes_in = {"Lock1": {"4L": (46, True)}}
+        fake.fix_per_configuration = False
+        fake.drift_in = {"N": {"carried1-1": (0.0, 0.0, 2.0)}}
+    cr, fake = _tc_again(monkeypatch, ALL_ON, tweak)
+    assert "after carried1-1 fell back in 4L: carried1-1 read fixed in N but 2 mm from its frame there, so it was put " \
+        "back at it" in cr.facts, cr.facts
+    assert "after carried1-1 fell back in 4L: carried1-1 fixed in every mode by one FixComponent in 4L" in cr.facts

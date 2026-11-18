@@ -446,8 +446,9 @@ was measured to do, held to its measurement: the `*_ON_2026` findings the carry 
 | Opening a lightweight component's part | resolves the old assembly's instance (demo-2 :566, :570; proposed `CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY`) | did not (knob default False) | does; False where a test asks |
 | A plane on a lightweight component | ReferenceType2 answers 4; its tree order needs the part's document, which it has not (W9c: GetModelDoc2 None), so Session says unread; a feature keeps its name (demo-2 :627) | "plane" | unread, select type 4 |
 | EntityParams | a point, then the entity's own direction in the assembly (W5 ring_mate_sense, W6 tier 9) | (0,0,0,0,0,1) for every entity | the direction turned by its component's frame; `entity_axes` for a face read against its part's Z |
-| MateEntity order of a coincident, concentric, parallel | the components' tree order, whatever was selected first: the probe's UserFaceCoin (S5 selected first) read S5 first, the fixture's (Chain-2 first) read Chain-1 first; every concentric, parallel and app coincident the earlier component first (`-2.log`:51-79, demo-2 :597-628) | as selected (the ledger's three cases reversed) | tree order, for the user's and the carry's mates read by W9d's Session (`read_entity_kinds`); `tree_order_entities` False as selected |
-| MateEntity order of a distance, angle, limit, gear, lock | as selected (UserChainDist, UserHousingDist, UserGear6 read their first selection first though it stood later) | as selected | unchanged |
+| MateEntity order of a coincident, concentric, parallel | *corrected by the review (`e056f33`)*: only two mates tell the readings apart, both face–face coincidents (the probe's UserFaceCoin, S5 selected first and read first; the fixture's, Chain-2 selected first and Chain-1 read first): each read the earlier-inserted component first, which rules out selection order and the ledger's second-selection-first for a face–face coincident. Every other coincident, concentric and parallel in the logs was selected later component first and read it second, so for concentric and parallel tree order is not told from the ledger's rule (`-2.log`:51-79, demo-2 :597-628) | as selected (the ledger's three cases reversed) | tree order (a reading, measured for the face–face coincident only), for the user's and the carry's mates read by W9d's Session (`read_entity_kinds`); `tree_order_entities` False as selected. The worker's fix holds whichever reading is true |
+| MateEntity order of a distance, angle, gear | as selected (UserDist4, UserChainDist, UserHousingDist, UserAsm6, UserAngle4, UserGear6, UserGearRoot, UserGearFillet read their first selection first though it stood later) | as selected | unchanged |
+| MateEntity order of a limit, lock | not told apart: UserLimit10 and the five locks were each selected earlier component first | as selected | unchanged (the lock now compared without order, A5) |
 | GetComponents(True) order | not tree order (demo-2: Chain-2 before Chain-1; `-1.log`:121 the user's parts before the app's) | tree order | tree order unless `listing_order` (which order SolidWorks gives is not measured) |
 | A gear mate's counts read | GearRatioNumerator is MateEntity(1)'s count (GOTCHAS §96 citing §75) | by selection | by the mate's own entities, so a mate read swapped reads its counts swapped |
 | A closed assembly's dependencies | every part it holds, top level (`DEPENDENCIES_READ`, `-1.log`:124) | [] unless a test listed them | every file inserted in it, the app's and the user's |
@@ -463,10 +464,12 @@ was measured to do, held to its measurement: the `*_ON_2026` findings the carry 
    `test_a_plain_distance_or_angle_reading_its_range_is_no_limit_mate`,
    `test_a_plain_distance_as_solidworks_reads_it_is_made_again_under_the_distance_word`.
 2. **A coincident, concentric or parallel between two carried components came back the other way round** and was
-   deleted and named `differs`: SolidWorks lists such a mate's entities in tree order, and the carry inserts in
+   deleted and named `differs`: SolidWorks lists a face–face coincident's entities earlier-inserted component first
+   (concentric and parallel: not told from the ledger's rule, the review's correction), and the carry inserts in
    GetComponents' order, which is not the tree's. The fixture's UserFaceCoin (Chain-1, Chain-2; R listed Chain-2
    first) would have met it in the next run. `_read_back` takes a symmetric kind (`_ORDERLESS_KINDS`: coincident,
-   concentric, parallel, perpendicular, tangent) read either way round as the same mate. Pin:
+   concentric, parallel, perpendicular, tangent, and since the review's A5 lock) read either way round as the same
+   mate, which holds whichever reading is true. Pin:
    `test_a_coincident_between_two_carried_components_inserted_in_another_order_is_kept`.
 3. **A gear mate read back swapped was made once more with its counts the old way round**, so with the selections
    reversed each count went with the other gear. The ratio is now reversed with the targets. Pin:
@@ -511,8 +514,23 @@ shapes 2026 answered (`test_swcom.py`), the dependencies default.
 
 ### Unmeasured, the fake answering by assumption
 
-- The order GetComponents lists (tree order unless `listing_order`); a perpendicular's or tangent's MateEntity order
-  and type name; a lock's MateEntity order where selection and tree disagree.
+- The order GetComponents lists (tree order unless `listing_order`; that it is not tree order is measured); a
+  perpendicular's or tangent's MateEntity order and type name; a concentric's and a parallel's against the ledger's
+  rule; a limit mate's and a lock's MateEntity order where selection and tree disagree (the review's A9).
+- **GetConstrainedStatus 5** (the review's A7): read on carried components with no mate of their own, Sprocket-10 in
+  H and Sprocket-8 in L (demo-2 :647) and Sprocket-11 in L (run 3 :658), beside 2 on the others. The repo names
+  only 2 under, 3 fully, 4 over (`findings.COMPONENT_*`; the ledger :879). The name `swconst.tlb` gives 5 is not
+  recorded here; from memory of the API help, `swConstrainedStatus_e` goes on past 4 with values for a component
+  the solver could not place (no solution / invalid solution), which is to be read from `swconst.tlb` before anything
+  rests on it. No app body has read 5, and the fake never gives it. What the worker would do if an app gear read 5
+  after a cluster's mates: `_free` counts anything but 2 as not free, so `_judge` would call a gear free before and 5
+  after **tied** (`FELL_TIE`) and fall the cluster back, and the post-check would stop the carry ("unable to turn")
+  where no cluster explains it. If 5 means the solver found no solution, that is not "held": the gear is not shown
+  tied, but its mates are not solved either, and falling the cluster back is the safe answer the user is told as a
+  tie. Not changed without a measurement. A user component reading 5 is never judged (only 4 is over-defined).
+- **The whole of C.6 and C.5's per-mode fix have never run on SolidWorks** (the review's A9): every remake, its rename,
+  its read-back, the flags per mode, `_judge`, the fallback and its per-mode put and fix, and the post-check with
+  remade mates on. Runs 2 and 3 both stopped in C.5.
 - A remade mate's flag, code and Flip read in a mode where a component it joins is suppressed (as set; the remade
   code); a whole-component (lock) entity on a suppressed component (unread, as a feature's was).
 - The root read `GetRootComponent3(True)` beside a lightweight component: the fake resolves it and marks the assembly;
@@ -579,3 +597,30 @@ word, so the run is not changed by it; the finding set from it now means what it
    `test_a_component_fixed_in_the_old_assembly_is_read_fixed_in_every_mode`. With the less kind default the whole
    suite passes unchanged. Unmeasured still: whether a put in another mode with a kept user–user mate holds
    (`Session.place_component` raises if pulled off), and whether FixComponent on a component already fixed is quiet.
+
+### The review's notes on the audit (W9D-REVIEW-A.md, `e056f33`), taken
+
+- **A8. The order of the fallback's puts.** `_put_and_fix` (the fallback's own mode and every other mode) puts and
+  fixes each component at once, a fixed one too where it stands off its frame there (positions are per
+  configuration). The order: the settled are those fixed at their frames and each one put; the next put is one whose
+  kept partners are all settled, else one with any settled, else plan order. The frames keep the old relative poses,
+  which satisfied the kept mates, so a put whose partners stand at their frames cannot be pulled. **No order is safe
+  for two joined components both free and off their frames**: whichever goes first has the other off as a partner,
+  and whether SolidWorks then pulls the put one back, moves the partner, or holds the put and leaves the mate violated
+  (as against a lock) is not measured. Putting all before fixing any does not help (each put is judged after its own
+  rebuild). What would: suppress the cluster's kept mates in that mode for the puts (the job's own, W8's
+  per-configuration flag route), then set their flags back and read them; not built. In the fixture it cannot arise
+  (the review: Housing-1 fixed by C.5 in every mode, Sprocket-8 the only put). C.5's own per-mode fix keeps one at a
+  time: no mate of the user's exists yet there. Pins: the fake's `kept_mates_pull` (a remade mate other than a lock
+  pulls a component put against a free partner; never measured) in
+  `test_a_fallback_puts_first_what_is_joined_to_a_fixed_component_so_a_kept_mate_cannot_pull_it`, which stops the
+  carry with plan-order puts; and `test_a_fallen_component_fixed_in_another_mode_but_off_its_frame_there_is_put_back`,
+  whose fact is `after <components> fell back in <mode>: <kept> read fixed in <modes> but <n> mm from its frame there,
+  so it was put back at it`.
+- **A5.** `"lock"` is in `_ORDERLESS_KINDS`. The swapped-retry test now uses a distance, whose entities are not
+  interchangeable, and pins a lock read the other way round kept at once.
+- **A6.** `test_a_whole_component_for_a_remade_lock_is_selected_by_the_count` pins `_select_target`'s whole-component
+  selection by the count; all three cases fail with the old `if not Select4` back.
+- **A7, A9.** In the lists above: status 5, a limit's and a lock's entity order, and that C.6 and C.5's per-mode fix
+  never ran on SolidWorks. The MateEntity-order row and fault 2 now say what the logs show; so do the fake's
+  `_read_ends` docstring and the comment over `_ORDERLESS_KINDS`.
