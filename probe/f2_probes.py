@@ -1198,12 +1198,18 @@ def section_export(out):
 
         def modified():
             def change(s):
+                # F2-0's decision 16: the spur is activated before step 8, so the step does not rest on step 6's
+                # answer. The first 2026 run changed it with the helical still active (step 6's) and the equation's put
+                # read back unchanged, '"Face Width"= 8' after being set to 9.
+                s.activate(str(call(doc_at(s, paths["spur"]), "GetTitle")))
+                active = label_of(call(s._app, "ActiveDoc"))  # noqa: SLF001
                 s.use_open_document(paths["spur"])
                 s.set_global_variable(FACE_WIDTH, CHANGED_FACE)
                 s.rebuild()
-                return bool(call(s._doc(), "GetSaveFlag"))  # noqa: SLF001
-            flag = run("export (8): the spur's Face Width set to 9 and rebuilt, not saved", C.in_build(change))
-            say(f"fact    export (8): the spur's flag after the change {flag}")
+                return bool(call(s._doc(), "GetSaveFlag")), active  # noqa: SLF001
+            flag, active = run("export (8): the spur activated, its Face Width set to 9 and rebuilt, not saved",
+                               C.in_build(change))
+            say(f"fact    export (8): the spur's flag after the change {flag}, {active} active at the change")
             d = exported("export (8) the spur, changed and not saved", export_case(folder, paths["spur"],
                                                                                     files["modified"], "active"))
             if d.get("stop"):
