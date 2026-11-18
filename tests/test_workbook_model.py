@@ -8,6 +8,7 @@ from gear_generator.gears import kind_for
 from gear_generator.spec import GearSpec
 from gear_generator.workbook import model, schema, xlsx
 from gear_generator.workbook.model import Box, Gear, GearboxSpec, Mesh, Mode, Shaft
+from workbook_fixtures import machined
 
 # -- the format, as the plan's §1 writes it down (canvas F lives outside the repo) --
 
@@ -320,12 +321,14 @@ def test_a_workbook_saved_by_libreoffice_reads_the_same(tmp_path):
     Calc (headless, `soffice --convert-to xlsx`). Shared strings, a theme, LibreOffice's own namespaces."""
     path = FIXTURES / "libreoffice" / "Reducer_12to1.xlsx"
     spec, diagnostics = read(path)
+    spec = machined(spec)                                   # PLAN-PRINTED §2.7: a committed workbook, read machined
     assert diagnostics == []
     assert spec.without_rows() == reducer()
     out = tmp_path / "edited.xlsx"
     result = xlsx.write_cells(str(path), {"Shafts": {"C3": 64}, "Gears": {"F3": 70}}, out_path=str(out))
     assert sorted(result.written) == ["Gears!F3", "Shafts!C3"] and not result.refused
     edited, diagnostics = read(out)
+    edited = machined(edited)
     assert diagnostics == [] and edited.shaft("S2").x == "64" and edited.gear("G2").teeth == "70"
 
 
@@ -363,6 +366,7 @@ def test_a_workbook_saved_by_excel_reads_the_same(tmp_path, saved_by):
     assert [book.sheet("Gears").cell(r, 23).text for r in range(2, 6)] == ["34", "136", "34", "102"]
     assert book.sheet("Meshes").cell(2, 3).percent
     spec, diagnostics = model.from_book(book)
+    spec = machined(spec)                                   # PLAN-PRINTED §2.7: a committed workbook, read machined
     assert diagnostics == []
     expected = reducer()
     expected = model.replace(expected, meshes=(model.replace(expected.meshes[0], efficiency="98"),) + expected.meshes[1:])
@@ -372,6 +376,7 @@ def test_a_workbook_saved_by_excel_reads_the_same(tmp_path, saved_by):
     result = xlsx.write_cells(str(path), {"Shafts": {"C3": 64, "C4": 132}, "Gears": {"F3": 70}}, out_path=str(out))
     assert result.refused == [("Shafts!C4", "it holds a formula")]
     edited, diagnostics = read(out)
+    edited = machined(edited)
     assert diagnostics == [] and edited.shaft("S2").x == "64" and edited.gear("G2").teeth == "70"
     assert edited.shaft("S3").x == "131.75"      # the formula's old value, until Excel recalculates and saves
     assert [sh.id for sh in edited.shafts] == ["S1", "S2", "S3"]     # row 6 is a comment
@@ -403,6 +408,7 @@ def test_frame_and_names_ignore_case(tmp_path):
 def test_a_percentage_formatted_cell_and_the_efficiency_range(tmp_path):
     for folder in ("excel", "excel-windows"):
         spec, diagnostics = read(FIXTURES / folder / "Reducer_12to1.xlsx")
+        spec = machined(spec)                               # PLAN-PRINTED §2.7: a committed workbook
         assert spec.meshes[0].efficiency == "98"        # 0.98 in a cell formatted 0%
     path = write(tmp_path, reducer())
     edit(path, "Meshes", {"C2": 1, "C3": 250})

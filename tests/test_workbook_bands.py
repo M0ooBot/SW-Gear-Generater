@@ -13,7 +13,7 @@ from gear_generator.gears import clutch, helical, kind_for, plan_for
 from gear_generator.gears.base import AddGlobal, LoftCut
 from gear_generator.spec import GearSpec
 from gear_generator.workbook import assess, gearbox, model, modes, schema, xlsx
-from workbook_fixtures import range_box, range_box_fixed
+from workbook_fixtures import machined, range_box, range_box_fixed
 
 BOOK = "C:\\B\\RangeBox_Fixed.xlsx"
 
@@ -62,6 +62,7 @@ def test_a_workbook_without_the_columns_reads_as_before():
     import os
     here = os.path.join(os.path.dirname(__file__), "fixtures", "excel-windows", "Reducer_12to1.xlsx")
     spec, diagnostics = model.from_book(xlsx.read(here))
+    spec = machined(spec)                                           # PLAN-PRINTED §2.7: a committed workbook
     assert diagnostics == [] and spec.gears
     assert all(g.start_band == "" == g.end_band for g in spec.gears)
     assert "start_band" not in spec.columns["Gears"] and "end_band" not in spec.columns["Gears"]

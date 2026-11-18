@@ -12,7 +12,10 @@ import os
 
 import pytest
 
+from dataclasses import replace
+
 from gear_generator.workbook import assess, gearbox, layout, link, xlsx
+from workbook_fixtures import machined
 
 HERE = os.path.join(os.path.dirname(__file__), "fixtures", "excel-windows")
 
@@ -20,6 +23,9 @@ HERE = os.path.join(os.path.dirname(__file__), "fixtures", "excel-windows")
 def assessed(name):
     reading = link.Link(os.path.join(HERE, name)).read()
     assert reading.ok, reading.error
+    # PLAN-PRINTED §2.7: a committed workbook, read marked machined; its importers in test_workbook_update and
+    # test_workbook_gearbox read it through here.
+    reading = replace(reading, spec=machined(reading.spec))
     return reading, assess.assess(reading.spec, reading.diagnostics, reading.spec.box.output_folder,
                                   reading.spec.box.part_template)
 

@@ -6,6 +6,7 @@ import pytest
 
 from gear_generator.workbook import checks, export, fixes, model, schema, xlsx
 from test_workbook_model import FIXTURES, reducer, write
+from workbook_fixtures import machined
 
 
 def moved(spec, **shaft_x):
@@ -106,6 +107,7 @@ def test_a_formula_is_listed_not_written_and_excel_must_recalculate(tmp_path, fo
     shutil.copy(FIXTURES / folder / "Reducer_12to1.xlsx", path)
     xlsx.write_cells(str(path), {"Shafts": {"C3": 64}})            # S2 off by 0.25; S3 follows by formula...
     spec, _ = read(path)                                           # ...once Excel recalculates — until then 131.75
+    spec = machined(spec)                                          # PLAN-PRINTED §2.7: a committed workbook
     report = checks.check(spec)
     move = report.fixes["Meshes!A2"][0]
     done = export.export(str(path), spec, [move], report)
@@ -353,6 +355,7 @@ def test_a_formula_target_is_named_with_the_value_the_fix_wants(tmp_path, folder
     from gear_generator import ui_text
     path = excel_saved(FIXTURES / folder / "Reducer_12to1.xlsx", tmp_path / "excel.xlsx", {"C3": 64, "C4": 132})
     spec, _ = read(path)
+    spec = machined(spec)                                          # PLAN-PRINTED §2.7: a committed workbook
     report = checks.check(spec)
     assert [d.field for d in report.diagnostics if d.is_error] == ["Meshes!A2"]    # only stage 1 is off
     done = export.export(str(path), spec, [report.fixes["Meshes!A2"][0]], report)
@@ -370,6 +373,7 @@ def test_nothing_written_when_every_cell_the_fix_names_is_a_formula(tmp_path):
     source = excel_saved(FIXTURES / "excel-windows" / "Reducer_12to1.xlsx", tmp_path / "s.xlsx", {"C4": 132})
     path = with_formula(source, tmp_path / "f.xlsx", "C3", "C2+64", 64)
     spec, _ = read(path)
+    spec = machined(spec)                                          # PLAN-PRINTED §2.7: a committed workbook
     report = checks.check(spec)
     move = report.fixes["Meshes!A2"][0]
     done = export.export(str(path), spec, [move], report)

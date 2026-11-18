@@ -74,6 +74,7 @@ from fractions import Fraction  # noqa: E402
 from gear_generator import findings  # noqa: E402
 from gear_generator.workbook import assess, build, checks, geometry, gearbox, kinematics, model, xlsx  # noqa: E402
 from gear_generator.workbook.model import Box, Gear, GearboxSpec, Mesh, Shaft, replace  # noqa: E402
+from workbook_fixtures import machined  # noqa: E402
 
 BOOK = "C:\\Books\\Planetary_4to1.xlsx"
 OUT = "C:\\Out\\"
@@ -400,7 +401,7 @@ def test_every_workbook_before_w7_plans_bit_for_bit_as_it_did(name, monkeypatch)
     if name.endswith(".xlsx"):
         here = os.path.join(os.path.dirname(__file__), "fixtures", "excel-windows")
         spec, diagnostics = model.from_book(xlsx.read(os.path.join(here, name)))
-        a = assess.assess(spec, diagnostics, OUT)
+        a = assess.assess(machined(spec), diagnostics, OUT)          # PLAN-PRINTED §2.7: a committed workbook
     else:
         import test_workbook_turned as turned
         a = assess.assess(replace(getattr(turned, name)(), source_path="C:\\B\\W.xlsx"), [], OUT)

@@ -10,6 +10,7 @@ import pytest
 from gear_generator import swbuild
 from gear_generator.workbook import assess, geometry, layout, link, motion
 from gear_generator.workbook.geometry import axis_vector, base_frame, family
+from workbook_fixtures import machined
 
 HERE = os.path.join(os.path.dirname(__file__), "fixtures", "excel-windows")
 FIXTURES = ["Reducer_12to1.xlsx", "Arc_Move.xlsx", "Risky_Placements.xlsx"]
@@ -111,8 +112,8 @@ def w4_frame(placed, theta):
 def assessed(name):
     reading = link.Link(os.path.join(HERE, name)).read()
     assert reading.ok, reading.error
-    return assess.assess(reading.spec, reading.diagnostics, reading.spec.box.output_folder,
-                         reading.spec.box.part_template)
+    spec = machined(reading.spec)                                   # PLAN-PRINTED §2.7: a committed workbook
+    return assess.assess(spec, reading.diagnostics, spec.box.output_folder, spec.box.part_template)
 
 
 @pytest.mark.parametrize("name", FIXTURES)
