@@ -72,7 +72,7 @@ class Planned:
                                   pressed=1795600000.0))
         self.result = result or po.PrintResult(
             written=tuple((p.path, self.folder + os.sep + p.stem + ".step") for p in self.parts), folder=self.folder,
-            active_restored=True)
+            live_features=((self.parts[1].path, ("User Keyway",)),), active_restored=True)
         test = self
 
         def workbook_print(record, assessment, update_plan, output_folder, version, **kw):

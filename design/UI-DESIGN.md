@@ -1838,7 +1838,10 @@ printed default*, its span (*Span over 3 teeth: 11.209 mm (the calipers square
 to the axis, at mid-face).*; a helical gear's *… across the teeth (the calipers
 tilted with them …)*; *Machined: its backlash is a cutter's, not a printer's; no
 span.*; the arcs, narrow-face, no-contact, internal and bevel lines), *Your
-features left in it: …*, a feature SolidWorks warns about, and *Checked: one
+features left in it: …* (for a part written, the user's features the job read
+live in it, B's `PrintResult.live_features`, whether or not its record lists
+them, so a keyway added to a form-built part is named; for a part the job
+stopped before writing, those its record lists), a feature SolidWorks warns about, and *Checked: one
 closed solid, AP214 (AUTOMOTIVE_DESIGN), millimetres; outer diameter and face
 width match the gear.* (or *size not checked (your features in it)*, *(a
 herringbone, not yet measured)*, *(a ring)* and the other kinds), *NOT FIT TO

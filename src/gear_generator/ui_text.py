@@ -6939,6 +6939,18 @@ PRINT_SIZE_SKIPPED = {"bevel": "a bevel gear", "ring": "a ring", "sleeve": "a sl
                       "not measured": "not yet shown on SolidWorks"}
 
 
+def _print_user_features(part, result: "PrintResult", written: bool) -> Tuple[str, ...]:
+    """The user's features a part's block names (F2-DEMONSTRATION-REVIEW §6.1): for a part written, those the job read
+    live in it (``PrintResult.live_features``, B's; tree order), whether or not its record lists them, since that is
+    what the file holds; for a part not written (the job stopped first), those its record lists."""
+    if not written:
+        return tuple(part.user_features)
+    for path, names in getattr(result, "live_features", ()) or ():
+        if _same_path(path, part.path):
+            return tuple(names)
+    return ()
+
+
 def _print_schema(name: str) -> str:
     """*AP214 (AUTOMOTIVE_DESIGN)*: the schema a file declares, by printout.STEP_SCHEMAS' prefixes."""
     from .printout import STEP_SCHEMAS
@@ -7006,8 +7018,9 @@ def print_list_text(plan: "PrintPlan", result: "PrintResult", version: str) -> s
         lines.append(f"  {'For ' + _and(part.rows) + ' · ' if part.rows else ''}print {part.count}")
         lines.append(f"  {_print_sizes(part.spec)}")
         lines.append(f"  {_print_span_line(part)}")
-        if part.user_features:
-            lines.append(f"  Your features left in it: {_and(part.user_features)}.")
+        features = _print_user_features(part, result, name in written)
+        if features:
+            lines.append(f"  Your features left in it: {_and(features)}.")
         for path, features in result.warnings:
             if _same_path(path, part.path):
                 lines.append(f"  SolidWorks warns about {_and(features)}; written as SolidWorks built it.")

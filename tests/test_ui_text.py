@@ -4409,7 +4409,8 @@ def test_the_print_list_says_each_kind_of_part_and_heads_a_failed_set():
         written=tuple((p.path, f"F\\{p.stem}.step") for p in parts[:3]), folder="F",
         failed=(("F\\Gear_a.step", po.SOLIDS),),
         refusal=po.Refusal(po.FILE_CHECK, ("Gear_a",), {"file": "F\\Gear_a.step", "reason": po.SOLIDS}),
-        warnings=((parts[0].path, ("Fillet3",)),), facts={"Gear_h.step|extent": "skipped: user features",
+        warnings=((parts[0].path, ("Fillet3",)),), live_features=((parts[2].path, ("User Keyway",)),),
+        facts={"Gear_h.step|extent": "skipped: user features",
                                                            "Gear_m1.5_N68.step|extent": "skipped: herringbone"},
         active_restored=True)
     text = ui_text.print_list_text(plan, result, "0.9")
@@ -4450,3 +4451,27 @@ def test_the_footer_while_print_files_runs_holds_both_buttons():
     f = ui_text.workbook_footer(None, printing=True)
     assert f.text == "Print files is writing STEP files from SolidWorks…"
     assert not f.build_enabled and not f.update_enabled
+
+
+
+def test_the_print_list_names_the_users_features_the_job_found_live():
+    """F2-DEMONSTRATION-REVIEW §6.1: a written part's block names the user's features B's job read live in it
+    (PrintResult.live_features), whether or not its record lists them; a part with none has no such line; a part the
+    job stopped before writing names what its record lists."""
+    listed = _part(COUPON, "Listed", user_features=("User Keyway",))
+    unlisted = _part(COUPON, "Unlisted")
+    plain = _part(COUPON, "Plain")
+    stopped = _part(COUPON, "Stopped", user_features=("Boss",))
+    plan = po.PrintPlan(None, (listed, unlisted, plain, stopped), folder="F", name="Box", pressed=PRESSED)
+    result = po.PrintResult(written=tuple((p.path, f"F\\{p.stem}.step") for p in (listed, unlisted, plain)), folder="F",
+                            live_features=((listed.path, ("User Keyway",)), (unlisted.path, ("Cut-Extrude1", "Fillet9"))),
+                            active_restored=True)
+    blocks = {b.split("\n", 1)[0]: b for b in ui_text.print_list_text(plan, result, "0.9").split("\n\n")}
+    assert "  Your features left in it: User Keyway.\n" in blocks["Listed.step"] + "\n"
+    assert "  Your features left in it: Cut-Extrude1 and Fillet9.\n" in blocks["Unlisted.step"] + "\n"
+    assert "Your features" not in blocks["Plain.step"]
+    assert "  Your features left in it: Boss.\n  Not written." in blocks["Stopped.step"]
+    # A written part the job found none in names none, whatever its record lists (the file is what the job read).
+    gone = po.PrintResult(written=((listed.path, "F\\Listed.step"),), folder="F", active_restored=True)
+    text = ui_text.print_list_text(po.PrintPlan(None, (listed,), folder="F", name="Box", pressed=PRESSED), gone, "0.9")
+    assert "Your features" not in text
