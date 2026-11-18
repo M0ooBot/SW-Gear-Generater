@@ -555,7 +555,7 @@ At this commit it passes, 0 failed. `--help` imports nothing of SolidWorks.
 | remove | 1033 s | 58 | 0 | 3.76 GB |
 | bands-off | 405 s | 13 | 0 | 2.61 GB |
 | m4 | 35 s | 7 | 0 | 2.82 GB |
-| remake | 1542 s, cut | 46 | 1 | 6.38 GB |
+| remake | 1542 s, cut | 46 | 1 (its time line counts 2: the FAIL and the cut, 24-4:317) | 6.38 GB |
 
 *Corrected on 2026-11-18 from the logs' own lines, as `W9C-RUNS-REVIEW.md`'s addendum "SolidWorks 2024" (§1, `78fdcb6`)
 shows: what the first version of this section said of the What's Wrong box, the memory, the times, the codes and the
@@ -596,7 +596,7 @@ after the section, 0 failed in it (24-1:1855). On 2026, runs 10 and 11 stayed un
     add, 160.748 against 152.629 (24-1:1520), 5.1 % low. `modes`' own press read N at 392.129 (24-1:1404). Why the
     app's read came low is not known.
   - Across versions, Hub and Sprocket-4 read 1408.381 on 2024 and 1408.364 on 2026, both sides agreeing within each
-    version: a kernel difference.
+    version. That the two differ by the geometry kernel's sums is an inference; nothing measured says why.
 - **Time.** Where a section can be compared, 2024 took 1.2 to 4 times as long as run 10 on 2026: `landing` 987 s
   against 824 (and 2024's built `rangebox.master` too), `modes` 3886 against 1115, `bands-off` 405 against 101,
   `m4` 35 against 17. `fixed` and `remove` also built their masters on 2024.
@@ -632,16 +632,43 @@ asked three things of the script before M3 runs again on 2024, and the coordinat
   2024; every box up one this job's watch read as the frame's; none unowned; the frame read enabled; nothing blocking;
   no other window logged), presses the box's own Close (`&Close`, the control W8's watch listed on it at 24-4:311;
   never FeatureXpert or its check box) and requires every box gone within 10 s with the frame still enabled
-  (`outlived_close_failed`). Anything it refuses or that fails is the STOP, naming why. The JSON's
+  (`outlived_close_failed`). *Since the re-check of these commits (`b725b32`) and the coordinator's ruling on it:*
+  before either press the control is checked to be the box's one child named Close, a visible, enabled `Button`
+  (`close_control`), else the STOP; the first press is a `BM_CLICK` posted to it; if the box is still up 10 s
+  later, the second try posts the box the `WM_COMMAND` that control itself sends when clicked (`BN_CLICKED` with
+  its id), which the ruling counts as a press of its own Close button; the box must be gone within 10 s of the last
+  try. The log says which press closed it and the control's class. Microsoft documents that `BM_CLICK` to a dialog
+  that is not active may fail, which is why the second try exists; neither press has been made on SolidWorks yet. The
+  glue (`close_outlived_with`) reaches the windows only through an `io` the self-check stands in for, and the
+  self-check drives it in every failing way. Anything it refuses or that fails is the STOP, naming why. The JSON's
   `whats_wrong_lifetimes` entry carries what was done under `outlived`. W9a's fact line now says "it was still up
   after … s" where a box is still up or was closed, and keeps "it took … s to go" for a box that went by itself.
 - **Step 2's ring** is held to its own reading just before the press (above), so 2024's code 51 is no fault.
-- **`remake-m3`**, by name only, runs remake's M3 alone (`remake_again`), without remake's first part, whose gate
-  is set on both versions. It needs only `setup.master`: from `--user-master`, or this `<out>`'s; with neither,
+- **`remake-m3`**, by name only, runs remake's M3 alone (`remake_again`, its first pass), without remake's first
+  part, whose gate is set on both versions, and then a second pass on its own copy (`remake_first_press`, folder
+  `remake-first`), below. It needs only `setup.master`: from `--user-master`, or this `<out>`'s; with neither,
   W9a's `setup` runs first and builds it (about 6 minutes on 2024, W9a's confirming run's 352 s), building RangeBox
   too through S0's `build_master` unless `--master` gives `rangebox.master`. Its folder is `remake-again`, as in
   `remake`. Every press there reads the inventory, so head's reads of each user mate entity's kind run inside an
   Update on 2024 too (the review's §2).
+- **The two passes of `remake-m3`** (the coordinator's ruling 5 on `b725b32`). In the first pass, the strict one
+  kept as it was, the script's own read before step 2 activates RangeBox before the app's press does (06d5141's box
+  came there), so a box at that read says nothing about the app, and no box in the press afterwards settles nothing:
+  a user's press straight after the stop would be the first activation. The second pass makes it so: step 1 as in
+  the first, then the press again at once, nothing of the script's between them opening or activating a document.
+  - *It can show:* whether What's Wrong comes in the app's press as the first activation since step 1, when and at
+    which call, and whether it goes by itself, outlives the press, or is closed by the close path (W9a's record of
+    that app job, in the JSON under `first_press`); that the press stops again on the ring and says to close it and
+    RangeBox without saving; and that it wrote nothing by its traced calls, every open document's save flag (read in
+    a job that opens nothing), every file's time and its result.
+  - *It cannot show:* the parts' and the assembly's globals, the assembly's frames, mates and flags, the gear mates'
+    ratios and the ring's codes are not read in it, since each of those reads opens and activates a document; so the
+    strict wrote-nothing check is not made there (the first pass's step 2 makes it). It does not repeat steps 2b
+    and 3.
+  - *The first pass can show* everything step 2 checks, strictly, and 2b and 3; *it cannot show* what the app's press
+    meets as the first activation.
+  - Chosen over reordering the first pass, which would have changed a step measured on 2026 and taken the strict
+    check's "before" from fewer reads; the second pass costs a copy, step 1 and one press (about 7 minutes on 2024).
 - **The self-check** now holds the app's own still-in-error sentence as head words it, the ring at 51 and 51 before and
   after (passing) and changed across the press (said), and each way the close path refuses or fails; it reads 0
   failed.
@@ -650,11 +677,14 @@ asked three things of the script before M3 runs again on 2024, and the coordinat
 2024 masters here are `<probe folder>\w9a-confirm-sw2024-20261117-002313\out\setup.master` (W9a's 2024 confirming
 run, built at 19651ee on 32.5.0, its setup 0 failed) and `<probe folder>\w9-s0-sw2024-20261116-064725\out\rangebox.master`
 (S0's). `remake-m3` needs the first only; given by `--user-master` it builds nothing. Its record is of W9a's schema
-and is brought forward when read, as W9c's 2026 runs read W9a's 2026 `setup.master`; nothing writes to the master,
-the section working on a copy. The command line is under "Command lines" below. *Its time is an estimate, not a
-measurement:* about 25 minutes on 2024, up to 30 if boxes are closed (each close costs the 60 s wait and up to 10 s),
-from 06d5141's M3 first press (181 s, three times 2026's 61 s) and run 11's M3 presses on 2026 (41, then 111 s) at the
-same ratio. Run it from a `git archive` of the commit that carries this, in a fresh SolidWorks 2024 session with no
+and is brought forward when read, as W9c's 2026 runs 1 to 7 read W9a's 2026 `setup.master` (before M3 was added;
+M3 has never run from a W9a-built master, and runs 8 to 11 and the 2024 run used masters W9c's harness built; step
+1's own check reads the premise, the ring stopping and marked, so a master that differs would fail there, not pass
+falsely); nothing writes to the master, the section working on a copy. The command line is under "Command lines" below. *Its time is an estimate, not a
+measurement:* about 32 minutes on 2024, the first pass about 25 and the second about 7, from 06d5141's M3 first press
+(181 s, three times 2026's 61 s) and run 11's M3 presses on 2026 (41, then 111 s) at the same ratio; up to about 45 if
+a box comes at every activation with the ring in error and each is closed (each close costs the 60 s wait and up to
+10 s, or 20 with the second try; some ten such activations across the two passes). Run it from a `git archive` of the commit that carries this, in a fresh SolidWorks 2024 session with no
 other SolidWorks running, in a new run folder.
 
 ## The tenth and eleventh runs on 2026: the final run (2026-11-17, `src` at 3a9e592, SolidWorks 2026 34.0.0)

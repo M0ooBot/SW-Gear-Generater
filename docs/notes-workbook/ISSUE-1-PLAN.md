@@ -1075,9 +1075,14 @@ outlived its job; the script then closes it with the box's own Close button and 
 on. Anything else (another dialog, another owner, a disabled frame, a box that will not close) stays the STOP it is.
 The app itself is unchanged by this: it still leaves the box alone and changes no SolidWorks setting. The close path
 is off unless the run asks for it by a flag (`probe/w9c_demonstration.py --close-outlived-whats-wrong`), so every
-other run behaves as before. Whether the app's own press, made with a part held in error, can leave such a box
-standing after it is not measured (the review's inference from `Session.open_document`'s `ActivateDoc3`); if a run
-shows it, this section and W9a's sentences take it.
+other run behaves as before. Ruled further the same day, on the re-check of the script (`W9C-RUNS-REVIEW.md`,
+`b725b32`): before either press the control must be checked to be a visible, enabled Button of that box, else the
+STOP; if a `BM_CLICK` on it leaves the box up, the script may post the box its own Close control's `WM_COMMAND`
+(that control's id, to that box) as a second try, still a press of its own Close button; the box must be gone within
+10 s of the last try, else the STOP; the log says which press closed it. Whether the app's own press, made with a part
+held in error, can leave such a box standing after it is not measured (the review's inference from
+`Session.open_document`'s `ActivateDoc3`); `remake-m3`'s second pass measures the app's press as the first
+activation after the stop. If a run shows it, this section and W9a's sentences take it.
 
 
 ## Changes after W9b, W9c's probes and the review of W9c's packages

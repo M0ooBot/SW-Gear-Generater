@@ -11,7 +11,10 @@ SolidWorks, through the Workbook window's own path (W9a's Desk9: the window's pl
 ``--close-outlived-whats-wrong`` (the coordinator's ruling of 2026-11-18, ISSUE-1-PLAN.md; off unless given, so every
 other run is as before): on SolidWorks 2024 only, a What's Wrong owned by SolidWorks' frame, the frame enabled, that is
 still up 60 s after a job (W9a's allowance) is said to have outlived its job, and the script then closes it with the
-box's own Close button and requires it gone within 10 s with the frame enabled, and goes on. Anything else (another
+box's own Close button and requires it gone within 10 s with the frame enabled, and goes on: the control checked to be a
+visible, enabled Button of that box before each press, a BM_CLICK first and, if the box is still up 10 s later, the
+control's own WM_COMMAND posted to the box as a second try (the ruling on the re-check, b725b32), the press that closed
+it said. Anything else (another
 window, another owner, a disabled frame, a box that will not close, another version) stays the STOP. The app is not
 changed by it: it still leaves the box alone and changes no SolidWorks setting.
 
@@ -72,7 +75,9 @@ Sections (each can run alone from a kept master; ``fixed`` keeps ``fixed-updated
 - ``w9b-part``  W9b's ``part`` section again (88 s on 2026), so its step-face read runs on SolidWorks in this session.
 - ``remake-m3`` (by name only) remake's M3 alone, without its first part: its own copy of setup.master (from
                 ``--user-master``, or this <out>'s; without either, W9a's ``setup`` runs first, building RangeBox too unless
-                ``--master`` gives it). Its folder is ``remake-again``, as in ``remake``.
+                ``--master`` gives it). Its folder is ``remake-again``, as in ``remake``. Then a second pass on its own
+                copy (``remake-first``): step 1, and the app's press again as the first thing to activate a document
+                after it, read around only by what activates nothing (W9C-DEMONSTRATION.md says what each pass shows).
 
 Time on 2026 (fixed and modes as run 5 measured): fixed 20 min, modes 48, remove 15, remake 30, bands-off 8, m4 5, w9b-part 2: about 2 h 10
 min (the plan's budget 2 h 20 min); add 5 min if setup.master and 4 if the 12 : 1's master must be built first.
@@ -795,22 +800,107 @@ def outlived_close_refused(year, boxes, seen, enabled, unowned, blocking, others
     return why
 
 
-def outlived_close_failed(pressed, left, enabled, seconds, within=WW_CLOSE_WITHIN):
-    """Why the script's close failed the ruling (empty: every box went in time, the frame enabled). ``pressed``:
-    {hwnd: the button's text pressed, "" where none was found}; ``left``: the What's Wrong boxes still up after the
-    wait; ``enabled``: SolidWorks' frame after; ``seconds``: how long after the press the boxes were read gone (or
-    the wait ended)."""
+def close_control(children, buttons=WW_CLOSE_BUTTONS):
+    """The box's own Close control among ``children`` (its child windows, each {"hwnd", "text", "class", "visible",
+    "enabled", "id"}) and why it may not be pressed (empty: it may). The coordinator's ruling of 2026-11-18 (b725b32's
+    should-fix 2): one control of that box named Close, a visible, enabled Button; anything else is the STOP."""
+    found = [c for c in children if c.get("text") in buttons]
+    if not found:
+        return None, [f"no control named {list(buttons)} in the box"]
+    control, why = found[0], []
+    if len(found) > 1:
+        why.append(f"{len(found)} controls named Close in the box")
+    if control.get("class") != "Button":
+        why.append(f"its Close is a {control.get('class')!r}, not a Button")
+    if control.get("visible") is not True:
+        why.append(f"its Close reads visible {control.get('visible')}")
+    if control.get("enabled") is not True:
+        why.append(f"its Close reads enabled {control.get('enabled')}")
+    return control, why
+
+
+def outlived_close_failed(left, enabled, seconds, within=WW_CLOSE_WITHIN):
+    """Why the script's close failed the ruling (empty: every box went in time, the frame enabled): ``left``, the What's
+    Wrong boxes still up after the last try's wait; ``enabled``: SolidWorks' frame after; ``seconds``: how long after
+    the last try the boxes were read gone (or the wait ended)."""
     why = []
-    missing = [h for h, button in pressed.items() if not button]
-    if not pressed or missing:
-        why.append(f"no Close button found on {len(missing)} of {len(pressed)} box(es)")
     if left:
-        why.append(f"{len(left)} still up {seconds:.2f} s after its Close was pressed (allowed {within:g})")
+        why.append(f"{len(left)} still up {seconds:.2f} s after the last press of its Close (allowed {within:g})")
     elif seconds > within:
-        why.append(f"gone only {seconds:.2f} s after its Close was pressed (allowed {within:g})")
+        why.append(f"gone only {seconds:.2f} s after the last press of its Close (allowed {within:g})")
     if enabled is not True:
         why.append(f"SolidWorks' frame enabled reads {enabled} after the close")
     return why
+
+
+CLOSE_PRESSES = ("BM_CLICK", "WM_COMMAND")   # the ruling's two tries at the box's own Close control, in this order
+
+
+def close_outlived_with(record, waited, year, io, within=WW_CLOSE_WITHIN):
+    """The close path (``A.WW_OUTLIVED`` under WW_CLOSE_FLAG), its windows reached only through ``io``, so the
+    self-check drives it as the run does: ``io.boxes()`` [(hwnd, owned)] of What's Wrong up, ``io.enabled()`` the
+    frame, ``io.others()`` other windows W8's watch logged, ``io.children(hwnd)``, ``io.click(control)`` (BM_CLICK to
+    the control), ``io.command(hwnd, control)`` (the control's WM_COMMAND, BN_CLICKED with its id, posted to its box),
+    ``io.clock()``, ``io.sleep(s)``, ``io.say(line)``. Said as having outlived its job; refused as
+    :func:`outlived_close_refused` says; each box's Close checked (:func:`close_control`) before each press; BM_CLICK
+    first, and only if a box is still up ``within`` s after it, the WM_COMMAND as the second try (the ruling of the
+    re-check, 2026-11-18); every box gone within ``within`` s of the last try with the frame enabled
+    (:func:`outlived_close_failed`), the press that closed it said. Sets ``record["outlived"]``: W9a's
+    ``whats_wrong_end`` says its ``said`` and stops on its ``stop``. Nothing here raises."""
+    what = record["what"]
+    out = {"outlived": True, "waited": waited, "closed_by_script": False, "closed_by": "", "presses": [],
+           "controls": [], "close_seconds": None, "stop": "", "said": ""}
+    record["outlived"] = out
+
+    def refuse(prefix, why):
+        out.update(stop=f"{prefix}: " + "; ".join(why), said=f"{prefix}: " + "; ".join(why))
+    try:
+        boxes = io.boxes()
+        enabled = io.enabled()
+        io.say(f"fact    {what}: What's Wrong outlived its job: {len(boxes)} still up {waited:.2f} s after it, owned by "
+               f"SolidWorks' frame {[owned for _, owned in boxes]}, the frame enabled {enabled} (the coordinator's "
+               "ruling of 2026-11-18)")
+        why = outlived_close_refused(year, boxes, [e["hwnd"] for e in record["seen"]], enabled, record["unowned"],
+                                     record.get("blocking"), io.others())
+        if why:
+            return refuse("not closed by the script", why)
+        pressed = [h for h, _ in boxes]
+        left, seconds = pressed, 0.0
+        for via in CLOSE_PRESSES:
+            stray = [h for h in left if h not in pressed]
+            if stray:
+                return refuse(f"not pressed by {via}", [f"{len(stray)} What's Wrong up that was not the one judged"])
+            for h in left:
+                control, why = close_control(io.children(h))
+                out["controls"].append({"press": via, **{k: (control or {}).get(k) for k in
+                                                         ("text", "class", "visible", "enabled", "id")}})
+                if why:
+                    return refuse(f"not pressed by {via}", why)
+                if via == "BM_CLICK":
+                    io.click(control)
+                else:
+                    io.command(h, control)
+            out["presses"].append(via)
+            began = io.clock()
+            left = [h for h, _ in io.boxes()]
+            while left and io.clock() - began < within:
+                io.sleep(0.25)
+                left = [h for h, _ in io.boxes()]
+            seconds = round(io.clock() - began, 2)
+            if not left:
+                break
+        after = io.enabled()
+        failed = outlived_close_failed(left, after, seconds, within=within)
+        out.update(closed_by_script=not left, closed_by=out["presses"][-1] if not left else "", close_seconds=seconds,
+                   frame_enabled_after=after)
+        tried = " then ".join(out["presses"])
+        if failed:
+            return refuse(f"its own Close pressed by {tried}", failed)
+        out["said"] = (f"the script pressed its own Close ({out['controls'][-1]['text']!r}, a {out['controls'][-1]['class']}"
+                       f") by {tried}, as a person would, and it was gone {seconds:.2f} s after the {out['closed_by']} "
+                       f"(allowed {within:g}), SolidWorks' frame enabled {after}: closed by the {out['closed_by']}")
+    except Exception as exc:  # noqa: BLE001 - said, and the STOP stands
+        refuse("the close path raised", [f"{type(exc).__name__}: {exc}"])
 
 
 # -- --self-check: the edits through the app's own read and classify, on the fake ------------------------------------------
@@ -1404,15 +1494,110 @@ def self_check():
     ok(all(outlived_close_refused(*args) != [] for args in refused.values()),
        f"What's Wrong outlived its job: not closed, the STOP, where {list(refused)}: "
        f"{[k for k, a in refused.items() if outlived_close_refused(*a) == []] or 'each refused'}")
-    ok(outlived_close_failed({7: "&Close"}, [], True, 1.25) == [],
+    ok(outlived_close_failed([], True, 1.25) == [],
        "What's Wrong closed by its own Close: gone in 1.25 s, the frame enabled, the run goes on")
-    failed = {"no Close button": ({7: ""}, [], True, 1.0), "nothing pressed": ({}, [], True, 0.0),
-              "still up after 10 s": ({7: "&Close"}, [7], True, 10.1), "gone late": ({7: "&Close"}, [], True, 10.6),
-              "the frame disabled after": ({7: "&Close"}, [], False, 1.0),
-              "the frame unread after": ({7: "&Close"}, [], None, 1.0)}
+    failed = {"still up after 10 s": ([7], True, 10.1), "gone late": ([], True, 10.6),
+              "the frame disabled after": ([], False, 1.0), "the frame unread after": ([], None, 1.0)}
     ok(all(outlived_close_failed(*args) != [] for args in failed.values()),
        f"What's Wrong closed by its own Close: the STOP where {list(failed)}: "
        f"{[k for k, a in failed.items() if outlived_close_failed(*a) == []] or 'each failed'}")
+    # The re-check's should-fix 2: only the box's own Close, a visible, enabled Button, is pressed.
+    close_btn = {"hwnd": 70, "text": "&Close", "class": "Button", "visible": True, "enabled": True, "id": 2}
+    others_ = [{"hwnd": 71, "text": "&FeatureXpert", "class": "Button", "visible": True, "enabled": True, "id": 3},
+               {"hwnd": 72, "text": "&Display What's Wrong during rebuild", "class": "Button", "visible": True,
+                "enabled": True, "id": 4}]
+    ok(close_control(others_ + [close_btn]) == (close_btn, []),
+       "the Close control: the box's own &Close, a visible, enabled Button, never FeatureXpert or the check box")
+    bad_controls = {"none": others_, "a Static": others_ + [dict(close_btn, **{"class": "Static"})],
+                    "hidden": [dict(close_btn, visible=False)], "disabled": [dict(close_btn, enabled=False)],
+                    "two": [close_btn, dict(close_btn, hwnd=73)]}
+    ok(all(close_control(c)[1] != [] for c in bad_controls.values()),
+       f"the Close control: not pressed, the STOP, where {list(bad_controls)}: "
+       f"{[k for k, c in bad_controls.items() if close_control(c)[1] == []] or 'each refused'}")
+
+    # The glue (the re-check's should-fix 5), driven as the run drives it, its windows stood in for.
+    class Io:
+        def __init__(self, closes_on=("BM_CLICK",), controls=None, enabled_after=True, year_=2024, others=(),
+                     stray=False, raises=False, disable_on_second=False):
+            self.up, self.t, self.lines, self.pressed = [(7, True)], 0.0, [], []
+            self.closes_on, self.enabled_after, self.year, self.stray = closes_on, enabled_after, year_, stray
+            self.controls = [close_btn] + others_ if controls is None else controls
+            self.others_, self.raises, self.disable_on_second = list(others), raises, disable_on_second
+
+        def boxes(self):
+            if self.raises:
+                raise OSError("EnumWindows failed")
+            return list(self.up)
+
+        def enabled(self):
+            return True if not self.pressed else self.enabled_after
+
+        def others(self):
+            return self.others_
+
+        def children(self, h):
+            if self.disable_on_second and self.pressed:
+                return [dict(close_btn, enabled=False)]
+            return list(self.controls)
+
+        def _press(self, via):
+            self.pressed.append(via)
+            if via in self.closes_on:
+                self.up = []
+            elif self.stray:
+                self.up = [(7, True), (8, True)]
+
+        def click(self, c):
+            self._press("BM_CLICK")
+
+        def command(self, h, c):
+            self._press("WM_COMMAND")
+
+        def clock(self):
+            return self.t
+
+        def sleep(self, s):
+            self.t += s
+
+        def say(self, line):
+            self.lines.append(line)
+
+    def glue(io, seen=(7,), unowned=()):
+        rec = {"what": "read remake, M3: before step 2", "seen": [{"hwnd": h} for h in seen],
+               "unowned": list(unowned)}
+        close_outlived_with(rec, 60.11, io.year, io)
+        return rec["outlived"], io
+
+    got, io = glue(Io())
+    ok(not got["stop"] and got["closed_by"] == "BM_CLICK" and io.pressed == ["BM_CLICK"] and "closed by the BM_CLICK"
+       in got["said"] and io.lines and "outlived its job" in io.lines[0],
+       f"the close path: closed by its BM_CLICK, said, the run goes on: {got['said']!r}")
+    got, io = glue(Io(closes_on=("WM_COMMAND",)))
+    ok(not got["stop"] and got["closed_by"] == "WM_COMMAND" and io.pressed == ["BM_CLICK", "WM_COMMAND"]
+       and [c["press"] for c in got["controls"]] == ["BM_CLICK", "WM_COMMAND"],
+       "the close path: the BM_CLICK left it up, the Close control checked again and its WM_COMMAND closed it, said")
+    stops = {"neither press closes it": (Io(closes_on=()), ["BM_CLICK", "WM_COMMAND"]),
+             "the frame disabled after": (Io(enabled_after=False), ["BM_CLICK"]),     # gone, yet the STOP
+             "on 2026": (Io(year_=2026), []), "another window logged": (Io(others=["a SolidWorks window 'X'"]), []),
+             "no Close control": (Io(controls=others_), []),
+             "its Close not a Button": (Io(controls=[dict(close_btn, **{"class": "Static"})]), []),
+             "its Close hidden": (Io(controls=[dict(close_btn, visible=False)]), []),
+             "its Close disabled before the second try": (Io(closes_on=(), disable_on_second=True), ["BM_CLICK"]),
+             "a second box after the first press": (Io(closes_on=(), stray=True), ["BM_CLICK"]),
+             "a window read failing": (Io(raises=True), [])}
+    wrong = []
+    for name, (io_, presses) in stops.items():
+        got, io_ = glue(io_)
+        if not got["stop"] or io_.pressed != presses or (got["closed_by"] and name != "the frame disabled after"):
+            wrong.append((name, got["stop"], io_.pressed))
+    got, io_ = glue(Io(), seen=(9,))
+    if not got["stop"] or io_.pressed:
+        wrong.append(("a box the watch never read", got["stop"], io_.pressed))
+    got, io_ = glue(Io(), unowned=(5,))
+    if not got["stop"] or io_.pressed:
+        wrong.append(("an unowned box in the job", got["stop"], io_.pressed))
+    ok(not wrong, f"the close path: the STOP, and no press past the failing check, where {list(stops)}, a box the "
+                  f"watch never read and an unowned one: {wrong or 'each'}")
     ok(wrote(mates_written=["flags [...]"]) != [] and wrote(ratios_after={"Sun meshes Planet copy 1": (29, 13)}) != [],
        "M3 step 2: a mate or a gear mate's ratio changed is said")
     # Step 2b: the parts' windows closed, RangeBox open, pressed once more.
@@ -1446,6 +1631,7 @@ from gear_generator.swcom import call  # noqa: E402
 from gear_generator.workbook import schema as wb_schema  # noqa: E402
 from gear_generator.workbook import update as wb_update  # noqa: E402
 from gear_generator.workbook.model import Mode  # noqa: E402
+import ctypes  # noqa: E402
 import time  # noqa: E402
 
 say, check = W.say, W.check
@@ -3756,56 +3942,149 @@ def section_w9b_part(out):
 def section_remake_m3(out):
     """``remake-m3`` (by name only; W9C-RUNS-REVIEW.md's 2024 addendum, §5 item 4): remake's M3 alone, ``remake_again``
     on its own copy of setup.master, without remake's first part (its gate is measured on both versions); every press
-    reads the inventory, so head's entity reads run inside an Update there too."""
+    reads the inventory, so head's entity reads run inside an Update there too. Then, on another copy, its second pass
+    (:func:`remake_first_press`), in which the app's press again is the first thing to activate a document after step
+    1 (the coordinator's ruling 5 on b725b32)."""
     remake_again(out.setdefault("again", {}))
+    remake_first_press(out.setdefault("first_press", {}))
+
+
+def remake_first_press(out):
+    """remake-m3's second pass: step 1 as in :func:`remake_again` (Sun 30, Planet 12, Ring 55 -> 54 set straight, so
+    the press stops in the ring and marks it), then the press again at once, with no read of the script's between them
+    that opens or activates a document. In the first pass the script's own read before step 2 activates RangeBox
+    first (06d5141's box came there), so a box in step 2's press, or none, says nothing of a user's press made straight
+    after the stop; here the app's press is the first activation since step 1. Read around it only what activates
+    nothing: every open document's save flag of the copy (``folder_flags`` in a job that opens nothing) and every
+    file's time; the press's traced calls and result. What this pass can show: whether What's Wrong comes in the app's
+    press as the first activation, when, at which call, and whether it goes by itself, outlives the press, or is
+    closed by the run's close path (W9a's What's Wrong record of that job, of kind app); that the press stops again on
+    the ring and says to close it and RangeBox without saving; and that by its traced calls, flags, file times and
+    result it wrote nothing. What it cannot: the parts' and the assembly's globals, the assembly's frames, mates and
+    flags, the gear mates' ratios and the ring's codes are not read in it (each read opens the assembly or a part,
+    and activates it), so the strict wrote-nothing check of step 2 is not made here; the first pass makes it. Steps
+    2b and 3 are not repeated. Every document of the copy is then closed without saving."""
+    stems = GATES["remake"]
+    say("-- remake-m3  the second pass: step 1, then the app's press again as the first thing to activate a document "
+        "after it (no read of the script's between them opens or activates one), on its own copy of setup.master")
+    rb, _, _ = specs()
+    stage = dataclasses.replace(rb, gears=tuple(dataclasses.replace(g, teeth=M3_STAGE[g.id]) if g.id in M3_STAGE else g
+                                                for g in rb.gears))
+    folder, path, book, desk = A.copy_desk(A.user_master(), "remake-first", "RangeBox.xlsx")
+    try:
+        box = desk.record.gearbox
+        ring_part = gear_entry(box, "Ring").part
+        stem = os.path.splitext(os.path.basename(ring_part))[0]
+        ring_file = os.path.basename(ring_part)
+        asm_stem = os.path.splitext(os.path.basename(box.assembly))[0]
+        edit_live(desk, book, row_edits(rb, stage), "Sun 30, Planet 12, Ring 54")
+
+        def marked():
+            return any(store.same_path(p, ring_part) for p in desk.record.unsaved_in_error)
+
+        def note():
+            return desk.note[0] if getattr(desk, "note", None) else ""
+
+        def unactivated_state(when):
+            """Save flags of the copy's open documents, read in a job that opens and activates nothing; file times."""
+            flags = run(f"remake-m3, the second pass: save flags {when}", lambda s: W.folder_flags(s, folder), 300)
+            times = {n: os.path.getmtime(os.path.join(folder, n)) for n in os.listdir(folder)
+                     if n.lower().endswith((".sldprt", ".sldasm"))}
+            return {"flags": flags, "times": times}
+        with patched(stems):
+            desk.plan_solidworks()
+            steps = swbuild.LANDING_STEPS
+            swbuild.LANDING_STEPS = ()
+            say(f"PATCH   swbuild.LANDING_STEPS = () in this process, for the first press only (was {steps})")
+            try:
+                first, _ = press(desk, "remake-m3, the second pass: the first press, set straight")
+            finally:
+                swbuild.LANDING_STEPS = steps
+            done_said(first, "remake-m3, the second pass, first")
+            stopped_in_ring = first is not None and bool(first.failures) and marked() and swbuild.LANDING_STEPS == steps
+            check(stopped_in_ring, f"remake-m3, the second pass: the press set straight stops in {stem} and the record "
+                                   f"marks it ({list(desk.record.unsaved_in_error)}); the patch restored")
+            if not stopped_in_ring:
+                A.section_stop("remake-m3, the second pass: step 1 did not stop in the ring, so the press again is not "
+                               "the case this pass measures")
+            s_before = unactivated_state("before the press again")
+            desk.plan_solidworks()
+            A.WW["last"] = None          # only this press's What's Wrong record is read below (None where none is ruled)
+            second, calls = press(desk, "remake-m3, the second pass: pressed again, the first activation since step 1")
+            done_said(second, "remake-m3, the second pass, pressed again")
+            ww = A.WW.get("last") or {}
+            s_after = unactivated_state("after the press again")
+            text = note()
+            changing = W.nothing_changed_calls(calls) + [c for c in calls if c[0] in ("AddComponent5", "SaveAs3")]
+            summary = {k: list(getattr(second, k, []) or []) for k in ("changed", "mates_made", "remade_in_modes",
+                                                                        "placed", "failures")}
+            summary["skipped"] = getattr(second, "skipped", "") if second else ""
+            stopped = second is not None and stopped_again(summary, ring_file)
+            wrote = wrote_in_press(changing, {}, {}, s_before, s_after, summary) if stopped else ["did not stop again"]
+            came = [(e.get("seconds"), e.get("call_in_progress")) for e in ww.get("seen", [])]
+            gone = [g.get("stayed") for g in ww.get("gone", [])]
+            out.update(status=text, result=summary, stopped_again=stopped, wrote=wrote,
+                       changing_calls=[list(c) for c in changing], flags=[s_before["flags"], s_after["flags"]],
+                       whats_wrong={"job": ww.get("what"), "kind": ww.get("kind"), "came": came, "stayed": gone,
+                                    "up_at_the_end": ww.get("up_at_the_end"), "outlived": ww.get("outlived")})
+            say(f"fact    remake-m3, the second pass: in the app's press again, the first activation since step 1, "
+                f"What's Wrong {'came ' + str(came) + ' (s into the job, the call in progress)' if came else 'did not come'}"
+                + (f"; went by itself after {gone} s" if gone else "")
+                + (f"; outlived the press: {ww['outlived'].get('said')}" if ww.get("outlived") else "")
+                + f"; status {text!r}; result {summary}; calls that change or show {changing or 'none'}")
+            say("fact    remake-m3, the second pass: not read in this pass, since each read opens and activates a "
+                "document: the parts' and the assembly's globals, the assembly's frames, mates and flags, the gear "
+                "mates' ratios, the ring's codes; the strict wrote-nothing check is the first pass's step 2")
+            check(stopped and not wrote and "still open in SolidWorks" in text and "set nothing" in text
+                  and says_close_with_assembly(text, stem, asm_stem) and status_alone(text) and marked(),
+                  f"remake-m3, the second pass: pressed again straight after step 1, it stopped again on {ring_file} "
+                  f"alone and wrote nothing by its traced calls, every save flag and file time, and its result, said "
+                  f"to close {stem} and {asm_stem} without saving, answering No, and the record keeps its mark: "
+                  f"{wrote or 'nothing written'}")
+            left = run("remake-m3, the second pass: every document of the copy closed without saving", W.quit_in(folder))
+            say(f"person  remake-m3, the second pass: closed every document of the copy without saving; left {left}")
+    finally:
+        if not W.HUNG["on"]:
+            A.w8_step(W.end_copy, CTX["worker"], folder, "remake-first")
 
 
 # -- What's Wrong outliving its job, closed where the run asks (the coordinator's ruling of 2026-11-18) ------------------
 
 
 def close_outlived(record, frame, waited):
-    """``A.WW_OUTLIVED`` under WW_CLOSE_FLAG: at a ruled job's end, with a What's Wrong still up WW_ALLOWANCE s after it.
-    Said as having outlived its job; then, where :func:`outlived_close_refused` finds nothing against it, each box is
-    closed with its own Close button (W8's ``press_dont_save`` with WW_CLOSE_BUTTONS: a BM_CLICK, never FeatureXpert or
-    the box's check box) and must be gone within WW_CLOSE_WITHIN s with the frame enabled (:func:`outlived_close_failed`).
-    Sets ``record["outlived"]``; W9a's ``whats_wrong_end`` says it and stops on its ``stop``. Nothing here raises."""
-    what = record["what"]
-    out = {"outlived": True, "waited": waited, "closed_by_script": False, "close_seconds": None, "buttons": [],
-           "stop": "", "said": ""}
-    record["outlived"] = out
-    try:
-        boxes = A.whats_wrong_boxes(frame)
-        enabled = A.frame_enabled(frame)
-        others = [n for n in W.NOTES[A.SEEN["notes"]:] if n.startswith("a SolidWorks window")
-                  and not n.startswith(f"a SolidWorks window {A.WHATS_WRONG!r}")]
-        say(f"fact    {what}: What's Wrong outlived its job: {len(boxes)} still up {waited:.2f} s after it, owned by "
-            f"SolidWorks' frame {[owned for _, owned in boxes]}, the frame enabled {enabled} (the coordinator's ruling "
-            "of 2026-11-18)")
-        why = outlived_close_refused(year(), boxes, [e["hwnd"] for e in record["seen"]], enabled, record["unowned"],
-                                     record.get("blocking"), others)
-        if why:
-            out.update(stop="not closed: " + "; ".join(why), said="not closed by the script: " + "; ".join(why))
-            return
-        pressed = {h: W.press_dont_save(h, WW_CLOSE_BUTTONS) for h, _ in boxes}
-        out["buttons"] = list(pressed.values())
-        began = time.monotonic()
-        left = [h for h, _ in A.whats_wrong_boxes(frame)]
-        while left and time.monotonic() - began < WW_CLOSE_WITHIN:
-            time.sleep(0.25)
-            left = [h for h, _ in A.whats_wrong_boxes(frame)]
-        seconds = round(time.monotonic() - began, 2)
-        after = A.frame_enabled(frame)
-        failed = outlived_close_failed(pressed, left, after, seconds, within=WW_CLOSE_WITHIN)
-        out.update(closed_by_script=not left, close_seconds=seconds, frame_enabled_after=after)
-        if failed:
-            out.update(stop="its Close pressed: " + "; ".join(failed),
-                       said=f"the script pressed its Close {out['buttons']}: " + "; ".join(failed))
-        else:
-            out["said"] = (f"the script pressed its own Close {out['buttons']}, as a person would, and it was gone "
-                           f"{seconds:.2f} s later (allowed {WW_CLOSE_WITHIN:g}), SolidWorks' frame enabled {after}")
-    except Exception as exc:  # noqa: BLE001 - said, and the STOP stands
-        out.update(stop=f"the close path raised {type(exc).__name__}: {exc}",
-                   said=f"the close path raised {type(exc).__name__}: {exc}")
+    """``A.WW_OUTLIVED`` under WW_CLOSE_FLAG: :func:`close_outlived_with` on this SolidWorks' windows. A box's child
+    windows read with their class, visibility, enabled state and id; BM_CLICK posted to its Close control; the second
+    try posts the box the WM_COMMAND (BN_CLICKED, the control's id) its Close control itself sends when clicked."""
+    win32con, win32gui, _ = A._win32()  # noqa: SLF001
+
+    def control_id(h):
+        getter = getattr(win32gui, "GetDlgCtrlID", None)
+        return int(getter(h)) if getter is not None else int(ctypes.windll.user32.GetDlgCtrlID(h))
+
+    def children(box):
+        found = []
+
+        def each(h, _):
+            try:
+                found.append({"hwnd": h, "text": win32gui.GetWindowText(h), "class": win32gui.GetClassName(h),
+                              "visible": bool(win32gui.IsWindowVisible(h)), "enabled": bool(win32gui.IsWindowEnabled(h)),
+                              "id": control_id(h)})
+            except Exception:  # noqa: BLE001 - a child that went away while listed
+                pass
+            return True
+        win32gui.EnumChildWindows(box, each, None)
+        return found
+
+    io = types.SimpleNamespace(
+        boxes=lambda: A.whats_wrong_boxes(frame), enabled=lambda: A.frame_enabled(frame),
+        others=lambda: [n for n in W.NOTES[A.SEEN["notes"]:] if n.startswith("a SolidWorks window")
+                        and not n.startswith(f"a SolidWorks window {A.WHATS_WRONG!r}")],
+        children=children,
+        click=lambda c: win32gui.PostMessage(c["hwnd"], win32con.BM_CLICK, 0, 0),
+        command=lambda box, c: win32gui.PostMessage(box, win32con.WM_COMMAND,
+                                                    (win32con.BN_CLICKED << 16) | (c["id"] & 0xFFFF), c["hwnd"]),
+        clock=time.monotonic, sleep=time.sleep, say=say)
+    close_outlived_with(record, waited, year(), io)
 
 
 def close_outlived_on():
@@ -3838,7 +4117,7 @@ SECTIONS = {"ring": section_ring, "landing": section_landing, "fixed": section_f
             "remake-m3": section_remake_m3}       # remake-m3: by name only
 FOLDERS = {"ring": ["ring"], "landing": ["landing"], "fixed": ["fixed-updated", "fixed-updated" + W.MASTER_SUFFIX], "modes": ["modes"],
            "remove": ["remove-reducer", "remove-setup"], "remake": ["remake", "remake-again"], "bands-off": ["bands-off"],
-           "m4": ["m4"], "w9b-part": ["part"], "remake-m3": ["remake-again"]}
+           "m4": ["m4"], "w9b-part": ["part"], "remake-m3": ["remake-again", "remake-first"]}
 
 
 def done_here(name):
