@@ -91,7 +91,7 @@ self-check, so a change of C's words fails there before a live run. The live sta
 *Your features left in it: User Keyway.* W9a's own check (`w9a_demonstration.py:1580-1587`) allows the inventory to list
 the keyway's sketch too, "when SolidWorks keeps it top-level … either is right". If it does, the app's line is
 *User Keyway Sketch and User Keyway* (or the reverse) and the check fails although the app is right. `userwork` already
-takes the names from the record's inventory; do the same here (the `listed` names in G1's part, line 2172).
+takes the names from the record's inventory; do the same here (the `listed` names in G1's part, line 2180).
 
 ## 3. The userwork section
 
