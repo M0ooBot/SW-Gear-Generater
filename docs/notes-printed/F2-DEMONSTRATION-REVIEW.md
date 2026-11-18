@@ -246,3 +246,42 @@ As the note gives them (§*Command lines*), from a `git archive` snapshot with `
   - Then `--sections gates,form,workbook,refusals`, with `workbook` before `refusals` so the printed 12 : 1 is built once.
 
   About 14 + 32 minutes.
+
+
+## 9. Re-check of the round before the run (2e5f7f5, b3fe4a1; 888035a, 567773c, 5e45718)
+
+Read at `b3fe4a1`. Nothing here should stop the run on SolidWorks 2026.
+
+**The script.**
+
+- **M1 is fixed at its cause.** G1's expected features (and Coupon_R's, and RangeBox's in `userwork`) are now the
+  top-level features named *User…* that the script reads itself, without activation, which is what the job reads live.
+  The keyway's sketch is therefore expected exactly when SolidWorks keeps it top-level.
+- **Each should-fix is taken, and no check is looser.**
+  - The list judge is stricter: a features line is now required to be absent where none is expected.
+  - The DeskP guard now reads DeskP, Desk9 and W8's Desk from their sources, and is shown to fail without DeskP's body.
+  - `window_press` clears the note and the said lines before each press.
+  - Coupon_R is put back by the form's own Update values (`_finish_single` loads the record, so it is offered), then
+    saved and written into a folder of its own.
+  - `userwork` presses once after Printed is typed: CHANGES_ON_UPDATE naming the five parts, planning only.
+  - The herringbone gets a verdict, as a NOTE and in the JSON.
+  - `resolved_judged` requires the assembly's own components (the gears' Name2s and the layout), and fails on none
+    read.
+  - A clean write of G1 open behind the user's part is added (SaveAs ×4, nothing activated).
+  - Its self-check covers the machined and ring lists, the herringbone verdict and the components judge.
+- **Self-check: 35 checks, 0 failed.**
+
+**The app.**
+
+- **`live_features` (B).** It carries exactly the names `_user_features` already gave the size check, one entry per part
+  holding any, through `with_list`. C names them for a written part, and falls back to the record's list for a part
+  the job stopped before writing. True in both states.
+- **NOT_A_PART names the active assembly (C).** The form now passes whatever is active and reads a record only for a
+  part.
+- **LIGHTWEIGHT's new words are true of all three cases B folds into it**: a lightweight or suppressed component, or a
+  part simply closed while an assembly is open. Pinned with the plural and no-assembly forms.
+- **The only test lines removed** are the two old LIGHTWEIGHT pins, replaced for that rewording, and one stand-in result
+  given its `live_features`.
+- **Nothing else in `src` moved** (gui 7, printout 6, swbuild 5, ui_text 31 lines).
+- **Targeted tests:** `test_printout`, `test_swbuild_print`, `test_ui_text`, `test_print_form`, `test_print_window`,
+  `test_printed_rule` and `test_findings`: 1193 passed.
