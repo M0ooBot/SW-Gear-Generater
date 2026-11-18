@@ -1247,3 +1247,67 @@ save flags, the vertex-extent check, the failed-set folder, the list's span for 
 wording, the `swcom.py:900-925` citation, the button's place and ellipsis, the cost, and §3.2's items in section 4.
 
 **Ready for F2-0 once M1 to M5 are in the plan or ruled.** None needs the user; M3 and step 8 need the coordinator.
+
+---
+
+# Re-check of the revision to F2's review (2026-11-18)
+
+**Read at `a20108b`** (`docs/PLAN-PRINTED.md` §3 and *Changes after F2's review*), against the code at `dce5aff`. Small
+scratch computations only; nothing run on SolidWorks, Excel or the suite.
+
+## 1. The five must-fixes
+
+- **M1, fixed at its cause.** §3.0 now gives `r_c = √(r_b² + (W_n cos β_b / 2)²)` with its derivation, and
+  `Span.contact_d` becomes `SpanReading.contact_d = 2 r_c`. The three helical rows agree with my recomputation: β 15°
+  k 3, W_n 15.0972, W_t 15.5645, r_c 20.713; β 20° k 4, 15.8438, 16.7315, 20.062; β 30° (new) k 4, 21.2255, 24.0448,
+  23.260; the faces needed (`W_n sin β_b + 3`) 6.67, 8.09 and 12.97 mm, β_b 14.076°, 18.747°, 28.024°. Each k is the
+  textbook one. **Should-fix:** the table gives no face width, and the β 30° gear at the default face of 10 mm is
+  under its 12.97, so its test would read *narrow face*, not the figure. Give that row a face (14 mm, say).
+- **M2, fixed.** No schema or unit is pinned; the check accepts AP203, AP214 and AP242 and any unit it can read, counts
+  instances, and refuses a surface model; `STEP_FILE_CHECK` is withdrawn. Two should-fixes: match the schema by its
+  name's prefix (SolidWorks writes the name followed by `{ 1 0 10303 … }`, and AP203's second edition is
+  `AP203_CONFIGURATION_CONTROLLED_3D_DESIGN…`, not `CONFIG_CONTROL_DESIGN`; step 3 will show which); and the
+  vertex-extent check should not refuse a part that holds the user's own features (a boss of theirs can pass the
+  tip circle): there it is a fact in the list, not a refusal.
+- **M3, fixed by the ruling.** A new folder per press, by date and time with a counter, `print list.txt` inside it,
+  `_r2` left to revisions, and a failed set's list headed *DO NOT PRINT THIS SET*. Nothing can be overwritten.
+- **M4, fixed.** B returns codes and structure, C's `ui_text` owns every sentence and the list's text, the interface
+  note gives each code's sentence once, and B checks the gate in planning and in the job. Disjoint as before, with
+  F2-0's stubs in `ui_text.py` added to its files.
+- **M5, fixed.** Probe step 7 exports a part open only as an assembly component, with a measured fallback, and two
+  findings gate them; the job says how each part is reached, reads everything before any export, closes only what it
+  opened (never an assembly) and puts the active document back. The citations hold (`active_document` `swcom.py:1131`,
+  `save_flags` `:3837`, `_squash` `swbuild.py:1414`, `_value_edits` `:5424`). Two should-fixes:
+  `GetOpenDocumentByName` is *Unverified* in the ledger (`API-LEDGER.md:94`) and new to this app, so the note should
+  say step 7 is its first use; and a **lightweight** component is not covered: the 12 : 1 fixture has been opened
+  lightweight in W9a's runs. Say that a part whose component is lightweight is treated as not reachable (fallback or
+  refusal), and have step 7 or the demonstration show it.
+
+## 2. The arcs ruling
+
+**Sound.** No figure and *choose Involute to measure* is the least misleading of the three choices, the coupons are
+Involute, the list says the same, and `span(derived, recipe)` carries the recipe. It covers helical arcs gears too.
+
+## 3. Dropping the part-in-error step
+
+**Safe and true, as written.** The app refuses a part with a feature in error in the job, on the form and in the
+window, after all reads and before any export (§3.1.3), so it never makes the export the step measured, and the
+caveat says exactly that. One should-fix: say whether a feature whose `GetErrorCode2` is non-zero with `IsWarning`
+True refuses. Refusing a warning would block a user's part that SolidWorks itself builds; I would refuse errors and
+name warnings in the list. (Opening a part in error on 2024 can show a What's Wrong box, as W9's Update meets
+already; that is not new to F2.)
+
+## 4. The user's instructions
+
+All my points are in: where the files are, the import precision, the seam, zeroing and light force, the tilt on a
+helical gear, the mean of twelve with re-takes, both faces for the shaft, the coupon-range gaps and the D-flat
+caveat, the optional second size, the record of what was printed, the floor, `cos α_n`, and the breakpoint put
+plainly as the user's choice. One wording gap: a user whose shaft is over 18 mm prints all four at module 2, z 30,
+so their optional Coupon_E should then be the other size (module 1.5, z 20), or it measures nothing new.
+
+## 5. Readiness
+
+**F2-0 may start.** M1 to M5 are fixed at their causes; what is left are the should-fixes above (the β 30° row's face,
+the schema prefix, the extent check beside user features, `GetOpenDocumentByName` as unverified, lightweight
+components, warnings against errors, Coupon_E for large shafts), each of which fits in F2-0's interface note or its
+probe without changing the plan's structure.
