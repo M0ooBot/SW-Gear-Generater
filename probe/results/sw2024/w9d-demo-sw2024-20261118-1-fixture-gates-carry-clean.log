@@ -1,0 +1,1586 @@
+awake   display and system held awake for the run (previous state -0x80000000)
+run     2026-11-18 06:07:38; W9d demonstration from C:\Users\M0obo\Documents\GearGeneratorProbe\w9d-demo-sw2024-20261118-060436\snap\src (snapshot: 5aca9c1); sections ['fixture', 'carry-gates', 'carry']; masters {'rangebox': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9-s0-sw2024-20261116-064725\\out\\rangebox.master', 'setup': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9a-confirm-sw2024-20261117-002313\\out\\setup.master', 'reducer': ''}; redo False
+ok      the app's settings and Recent list go into this run's folder, not the user's: C:\Users\M0obo\Documents\GearGeneratorProbe\w9d-demo-sw2024-20261118-060436\out\appdata\Gear Generator\recent.json
+attach  SolidWorks 2024 (revision 32.5.0) (revision 32.5.0), PID 52508; SolidWorks 0.64 GB private, 9.43 GB free
+open    before: []
+findings USER_MATE_PUT_ROUTE "put along, the user's locks left on", USER_TIE_RULE 'not COMPONENT_UNDER_DEFINED', WHATS_WRONG_OPENS_ON_PART_REBUILD False, the branches {'USER_MATE_PUT_FIXED_GEAR_ON_2024': None, 'USER_MATE_PUT_FIXED_GEAR_ON_2026': None, 'USER_MATE_PUT_HELD_GEAR_ON_2024': None, 'USER_MATE_PUT_HELD_GEAR_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2024': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_ON_2024': True, 'USER_MATE_PUT_NO_CARRIER_ON_2026': True, 'USER_MATE_PUT_SUBASSEMBLY_ON_2024': None, 'USER_MATE_PUT_SUBASSEMBLY_ON_2026': None}
+rule    What's Wrong: swbuild.whats_wrong_shows_in_update reads True; a What's Wrong box owned by SolidWorks' frame during any job the script waits on is logged as a fact (under an app Update or Build, as the app's Update shows it; under the script's own steps and W8's helpers, as SolidWorks shows it when a person does this), the job waited for, and at its end the box must go within 60 s and the frame be enabled (else a STOP)
+rule    --close-outlived-whats-wrong: a What's Wrong owned by SolidWorks' frame, the frame enabled, still up 60 s after a job is said to have outlived it and closed with its own Close button, to be gone within 10 s; anything else stays the STOP (the coordinator's ruling of 2026-11-18, SolidWorks 2024 only): in force here
+excel   started our own Excel, PID 8320, 16.0 build 20527.0
+== fixture  W9a's setup.master with §15's additions (W9D-INTERFACES §15): two clusters on feature mates, face mates, a face of Sun, a gear mate on Sun's Gear Axis, on a root cylinder and on a root fillet, a parallel and a limit distance, a component suppressed in L and one in H, a file of its own to be set lightweight, one in a second configuration, the tie, a mate to the assembly's own Front plane; saved with H showing; a quiet press records the inventory; kept as w9d-fixture.master
+ok      fixture: Chain.SLDPRT built and saved by the strip: []
+ok      fixture: SprocketLight.SLDPRT built and saved by the strip: []
+ok      fixture: SprocketConf.SLDPRT built and saved by the strip: []
+ok      fixture: the extra parts closed: left []
+copy    setup.master -> w9d-fixture: 17 files, mtimes kept
+        RangeBox.xlsx's record: 21 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.carriers[0].path', 'record.gearbox.user_work.assembly', 'record.gearbox.user_work.features[0].path', 'record.gearbox.user_work.features[1].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      w9d-fixture: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+probe   W6-PLAN §7.1: RangeBox.SLDASM of w9d-fixture, whose stored references name a folder that is gone, opened under the dialog watch (120 s at most)
+DIALOG  SolidWorks shows '': ['Close', 'Opened 15\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 2 seconds', 'For more information, view: ']
+fact    w9d-fixture: the copy's assembly opened in 3.4 s; marked modified straight after the open: {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'Sprocket.SLDPRT': False, 'Housing.SLDPRT': False, 'RangeBox.SLDASM': False}
+fact    W6-PLAN §7.1: dialogs while the copied assembly opened: none
+ok      w9d-fixture: SolidWorks found all 9 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side. This workbook's Gears sheet has no Start band (mm) and End band (mm) columns, which give a sleeve toothed bands with a relief between them: type both headers on row 1 of the Gears sheet (after Slides, as a new workbook has them) and save.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      w9d-fixture: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+ok      fixture: the copy's workbook holds the fixture's Gears, Meshes and Modes rows (as the app reads them)
+fact    fixture: SprocketConf.SLDPRT's configurations ['Default'] -> ['Default', 'Z20'], showing Default
+person  saved in SolidWorks (SprocketConf's second configuration): ['SprocketConf.SLDPRT']
+DIALOG  SolidWorks shows 'Opening': ['Close', 'Opening Component 2 of 15', 'Update\nAssembly', 'Update\nGraphics', 'Opening File: C:\\Use...-fixture\\Gear_m1.25_N13.SLDPRT', 'Elapsed time: 0s', 'This file was last opened in 2 seconds', 'For more information, view: '] (a progress box that closes itself; not logged again)
+fact    fixture: inserted {'c1': 'Chain-1', 'c2': 'Chain-2', 'h2': 'Housing-2', 's5': 'Sprocket-5', 's6': 'Sprocket-6', 's7': 'Sprocket-7', 's8': 'Sprocket-8', 's9': 'Sprocket-9', 's10': 'Sprocket-10', 's11': 'Sprocket-11', 'lt': 'SprocketLight-1', 'cf': 'SprocketConf-1'}; Sun's cylinders: coaxial radii [16.375, 19.375], off-axis [0.475, 1.5]; end faces (z, part) {'c1': [0.0, 6.0], 'c2': [0.0, 6.0], 's5': [0.0, 6.0], 'sun': [0.0, 10.0]}
+        UserChainAxis: made, status 1
+        UserChainDist: made, status 1
+        UserFaceConc: made, status 1
+        UserFaceCoin: made, status 1
+        UserHousingRight: made, status 1
+        UserHousingDist: made, status 1
+        UserHousingPar: made, status 1
+        UserAxis5: made, status 1
+        UserSunFace: made, status 1
+        UserAxis6: made, status 1
+        UserGear6: made, status 1
+        UserAsm6: made, status 1
+        UserAxis7: made, status 1
+        UserLock8a: made, status 1
+        UserAngle8b: made, status 1
+        UserAxis9: made, status 1
+        UserAxis10: made, status 1
+        UserGearRoot: made, status 1
+        UserAxis11: made, status 1
+        UserGearFillet: made, status 1
+        UserLimit10: made, status 1
+        UserAxisLight: made, status 1
+        UserAxisConf: made, status 1
+ok      fixture: every mate made: not made none (an item not made is not shown)
+fact    swconst.tlb beside the running sldworks.exe; read ['swComponentSuppressionState_e', 'swConstrainedStatus_e', 'swDeleteSelectionOptions_e', 'swDocumentTypes_e', 'swInConfigurationOpts_e', 'swMateAlign_e', 'swMateType_e', 'swMateWidthOptions_e', 'swOpenDocOptions_e', 'swSelectType_e']; the positive control (mate types findings.py holds) agrees
+fact    swConstrainedStatus_e as swconst.tlb gives it: {1: 'swUnknownConstraint', 2: 'swUnderConstrained', 3: 'swFullyConstrained', 4: 'swOverConstrained', 5: 'swNoSolution', 6: 'swInvalidSolution', 7: 'swAutosolveOff'}
+fact    fixture: the tie's angle between Sprocket-8's and Housing-1's ('plane2', 'plane3') (both at 90° across Sun's axis as they stand); Sun reads constrained status 3 (swFullyConstrained)
+ok      fixture: every mate on in H reads code 0 and Sun cannot turn (the tie): none
+ok      fixture: Sprocket-7 suppressed in L alone, Sprocket-9 in H alone, H showing: {'s7': {'L'}, 's9': {'H'}}, H
+ok      fixture: SprocketConf-1 references Z20 in every mode (the put: {'H': 'put', 'N': 'put', 'L': 'put'}): {'H': 'Z20', 'N': 'Z20', 'L': 'Z20'}
+fact    fixture: interferences with the user's components (facts): []
+person  saved in SolidWorks (the fixture): ['RangeBox.SLDASM']
+ok      fixture: closed after the save: left []
+-- fixture  a quiet press reads the inventory (W9d's entity kinds in it); it may refuse over the tie (K2), which records the inventory as read all the same
+ok      fixture: a quiet press: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.81 GB private, 9.25 GB free
+        in 457.9 s; SolidWorks 6.41 GB private, 8.96 GB free; loaded from disk ['Gear_m1.25_N29.SLDPRT', 'Gear_m1.25_N13.SLDPRT', 'Ring_m1.25_N55.SLDPRT', 'Dog_m1.25_N17.SLDPRT', 'Sleeve_m1.25_N17.SLDPRT', 'RangeBox_Layout.SLDPRT', 'RangeBox_Carrier_Carrier.SLDPRT', 'RangeBox.SLDASM']
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] SolidWorks already matches the workbook: nothing was changed. It worked in H, the configuration that was active; it did not show the other modes, since nothing in H needed changing.
+fact    fixture: a quiet press: the press took 457.9 s; SolidWorks calls by member {'OpenDoc6': 9, 'IsSuppressed2': 204, 'GetSystemValue3': 1}
+        shows and puts in order: []
+        configuration 'H'; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures []
+fact    fixture: a quiet press: the press took 458 s
+fact    fixture: the quiet press went through; problems on record []
+ok      fixture: the record's inventory holds every component and mate, each mate's entities: missing [], []
+        w9d-fixture, the builder's end: SolidWorks 2024, this run's modified documents saved before the close: []
+ok      w9d-fixture, the builder's end: w9d-fixture ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox.xlsx']), no open document by a file name it holds ([])
+master  w9d-fixture renamed w9d-fixture.master: it stays so for the rest of the run
+ok      fixture: kept as w9d-fixture.master: C:\Users\M0obo\Documents\GearGeneratorProbe\w9d-demo-sw2024-20261118-060436\out\w9d-fixture.master
+time    fixture: 846 s; 0 failed; SolidWorks 1.77 GB private, 9.23 GB free
+== carry-gates  every W9d write gate as it stands: the question says W9a's clause led by its finding, the press builds RangeBox_r2 as today and carries nothing, names everything, writes nothing to the old assembly or a user file; then each gate's own refusal by plan_carry on the read the press made
+findings {'CARRY_INSERTS_ON_2024': None, 'CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024': None, 'REFERENCED_CONFIGURATION_READ_ON_2024': None, 'CARRY_REMAKE_KINDS_ON_2024': None, 'CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024': None}; probe reads {'faces': True, 'coaxial': True, 'states': True, 'unsaved': True, 'reload': True, 'closed_read': True}
+copy    w9d-fixture.master -> carry-gates: 21 files, mtimes kept
+        RangeBox.xlsx's record: 21 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.carriers[0].path', 'record.gearbox.user_work.assembly', 'record.gearbox.user_work.features[0].path', 'record.gearbox.user_work.features[1].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      carry-gates: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+fact    carry-gates: the copy's assembly opened in 3.6 s; marked modified straight after the open: {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'Sprocket.SLDPRT': False, 'Housing.SLDPRT': False, 'Chain.SLDPRT': False, 'SprocketLight.SLDPRT': False, 'SprocketConf.SLDPRT': False, 'RangeBox.SLDASM': False}
+ok      carry-gates: SolidWorks found all 9 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side. This workbook's Gears sheet has no Start band (mm) and End band (mm) columns, which give a sleeve toothed bands with a relief between them: type both headers on row 1 of the Gears sheet (after Slides, as a new workbook has them) and save.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      carry-gates: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+ok      carry-gates: the copy's workbook holds the fixture's Gears, Meshes and Modes rows (as the app reads them)
+edit    carry-gates: Sun's Flank to arcs, a shaft Aux added: [('Shafts', 'A7', 'Aux'), ('Shafts', 'B7', 'frame'), ('Shafts', 'C7', 80), ('Shafts', 'D7', 0), ('Shafts', 'E7', 0), ('Shafts', 'F7', 'Z+'), ('Gears', 'K2', 'arcs'), ('Gears', 'A8', 'Aux'), ('Gears', 'B8', 'Aux'), ('Gears', 'C8', 10.5), ('Gears', 'D8', 'spur'), ('Gears', 'F8', 20), ('Gears', 'G8', 1.25), ('Gears', 'I8', 6)]
+excel   Shafts!A7 := 'Aux'
+excel   Shafts!B7 := 'frame'
+excel   Shafts!C7 := 80
+excel   Shafts!D7 := 0
+excel   Shafts!E7 := 0
+excel   Shafts!F7 := 'Z+'
+excel   Gears!K2 := 'arcs'
+excel   Gears!A8 := 'Aux'
+excel   Gears!B8 := 'Aux'
+excel   Gears!C8 := 10.5
+excel   Gears!D8 := 'spur'
+excel   Gears!F8 := 20
+excel   Gears!G8 := 1.25
+excel   Gears!I8 := 6
+excel   saved RangeBox.xlsx
+poll    a new read 0.0 s after asking; changes:
+          shaft Aux added (Shafts row 7)
+          Gears!K2 Sun Flank blank → arcs
+          gear Aux added (Gears row 8)
+ok      read RangeBox.xlsx: ok
+        warning Gears!K2: Sun: Arcs stand in for the involute on this gear to within 34.7 µm.
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side. This workbook's Gears sheet has no Start band (mm) and End band (mm) columns, which give a sleeve toothed bands with a relief between them: type both headers on row 1 of the Gears sheet (after Slides, as a new workbook has them) and save.
+        6 shafts · 7 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.25_N29.SLDPRT']; moved []; re-place []; structural ['Aux is new on Aux, which is new too, and Update SolidWorks adds a gear only on a shaft the layout part has, so the gearbox needs building again.', 'Shaft Aux is new, and the layout part has no axis for it.', 'Gear_m1.25_N29 (Sun): Flank changed from involute to arcs, which its values cannot carry; build it again as a new part.']; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['Aux X = 80']
+summary Aux is new on Aux, which is new too, and Update SolidWorks adds a gear only on a shaft the layout part has, so the gearbox needs building again (and 2 other changes Update SolidWorks cannot carry). Update SolidWorks offers to build again as a new revision.
+ok      carry-gates: classify sends it to Build again… as RangeBox_r2, for Sun's Flank and the shaft Aux: ['Aux is new on Aux, which is new too, and Update SolidWorks adds a gear only on a shaft the layout part has, so the gearbox needs building again.', 'Shaft Aux is new, and the layout part has no axis for it.', 'Gear_m1.25_N29 (Sun): Flank changed from involute to arcs, which its values cannot carry; build it again as a new part.']
+question Aux is new on Aux, which is new too, and Update SolidWorks adds a gear only on a shaft the layout part has, so the gearbox needs building again. Shaft Aux is new, and the layout part has no axis for it. Gear_m1.25_N29 (Sun): Flank changed from involute to arcs, which its values cannot carry, so it needs a new part. Build again as RangeBox_r2? That makes new parts for Sun (Gear_m1.25_N29_r2) and Aux (Gear_m1.25_N20), reuses 4 parts that have not changed and makes a new layout part, carrier part and assembly (RangeBox_r2_Layout, RangeBox_r2_Carrier_Carrier and RangeBox_r2.SLDASM). Nothing is overwritten, and RangeBox.SLDASM stays as it is on disk, but it shares the 4 reused parts: a later Update SolidWorks that changes one of them changes RangeBox.SLDASM too. Gear Generator has not yet been shown to carry your work into a new revision on SolidWorks 2024 (findings.CARRY_INSERTS_ON_2024), so as read at 06:16, your Sprocket-7, Sprocket-8, Housing-1, 14 other components and 31 mates stay in RangeBox.SLDASM, and your User Keyway Sketch and User Keyway stay in Gear_m1.25_N29, which Sun's new part replaces; RangeBox_r2 has none of them, nor anything added since.
+ok      carry-gates: the question leads W9a's clause with ['CARRY_INSERTS_ON_2024'] and names the Keyway
+footer  (carry-gates, before the build) [green] Aux is new on Aux, which is new too, and Update SolidWorks adds a gear only on a shaft the layout part has, so the gearbox needs building again (and 2 other changes Update SolidWorks cannot carry). Update SolidWorks offers to build again as RangeBox_r2. It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. Carrier (the carrier) is axes and planes only, so it has nothing to drag.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      carry-gates: the footer offers Build again… ('Build again…', enabled True)
+read    carry-gates: the old assembly before: H showing; mates in error none; marked none; rebuild state 0; states {'Sprocket-1': 2, 'Sprocket-2': 2, 'Sprocket-3': 2, 'Sprocket-4': 2, 'Housing-1': 2, 'Chain-1': 2, 'Chain-2': 2, 'Housing-2': 2, 'Sprocket-5': 2, 'Sprocket-6': 2, 'Sprocket-7': 2, 'Sprocket-8': 2, 'Sprocket-9': 0, 'Sprocket-10': 2, 'Sprocket-11': 2, 'SprocketLight-1': 2, 'SprocketConf-1': 2}
+fact    component_configurations('old1',) -> ('', 'Default', ('Default',)) in 0.032 s
+fact    component_configurations('old2',) -> ('', 'Default', ('Default',)) in 0.027 s
+fact    component_configurations('old3',) -> ('', 'Default', ('Default',)) in 0.027 s
+fact    component_configurations('old4',) -> ('', 'Default', ('Default',)) in 0.041 s
+fact    component_configurations('old5',) -> ('', 'Default', ('Default',)) in 0.03 s
+fact    component_configurations('old6',) -> ('', 'Default', ('Default',)) in 0.025 s
+fact    component_configurations('old7',) -> ('', 'Default', ('Default',)) in 0.024 s
+fact    component_configurations('old8',) -> ('', 'Default', ('Default',)) in 0.028 s
+fact    component_configurations('old9',) -> ('', 'Default', ('Default',)) in 0.028 s
+fact    component_configurations('old10',) -> ('', 'Default', ('Default',)) in 0.025 s
+fact    component_configurations('old11',) -> ('', 'Default', ('Default',)) in 0.027 s
+fact    component_configurations('old12',) -> ('', 'Default', ('Default',)) in 0.025 s
+fact    component_configurations('old13',) -> ('', 'Default', ('Default',)) in 0.036 s
+fact    component_configurations('old14',) -> ('', 'Default', ('Default',)) in 0.031 s
+fact    component_configurations('old15',) -> ('', 'Default', ('Default',)) in 0.028 s
+fact    component_configurations('old16',) -> ('', '', ('Default',)) in 0.021 s
+fact    component_configurations('old17',) -> ('', 'Default', ('Default', 'Z20')) in 0.025 s
+fact    component_states_in(['Sprocket-1', 'Sprocket-3', 'Sprocket-2', 'Sprocket-4', 'Housing-2', 'SprocketLight-1', 'Housing-1', 'Sprocket-5', 'Sprocket-6', 'Sprocket-8', 'Chain-2', 'Sprocket-7', 'Sprocket-10', 'Chain-1', 'Sprocket-11', 'Sprocket-9', 'SprocketConf-1'], ['H', 'N', 'L']) -> {'Sprocket-1': {'H': False, 'N': False, 'L': False}, 'Sprocket-3': {'H': False, 'N': False, 'L': False}, 'Sprocket-2': {'H': False, 'N': False, 'L': False}, 'Sprocket-4': {'H': False, 'N': False, 'L': False}, 'Housing-2': {'H': False, 'N': False, 'L': False}, 'SprocketLight-1': {'H': False, 'N': False, 'L': False}, 'Housing-1': {'H': False, 'N': False, 'L': False}, 'Sprocket-5': {'H': False, 'N': False, 'L': False}, 'Sprocket-6': {'H': False, 'N': False, 'L': False}, 'Sprocket-8': {'H': False, 'N': False, 'L': False}, 'Chain-2': {'H': False, 'N': False, 'L': False}, 'Sprocket-7': {'H': False, 'N': False, 'L': True}, 'Sprocket-10': {'H': False, 'N': False, 'L': False}, 'Chain-1': {'H': False, 'N': False, 'L': False}, 'Sprocket-11': {'H': False, 'N': False, 'L': False}, 'Sprocket-9': {'H': True, 'N': False, 'L': False}, 'SprocketConf-1': {'H': False, 'N': False, 'L': False}} in 0.134 s
+fact    entity_reference('oldmate1', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 3.7 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate2', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 3.679 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate6', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 3.835 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate7', 0) -> ('plane', '6842000001000000fffeff000000000002000000', None, '') in 4.207 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate7', 1) -> ('plane', '6842000001000000fffeff000000000002000000', None, '') in 4.235 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate8', 0) -> ('plane', '6842000001000000fffeff000000000003000000', None, '') in 4.201 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate9', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 3.766 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate10', 0) -> ('plane', '6842000001000000fffeff000000000002000000', None, '') in 4.312 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate10', 1) -> ('plane', '6842000001000000fffeff000000000002000000', None, '') in 4.963 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate13', 1) -> ('plane', '6842000001000000fffeff000000000004000000', None, '') in 4.674 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate14', 0) -> ('plane', '6842000001000000fffeff000000000002000000', None, '') in 4.472 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate15', 1) -> ('plane', '6842000001000000fffeff000000000003000000', None, '') in 4.333 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate16', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 3.96 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate18', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 3.9 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate19', 0) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 3.993 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate20', 0) -> ('plane', '6842000001000000fffeff000000000002000000', None, '') in 4.48 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate21', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 4.069 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate23', 0) -> ('plane', '6842000001000000fffeff000000000003000000', None, '') in 4.587 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate23', 1) -> ('plane', '6842000001000000fffeff000000000004000000', None, '') in 4.727 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate25', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 4.352 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate26', 0) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 4.213 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate27', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 4.917 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate28', 0) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 4.748 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate29', 0) -> ('plane', '6842000001000000fffeff000000000002000000', None, '') in 5.353 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate29', 1) -> ('plane', '6842000001000000fffeff000000000002000000', None, '') in 6.5 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate30', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 5.697 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate31', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 5.591 s; calls {'GetPersistReference3': 1}
+        build   Part4 · spur · recipe B · trig degrees
+        ok      new part Part4
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      circle pitch
+        ok      circle base
+        ok      circle cap
+        ok      line CL
+        ok      line A
+        ok      arc E+
+        ok      arc E-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      coincident pitch.centre origin
+        ok      coincident base.centre origin
+        ok      coincident cap.centre origin
+        ok      coincident R.centre origin
+        ok      coincident CL.start origin
+        ok      horizontal CL
+        ok      coincident CL.end cap
+        ok      coincident A.start origin
+        ok      coincident A.end pitch
+        ok      coincident E+.centre base
+        ok      coincident A.end E+
+        ok      coincident E+.end cap
+        ok      symmetric E+.centre E-.centre CL
+        ok      equal E+ E-
+        ok      coincident E-.start cap
+        ok      coincident F+.start E+.start (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      tangent F+ E+
+        ok      tangent F+ R
+        ok      coincident F-.end E-.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F- E-
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start E+.end (already one point)
+        ok      coincident T.end E-.start (already one point)
+        ok      dimension Pitch
+        ok      dimension Base
+        ok      dimension Cap
+        ok      dimension HalfSpace
+        ok      dimension Flank
+        ok      dimension Fillet
+        ok      dimension Root
+        ok      sketch Tooth Space Sketch
+        ok      link "Pitch@Tooth Space Sketch"
+        ok      link "Base@Tooth Space Sketch"
+        ok      link "Cap@Tooth Space Sketch"
+        ok      link "HalfSpace@Tooth Space Sketch"
+        ok      link "Flank@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      link "Root@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 29
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.25_N29_r2; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9d-demo-sw2024-20261118-060436\out\carry-gates\Gear_m1.25_N29_r2.SLDPRT
+        build   Part5 · spur · recipe A · trig degrees
+        ok      new part Part5
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.25_N20; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9d-demo-sw2024-20261118-060436\out\carry-gates\Gear_m1.25_N20.SLDPRT
+        ok      checked Gear_m1.25_N13.SLDPRT: it holds what the workbook asks, so it is reused
+        ok      checked Ring_m1.25_N55.SLDPRT: it holds what the workbook asks, so it is reused
+        ok      checked Dog_m1.25_N17.SLDPRT: it holds what the workbook asks, so it is reused
+        ok      checked Sleeve_m1.25_N17.SLDPRT: it holds what the workbook asks, so it is reused
+        build   Part6 · layout · recipe  · trig degrees
+        ok      new part Part6
+        ok      trig units measured: degrees
+        ok      global "Aux X"
+        ok      axis Input Axis
+        ok      axis Carrier Axis
+        ok      axis Ring Axis
+        ok      axis Output Axis
+        ok      plane Aux X Plane
+        ok      link "Offset@Aux X Plane"
+        ok      axis Aux Axis
+        ok      1 globals read back and match the maths
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9d-demo-sw2024-20261118-060436\out\carry-gates\RangeBox_r2_Layout.SLDPRT
+        build   Part7 · carrier · recipe  · trig degrees
+        ok      new part Part7
+        ok      trig units measured: degrees
+        ok      global "Planet copy 1 X"
+        ok      global "Planet copy 2 X"
+        ok      global "Planet copy 2 Y"
+        ok      global "Planet copy 3 X"
+        ok      global "Planet copy 3 Y"
+        ok      axis Carrier Axis
+        ok      plane Planet copy 1 X Plane
+        ok      link "Offset@Planet copy 1 X Plane"
+        ok      axis Planet copy 1 Axis
+        ok      plane Planet copy 2 X Plane
+        ok      link "Offset@Planet copy 2 X Plane"
+        ok      plane Planet copy 2 Y Plane
+        ok      link "Offset@Planet copy 2 Y Plane"
+        ok      axis Planet copy 2 Axis
+        ok      plane Planet copy 3 X Plane
+        ok      link "Offset@Planet copy 3 X Plane"
+        ok      plane Planet copy 3 Y Plane
+        ok      link "Offset@Planet copy 3 Y Plane"
+        ok      axis Planet copy 3 Axis
+        ok      5 globals read back and match the maths
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9d-demo-sw2024-20261118-060436\out\carry-gates\RangeBox_r2_Carrier_Carrier.SLDPRT
+        build   Assem1 · assembly · recipe  · trig degrees
+        ok      new assembly Assem1
+        ok      trig units measured: degrees
+        ok      global "Sun Face Z"
+        ok      global "Planet Face Z"
+        ok      global "Aux Face Z"
+        ok      component RangeBox_r2_Layout-1
+        ok      placed layout
+        ok      fixed layout
+        ok      component RangeBox_r2_Carrier_Carrier-1
+        ok      placed carrier1
+        ok      fixed carrier1
+        ok      component Gear_m1.25_N29_r2-1
+        ok      placed gear1
+        ok      fixed gear1
+        ok      component Gear_m1.25_N13-1
+        ok      placed gear2c1
+        ok      fixed gear2c1
+        ok      component Gear_m1.25_N13-2
+        ok      placed gear2c2
+        ok      fixed gear2c2
+        ok      component Gear_m1.25_N13-3
+        ok      placed gear2c3
+        ok      fixed gear2c3
+        ok      component Ring_m1.25_N55-1
+        ok      placed gear3
+        ok      fixed gear3
+        ok      component Dog_m1.25_N17-1
+        ok      placed gear4
+        ok      fixed gear4
+        ok      component Dog_m1.25_N17-2
+        ok      placed gear5
+        ok      fixed gear5
+        ok      component Sleeve_m1.25_N17-1
+        ok      placed gear6
+        ok      fixed gear6
+        ok      component Gear_m1.25_N20-1
+        ok      placed gear7
+        ok      fixed gear7
+        ok      unfixed gear1
+        ok      mate coincident gear1:Gear Axis ~ layout:Input Axis as Sun on Input Axis
+        ok      mate point distance gear1:origin ~ layout:plane1 as Sun along Input
+        ok      link "D1@Sun along Input"
+        ok      unfixed gear4
+        ok      mate lock gear1 ~ gear4 as HighDog locked to Sun
+        ok      unfixed carrier1
+        ok      mate coincident carrier1:Carrier Axis ~ layout:Carrier Axis as Carrier carrier on Carrier Axis
+        ok      mate point carrier1:origin ~ layout:plane1 as Carrier carrier along Carrier
+        ok      unfixed gear5
+        ok      mate lock carrier1 ~ gear5 as LowDog locked to Carrier carrier
+        ok      unfixed gear2c1
+        ok      mate coincident gear2c1:Gear Axis ~ carrier1:Planet copy 1 Axis as Planet copy 1 on Planet copy 1 Axis
+        ok      mate point distance gear2c1:origin ~ layout:plane1 as Planet copy 1 along Planet copy 1
+        ok      link "D1@Planet copy 1 along Planet copy 1"
+        ok      unfixed gear2c2
+        ok      mate coincident gear2c2:Gear Axis ~ carrier1:Planet copy 2 Axis as Planet copy 2 on Planet copy 2 Axis
+        ok      mate point distance gear2c2:origin ~ layout:plane1 as Planet copy 2 along Planet copy 2
+        ok      link "D1@Planet copy 2 along Planet copy 2"
+        ok      unfixed gear2c3
+        ok      mate coincident gear2c3:Gear Axis ~ carrier1:Planet copy 3 Axis as Planet copy 3 on Planet copy 3 Axis
+        ok      mate point distance gear2c3:origin ~ layout:plane1 as Planet copy 3 along Planet copy 3
+        ok      link "D1@Planet copy 3 along Planet copy 3"
+        ok      unfixed gear6
+        ok      mate coincident gear6:Gear Axis ~ layout:Output Axis as RangeSlv on Output Axis
+        ok      mate point distance gear6:origin ~ layout:plane1 as RangeSlv along Output
+        ok      unfixed gear7
+        ok      mate coincident gear7:Gear Axis ~ layout:Aux Axis as Aux on Aux Axis
+        ok      mate point distance gear7:origin ~ layout:plane1 as Aux along Aux
+        ok      link "D1@Aux along Aux"
+        ok      mate gear gear1:Gear Axis ~ gear2c1:Gear Axis as Sun meshes Planet copy 1
+        ok      mate gear gear1:Gear Axis ~ gear2c2:Gear Axis as Sun meshes Planet copy 2
+        ok      mate gear gear1:Gear Axis ~ gear2c3:Gear Axis as Sun meshes Planet copy 3
+        ok      mate gear gear2c1:Gear Axis ~ gear3:Gear Axis as Planet copy 1 meshes Ring
+        ok      3 globals read back and match the maths
+        ok      every mate sound, every gear free to turn
+        ok      configuration H made
+        ok      configuration N made
+        ok      configuration L made
+        ok      1 slide value(s) set and read back in 3 configurations
+        ok      mate gear gear6:Gear Axis ~ gear4:Gear Axis as RangeSlv engages HighDog
+        ok      mate gear gear6:Gear Axis ~ gear5:Gear Axis as RangeSlv engages LowDog
+        ok      every mode checked: H, N, L
+        ok      configuration Default deleted
+        mate    Sun on Input Axis
+        mate    Sun along Input
+        mate    HighDog locked to Sun
+        mate    Carrier carrier on Carrier Axis
+        mate    Carrier carrier along Carrier
+        mate    LowDog locked to Carrier carrier
+        mate    Planet copy 1 on Planet copy 1 Axis
+        mate    Planet copy 1 along Planet copy 1
+        mate    Planet copy 2 on Planet copy 2 Axis
+        mate    Planet copy 2 along Planet copy 2
+        mate    Planet copy 3 on Planet copy 3 Axis
+        mate    Planet copy 3 along Planet copy 3
+        mate    RangeSlv on Output Axis
+        mate    RangeSlv along Output
+        mate    Aux on Aux Axis
+        mate    Aux along Aux
+        mate    Sun meshes Planet copy 1
+        mate    Sun meshes Planet copy 2
+        mate    Sun meshes Planet copy 3
+        mate    Planet copy 1 meshes Ring
+        ok      read turning against their mesh, so made again with the other Flip: RangeSlv engages HighDog, RangeSlv engages LowDog
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9d-demo-sw2024-20261118-060436\out\carry-gates\RangeBox_r2.SLDASM
+        config  H: 21 mates as planned, 1 off
+        mode    H: every mate sound, every gear free to turn, no interference
+        config  N: 20 mates as planned, 2 off
+        mode    N: every mate sound, every gear free to turn, no interference
+        config  L: 21 mates as planned, 1 off
+        mode    L: every mate sound, every gear free to turn, no interference
+        CHECK   not carried: Sprocket-1 (unmeasured)
+        CHECK   not carried: Sprocket-3 (unmeasured)
+        CHECK   not carried: Sprocket-2 (unmeasured)
+        CHECK   not carried: Sprocket-4 (unmeasured)
+        CHECK   not carried: Housing-2 (unmeasured)
+        CHECK   not carried: SprocketLight-1 (unmeasured)
+        CHECK   not carried: Housing-1 (unmeasured)
+        CHECK   not carried: Sprocket-5 (unmeasured)
+        CHECK   not carried: Sprocket-6 (unmeasured)
+        CHECK   not carried: Sprocket-8 (unmeasured)
+        CHECK   not carried: Chain-2 (unmeasured)
+        CHECK   not carried: Sprocket-7 (unmeasured)
+        CHECK   not carried: Sprocket-10 (unmeasured)
+        CHECK   not carried: Chain-1 (unmeasured)
+        CHECK   not carried: Sprocket-11 (unmeasured)
+        CHECK   not carried: Sprocket-9 (unmeasured)
+        CHECK   not carried: SprocketConf-1 (unmeasured)
+        CHECK   not carried: UserAxis1 (component not carried)
+        CHECK   not carried: UserAxis2 (component not carried)
+        CHECK   not carried: UserLock1 (component not carried)
+        CHECK   not carried: UserLock2 (component not carried)
+        CHECK   not carried: UserLock3 (component not carried)
+        CHECK   not carried: UserAxis4 (component not carried)
+        CHECK   not carried: UserDist4 (component not carried)
+        CHECK   not carried: UserAngle4 (component not carried)
+        CHECK   not carried: UserChainAxis (component not carried)
+        CHECK   not carried: UserChainDist (component not carried)
+        CHECK   not carried: UserFaceConc (component not carried)
+        CHECK   not carried: UserFaceCoin (component not carried)
+        CHECK   not carried: UserHousingRight (component not carried)
+        CHECK   not carried: UserHousingDist (component not carried)
+        CHECK   not carried: UserHousingPar (component not carried)
+        CHECK   not carried: UserAxis5 (component not carried)
+        CHECK   not carried: UserSunFace (component not carried)
+        CHECK   not carried: UserAxis6 (component not carried)
+        CHECK   not carried: UserGear6 (component not carried)
+        CHECK   not carried: UserAsm6 (component not carried)
+        CHECK   not carried: UserAxis7 (component not carried)
+        CHECK   not carried: UserLock8a (component not carried)
+        CHECK   not carried: UserAngle8b (component not carried)
+        CHECK   not carried: UserAxis9 (unread)
+        CHECK   not carried: UserAxis10 (component not carried)
+        CHECK   not carried: UserGearRoot (component not carried)
+        CHECK   not carried: UserAxis11 (component not carried)
+        CHECK   not carried: UserGearFillet (component not carried)
+        CHECK   not carried: UserLimit10 (component not carried)
+        CHECK   not carried: UserAxisLight (component not carried)
+        CHECK   not carried: UserAxisConf (component not carried)
+        in 429.2 s; SolidWorks 6.34 GB private, 8.76 GB free; old read ''
+status  [green] Built 2 parts, RangeBox_r2_Layout, RangeBox_r2_Carrier_Carrier and RangeBox_r2.SLDASM, reusing the 4 parts already built; no interference between the gears in any mode, where they stand. Its turning gears are mated to turn in each of its 3 modes, one configuration each (H, N and L), and SolidWorks reports no mate in error in any of them: it opens in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. RangeSlv slides along Output, to its place in each mode. The 3 copies of Planet turn on Carrier, and RangeBox_r2_Carrier_Carrier holds Carrier's axes and planes only: a plate and pins are yours to add. Ring stays fixed where it is placed: its shaft does not turn. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. 1 thing to do by hand: Assign a material to each of the 2 parts; the build leaves it unset. Gear Generator has not yet been shown to carry your work into a new revision on SolidWorks 2024 (findings.CARRY_INSERTS_ON_2024), so your Sprocket-1, Sprocket-3, Sprocket-2, 14 other components and 31 mates stay in RangeBox.SLDASM, as read when this build began; RangeBox_r2 has none of them. As read at 06:16, your User Keyway Sketch and User Keyway stay in Gear_m1.25_N29, which Sun's new part replaces; RangeBox_r2 has none of them, nor anything added since. UserAxis9 is on Sprocket-9, which is suppressed in H, the mode RangeBox.SLDASM showed, so it could not be read and is not made again.
+fact    carry-gates: the build took 429 s; GetSaveFlag before none, after ['RangeBox_r2.SLDASM']
+read    carry-gates: the old assembly after: H showing; mates in error none; marked ['RangeBox_r2.SLDASM']; rebuild state 0; states {'Sprocket-1': 2, 'Sprocket-2': 2, 'Sprocket-3': 2, 'Sprocket-4': 2, 'Housing-1': 2, 'Chain-1': 2, 'Chain-2': 2, 'Housing-2': 2, 'Sprocket-5': 2, 'Sprocket-6': 2, 'Sprocket-7': 2, 'Sprocket-8': 2, 'Sprocket-9': 0, 'Sprocket-10': 2, 'Sprocket-11': 2, 'SprocketLight-1': 2, 'SprocketConf-1': 2}
+ok      carry-gates: the old assembly's save flag, mode showing (H), every component's frame and state, every mate's code, flag per mode and entities as before
+ok      carry-gates: the old assembly and every user file unchanged on disk (size, time, hash): ['Chain.SLDPRT', 'Housing.SLDPRT', 'RangeBox.SLDASM', 'Sprocket.SLDPRT', 'SprocketConf.SLDPRT', 'SprocketLight.SLDPRT']
+fact    carry-gates: traced calls on the old assembly and the user's files none; saves [('SaveAs3', 'Gear_m1.25_N29_r2.SLDPRT'), ('SaveAs3', 'Gear_m1.25_N20.SLDPRT'), ('SaveAs3', 'RangeBox_r2_Layout.SLDPRT'), ('SaveAs3', 'RangeBox_r2_Carrier_Carrier.SLDPRT'), ('SaveAs3', 'RangeBox_r2.SLDASM')]
+ok      carry-gates: no write, show, rebuild, save or close of the old assembly or a user document in the traced calls, and nothing saved after RangeBox_r2.SLDASM's first save
+status  (carry-gates, after the build) Built 2 parts, RangeBox_r2_Layout, RangeBox_r2_Carrier_Carrier and RangeBox_r2.SLDASM, reusing the 4 parts already built; no interference between the gears in any mode, where they stand. Its turning gears are mated to turn in each of its 3 modes, one configuration each (H, N and L), and SolidWorks reports no mate in error in any of them: it opens in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. RangeSlv slides along Output, to its place in each mode. The 3 copies of Planet turn on Carrier, and RangeBox_r2_Carrier_Carrier holds Carrier's axes and planes only: a plate and pins are yours to add. Ring stays fixed where it is placed: its shaft does not turn. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. 1 thing to do by hand: Assign a material to each of the 2 parts; the build leaves it unset. Gear Generator has not yet been shown to carry your work into a new revision on SolidWorks 2024 (findings.CARRY_INSERTS_ON_2024), so your Sprocket-1, Sprocket-3, Sprocket-2, 14 other components and 31 mates stay in RangeBox.SLDASM, as read when this build began; RangeBox_r2 has none of them. As read at 06:16, your User Keyway Sketch and User Keyway stay in Gear_m1.25_N29, which Sun's new part replaces; RangeBox_r2 has none of them, nor anything added since. UserAxis9 is on Sprocket-9, which is suppressed in H, the mode RangeBox.SLDASM showed, so it could not be read and is not made again.
+ok      carry-gates: RangeBox_r2 built and saved as today: ok True
+ok      carry-gates: no file changed on disk after the carry (CarryResult.changed_files): none
+fact    carry-gates: R read the old assembly open, H showing, modes ['H', 'N', 'L'], states by IConfiguration.GetComponentSuppressionState(Name2); marked none, left none, unread none
+        Sprocket-1: state 2, frame read, configuration '' of ('Default',) (its document's 'Default'), suppressed in ()
+        Sprocket-3: state 2, frame read, configuration '' of ('Default',) (its document's 'Default'), suppressed in ()
+        Sprocket-2: state 2, frame read, configuration '' of ('Default',) (its document's 'Default'), suppressed in ()
+        Sprocket-4: state 2, frame read, configuration '' of ('Default',) (its document's 'Default'), suppressed in ()
+        Housing-2: state 2, frame read, configuration '' of ('Default',) (its document's 'Default'), suppressed in ()
+        SprocketLight-1: state 2, frame read, configuration '' of ('Default',) (its document's 'Default'), suppressed in ()
+        Housing-1: state 2, frame read, configuration '' of ('Default',) (its document's 'Default'), suppressed in ()
+        Sprocket-5: state 2, frame read, configuration '' of ('Default',) (its document's 'Default'), suppressed in ()
+        Sprocket-6: state 2, frame read, configuration '' of ('Default',) (its document's 'Default'), suppressed in ()
+        Sprocket-8: state 2, frame read, configuration '' of ('Default',) (its document's 'Default'), suppressed in ()
+        Chain-2: state 2, frame read, configuration '' of ('Default',) (its document's 'Default'), suppressed in ()
+        Sprocket-7: state 2, frame read, configuration '' of ('Default',) (its document's 'Default'), suppressed in ('L',)
+        Sprocket-10: state 2, frame read, configuration '' of ('Default',) (its document's 'Default'), suppressed in ()
+        Chain-1: state 2, frame read, configuration '' of ('Default',) (its document's 'Default'), suppressed in ()
+        Sprocket-11: state 2, frame read, configuration '' of ('Default',) (its document's 'Default'), suppressed in ()
+        Sprocket-9: state 0, frame read, configuration '' of ('Default',) (its document's ''), suppressed in ('H',)
+        SprocketConf-1: state 2, frame read, configuration '' of ('Default', 'Z20') (its document's 'Default'), suppressed in ()
+        UserAxis1: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Sprocket-1', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserAxis2: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Output Axis', False, None, None, '', ''), ('user', 'Sprocket-2', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserLock1: MateLock type 16, alignment 2, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('app', 'Sun', 'whole', '', False, None, None, '', ''), ('user', 'Sprocket-1', 'whole', '', False, None, None, '', '')]
+        UserLock2: MateLock type 16, alignment 2, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('app', 'RangeSlv', 'whole', '', False, None, None, '', ''), ('user', 'Sprocket-2', 'whole', '', False, None, None, '', '')]
+        UserLock3: MateLock type 16, alignment 2, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('user', 'Sprocket-1', 'whole', '', False, None, None, '', ''), ('user', 'Sprocket-3', 'whole', '', False, None, None, '', '')]
+        UserAxis4: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Sprocket-4', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserDist4: MateDistanceDim type 5, alignment 0, flipped False, values [('Distance', 0.09), ('MaximumDistance', 0.09), ('MinimumDistance', 0.09), ('FlipDimension', 0.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Sprocket-4', 'plane', 'plane1', True, None, None, '', ''), ('user', 'Sprocket-3', 'plane', 'plane1', True, None, None, '', '')]
+        UserAngle4: MatePlanarAngleDim type 6, alignment 0, flipped False, values [('Angle', 1.5707963267948966), ('MaximumAngle', 1.5707963267948966), ('MinimumAngle', 1.5707963267948966), ('FlipDimension', 0.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Sprocket-4', 'plane', 'plane2', True, None, None, '', ''), ('layout', '', 'plane', 'plane3', False, None, None, '', '')]
+        UserChainAxis: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Chain-1', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserChainDist: MateDistanceDim type 5, alignment 0, flipped False, values [('Distance', 0.15), ('MaximumDistance', 0.15), ('MinimumDistance', 0.15), ('FlipDimension', 0.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Chain-1', 'plane', 'plane1', True, None, None, '', ''), ('user', 'Sprocket-1', 'plane', 'plane1', True, None, None, '', '')]
+        UserFaceConc: MateConcentric type 1, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Chain-2', 'face', '', False, None, None, '', '')]
+        UserFaceCoin: MateCoincident type 0, alignment 1, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('user', 'Chain-1', 'face', '', False, None, None, '', ''), ('user', 'Chain-2', 'face', '', False, None, None, '', '')]
+        UserHousingRight: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'plane', 'plane3', False, None, None, '', ''), ('user', 'Housing-2', 'plane', 'plane3', True, None, None, '', '')]
+        UserHousingDist: MateDistanceDim type 5, alignment 0, flipped False, values [('Distance', 0.42), ('MaximumDistance', 0.42), ('MinimumDistance', 0.42), ('FlipDimension', 0.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Housing-2', 'plane', 'plane1', True, None, None, '', ''), ('layout', '', 'plane', 'plane1', False, None, None, '', '')]
+        UserHousingPar: MateParallel type 3, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'plane', 'plane2', False, None, None, '', ''), ('user', 'Housing-2', 'plane', 'plane2', True, None, None, '', '')]
+        UserAxis5: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Sprocket-5', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserSunFace: MateCoincident type 0, alignment 1, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('app', 'Sun', 'face', '', False, None, None, '', ''), ('user', 'Sprocket-5', 'face', '', False, None, None, '', '')]
+        UserAxis6: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Sprocket-6', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserGear6: MateGearDim type 10, alignment 2, flipped False, values [('GearRatioNumerator', 29.0), ('GearRatioDenominator', 20.0), ('Reverse', 1.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Sprocket-6', 'feature', 'Gear Axis', True, None, None, '', ''), ('app', 'Sun', 'feature', 'Gear Axis', False, None, None, '', '')]
+        UserAsm6: MateDistanceDim type 5, alignment 0, flipped False, values [('Distance', 0.23), ('MaximumDistance', 0.23), ('MinimumDistance', 0.23), ('FlipDimension', 0.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Sprocket-6', 'plane', 'plane1', True, None, None, '', ''), ('assembly', '', 'plane', 'plane1', False, None, None, '', '')]
+        UserAxis7: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Sprocket-7', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserLock8a: MateLock type 16, alignment 2, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('app', 'Sun', 'whole', '', False, None, None, '', ''), ('user', 'Sprocket-8', 'whole', '', False, None, None, '', '')]
+        UserAngle8b: MatePlanarAngleDim type 6, alignment 0, flipped False, values [('Angle', 1.5707963267948966), ('MaximumAngle', 1.5707963267948966), ('MinimumAngle', 1.5707963267948966), ('FlipDimension', 0.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Sprocket-8', 'plane', 'plane2', True, None, None, '', ''), ('user', 'Housing-1', 'plane', 'plane3', True, None, None, '', '')]
+        UserAxis9: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Sprocket-9', 'unread', '', False, None, None, '', 'a component it joins is suppressed in the mode the old assembly showed')]
+        UserAxis10: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Sprocket-10', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserGearRoot: MateGearDim type 10, alignment 2, flipped False, values [('GearRatioNumerator', 1.0), ('GearRatioDenominator', 1.0), ('Reverse', 1.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Sprocket-10', 'feature', 'Gear Axis', True, None, None, '', ''), ('app', 'Sun', 'face', '', False, None, None, '', '')]
+        UserAxis11: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Sprocket-11', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserGearFillet: MateGearDim type 10, alignment 2, flipped True, values [('GearRatioNumerator', 1.0), ('GearRatioDenominator', 1.0), ('Reverse', 0.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Sprocket-11', 'feature', 'Gear Axis', True, None, None, '', ''), ('app', 'Sun', 'face', '', False, None, None, '', '')]
+        UserLimit10: MateLimitDistanceDim type 5, alignment 0, flipped False, values [('Distance', 0.02), ('MaximumDistance', 0.03), ('MinimumDistance', 0.01), ('FlipDimension', 0.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Sprocket-10', 'plane', 'plane1', True, None, None, '', ''), ('user', 'Sprocket-11', 'plane', 'plane1', True, None, None, '', '')]
+        UserAxisLight: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'SprocketLight-1', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserAxisConf: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'SprocketConf-1', 'feature', 'Gear Axis', True, None, None, '', '')]
+ok      carry-gates: no r3 walk while CARRY_INSERTS is None (N3, ruled): none
+ok      carry-gates: nothing carried, every component named with CARRY_INSERTS, every mate named: 48 named
+ok      carry-gates: the result says W9a's sentence led by CARRY_INSERTS, and the Keyway
+ok      read RangeBox.xlsx: ok
+        warning Gears!K2: Sun: Arcs stand in for the involute on this gear to within 34.7 µm.
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side. This workbook's Gears sheet has no Start band (mm) and End band (mm) columns, which give a sleeve toothed bands with a relief between them: type both headers on row 1 of the Gears sheet (after Slides, as a new workbook has them) and save.
+        6 shafts · 7 gears · 2 meshes; gate ''
+footer  (carry-gates, after the build, the finish's sentence standing) [green] Built 2 parts, RangeBox_r2_Layout, RangeBox_r2_Carrier_Carrier and RangeBox_r2.SLDASM, reusing the 4 parts already built; no interference between the gears in any mode, where they stand. Its turning gears are mated to turn in each of its 3 modes, one configuration each (H, N and L), and SolidWorks reports no mate in error in any of them: it opens in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. RangeSlv slides along Output, to its place in each mode. The 3 copies of Planet turn on Carrier, and RangeBox_r2_Carrier_Carrier holds Carrier's axes and planes only: a plate and pins are yours to add. Ring stays fixed where it is placed: its shaft does not turn. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. 1 thing to do by hand: Assign a material to each of the 2 parts; the build leaves it unset. Gear Generator has not yet been shown to carry your work into a new revision on SolidWorks 2024 (findings.CARRY_INSERTS_ON_2024), so your Sprocket-1, Sprocket-3, Sprocket-2, 14 other components and 31 mates stay in RangeBox.SLDASM, as read when this build began; RangeBox_r2 has none of them. As read at 06:16, your User Keyway Sketch and User Keyway stay in Gear_m1.25_N29, which Sun's new part replaces; RangeBox_r2 has none of them, nor anything added since. UserAxis9 is on Sprocket-9, which is suppressed in H, the mode RangeBox.SLDASM showed, so it could not be read and is not made again.
+        button 'Build again…' on; Update SolidWorks shown on primary
+footer  (carry-gates, after the build, the finish's sentence gone) [green] SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move. It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. Carrier (the carrier) is axes and planes only, so it has nothing to drag.
+        button 'Build again…' on; Update SolidWorks shown on primary
+fact    carry-gates: the footer with the finish's sentence standing does NOT ask for the save; §9.4's line is not in it; with the sentence gone it does NOT say §9.4's line; the carry finished
+ok      carry-gates: the record on disk at schema 10 holds the carry (how open, 0 components, 0 mates, 48 named), unsaved_at 0.0 against the file's 1795001604.0315478; the footer says ''
+ok      carry-gates: with nothing carried the new revision holds no inventory and the footer no carry line
+-- carry-gates  each gate's own refusal, on what the press read: plan_carry (pure) with that gate as it stands and every other patched
+PATCH   findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.REFERENCED_CONFIGURATION_READ_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.CARRY_REMAKE_KINDS_ON_2024 = ('coincident', 'concentric', 'parallel', 'perpendicular', 'tangent', 'distance', 'angle', 'limit distance', 'limit angle', 'lock', 'gear') in this process, for this measurement only (was None)
+PATCH   findings.CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.CARRY_INSERTS_ON_2024 = None in this process, for this measurement only (was None)
+PATCH   findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 back to None
+PATCH   findings.REFERENCED_CONFIGURATION_READ_ON_2024 back to None
+PATCH   findings.CARRY_REMAKE_KINDS_ON_2024 back to None
+PATCH   findings.CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 back to None
+PATCH   findings.CARRY_INSERTS_ON_2024 back to None
+ok      carry-gates: CARRY_INSERTS_ON_2024 as it stands keeps back [('Sprocket-1', 'unmeasured'), ('Sprocket-3', 'unmeasured'), ('Sprocket-2', 'unmeasured'), ('Sprocket-4', 'unmeasured'), ('Housing-2', 'unmeasured'), ('SprocketLight-1', 'unmeasured'), ('Housing-1', 'unmeasured'), ('Sprocket-5', 'unmeasured'), ('Sprocket-6', 'unmeasured'), ('Sprocket-8', 'unmeasured'), ('Chain-2', 'unmeasured'), ('Sprocket-7', 'unmeasured'), ('Sprocket-10', 'unmeasured'), ('Chain-1', 'unmeasured'), ('Sprocket-11', 'unmeasured'), ('Sprocket-9', 'unmeasured'), ('SprocketConf-1', 'unmeasured')]
+PATCH   findings.CARRY_INSERTS_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.REFERENCED_CONFIGURATION_READ_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.CARRY_REMAKE_KINDS_ON_2024 = ('coincident', 'concentric', 'parallel', 'perpendicular', 'tangent', 'distance', 'angle', 'limit distance', 'limit angle', 'lock', 'gear') in this process, for this measurement only (was None)
+PATCH   findings.CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 = None in this process, for this measurement only (was None)
+PATCH   findings.CARRY_INSERTS_ON_2024 back to None
+PATCH   findings.REFERENCED_CONFIGURATION_READ_ON_2024 back to None
+PATCH   findings.CARRY_REMAKE_KINDS_ON_2024 back to None
+PATCH   findings.CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 back to None
+PATCH   findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 back to None
+ok      carry-gates: CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 as it stands keeps back [('SprocketConf-1', 'unmeasured')]
+PATCH   findings.CARRY_INSERTS_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.CARRY_REMAKE_KINDS_ON_2024 = ('coincident', 'concentric', 'parallel', 'perpendicular', 'tangent', 'distance', 'angle', 'limit distance', 'limit angle', 'lock', 'gear') in this process, for this measurement only (was None)
+PATCH   findings.CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.REFERENCED_CONFIGURATION_READ_ON_2024 = None in this process, for this measurement only (was None)
+PATCH   findings.CARRY_INSERTS_ON_2024 back to None
+PATCH   findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 back to None
+PATCH   findings.CARRY_REMAKE_KINDS_ON_2024 back to None
+PATCH   findings.CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 back to None
+PATCH   findings.REFERENCED_CONFIGURATION_READ_ON_2024 back to None
+ok      carry-gates: REFERENCED_CONFIGURATION_READ_ON_2024 as it stands keeps back [('SprocketConf-1', 'unmeasured')]
+PATCH   findings.CARRY_INSERTS_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.REFERENCED_CONFIGURATION_READ_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.CARRY_REMAKE_KINDS_ON_2024 = None in this process, for this measurement only (was None)
+PATCH   findings.CARRY_INSERTS_ON_2024 back to None
+PATCH   findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 back to None
+PATCH   findings.REFERENCED_CONFIGURATION_READ_ON_2024 back to None
+PATCH   findings.CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 back to None
+PATCH   findings.CARRY_REMAKE_KINDS_ON_2024 back to None
+ok      carry-gates: CARRY_REMAKE_KINDS_ON_2024 as it stands keeps back [('UserAxis1', 'unmeasured'), ('UserAxis2', 'unmeasured'), ('UserLock1', 'unmeasured'), ('UserLock2', 'unmeasured'), ('UserLock3', 'unmeasured'), ('UserAxis4', 'unmeasured'), ('UserDist4', 'unmeasured'), ('UserAngle4', 'unmeasured'), ('UserChainAxis', 'unmeasured'), ('UserChainDist', 'unmeasured'), ('UserFaceConc', 'unmeasured'), ('UserFaceCoin', 'unmeasured'), ('UserHousingRight', 'unmeasured'), ('UserHousingDist', 'unmeasured'), ('UserHousingPar', 'unmeasured'), ('UserAxis5', 'unmeasured'), ('UserAxis6', 'unmeasured'), ('UserGear6', 'unmeasured'), ('UserAsm6', 'unmeasured'), ('UserAxis7', 'unmeasured'), ('UserLock8a', 'unmeasured'), ('UserAngle8b', 'unmeasured'), ('UserAxis10', 'unmeasured'), ('UserAxis11', 'unmeasured'), ('UserLimit10', 'unmeasured'), ('UserAxisLight', 'unmeasured')]
+PATCH   findings.CARRY_INSERTS_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.REFERENCED_CONFIGURATION_READ_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.CARRY_REMAKE_KINDS_ON_2024 = ('coincident', 'concentric', 'parallel', 'perpendicular', 'tangent', 'distance', 'angle', 'limit distance', 'limit angle', 'lock', 'gear') in this process, for this measurement only (was None)
+PATCH   findings.CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 = None in this process, for this measurement only (was None)
+PATCH   findings.CARRY_INSERTS_ON_2024 back to None
+PATCH   findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 back to None
+PATCH   findings.REFERENCED_CONFIGURATION_READ_ON_2024 back to None
+PATCH   findings.CARRY_REMAKE_KINDS_ON_2024 back to None
+PATCH   findings.CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 back to None
+ok      carry-gates: CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 as it stands keeps back [('UserGear6', 'unmeasured')]
+ok      carry-gates, the copy's end: carry-gates ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox.xlsx']), no open document by a file name it holds ([])
+time    carry-gates: 1228 s; 0 failed; SolidWorks 2.71 GB private, 8.67 GB free
+== carry  the Done-when (§5 W9d, M9): the old assembly open with H showing, SprocketLight-1 set lightweight in the session; the edit; the question; the gates patched in this process; Build again…
+copy    w9d-fixture.master -> carry: 21 files, mtimes kept
+        RangeBox.xlsx's record: 21 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.carriers[0].path', 'record.gearbox.user_work.assembly', 'record.gearbox.user_work.features[0].path', 'record.gearbox.user_work.features[1].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      carry: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+fact    carry: the copy's assembly opened in 4.8 s; marked modified straight after the open: {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'Sprocket.SLDPRT': False, 'Housing.SLDPRT': False, 'Chain.SLDPRT': False, 'SprocketLight.SLDPRT': False, 'SprocketConf.SLDPRT': False, 'RangeBox.SLDASM': False}
+ok      carry: SolidWorks found all 9 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side. This workbook's Gears sheet has no Start band (mm) and End band (mm) columns, which give a sleeve toothed bands with a relief between them: type both headers on row 1 of the Gears sheet (after Slides, as a new workbook has them) and save.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      carry: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+ok      carry: the copy's workbook holds the fixture's Gears, Meshes and Modes rows (as the app reads them)
+ok      carry: the old assembly shows H (H expected, as saved)
+person  SprocketLight-1 set to state 1 in RangeBox.SLDASM: reads 1
+ok      carry: SprocketLight-1 alone reads lightweight (a file of its own): ['SprocketLight-1']
+edit    carry: Sun's Flank to arcs, a shaft Aux added: [('Shafts', 'A7', 'Aux'), ('Shafts', 'B7', 'frame'), ('Shafts', 'C7', 80), ('Shafts', 'D7', 0), ('Shafts', 'E7', 0), ('Shafts', 'F7', 'Z+'), ('Gears', 'K2', 'arcs'), ('Gears', 'A8', 'Aux'), ('Gears', 'B8', 'Aux'), ('Gears', 'C8', 10.5), ('Gears', 'D8', 'spur'), ('Gears', 'F8', 20), ('Gears', 'G8', 1.25), ('Gears', 'I8', 6)]
+excel   Shafts!A7 := 'Aux'
+excel   Shafts!B7 := 'frame'
+excel   Shafts!C7 := 80
+excel   Shafts!D7 := 0
+excel   Shafts!E7 := 0
+excel   Shafts!F7 := 'Z+'
+excel   Gears!K2 := 'arcs'
+excel   Gears!A8 := 'Aux'
+excel   Gears!B8 := 'Aux'
+excel   Gears!C8 := 10.5
+excel   Gears!D8 := 'spur'
+excel   Gears!F8 := 20
+excel   Gears!G8 := 1.25
+excel   Gears!I8 := 6
+excel   saved RangeBox.xlsx
+poll    a new read 0.0 s after asking; changes:
+          shaft Aux added (Shafts row 7)
+          Gears!K2 Sun Flank blank → arcs
+          gear Aux added (Gears row 8)
+ok      read RangeBox.xlsx: ok
+        warning Gears!K2: Sun: Arcs stand in for the involute on this gear to within 34.7 µm.
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side. This workbook's Gears sheet has no Start band (mm) and End band (mm) columns, which give a sleeve toothed bands with a relief between them: type both headers on row 1 of the Gears sheet (after Slides, as a new workbook has them) and save.
+        6 shafts · 7 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.25_N29.SLDPRT']; moved []; re-place []; structural ['Aux is new on Aux, which is new too, and Update SolidWorks adds a gear only on a shaft the layout part has, so the gearbox needs building again.', 'Shaft Aux is new, and the layout part has no axis for it.', 'Gear_m1.25_N29 (Sun): Flank changed from involute to arcs, which its values cannot carry; build it again as a new part.']; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['Aux X = 80']
+summary Aux is new on Aux, which is new too, and Update SolidWorks adds a gear only on a shaft the layout part has, so the gearbox needs building again (and 2 other changes Update SolidWorks cannot carry). Update SolidWorks offers to build again as a new revision.
+ok      carry: classify sends it to Build again… as RangeBox_r2, for Sun's Flank and the shaft Aux: ['Aux is new on Aux, which is new too, and Update SolidWorks adds a gear only on a shaft the layout part has, so the gearbox needs building again.', 'Shaft Aux is new, and the layout part has no axis for it.', 'Gear_m1.25_N29 (Sun): Flank changed from involute to arcs, which its values cannot carry; build it again as a new part.']
+question Aux is new on Aux, which is new too, and Update SolidWorks adds a gear only on a shaft the layout part has, so the gearbox needs building again. Shaft Aux is new, and the layout part has no axis for it. Gear_m1.25_N29 (Sun): Flank changed from involute to arcs, which its values cannot carry, so it needs a new part. Build again as RangeBox_r2? That makes new parts for Sun (Gear_m1.25_N29_r2) and Aux (Gear_m1.25_N20), reuses 4 parts that have not changed and makes a new layout part, carrier part and assembly (RangeBox_r2_Layout, RangeBox_r2_Carrier_Carrier and RangeBox_r2.SLDASM). Nothing is overwritten, and RangeBox.SLDASM stays as it is on disk, but it shares the 4 reused parts: a later Update SolidWorks that changes one of them changes RangeBox.SLDASM too. Gear Generator has not yet been shown to carry your work into a new revision on SolidWorks 2024 (findings.CARRY_INSERTS_ON_2024), so as read at 06:16, your Sprocket-7, Sprocket-8, Housing-1, 14 other components and 31 mates stay in RangeBox.SLDASM, and your User Keyway Sketch and User Keyway stay in Gear_m1.25_N29, which Sun's new part replaces; RangeBox_r2 has none of them, nor anything added since.
+PATCH   findings.CARRY_INSERTS_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.REFERENCED_CONFIGURATION_READ_ON_2024 = True in this process, for this measurement only (was None)
+PATCH   findings.CARRY_REMAKE_KINDS_ON_2024 = ('coincident', 'concentric', 'parallel', 'perpendicular', 'tangent', 'distance', 'angle', 'limit distance', 'limit angle', 'lock', 'gear') in this process, for this measurement only (was None)
+PATCH   findings.CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 = True in this process, for this measurement only (was None)
+question (the gates patched) Aux is new on Aux, which is new too, and Update SolidWorks adds a gear only on a shaft the layout part has, so the gearbox needs building again. Shaft Aux is new, and the layout part has no axis for it. Gear_m1.25_N29 (Sun): Flank changed from involute to arcs, which its values cannot carry, so it needs a new part. Build again as RangeBox_r2? That makes new parts for Sun (Gear_m1.25_N29_r2) and Aux (Gear_m1.25_N20), reuses 4 parts that have not changed and makes a new layout part, carrier part and assembly (RangeBox_r2_Layout, RangeBox_r2_Carrier_Carrier and RangeBox_r2.SLDASM). Nothing is overwritten, and RangeBox.SLDASM stays as it is on disk, but it shares the 4 reused parts: a later Update SolidWorks that changes one of them changes RangeBox.SLDASM too. As read at 06:16, RangeBox_r2 takes your Sprocket-7, Sprocket-8, Housing-1 and 14 other components and makes your 26 mates again in the modes each was on in. UserSunFace was on a face of Sun, and Sun's part is new because its Flank changed, so it is not made again. Your UserGear6 is made again if the press reads its gear ratio and which way it turns. Your UserGearRoot and UserGearFillet are made again only if the face of Sun each is on proves to be on Sun's axis, since Sun's part is new. Sprocket-9 was suppressed in the mode RangeBox.SLDASM showed, as read, so UserAxis9 on it could not be read: show a mode where Sprocket-9 is resolved before you press, or Sprocket-9 may not be carried and UserAxis9 is not made again. Your User Keyway Sketch and User Keyway stay in Gear_m1.25_N29, which Sun's new part replaces (its Flank changed). RangeBox_r2 holds what it carries unsaved. If RangeBox.SLDASM is closed, open it first unless this SolidWorks last saved it and its files, those files are where it says, and nothing of yours is open. Assembly features, display states and appearances stay behind; pattern instances come over as components of their own.
+ok      carry: the question, gates patched, names the Keyway in Sun's part made new because its Flank changed, with the time read
+ok      carry: the question says UserGear6's ratio and sense and UserGearRoot's face on Sun's axis as may, and no mate of the user's in error: as said
+fact    carry: the question names UserSunFace (on Sun's face, not made again) by name
+footer  (carry, before the build) [green] Aux is new on Aux, which is new too, and Update SolidWorks adds a gear only on a shaft the layout part has, so the gearbox needs building again (and 2 other changes Update SolidWorks cannot carry). Update SolidWorks offers to build again as RangeBox_r2. It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. Carrier (the carrier) is axes and planes only, so it has nothing to drag.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      carry: the footer offers Build again… ('Build again…', enabled True)
+read    carry: the old assembly before: H showing; mates in error none; marked none; rebuild state 0; states {'Sprocket-1': 2, 'Sprocket-2': 2, 'Sprocket-3': 2, 'Sprocket-4': 2, 'Housing-1': 2, 'Chain-1': 2, 'Chain-2': 2, 'Housing-2': 2, 'Sprocket-5': 2, 'Sprocket-6': 2, 'Sprocket-7': 2, 'Sprocket-8': 2, 'Sprocket-9': 0, 'Sprocket-10': 2, 'Sprocket-11': 2, 'SprocketLight-1': 1, 'SprocketConf-1': 2}
+fact    component_configurations('old1',) -> ('Default', 'Default', ('Default',)) in 0.03 s
+fact    component_configurations('old2',) -> ('Default', 'Default', ('Default',)) in 0.033 s
+fact    component_configurations('old3',) -> ('Default', '', ('Default',)) in 0.018 s
+fact    component_configurations('old4',) -> ('Default', 'Default', ('Default',)) in 0.038 s
+fact    component_configurations('old5',) -> ('Default', '', ('Default',)) in 0.016 s
+fact    component_configurations('old6',) -> ('Default', 'Default', ('Default',)) in 0.032 s
+fact    component_configurations('old7',) -> ('Default', 'Default', ('Default',)) in 0.026 s
+fact    component_configurations('old8',) -> ('Default', 'Default', ('Default',)) in 0.03 s
+fact    component_configurations('old9',) -> ('Default', 'Default', ('Default',)) in 0.039 s
+fact    component_configurations('old10',) -> ('Default', 'Default', ('Default',)) in 0.035 s
+fact    component_configurations('old11',) -> ('Default', 'Default', ('Default',)) in 0.03 s
+fact    component_configurations('old12',) -> ('Default', 'Default', ('Default',)) in 0.038 s
+fact    component_configurations('old13',) -> ('Default', 'Default', ('Default',)) in 0.029 s
+fact    component_configurations('old14',) -> ('Default', 'Default', ('Default',)) in 0.032 s
+fact    component_configurations('old15',) -> ('Default', 'Default', ('Default',)) in 0.029 s
+fact    component_configurations('old16',) -> ('Default', 'Default', ('Default',)) in 0.036 s
+fact    component_configurations('old17',) -> ('Z20', 'Default', ('Default', 'Z20')) in 0.038 s
+fact    component_states_in(['Sprocket-2', 'Sprocket-1', 'Sprocket-9', 'Sprocket-6', 'SprocketLight-1', 'Chain-1', 'Sprocket-4', 'Sprocket-3', 'Housing-1', 'Sprocket-5', 'Sprocket-7', 'Sprocket-8', 'Chain-2', 'Housing-2', 'Sprocket-11', 'Sprocket-10', 'SprocketConf-1'], ['H', 'N', 'L']) -> {'Sprocket-2': {'H': False, 'N': False, 'L': False}, 'Sprocket-1': {'H': False, 'N': False, 'L': False}, 'Sprocket-9': {'H': True, 'N': False, 'L': False}, 'Sprocket-6': {'H': False, 'N': False, 'L': False}, 'SprocketLight-1': {'H': False, 'N': False, 'L': False}, 'Chain-1': {'H': False, 'N': False, 'L': False}, 'Sprocket-4': {'H': False, 'N': False, 'L': False}, 'Sprocket-3': {'H': False, 'N': False, 'L': False}, 'Housing-1': {'H': False, 'N': False, 'L': False}, 'Sprocket-5': {'H': False, 'N': False, 'L': False}, 'Sprocket-7': {'H': False, 'N': False, 'L': True}, 'Sprocket-8': {'H': False, 'N': False, 'L': False}, 'Chain-2': {'H': False, 'N': False, 'L': False}, 'Housing-2': {'H': False, 'N': False, 'L': False}, 'Sprocket-11': {'H': False, 'N': False, 'L': False}, 'Sprocket-10': {'H': False, 'N': False, 'L': False}, 'SprocketConf-1': {'H': False, 'N': False, 'L': False}} in 0.162 s
+fact    entity_references: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}, {'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [2, 2]
+fact    r3 walk on Chain-2, grouped (2 face/edge item(s), each candidate carried at most once): 6.285 s, 2 carried, 3.1425 s per candidate; per item (kind, listed, after the part-against-assembly prefilter, its key, matched) [('face', 163, 1, "('area', 0.0001884955592153876)", 1), ('face', 163, 1, "('area', 0.0003749931248352562)", 1)]; calls {'GetCorresponding': 2, 'IsSame': 4, 'GetArea': 328, 'GetPersistReference3': 2, 'GetObjectByPersistReference3': 2}; found 2; capped none (caps (200, 20.0)); [('face', True, True, 5.0, '', ''), ('face', True, False, None, '', '')]
+fact    entity_references: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [2]
+fact    r3 walk on Chain-1, grouped (1 face/edge item(s), each candidate carried at most once): 4.434 s, 1 carried, 4.434 s per candidate; per item (kind, listed, after the part-against-assembly prefilter, its key, matched) [('face', 163, 1, "('area', 0.0003749912370201268)", 1)]; calls {'GetCorresponding': 1, 'IsSame': 2, 'GetArea': 164, 'GetPersistReference3': 1, 'GetObjectByPersistReference3': 1}; found 1; capped none (caps (200, 20.0)); [('face', True, False, None, '', '')]
+fact    entity_references: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [2]
+fact    r3 walk on Sprocket-5, grouped (1 face/edge item(s), each candidate carried at most once): 4.085 s, 1 carried, 4.085 s per candidate; per item (kind, listed, after the part-against-assembly prefilter, its key, matched) [('face', 163, 1, "('area', 0.0003749931248352562)", 1)]; calls {'GetCorresponding': 1, 'IsSame': 2, 'GetArea': 164, 'GetPersistReference3': 1, 'GetObjectByPersistReference3': 1}; found 1; capped none (caps (200, 20.0)); [('face', True, False, None, '', '')]
+fact    entity_references: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}, {'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [2, 2]
+fact    r3 walk on Gear_m1.25_N29-1, grouped (2 face/edge item(s), each candidate carried at most once): 8.226 s, 87 carried, 0.0946 s per candidate; per item (kind, listed, after the part-against-assembly prefilter, its key, matched) [('face', 235, 29, "('area', 7.069953304421913e-06)", 1), ('face', 235, 58, "('area', 7.327362734094641e-06)", 1)]; calls {'GetCorresponding': 87, 'IsSame': 89, 'GetArea': 472, 'GetPersistReference3': 2, 'GetObjectByPersistReference3': 2}; found 2; capped none (caps (200, 20.0)); [('face', True, True, 16.375, '', ''), ('face', True, False, 0.47500000000000153, '', '')]
+fact    entity_reference('oldmate1', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 4.926 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate2', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 4.71 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate6', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 4.061 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate7', 0) -> ('plane', '6842000001000000fffeff000000000002000000', None, '') in 4.345 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate7', 1) -> ('plane', '6842000001000000fffeff000000000002000000', None, '') in 4.161 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate8', 0) -> ('plane', '6842000001000000fffeff000000000003000000', None, '') in 4.112 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate9', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 3.8 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate10', 0) -> ('plane', '6842000001000000fffeff000000000002000000', None, '') in 4.203 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate10', 1) -> ('plane', '6842000001000000fffeff000000000002000000', None, '') in 4.257 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate13', 1) -> ('plane', '6842000001000000fffeff000000000004000000', None, '') in 4.373 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate14', 0) -> ('plane', '6842000001000000fffeff000000000002000000', None, '') in 4.399 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate15', 1) -> ('plane', '6842000001000000fffeff000000000003000000', None, '') in 4.503 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate16', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 3.884 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate18', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 4.022 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate19', 0) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 3.957 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate20', 0) -> ('plane', '6842000001000000fffeff000000000002000000', None, '') in 4.597 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate21', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 4.091 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate23', 0) -> ('plane', '6842000001000000fffeff000000000003000000', None, '') in 4.523 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate23', 1) -> ('plane', '6842000001000000fffeff000000000004000000', None, '') in 4.595 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate25', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 4.164 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate26', 0) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 5.277 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate27', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 4.672 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate28', 0) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 4.243 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate29', 0) -> ('plane', '6842000001000000fffeff000000000002000000', None, '') in 4.648 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate29', 1) -> ('plane', '6842000001000000fffeff000000000002000000', None, '') in 4.656 s; calls {'GetPersistReference3': 1}
+fact    entity_reference('oldmate31', 1) -> ('feature', '6842000001000000fffeff00000000001a000000', None, '') in 4.195 s; calls {'GetPersistReference3': 1}
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)
+fact    add_component_in('carried17', 'SprocketConf.SLDPRT', (0.0, 0.0, 370.0), 'Z20') -> SprocketConf-1 in 0.263 s
+fact    component_configurations('carried17',) -> ('Z20', 'Z20', ('Default', 'Z20')) in 0.064 s
+fact    set_component_suppressed('carried1', False) -> None in 0.207 s
+fact    set_component_suppressed('carried2', False) -> None in 0.281 s
+fact    set_component_suppressed('carried3', True) -> None in 0.636 s
+fact    set_component_suppressed('carried4', False) -> None in 0.289 s
+fact    set_component_suppressed('carried5', False) -> None in 0.323 s
+fact    set_component_suppressed('carried6', False) -> None in 0.271 s
+fact    set_component_suppressed('carried7', False) -> None in 0.273 s
+fact    set_component_suppressed('carried8', False) -> None in 0.262 s
+fact    set_component_suppressed('carried9', False) -> None in 0.21 s
+fact    set_component_suppressed('carried10', False) -> None in 0.25 s
+fact    set_component_suppressed('carried11', False) -> None in 0.244 s
+fact    set_component_suppressed('carried12', False) -> None in 0.202 s
+fact    set_component_suppressed('carried13', False) -> None in 0.218 s
+fact    set_component_suppressed('carried14', False) -> None in 0.26 s
+fact    set_component_suppressed('carried15', False) -> None in 0.227 s
+fact    set_component_suppressed('carried16', False) -> None in 0.27 s
+fact    set_component_suppressed('carried17', False) -> None in 0.267 s
+fact    set_component_suppressed('carried1', False) -> None in 0.317 s
+fact    set_component_suppressed('carried2', False) -> None in 0.321 s
+fact    set_component_suppressed('carried3', False) -> None in 0.305 s
+fact    set_component_suppressed('carried4', False) -> None in 0.331 s
+fact    set_component_suppressed('carried5', False) -> None in 0.322 s
+fact    set_component_suppressed('carried6', False) -> None in 0.306 s
+fact    set_component_suppressed('carried7', False) -> None in 0.268 s
+fact    set_component_suppressed('carried8', False) -> None in 0.248 s
+fact    set_component_suppressed('carried9', False) -> None in 0.355 s
+fact    set_component_suppressed('carried10', False) -> None in 0.233 s
+fact    set_component_suppressed('carried11', False) -> None in 0.283 s
+fact    set_component_suppressed('carried12', False) -> None in 0.223 s
+fact    set_component_suppressed('carried13', False) -> None in 0.286 s
+fact    set_component_suppressed('carried14', False) -> None in 0.216 s
+fact    set_component_suppressed('carried15', False) -> None in 0.246 s
+fact    set_component_suppressed('carried16', False) -> None in 0.215 s
+fact    set_component_suppressed('carried17', False) -> None in 0.331 s
+fact    set_component_suppressed('carried1', False) -> None in 0.235 s
+fact    set_component_suppressed('carried2', False) -> None in 0.213 s
+fact    set_component_suppressed('carried3', False) -> None in 0.28 s
+fact    set_component_suppressed('carried4', False) -> None in 0.234 s
+fact    set_component_suppressed('carried5', False) -> None in 0.243 s
+fact    set_component_suppressed('carried6', False) -> None in 0.231 s
+fact    set_component_suppressed('carried7', False) -> None in 0.223 s
+fact    set_component_suppressed('carried8', False) -> None in 0.241 s
+fact    set_component_suppressed('carried9', False) -> None in 0.237 s
+fact    set_component_suppressed('carried10', False) -> None in 0.242 s
+fact    set_component_suppressed('carried11', True) -> None in 0.481 s
+fact    set_component_suppressed('carried12', False) -> None in 0.23 s
+fact    set_component_suppressed('carried13', False) -> None in 0.262 s
+fact    set_component_suppressed('carried14', False) -> None in 0.23 s
+fact    set_component_suppressed('carried15', False) -> None in 0.235 s
+fact    set_component_suppressed('carried16', False) -> None in 0.224 s
+fact    set_component_suppressed('carried17', False) -> None in 0.217 s
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [5]
+fact    select_by_reference('carried2', 'feature', '6842000001000000fffeff00000000001a000000', False) -> None in 0.333 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate1', '<definition of UserAxis1>', ['ref:carried2:feature:6842000001000000fff…(61)', 'layout:Input Axis'], 'UserAxis1', (1.0, 1.0)) -> ('UserAxis1', 1) in 7.242 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate2', '<definition of UserLock1>', ['gear1', 'carried2'], 'UserLock1', (1.0, 1.0)) -> ('UserLock1', 1) in 9.438 s
+fact    remake_mate('carrymate3', '<definition of UserLock3>', ['carried2', 'carried8'], 'UserLock3', (1.0, 1.0)) -> ('UserLock3', 1) in 8.204 s
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [5]
+fact    select_by_reference('carried7', 'feature', '6842000001000000fffeff00000000001a000000', False) -> None in 0.31 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate4', '<definition of UserAxis4>', ['ref:carried7:feature:6842000001000000fff…(61)', 'layout:Input Axis'], 'UserAxis4', (1.0, 1.0)) -> ('UserAxis4', 1) in 5.932 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [4]
+fact    select_by_reference('carried7', 'plane', '6842000001000000fffeff000000000002000000', False) -> None in 0.338 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [4]
+fact    select_by_reference('carried8', 'plane', '6842000001000000fffeff000000000002000000', True) -> None in 0.31 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate5', '<definition of UserDist4>', ['ref:carried7:plane:6842000001000000fffeff000000000002000000', 'ref:carried8:plane:6842000001000000fffeff000000000002000000'], 'UserDist4', (1.0, 1.0)) -> ('UserDist4', 1) in 7.349 s; calls {'GetCorresponding': 2, 'GetObjectByPersistReference3': 2}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [4]
+fact    select_by_reference('carried7', 'plane', '6842000001000000fffeff000000000003000000', False) -> None in 0.295 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate6', '<definition of UserAngle4>', ['ref:carried7:plane:6842000001000000fffeff000000000003000000', 'layout:plane3'], 'UserAngle4', (1.0, 1.0)) -> ('UserAngle4', 1) in 7.201 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [5]
+fact    select_by_reference('carried6', 'feature', '6842000001000000fffeff00000000001a000000', False) -> None in 0.299 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate7', '<definition of UserChainAxis>', ['ref:carried6:feature:6842000001000000fff…(61)', 'layout:Input Axis'], 'UserChainAxis', (1.0, 1.0)) -> ('UserChainAxis', 1) in 6.707 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [4]
+fact    select_by_reference('carried6', 'plane', '6842000001000000fffeff000000000002000000', False) -> None in 0.27 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [4]
+fact    select_by_reference('carried2', 'plane', '6842000001000000fffeff000000000002000000', True) -> None in 0.286 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate8', '<definition of UserChainDist>', ['ref:carried6:plane:6842000001000000fffeff000000000002000000', 'ref:carried2:plane:6842000001000000fffeff000000000002000000'], 'UserChainDist', (1.0, 1.0)) -> ('UserChainDist', 1) in 7.276 s; calls {'GetCorresponding': 2, 'GetObjectByPersistReference3': 2}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [2]
+fact    select_by_reference('carried13', 'face', '6842000003000000fffeff0000000000ffff0100…(1126)', False) -> None in 0.423 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate9', '<definition of UserFaceConc>', ['ref:carried13:face:6842000003000000fffef…(1145)', 'layout:Input Axis'], 'UserFaceConc', (1.0, 1.0)) -> ('UserFaceConc', 1) in 11.508 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [2]
+fact    select_by_reference('carried6', 'face', '6842000003000000fffeff0000000000ffff0100…(16152)', False) -> None in 0.259 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [2]
+fact    select_by_reference('carried13', 'face', '6842000003000000fffeff0000000000ffff0100…(16152)', True) -> None in 0.249 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate10', '<definition of UserFaceCoin>', ['ref:carried6:face:6842000003000000fffeff…(16170)', 'ref:carried13:face:6842000003000000fffef…(16171)'], 'UserFaceCoin', (1.0, 1.0)) -> ('UserFaceCoin', 1) in 7.364 s; calls {'GetCorresponding': 2, 'GetObjectByPersistReference3': 2}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [5]
+fact    select_by_reference('carried1', 'feature', '6842000001000000fffeff00000000001a000000', False) -> None in 0.975 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate11', '<definition of UserAxis2>', ['ref:carried1:feature:6842000001000000fff…(61)', 'layout:Output Axis'], 'UserAxis2', (1.0, 1.0)) -> ('UserAxis2', 1) in 14.432 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate12', '<definition of UserLock2>', ['gear6', 'carried1'], 'UserLock2', (1.0, 1.0)) -> ('UserLock2', 1) in 7.481 s
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [4]
+fact    select_by_reference('carried14', 'plane', '6842000001000000fffeff000000000004000000', True) -> None in 0.372 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate13', '<definition of UserHousingRight>', ['layout:plane3', 'ref:carried14:plane:6842000001000000fffeff000000000004000000'], 'UserHousingRight', (1.0, 1.0)) -> ('UserHousingRight', 1) in 8.961 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [4]
+fact    select_by_reference('carried14', 'plane', '6842000001000000fffeff000000000002000000', False) -> None in 0.261 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate14', '<definition of UserHousingDist>', ['ref:carried14:plane:6842000001000000fffeff000000000002000000', 'layout:plane1'], 'UserHousingDist', (1.0, 1.0)) -> ('UserHousingDist', 1) in 8.315 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [4]
+fact    select_by_reference('carried14', 'plane', '6842000001000000fffeff000000000003000000', True) -> None in 0.272 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate15', '<definition of UserHousingPar>', ['layout:plane2', 'ref:carried14:plane:6842000001000000fffeff000000000003000000'], 'UserHousingPar', (1.0, 1.0)) -> ('UserHousingPar', 1) in 8.237 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [5]
+fact    select_by_reference('carried10', 'feature', '6842000001000000fffeff00000000001a000000', False) -> None in 0.325 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate16', '<definition of UserAxis5>', ['ref:carried10:feature:6842000001000000ff…(62)', 'layout:Input Axis'], 'UserAxis5', (1.0, 1.0)) -> ('UserAxis5', 1) in 7.908 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while GetNextSubFeature was in progress (exempt by the coordinator's ruling; nothing answers it)
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [5]
+fact    select_by_reference('carried4', 'feature', '6842000001000000fffeff00000000001a000000', False) -> None in 0.293 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate17', '<definition of UserAxis6>', ['ref:carried4:feature:6842000001000000fff…(61)', 'layout:Input Axis'], 'UserAxis6', (1.0, 1.0)) -> ('UserAxis6', 1) in 7.966 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [5]
+fact    select_by_reference('carried4', 'feature', '6842000001000000fffeff00000000001a000000', False) -> None in 0.289 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate18', '<definition of UserGear6>', ['ref:carried4:feature:6842000001000000fff…(61)', 'gear1:Gear Axis'], 'UserGear6', (20.0, 29.0)) -> ('UserGear6', 1) in 8.04 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [5]
+fact    select_by_reference('carried11', 'feature', '6842000001000000fffeff00000000001a000000', False) -> None in 0.324 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate19', '<definition of UserAxis7>', ['ref:carried11:feature:6842000001000000ff…(62)', 'layout:Input Axis'], 'UserAxis7', (1.0, 1.0)) -> ('UserAxis7', 1) in 7.398 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate20', '<definition of UserLock8a>', ['gear1', 'carried12'], 'UserLock8a', (1.0, 1.0)) -> ('UserLock8a', 1) in 7.947 s
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [4]
+fact    select_by_reference('carried12', 'plane', '6842000001000000fffeff000000000003000000', False) -> None in 0.289 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [4]
+fact    select_by_reference('carried9', 'plane', '6842000001000000fffeff000000000004000000', True) -> None in 0.28 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate21', '<definition of UserAngle8b>', ['ref:carried12:plane:6842000001000000fffeff000000000003000000', 'ref:carried9:plane:6842000001000000fffeff000000000004000000'], 'UserAngle8b', (1.0, 1.0)) -> ('UserAngle8b', 1) in 8.176 s; calls {'GetCorresponding': 2, 'GetObjectByPersistReference3': 2}
+fact    delete_mate('carrymate20',) -> None in 5.855 s
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [5]
+fact    select_by_reference('carried16', 'feature', '6842000001000000fffeff00000000001a000000', False) -> None in 0.314 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate22', '<definition of UserAxis10>', ['ref:carried16:feature:6842000001000000ff…(62)', 'layout:Input Axis'], 'UserAxis10', (1.0, 1.0)) -> ('UserAxis10', 1) in 6.955 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [5]
+fact    select_by_reference('carried16', 'feature', '6842000001000000fffeff00000000001a000000', False) -> None in 0.275 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate23', '<definition of UserGearRoot>', ['ref:carried16:feature:6842000001000000ff…(62)', 'gear1:Gear Axis'], 'UserGearRoot', (1.0, 1.0)) -> ('UserGearRoot', 1) in 8.468 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [5]
+fact    select_by_reference('carried15', 'feature', '6842000001000000fffeff00000000001a000000', False) -> None in 0.31 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate24', '<definition of UserAxis11>', ['ref:carried15:feature:6842000001000000ff…(62)', 'layout:Input Axis'], 'UserAxis11', (1.0, 1.0)) -> ('UserAxis11', 1) in 8.118 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [4]
+fact    select_by_reference('carried16', 'plane', '6842000001000000fffeff000000000002000000', False) -> None in 0.283 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [4]
+fact    select_by_reference('carried15', 'plane', '6842000001000000fffeff000000000002000000', True) -> None in 0.28 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate25', '<definition of UserLimit10>', ['ref:carried16:plane:6842000001000000fffeff000000000002000000', 'ref:carried15:plane:6842000001000000fffeff000000000002000000'], 'UserLimit10', (1.0, 1.0)) -> ('UserLimit10', 1) in 8.735 s; calls {'GetCorresponding': 2, 'GetObjectByPersistReference3': 2}
+fact    select_by_reference: GetObjectByPersistReference3's out code as SolidWorks left it [{'returned_tuple': False, 'returned_second': None, 'out_parameter_after': 0}]; IEntity.GetType on what resolved [5]
+fact    select_by_reference('carried17', 'feature', '6842000001000000fffeff00000000001a000000', False) -> None in 0.282 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+fact    remake_mate('carrymate26', '<definition of UserAxisConf>', ['ref:carried17:feature:6842000001000000ff…(62)', 'layout:Input Axis'], 'UserAxisConf', (1.0, 1.0)) -> ('UserAxisConf', 1) in 8.42 s; calls {'GetCorresponding': 1, 'GetObjectByPersistReference3': 1}
+        build   Part8 · spur · recipe B · trig degrees
+        ok      new part Part8
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      circle pitch
+        ok      circle base
+        ok      circle cap
+        ok      line CL
+        ok      line A
+        ok      arc E+
+        ok      arc E-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      coincident pitch.centre origin
+        ok      coincident base.centre origin
+        ok      coincident cap.centre origin
+        ok      coincident R.centre origin
+        ok      coincident CL.start origin
+        ok      horizontal CL
+        ok      coincident CL.end cap
+        ok      coincident A.start origin
+        ok      coincident A.end pitch
+        ok      coincident E+.centre base
+        ok      coincident A.end E+
+        ok      coincident E+.end cap
+        ok      symmetric E+.centre E-.centre CL
+        ok      equal E+ E-
+        ok      coincident E-.start cap
+        ok      coincident F+.start E+.start (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      tangent F+ E+
+        ok      tangent F+ R
+        ok      coincident F-.end E-.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F- E-
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start E+.end (already one point)
+        ok      coincident T.end E-.start (already one point)
+        ok      dimension Pitch
+        ok      dimension Base
+        ok      dimension Cap
+        ok      dimension HalfSpace
+        ok      dimension Flank
+        ok      dimension Fillet
+        ok      dimension Root
+        ok      sketch Tooth Space Sketch
+        ok      link "Pitch@Tooth Space Sketch"
+        ok      link "Base@Tooth Space Sketch"
+        ok      link "Cap@Tooth Space Sketch"
+        ok      link "HalfSpace@Tooth Space Sketch"
+        ok      link "Flank@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      link "Root@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 29
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.25_N29_r2; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9d-demo-sw2024-20261118-060436\out\carry\Gear_m1.25_N29_r2.SLDPRT
+        build   Part9 · spur · recipe A · trig degrees
+        ok      new part Part9
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.25_N20; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9d-demo-sw2024-20261118-060436\out\carry\Gear_m1.25_N20.SLDPRT
+        ok      checked Gear_m1.25_N13.SLDPRT: it holds what the workbook asks, so it is reused
+        ok      checked Ring_m1.25_N55.SLDPRT: it holds what the workbook asks, so it is reused
+        ok      checked Dog_m1.25_N17.SLDPRT: it holds what the workbook asks, so it is reused
+        ok      checked Sleeve_m1.25_N17.SLDPRT: it holds what the workbook asks, so it is reused
+        build   Part10 · layout · recipe  · trig degrees
+        ok      new part Part10
+        ok      trig units measured: degrees
+        ok      global "Aux X"
+        ok      axis Input Axis
+        ok      axis Carrier Axis
+        ok      axis Ring Axis
+        ok      axis Output Axis
+        ok      plane Aux X Plane
+        ok      link "Offset@Aux X Plane"
+        ok      axis Aux Axis
+        ok      1 globals read back and match the maths
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9d-demo-sw2024-20261118-060436\out\carry\RangeBox_r2_Layout.SLDPRT
+        build   Part11 · carrier · recipe  · trig degrees
+        ok      new part Part11
+        ok      trig units measured: degrees
+        ok      global "Planet copy 1 X"
+        ok      global "Planet copy 2 X"
+        ok      global "Planet copy 2 Y"
+        ok      global "Planet copy 3 X"
+        ok      global "Planet copy 3 Y"
+        ok      axis Carrier Axis
+        ok      plane Planet copy 1 X Plane
+        ok      link "Offset@Planet copy 1 X Plane"
+        ok      axis Planet copy 1 Axis
+        ok      plane Planet copy 2 X Plane
+        ok      link "Offset@Planet copy 2 X Plane"
+        ok      plane Planet copy 2 Y Plane
+        ok      link "Offset@Planet copy 2 Y Plane"
+        ok      axis Planet copy 2 Axis
+        ok      plane Planet copy 3 X Plane
+        ok      link "Offset@Planet copy 3 X Plane"
+        ok      plane Planet copy 3 Y Plane
+        ok      link "Offset@Planet copy 3 Y Plane"
+        ok      axis Planet copy 3 Axis
+        ok      5 globals read back and match the maths
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9d-demo-sw2024-20261118-060436\out\carry\RangeBox_r2_Carrier_Carrier.SLDPRT
+        build   Assem2 · assembly · recipe  · trig degrees
+        ok      new assembly Assem2
+        ok      trig units measured: degrees
+        ok      global "Sun Face Z"
+        ok      global "Planet Face Z"
+        ok      global "Aux Face Z"
+        ok      component RangeBox_r2_Layout-1
+        ok      placed layout
+        ok      fixed layout
+        ok      component RangeBox_r2_Carrier_Carrier-1
+        ok      placed carrier1
+        ok      fixed carrier1
+        ok      component Gear_m1.25_N29_r2-1
+        ok      placed gear1
+        ok      fixed gear1
+        ok      component Gear_m1.25_N13-1
+        ok      placed gear2c1
+        ok      fixed gear2c1
+        ok      component Gear_m1.25_N13-2
+        ok      placed gear2c2
+        ok      fixed gear2c2
+        ok      component Gear_m1.25_N13-3
+        ok      placed gear2c3
+        ok      fixed gear2c3
+        ok      component Ring_m1.25_N55-1
+        ok      placed gear3
+        ok      fixed gear3
+        ok      component Dog_m1.25_N17-1
+        ok      placed gear4
+        ok      fixed gear4
+        ok      component Dog_m1.25_N17-2
+        ok      placed gear5
+        ok      fixed gear5
+        ok      component Sleeve_m1.25_N17-1
+        ok      placed gear6
+        ok      fixed gear6
+        ok      component Gear_m1.25_N20-1
+        ok      placed gear7
+        ok      fixed gear7
+        ok      unfixed gear1
+        ok      mate coincident gear1:Gear Axis ~ layout:Input Axis as Sun on Input Axis
+        ok      mate point distance gear1:origin ~ layout:plane1 as Sun along Input
+        ok      link "D1@Sun along Input"
+        ok      unfixed gear4
+        ok      mate lock gear1 ~ gear4 as HighDog locked to Sun
+        ok      unfixed carrier1
+        ok      mate coincident carrier1:Carrier Axis ~ layout:Carrier Axis as Carrier carrier on Carrier Axis
+        ok      mate point carrier1:origin ~ layout:plane1 as Carrier carrier along Carrier
+        ok      unfixed gear5
+        ok      mate lock carrier1 ~ gear5 as LowDog locked to Carrier carrier
+        ok      unfixed gear2c1
+        ok      mate coincident gear2c1:Gear Axis ~ carrier1:Planet copy 1 Axis as Planet copy 1 on Planet copy 1 Axis
+        ok      mate point distance gear2c1:origin ~ layout:plane1 as Planet copy 1 along Planet copy 1
+        ok      link "D1@Planet copy 1 along Planet copy 1"
+        ok      unfixed gear2c2
+        ok      mate coincident gear2c2:Gear Axis ~ carrier1:Planet copy 2 Axis as Planet copy 2 on Planet copy 2 Axis
+        ok      mate point distance gear2c2:origin ~ layout:plane1 as Planet copy 2 along Planet copy 2
+        ok      link "D1@Planet copy 2 along Planet copy 2"
+        ok      unfixed gear2c3
+        ok      mate coincident gear2c3:Gear Axis ~ carrier1:Planet copy 3 Axis as Planet copy 3 on Planet copy 3 Axis
+        ok      mate point distance gear2c3:origin ~ layout:plane1 as Planet copy 3 along Planet copy 3
+        ok      link "D1@Planet copy 3 along Planet copy 3"
+        ok      unfixed gear6
+        ok      mate coincident gear6:Gear Axis ~ layout:Output Axis as RangeSlv on Output Axis
+        ok      mate point distance gear6:origin ~ layout:plane1 as RangeSlv along Output
+        ok      unfixed gear7
+        ok      mate coincident gear7:Gear Axis ~ layout:Aux Axis as Aux on Aux Axis
+        ok      mate point distance gear7:origin ~ layout:plane1 as Aux along Aux
+        ok      link "D1@Aux along Aux"
+        ok      mate gear gear1:Gear Axis ~ gear2c1:Gear Axis as Sun meshes Planet copy 1
+        ok      mate gear gear1:Gear Axis ~ gear2c2:Gear Axis as Sun meshes Planet copy 2
+        ok      mate gear gear1:Gear Axis ~ gear2c3:Gear Axis as Sun meshes Planet copy 3
+        ok      mate gear gear2c1:Gear Axis ~ gear3:Gear Axis as Planet copy 1 meshes Ring
+        ok      3 globals read back and match the maths
+        ok      every mate sound, every gear free to turn
+        ok      configuration H made
+        ok      configuration N made
+        ok      configuration L made
+        ok      1 slide value(s) set and read back in 3 configurations
+        ok      mate gear gear6:Gear Axis ~ gear4:Gear Axis as RangeSlv engages HighDog
+        ok      mate gear gear6:Gear Axis ~ gear5:Gear Axis as RangeSlv engages LowDog
+        ok      every mode checked: H, N, L
+        ok      configuration Default deleted
+        mate    Sun on Input Axis
+        mate    Sun along Input
+        mate    HighDog locked to Sun
+        mate    Carrier carrier on Carrier Axis
+        mate    Carrier carrier along Carrier
+        mate    LowDog locked to Carrier carrier
+        mate    Planet copy 1 on Planet copy 1 Axis
+        mate    Planet copy 1 along Planet copy 1
+        mate    Planet copy 2 on Planet copy 2 Axis
+        mate    Planet copy 2 along Planet copy 2
+        mate    Planet copy 3 on Planet copy 3 Axis
+        mate    Planet copy 3 along Planet copy 3
+        mate    RangeSlv on Output Axis
+        mate    RangeSlv along Output
+        mate    Aux on Aux Axis
+        mate    Aux along Aux
+        mate    Sun meshes Planet copy 1
+        mate    Sun meshes Planet copy 2
+        mate    Sun meshes Planet copy 3
+        mate    Planet copy 1 meshes Ring
+        ok      read turning against their mesh, so made again with the other Flip: RangeSlv engages HighDog, RangeSlv engages LowDog
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9d-demo-sw2024-20261118-060436\out\carry\RangeBox_r2.SLDASM
+        config  H: 21 mates as planned, 1 off
+        mode    H: every mate sound, every gear free to turn, no interference
+        config  N: 20 mates as planned, 2 off
+        mode    N: every mate sound, every gear free to turn, no interference
+        config  L: 21 mates as planned, 1 off
+        mode    L: every mate sound, every gear free to turn, no interference
+        ok      carried Sprocket-2 as Sprocket-1
+        ok      carried Sprocket-1 as Sprocket-2
+        ok      carried Sprocket-9 as Sprocket-3
+        ok      carried Sprocket-6 as Sprocket-4
+        ok      carried SprocketLight-1 as SprocketLight-1
+        ok      carried Chain-1 as Chain-1
+        ok      carried Sprocket-4 as Sprocket-5
+        ok      carried Sprocket-3 as Sprocket-6
+        ok      carried Housing-1 as Housing-1
+        ok      carried Sprocket-5 as Sprocket-7
+        ok      carried Sprocket-7 as Sprocket-8
+        ok      carried Sprocket-8 as Sprocket-9
+        ok      carried Chain-2 as Chain-2
+        ok      carried Housing-2 as Housing-2
+        ok      carried Sprocket-11 as Sprocket-10
+        ok      carried Sprocket-10 as Sprocket-11
+        ok      carried SprocketConf-1 as SprocketConf-1
+        ok      made UserAxis1 again, on in H, N and L
+        ok      made UserLock1 again, on in H, N and L
+        ok      made UserLock3 again, on in H, N and L
+        ok      made UserAxis4 again, on in H, N and L
+        ok      made UserDist4 again, on in H, N and L
+        ok      made UserAngle4 again, on in H, N and L
+        ok      made UserChainAxis again, on in H, N and L
+        ok      made UserChainDist again, on in H, N and L
+        ok      made UserFaceConc again, on in H, N and L
+        ok      made UserFaceCoin again, on in H, N and L
+        ok      made UserAxis2 again, on in H, N and L
+        ok      made UserLock2 again, on in H, N and L
+        ok      made UserHousingRight again, on in H, N and L
+        ok      made UserHousingDist again, on in H, N and L
+        ok      made UserHousingPar again, on in H, N and L
+        ok      made UserAxis5 again, on in H, N and L
+        ok      made UserAxis6 again, on in H, N and L
+        ok      made UserGear6 again, on in H, N and L
+        ok      made UserAxis7 again, on in H, N and L
+        ok      made UserAngle8b again, on in H, N and L
+        ok      made UserAxis10 again, on in H, N and L
+        ok      made UserGearRoot again, on in H, N and L
+        ok      made UserAxis11 again, on in H, N and L
+        ok      made UserLimit10 again, on in H, N and L
+        ok      made UserAxisConf again, on in H, N and L
+        CHECK   not carried: UserSunFace (part new)
+        CHECK   not carried: UserAsm6 (unread)
+        CHECK   not carried: UserAxis9 (unread)
+        CHECK   not carried: UserGearFillet (part new)
+        CHECK   not carried: UserAxisLight (lightweight)
+        FIXED   Housing-1 and Sprocket-9 fixed where placed (tie); taken out again: UserLock8a
+        CHECK   the new assembly holds what was carried, not saved
+        fact    walk Chain-2: face of 163: 1 after the prefilter (key ('area', 0.0001884955592153876)), 1 matched; face of 163: 1 after the prefilter (key ('area', 0.0003749931248352562)), 1 matched; 2 carried, 5.836 s, cap not reached
+        fact    walk Chain-1: face of 163: 1 after the prefilter (key ('area', 0.0003749912370201268)), 1 matched; 1 carried, 3.95 s, cap not reached
+        fact    walk Sprocket-5: face of 163: 1 after the prefilter (key ('area', 0.0003749931248352562)), 1 matched; 1 carried, 3.715 s, cap not reached
+        fact    walk Gear_m1.25_N29-1: face of 235: 29 after the prefilter (key ('area', 7.069953304421913e-06)), 1 matched; face of 235: 58 after the prefilter (key ('area', 7.327362734094641e-06)), 1 matched; 87 carried, 7.446 s, cap not reached
+        fact    SprocketLight-1 in RangeBox.SLDASM was lightweight and read resolved once its part was opened to insert it; left so
+        fact    fixed as in RangeBox.SLDASM: Housing-1 fixed in every mode by one FixComponent in H
+        fact    UserDist4 made again with Flip False for its FlipDimension 0; it reads FlipDimension 0
+        fact    UserAngle4 made again with Flip False for its FlipDimension 0; it reads FlipDimension 0
+        fact    UserChainDist made again with Flip False for its FlipDimension 0; it reads FlipDimension 0
+        fact    UserHousingDist made again with Flip False for its FlipDimension 0; it reads FlipDimension 0
+        fact    UserAngle8b made again with Flip False for its FlipDimension 0; it reads FlipDimension 0
+        fact    after Housing-1 and Sprocket-9 fell back in H: Housing-1 and Sprocket-9 fixed in every mode by one FixComponent in H
+        fact    UserLimit10 made again with Flip False for its FlipDimension 0; it reads FlipDimension 0
+        fact    UserAxis7 in L, where Sprocket-7 is suppressed: on, code 0; not judged
+        in 1388.6 s; SolidWorks 11.03 GB private, 8.62 GB free; old read ''
+status  [green] Built 2 parts, RangeBox_r2_Layout, RangeBox_r2_Carrier_Carrier and RangeBox_r2.SLDASM, reusing the 4 parts already built; no interference between the gears in any mode, where they stand. Its turning gears are mated to turn in each of its 3 modes, one configuration each (H, N and L), and SolidWorks reports no mate in error in any of them: it opens in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. RangeSlv slides along Output, to its place in each mode. The 3 copies of Planet turn on Carrier, and RangeBox_r2_Carrier_Carrier holds Carrier's axes and planes only: a plate and pins are yours to add. Ring stays fixed where it is placed: its shaft does not turn. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. 1 thing to do by hand: Assign a material to each of the 2 parts; the build leaves it unset. Carried into RangeBox_r2, unsaved: your Sprocket-1 (was Sprocket-2), Sprocket-2 (was Sprocket-1), Sprocket-3 (was Sprocket-9) and 14 other components, each where it stood, and 25 of your 31 mates, each on in the modes it was on in. UserAsm6 is on a plane of RangeBox.SLDASM itself, which Gear Generator did not read while SprocketLight-1 was lightweight in it, so it is not made again. UserAxis9 is on Sprocket-9, which is suppressed in H, the mode RangeBox.SLDASM showed, so it could not be read and is not made again. UserSunFace was on a face of Sun, and Sun's part is new because its Flank changed, so it is not made again. UserGearFillet was on a face of Sun, and Sun's part is new because its Flank changed, so it is not made again. UserAxisLight is on SprocketLight-1, which was lightweight in RangeBox.SLDASM, so what it joins could not be read, and it is not made again. Your User Keyway Sketch and User Keyway stay in Gear_m1.25_N29, which Sun's new part replaces because its Flank changed (RangeBox.SLDASM and that file keep them). Housing-1 and Sprocket-9 (was Sprocket-8) are fixed where they stood in RangeBox_r2: with your UserLock8a made again SolidWorks reads Sun unable to turn, so it was not kept; UserAngle8b beside it was. Your components were placed where they stood in H, the mode RangeBox.SLDASM showed; one no mate holds stands there in every mode. Assembly features, display states and appearances stay behind; pattern instances come over as components of their own. If a part of yours was made in context of RangeBox.SLDASM, it still refers to that assembly's parts. SprocketLight-1 was lightweight in RangeBox.SLDASM and is resolved there now: SolidWorks loaded its part to carry it. Save RangeBox_r2 in SolidWorks to keep what was carried.
+fact    carry: the build took 1389 s; GetSaveFlag before none, after ['RangeBox_r2.SLDASM']
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while GetNextSubFeature was in progress (exempt by the coordinator's ruling; nothing answers it)
+read    carry: the old assembly after: H showing; mates in error none; marked ['RangeBox_r2.SLDASM']; rebuild state 0; states {'Sprocket-1': 2, 'Sprocket-2': 2, 'Sprocket-3': 2, 'Sprocket-4': 2, 'Housing-1': 2, 'Chain-1': 2, 'Chain-2': 2, 'Housing-2': 2, 'Sprocket-5': 2, 'Sprocket-6': 2, 'Sprocket-7': 2, 'Sprocket-8': 2, 'Sprocket-9': 0, 'Sprocket-10': 2, 'Sprocket-11': 2, 'SprocketLight-1': 2, 'SprocketConf-1': 2}
+fact    carry: SprocketLight-1 in the old assembly, lightweight as the user set it, read 1 before the press and 2 after; what that alone changed, set apart (the coordinator's ruling on M1 (b)): ['states of SprocketLight-1: 1 -> 2', 'save flag of SprocketLight.SLDPRT: not open -> open, unmarked']
+ok      carry: the old assembly's save flag, mode showing (H), every component's frame and state, every mate's code, flag per mode and entities as before
+ok      carry: the old assembly and every user file unchanged on disk (size, time, hash): ['Chain.SLDPRT', 'Housing.SLDPRT', 'RangeBox.SLDASM', 'Sprocket.SLDPRT', 'SprocketConf.SLDPRT', 'SprocketLight.SLDPRT']
+fact    carry: traced calls on the old assembly and the user's files [('OpenDoc6', 'Sprocket.SLDPRT'), ('ActivateDoc3', 'Sprocket.SLDPRT'), ('OpenDoc6', 'Sprocket.SLDPRT'), ('ActivateDoc3', 'Sprocket.SLDPRT'), ('OpenDoc6', 'Sprocket.SLDPRT'), ('ActivateDoc3', 'Sprocket.SLDPRT'), ('OpenDoc6', 'Sprocket.SLDPRT'), ('ActivateDoc3', 'Sprocket.SLDPRT'), ('OpenDoc6', 'SprocketLight.SLDPRT'), ('ActivateDoc3', 'SprocketLight.SLDPRT'), ('OpenDoc6', 'Chain.SLDPRT'), ('ActivateDoc3', 'Chain.SLDPRT'), ('OpenDoc6', 'Sprocket.SLDPRT'), ('ActivateDoc3', 'Sprocket.SLDPRT'), ('OpenDoc6', 'Sprocket.SLDPRT'), ('ActivateDoc3', 'Sprocket.SLDPRT'), ('OpenDoc6', 'Housing.SLDPRT'), ('ActivateDoc3', 'Housing.SLDPRT'), ('OpenDoc6', 'Sprocket.SLDPRT'), ('ActivateDoc3', 'Sprocket.SLDPRT'), ('OpenDoc6', 'Sprocket.SLDPRT'), ('ActivateDoc3', 'Sprocket.SLDPRT'), ('OpenDoc6', 'Sprocket.SLDPRT'), ('ActivateDoc3', 'Sprocket.SLDPRT'), ('OpenDoc6', 'Chain.SLDPRT'), ('ActivateDoc3', 'Chain.SLDPRT'), ('OpenDoc6', 'Housing.SLDPRT'), ('ActivateDoc3', 'Housing.SLDPRT'), ('OpenDoc6', 'Sprocket.SLDPRT'), ('ActivateDoc3', 'Sprocket.SLDPRT'), ('OpenDoc6', 'Sprocket.SLDPRT'), ('ActivateDoc3', 'Sprocket.SLDPRT'), ('OpenDoc6', 'SprocketConf.SLDPRT'), ('ActivateDoc3', 'SprocketConf.SLDPRT')]; saves [('SaveAs3', 'Gear_m1.25_N29_r2.SLDPRT'), ('SaveAs3', 'Gear_m1.25_N20.SLDPRT'), ('SaveAs3', 'RangeBox_r2_Layout.SLDPRT'), ('SaveAs3', 'RangeBox_r2_Carrier_Carrier.SLDPRT'), ('SaveAs3', 'RangeBox_r2.SLDASM')]
+ok      carry: no write, show, rebuild, save or close of the old assembly or a user document in the traced calls, and nothing saved after RangeBox_r2.SLDASM's first save
+status  (carry, after the build) Built 2 parts, RangeBox_r2_Layout, RangeBox_r2_Carrier_Carrier and RangeBox_r2.SLDASM, reusing the 4 parts already built; no interference between the gears in any mode, where they stand. Its turning gears are mated to turn in each of its 3 modes, one configuration each (H, N and L), and SolidWorks reports no mate in error in any of them: it opens in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. RangeSlv slides along Output, to its place in each mode. The 3 copies of Planet turn on Carrier, and RangeBox_r2_Carrier_Carrier holds Carrier's axes and planes only: a plate and pins are yours to add. Ring stays fixed where it is placed: its shaft does not turn. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. 1 thing to do by hand: Assign a material to each of the 2 parts; the build leaves it unset. Carried into RangeBox_r2, unsaved: your Sprocket-1 (was Sprocket-2), Sprocket-2 (was Sprocket-1), Sprocket-3 (was Sprocket-9) and 14 other components, each where it stood, and 25 of your 31 mates, each on in the modes it was on in. UserAsm6 is on a plane of RangeBox.SLDASM itself, which Gear Generator did not read while SprocketLight-1 was lightweight in it, so it is not made again. UserAxis9 is on Sprocket-9, which is suppressed in H, the mode RangeBox.SLDASM showed, so it could not be read and is not made again. UserSunFace was on a face of Sun, and Sun's part is new because its Flank changed, so it is not made again. UserGearFillet was on a face of Sun, and Sun's part is new because its Flank changed, so it is not made again. UserAxisLight is on SprocketLight-1, which was lightweight in RangeBox.SLDASM, so what it joins could not be read, and it is not made again. Your User Keyway Sketch and User Keyway stay in Gear_m1.25_N29, which Sun's new part replaces because its Flank changed (RangeBox.SLDASM and that file keep them). Housing-1 and Sprocket-9 (was Sprocket-8) are fixed where they stood in RangeBox_r2: with your UserLock8a made again SolidWorks reads Sun unable to turn, so it was not kept; UserAngle8b beside it was. Your components were placed where they stood in H, the mode RangeBox.SLDASM showed; one no mate holds stands there in every mode. Assembly features, display states and appearances stay behind; pattern instances come over as components of their own. If a part of yours was made in context of RangeBox.SLDASM, it still refers to that assembly's parts. SprocketLight-1 was lightweight in RangeBox.SLDASM and is resolved there now: SolidWorks loaded its part to carry it. Save RangeBox_r2 in SolidWorks to keep what was carried.
+propose CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2024 = True  # carry: SprocketLight-1, lightweight in the open old assembly, read 1 before the press and 2 after (carrying it opens its file, and lightweight is per file in the session); a fact for D10 and for the result's sentence if True; set apart: ['states of SprocketLight-1: 1 -> 2', 'save flag of SprocketLight.SLDPRT: not open -> open, unmarked']
+ok      carry: RangeBox_r2 built, checked and saved as today; the old assembly read open: []
+fact    carry [worker]: SprocketLight-1 in RangeBox.SLDASM was lightweight and read resolved once its part was opened to insert it; left so
+fact    carry [fixed as in the old]: fixed as in RangeBox.SLDASM: Housing-1 fixed in every mode by one FixComponent in H
+fact    carry [flip dimension]: UserDist4 made again with Flip False for its FlipDimension 0; it reads FlipDimension 0
+fact    carry [flip dimension]: UserAngle4 made again with Flip False for its FlipDimension 0; it reads FlipDimension 0
+fact    carry [flip dimension]: UserChainDist made again with Flip False for its FlipDimension 0; it reads FlipDimension 0
+fact    carry [flip dimension]: UserHousingDist made again with Flip False for its FlipDimension 0; it reads FlipDimension 0
+fact    carry [flip dimension]: UserAngle8b made again with Flip False for its FlipDimension 0; it reads FlipDimension 0
+fact    carry [fixed after a fallback]: after Housing-1 and Sprocket-9 fell back in H: Housing-1 and Sprocket-9 fixed in every mode by one FixComponent in H
+fact    carry [flip dimension]: UserLimit10 made again with Flip False for its FlipDimension 0; it reads FlipDimension 0
+fact    carry [worker]: UserAxis7 in L, where Sprocket-7 is suppressed: on, code 0; not judged
+ok      carry: no file changed on disk after the carry (CarryResult.changed_files): none
+fact    carry: R read the old assembly open, H showing, modes ['H', 'N', 'L'], states by IConfiguration.GetComponentSuppressionState(Name2); marked none, left none, unread none
+        Sprocket-2: state 2, frame read, configuration 'Default' of ('Default',) (its document's 'Default'), suppressed in ()
+        Sprocket-1: state 2, frame read, configuration 'Default' of ('Default',) (its document's 'Default'), suppressed in ()
+        Sprocket-9: state 0, frame read, configuration 'Default' of ('Default',) (its document's ''), suppressed in ('H',)
+        Sprocket-6: state 2, frame read, configuration 'Default' of ('Default',) (its document's 'Default'), suppressed in ()
+        SprocketLight-1: state 1, frame read, configuration 'Default' of ('Default',) (its document's ''), suppressed in ()
+        Chain-1: state 2, frame read, configuration 'Default' of ('Default',) (its document's 'Default'), suppressed in ()
+        Sprocket-4: state 2, frame read, configuration 'Default' of ('Default',) (its document's 'Default'), suppressed in ()
+        Sprocket-3: state 2, frame read, configuration 'Default' of ('Default',) (its document's 'Default'), suppressed in ()
+        Housing-1: state 2, frame read, configuration 'Default' of ('Default',) (its document's 'Default'), suppressed in ()
+        Sprocket-5: state 2, frame read, configuration 'Default' of ('Default',) (its document's 'Default'), suppressed in ()
+        Sprocket-7: state 2, frame read, configuration 'Default' of ('Default',) (its document's 'Default'), suppressed in ('L',)
+        Sprocket-8: state 2, frame read, configuration 'Default' of ('Default',) (its document's 'Default'), suppressed in ()
+        Chain-2: state 2, frame read, configuration 'Default' of ('Default',) (its document's 'Default'), suppressed in ()
+        Housing-2: state 2, frame read, configuration 'Default' of ('Default',) (its document's 'Default'), suppressed in ()
+        Sprocket-11: state 2, frame read, configuration 'Default' of ('Default',) (its document's 'Default'), suppressed in ()
+        Sprocket-10: state 2, frame read, configuration 'Default' of ('Default',) (its document's 'Default'), suppressed in ()
+        SprocketConf-1: state 2, frame read, configuration 'Z20' of ('Default', 'Z20') (its document's 'Default'), suppressed in ()
+        UserAxis1: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Sprocket-1', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserAxis2: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Output Axis', False, None, None, '', ''), ('user', 'Sprocket-2', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserLock1: MateLock type 16, alignment 2, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('app', 'Sun', 'whole', '', False, None, None, '', ''), ('user', 'Sprocket-1', 'whole', '', False, None, None, '', '')]
+        UserLock2: MateLock type 16, alignment 2, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('app', 'RangeSlv', 'whole', '', False, None, None, '', ''), ('user', 'Sprocket-2', 'whole', '', False, None, None, '', '')]
+        UserLock3: MateLock type 16, alignment 2, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('user', 'Sprocket-1', 'whole', '', False, None, None, '', ''), ('user', 'Sprocket-3', 'whole', '', False, None, None, '', '')]
+        UserAxis4: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Sprocket-4', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserDist4: MateDistanceDim type 5, alignment 0, flipped False, values [('Distance', 0.09), ('MaximumDistance', 0.09), ('MinimumDistance', 0.09), ('FlipDimension', 0.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Sprocket-4', 'plane', 'plane1', True, None, None, '', ''), ('user', 'Sprocket-3', 'plane', 'plane1', True, None, None, '', '')]
+        UserAngle4: MatePlanarAngleDim type 6, alignment 0, flipped False, values [('Angle', 1.5707963267948966), ('MaximumAngle', 1.5707963267948966), ('MinimumAngle', 1.5707963267948966), ('FlipDimension', 0.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Sprocket-4', 'plane', 'plane2', True, None, None, '', ''), ('layout', '', 'plane', 'plane3', False, None, None, '', '')]
+        UserChainAxis: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Chain-1', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserChainDist: MateDistanceDim type 5, alignment 0, flipped False, values [('Distance', 0.15), ('MaximumDistance', 0.15), ('MinimumDistance', 0.15), ('FlipDimension', 0.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Chain-1', 'plane', 'plane1', True, None, None, '', ''), ('user', 'Sprocket-1', 'plane', 'plane1', True, None, None, '', '')]
+        UserFaceConc: MateConcentric type 1, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Chain-2', 'face', '', True, True, 5.0, '', '')]
+        UserFaceCoin: MateCoincident type 0, alignment 1, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('user', 'Chain-1', 'face', '', True, False, None, '', ''), ('user', 'Chain-2', 'face', '', True, False, None, '', '')]
+        UserHousingRight: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'plane', 'plane3', False, None, None, '', ''), ('user', 'Housing-2', 'plane', 'plane3', True, None, None, '', '')]
+        UserHousingDist: MateDistanceDim type 5, alignment 0, flipped False, values [('Distance', 0.42), ('MaximumDistance', 0.42), ('MinimumDistance', 0.42), ('FlipDimension', 0.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Housing-2', 'plane', 'plane1', True, None, None, '', ''), ('layout', '', 'plane', 'plane1', False, None, None, '', '')]
+        UserHousingPar: MateParallel type 3, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'plane', 'plane2', False, None, None, '', ''), ('user', 'Housing-2', 'plane', 'plane2', True, None, None, '', '')]
+        UserAxis5: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Sprocket-5', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserSunFace: MateCoincident type 0, alignment 1, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('app', 'Sun', 'face', '', False, None, None, '', ''), ('user', 'Sprocket-5', 'face', '', True, False, None, '', '')]
+        UserAxis6: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Sprocket-6', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserGear6: MateGearDim type 10, alignment 2, flipped False, values [('GearRatioNumerator', 29.0), ('GearRatioDenominator', 20.0), ('Reverse', 1.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Sprocket-6', 'feature', 'Gear Axis', True, None, None, '', ''), ('app', 'Sun', 'feature', 'Gear Axis', False, None, None, '', '')]
+        UserAsm6: MateDistanceDim type 5, alignment 0, flipped False, values [('Distance', 0.23), ('MaximumDistance', 0.23), ('MinimumDistance', 0.23), ('FlipDimension', 0.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Sprocket-6', 'plane', 'plane1', True, None, None, '', ''), ('unread', '', 'unread', 'plane1', False, None, None, '', "the assembly's own plane is not read while a component of it is lightweight")]
+        UserAxis7: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Sprocket-7', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserLock8a: MateLock type 16, alignment 2, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('app', 'Sun', 'whole', '', False, None, None, '', ''), ('user', 'Sprocket-8', 'whole', '', False, None, None, '', '')]
+        UserAngle8b: MatePlanarAngleDim type 6, alignment 0, flipped False, values [('Angle', 1.5707963267948966), ('MaximumAngle', 1.5707963267948966), ('MinimumAngle', 1.5707963267948966), ('FlipDimension', 0.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Sprocket-8', 'plane', 'plane2', True, None, None, '', ''), ('user', 'Housing-1', 'plane', 'plane3', True, None, None, '', '')]
+        UserAxis9: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Sprocket-9', 'unread', '', False, None, None, '', 'a component it joins is suppressed in the mode the old assembly showed')]
+        UserAxis10: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Sprocket-10', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserGearRoot: MateGearDim type 10, alignment 2, flipped False, values [('GearRatioNumerator', 1.0), ('GearRatioDenominator', 1.0), ('Reverse', 1.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Sprocket-10', 'feature', 'Gear Axis', True, None, None, '', ''), ('app', 'Sun', 'face', '', False, True, 16.375, '', '')]
+        UserAxis11: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'Sprocket-11', 'feature', 'Gear Axis', True, None, None, '', '')]
+        UserGearFillet: MateGearDim type 10, alignment 2, flipped True, values [('GearRatioNumerator', 1.0), ('GearRatioDenominator', 1.0), ('Reverse', 0.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Sprocket-11', 'feature', 'Gear Axis', True, None, None, '', ''), ('app', 'Sun', 'face', '', False, False, 0.47500000000000153, '', '')]
+        UserLimit10: MateLimitDistanceDim type 5, alignment 0, flipped False, values [('Distance', 0.02), ('MaximumDistance', 0.03), ('MinimumDistance', 0.01), ('FlipDimension', 0.0)], on ['H', 'N', 'L'], code 0, entities [('user', 'Sprocket-10', 'plane', 'plane1', True, None, None, '', ''), ('user', 'Sprocket-11', 'plane', 'plane1', True, None, None, '', '')]
+        UserAxisLight: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'SprocketLight-1', 'feature', 'Gear Axis', False, None, None, '', '')]
+        UserAxisConf: MateCoincident type 0, alignment 0, flipped False, values [], on ['H', 'N', 'L'], code 0, entities [('layout', '', 'feature', 'Input Axis', False, None, None, '', ''), ('user', 'SprocketConf-1', 'feature', 'Gear Axis', True, None, None, '', '')]
+ok      carry: the result says what was carried unsaved, the Keyway with why, the mate on Sun's face
+        named UserSunFace (mate): part new ['Sun', 'its Flank changed', 'face', '']
+        named UserAsm6 (mate): unread ["the assembly's own plane is not read while a component of it is lightweight", 'beside lightweight', 'SprocketLight-1']
+        named UserAxis9 (mate): unread ['a component it joins is suppressed in the mode the old assembly showed', 'suppressed', 'Sprocket-9', 'H']
+        named UserGearFillet (mate): part new ['Sun', 'its Flank changed', 'face', '']
+        named UserAxisLight (mate): lightweight ['SprocketLight-1']
+ok      carry: every mate made again, named or fallen back as the findings say ({'faces': True, 'coaxial': True, 'states': True, 'unsaved': True, 'reload': True, 'closed_read': True}): as expected
+ok      carry: every component carried (17), or named only as a component suppressed in the mode showing may be: none; wrongly none
+ok      carry: the tied cluster alone fell back, UserLock8a deleted, UserAngle8b kept, ['Housing-1', 'Sprocket-8 as Sprocket-9'] fixed: [CarryFallback(components=('Housing-1', 'Sprocket-9'), deleted=('UserLock8a',), kept=('UserAngle8b',), why='tie', subjects=('Sun', 'H'))]
+ok      carry: no mate back in an old error [], nothing moved [], no stop '' '', the new assembly unsaved True
+ok      carry: each carried component placed against the fixture's anchor (D20 as ruled 2026-11-17; a fixed one by the world): all
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while GetNextFeature was in progress (exempt by the coordinator's ruling; nothing answers it)
+ok      carry: Sprocket-7 and Sprocket-9 read suppressed in {'Sprocket-7 as Sprocket-8': ['L'], 'Sprocket-9 as Sprocket-3': ['H']} (shown and read), as the route says {'s7': {'L'}, 's9': {'H'}} and the carry said {'s7': {'L'}, 's9': {'H'}}; 
+ok      carry: every other carried component resolved in every mode: all
+fact    carry: the worker's kind words differ from the fixture's for no mate
+ok      carry: every mate expected to be made again was, its definition and entities in RangeBox_r2 as the old one's, by the script's own reads: all; every one reached
+fact    carry: UserAxis7 in L, where a component it joins (Sprocket-7 as Sprocket-8) is suppressed: set on as recorded, SolidWorks reads it on (the script's read); the worker's fact ['UserAxis7 in L, where Sprocket-7 is suppressed: on, code 0; not judged']; not judged (§3 C.6.1)
+ok      carry: every mate expected to be made again on in the modes it was on in, read again: all; every one reached
+fact    carry: Housing-1 per mode: IsFixed [True, True, True]; its frame's largest difference from where it stands in H {'H': 0.0, 'N': 0.0, 'L': 0.0}; from its world frame in the old assembly 0.0
+fact    carry: Sprocket-8 as Sprocket-9 per mode: IsFixed [True, True, True]; its frame's largest difference from where it stands in H {'H': 0.0, 'N': 0.0, 'L': 0.0}
+ok      carry: every component of the fallen cluster ['Housing-1', 'Sprocket-9'] and every one fixed in the old assembly ['Housing-1'] reads fixed in every mode (the script's IsFixed): all
+fact    carry: the worker's sentence after the fallback: one FixComponent; for the components fixed in the old assembly: one FixComponent (the first reading of what one FixComponent does across configurations: the script read {'H': {'Sprocket-1': False, 'Sprocket-2': False, 'Sprocket-3': False, 'Sprocket-4': False, 'SprocketLight-1': False, 'Chain-1': False, 'Sprocket-5': False, 'Sprocket-6': False, 'Housing-1': True, 'Sprocket-7': False, 'Sprocket-8': False, 'Sprocket-9': True, 'Chain-2': False, 'Housing-2': False, 'Sprocket-10': False, 'Sprocket-11': False, 'SprocketConf-1': False}, 'N': {'Sprocket-1': False, 'Sprocket-2': False, 'Sprocket-3': False, 'Sprocket-4': False, 'SprocketLight-1': False, 'Chain-1': False, 'Sprocket-5': False, 'Sprocket-6': False, 'Housing-1': True, 'Sprocket-7': False, 'Sprocket-8': False, 'Sprocket-9': True, 'Chain-2': False, 'Housing-2': False, 'Sprocket-10': False, 'Sprocket-11': False, 'SprocketConf-1': False}, 'L': {'Sprocket-1': False, 'Sprocket-2': False, 'Sprocket-3': False, 'Sprocket-4': False, 'SprocketLight-1': False, 'Chain-1': False, 'Sprocket-5': False, 'Sprocket-6': False, 'Housing-1': True, 'Sprocket-7': False, 'Sprocket-8': False, 'Sprocket-9': True, 'Chain-2': False, 'Housing-2': False, 'Sprocket-10': False, 'Sprocket-11': False, 'SprocketConf-1': False}})
+fact    carry: UserDist4 as UserDist4: FlipDimension False in the old assembly, False in RangeBox_r2; IMate2.Flipped False before, False after (the script's reads); the worker: UserDist4 made again with Flip False for its FlipDimension 0; it reads FlipDimension 0
+fact    carry: UserAngle4 as UserAngle4: FlipDimension False in the old assembly, False in RangeBox_r2; IMate2.Flipped False before, False after (the script's reads); the worker: UserAngle4 made again with Flip False for its FlipDimension 0; it reads FlipDimension 0
+fact    carry: UserChainDist as UserChainDist: FlipDimension False in the old assembly, False in RangeBox_r2; IMate2.Flipped False before, False after (the script's reads); the worker: UserChainDist made again with Flip False for its FlipDimension 0; it reads FlipDimension 0
+fact    carry: UserHousingDist as UserHousingDist: FlipDimension False in the old assembly, False in RangeBox_r2; IMate2.Flipped False before, False after (the script's reads); the worker: UserHousingDist made again with Flip False for its FlipDimension 0; it reads FlipDimension 0
+fact    carry: UserAngle8b as UserAngle8b: FlipDimension False in the old assembly, False in RangeBox_r2; IMate2.Flipped False before, False after (the script's reads); the worker: UserAngle8b made again with Flip False for its FlipDimension 0; it reads FlipDimension 0
+fact    carry: UserLimit10 as UserLimit10: FlipDimension False in the old assembly, False in RangeBox_r2; IMate2.Flipped False before, False after (the script's reads); the worker: UserLimit10 made again with Flip False for its FlipDimension 0; it reads FlipDimension 0
+fact    carry: UserGear6 as UserGear6, a gear mate: alignment 2 before, 2 after (not judged: AddMate5 ignores a gear mate's alignment)
+fact    carry: UserGearRoot as UserGearRoot, a gear mate: alignment 2 before, 2 after (not judged: AddMate5 ignores a gear mate's alignment)
+ok      carry: every remade mate kept under its old name, or the worker said the name SolidWorks kept: every one its own
+fact    carry: UserAngle8b, joining two components fixed by the fallback, reads code per mode {'H': (0, False), 'N': (0, False), 'L': (0, False)}
+fact    carry: GetConstrainedStatus per mode of the app's bodies {'H': {'Sun': '2 (swUnderConstrained)', 'Planet copy 1': '2 (swUnderConstrained)', 'Planet copy 2': '2 (swUnderConstrained)', 'Planet copy 3': '2 (swUnderConstrained)', 'Ring': '3 (swFullyConstrained)', 'HighDog': '2 (swUnderConstrained)', 'LowDog': '2 (swUnderConstrained)', 'RangeSlv': '2 (swUnderConstrained)', 'Aux': '2 (swUnderConstrained)', 'Carrier carrier': '2 (swUnderConstrained)', 'layout': '3 (swFullyConstrained)', 'Sprocket-1': '2 (swUnderConstrained)', 'Sprocket-2': '2 (swUnderConstrained)', 'Sprocket-3': '2 (swUnderConstrained)', 'Sprocket-4': '2 (swUnderConstrained)', 'SprocketLight-1': '2 (swUnderConstrained)', 'Chain-1': '2 (swUnderConstrained)', 'Sprocket-5': '3 (swFullyConstrained)', 'Sprocket-6': '2 (swUnderConstrained)', 'Housing-1': '3 (swFullyConstrained)', 'Sprocket-7': '2 (swUnderConstrained)', 'Sprocket-8': '2 (swUnderConstrained)', 'Sprocket-9': '3 (swFullyConstrained)', 'Chain-2': '2 (swUnderConstrained)', 'Housing-2': '2 (swUnderConstrained)', 'Sprocket-10': '2 (swUnderConstrained)', 'Sprocket-11': '2 (swUnderConstrained)', 'SprocketConf-1': '2 (swUnderConstrained)'}, 'N': {'Sun': '2 (swUnderConstrained)', 'Planet copy 1': '2 (swUnderConstrained)', 'Planet copy 2': '2 (swUnderConstrained)', 'Planet copy 3': '2 (swUnderConstrained)', 'Ring': '3 (swFullyConstrained)', 'HighDog': '2 (swUnderConstrained)', 'LowDog': '2 (swUnderConstrained)', 'RangeSlv': '2 (swUnderConstrained)', 'Aux': '2 (swUnderConstrained)', 'Carrier carrier': '2 (swUnderConstrained)', 'layout': '3 (swFullyConstrained)', 'Sprocket-1': '2 (swUnderConstrained)', 'Sprocket-2': '2 (swUnderConstrained)', 'Sprocket-3': '2 (swUnderConstrained)', 'Sprocket-4': '2 (swUnderConstrained)', 'SprocketLight-1': '2 (swUnderConstrained)', 'Chain-1': '2 (swUnderConstrained)', 'Sprocket-5': '3 (swFullyConstrained)', 'Sprocket-6': '2 (swUnderConstrained)', 'Housing-1': '3 (swFullyConstrained)', 'Sprocket-7': '2 (swUnderConstrained)', 'Sprocket-8': '2 (swUnderConstrained)', 'Sprocket-9': '3 (swFullyConstrained)', 'Chain-2': '2 (swUnderConstrained)', 'Housing-2': '2 (swUnderConstrained)', 'Sprocket-10': '2 (swUnderConstrained)', 'Sprocket-11': '2 (swUnderConstrained)', 'SprocketConf-1': '2 (swUnderConstrained)'}, 'L': {'Sun': '2 (swUnderConstrained)', 'Planet copy 1': '2 (swUnderConstrained)', 'Planet copy 2': '2 (swUnderConstrained)', 'Planet copy 3': '2 (swUnderConstrained)', 'Ring': '3 (swFullyConstrained)', 'HighDog': '2 (swUnderConstrained)', 'LowDog': '2 (swUnderConstrained)', 'RangeSlv': '2 (swUnderConstrained)', 'Aux': '2 (swUnderConstrained)', 'Carrier carrier': '2 (swUnderConstrained)', 'layout': '3 (swFullyConstrained)', 'Sprocket-1': '2 (swUnderConstrained)', 'Sprocket-2': '2 (swUnderConstrained)', 'Sprocket-3': '2 (swUnderConstrained)', 'Sprocket-4': '2 (swUnderConstrained)', 'SprocketLight-1': '2 (swUnderConstrained)', 'Chain-1': '2 (swUnderConstrained)', 'Sprocket-5': '3 (swFullyConstrained)', 'Sprocket-6': '2 (swUnderConstrained)', 'Housing-1': '3 (swFullyConstrained)', 'Sprocket-7': '2 (swUnderConstrained)', 'Sprocket-8': '2 (swUnderConstrained)', 'Sprocket-9': '3 (swFullyConstrained)', 'Chain-2': '2 (swUnderConstrained)', 'Housing-2': '2 (swUnderConstrained)', 'Sprocket-10': '2 (swUnderConstrained)', 'Sprocket-11': '2 (swUnderConstrained)', 'SprocketConf-1': '2 (swUnderConstrained)'}}
+fact    carry: GetConstrainedStatus per mode of the carried components {'H': {'Sprocket-2 as Sprocket-1': '2 (swUnderConstrained)', 'Sprocket-1 as Sprocket-2': '2 (swUnderConstrained)', 'Sprocket-9 as Sprocket-3': '2 (swUnderConstrained)', 'Sprocket-6 as Sprocket-4': '2 (swUnderConstrained)', 'SprocketLight-1': '2 (swUnderConstrained)', 'Chain-1': '2 (swUnderConstrained)', 'Sprocket-4 as Sprocket-5': '3 (swFullyConstrained)', 'Sprocket-3 as Sprocket-6': '2 (swUnderConstrained)', 'Housing-1': '3 (swFullyConstrained)', 'Sprocket-5 as Sprocket-7': '2 (swUnderConstrained)', 'Sprocket-7 as Sprocket-8': '2 (swUnderConstrained)', 'Sprocket-8 as Sprocket-9': '3 (swFullyConstrained)', 'Chain-2': '2 (swUnderConstrained)', 'Housing-2': '2 (swUnderConstrained)', 'Sprocket-11 as Sprocket-10': '2 (swUnderConstrained)', 'Sprocket-10 as Sprocket-11': '2 (swUnderConstrained)', 'SprocketConf-1': '2 (swUnderConstrained)'}, 'N': {'Sprocket-2 as Sprocket-1': '2 (swUnderConstrained)', 'Sprocket-1 as Sprocket-2': '2 (swUnderConstrained)', 'Sprocket-9 as Sprocket-3': '2 (swUnderConstrained)', 'Sprocket-6 as Sprocket-4': '2 (swUnderConstrained)', 'SprocketLight-1': '2 (swUnderConstrained)', 'Chain-1': '2 (swUnderConstrained)', 'Sprocket-4 as Sprocket-5': '3 (swFullyConstrained)', 'Sprocket-3 as Sprocket-6': '2 (swUnderConstrained)', 'Housing-1': '3 (swFullyConstrained)', 'Sprocket-5 as Sprocket-7': '2 (swUnderConstrained)', 'Sprocket-7 as Sprocket-8': '2 (swUnderConstrained)', 'Sprocket-8 as Sprocket-9': '3 (swFullyConstrained)', 'Chain-2': '2 (swUnderConstrained)', 'Housing-2': '2 (swUnderConstrained)', 'Sprocket-11 as Sprocket-10': '2 (swUnderConstrained)', 'Sprocket-10 as Sprocket-11': '2 (swUnderConstrained)', 'SprocketConf-1': '2 (swUnderConstrained)'}, 'L': {'Sprocket-2 as Sprocket-1': '2 (swUnderConstrained)', 'Sprocket-1 as Sprocket-2': '2 (swUnderConstrained)', 'Sprocket-9 as Sprocket-3': '2 (swUnderConstrained)', 'Sprocket-6 as Sprocket-4': '2 (swUnderConstrained)', 'SprocketLight-1': '2 (swUnderConstrained)', 'Chain-1': '2 (swUnderConstrained)', 'Sprocket-4 as Sprocket-5': '3 (swFullyConstrained)', 'Sprocket-3 as Sprocket-6': '2 (swUnderConstrained)', 'Housing-1': '3 (swFullyConstrained)', 'Sprocket-5 as Sprocket-7': '2 (swUnderConstrained)', 'Sprocket-7 as Sprocket-8': '2 (swUnderConstrained)', 'Sprocket-8 as Sprocket-9': '3 (swFullyConstrained)', 'Chain-2': '2 (swUnderConstrained)', 'Housing-2': '2 (swUnderConstrained)', 'Sprocket-11 as Sprocket-10': '2 (swUnderConstrained)', 'Sprocket-10 as Sprocket-11': '2 (swUnderConstrained)', 'SprocketConf-1': '2 (swUnderConstrained)'}}
+ok      carry: every app gear free to turn in every mode with the carried mates on: all
+fact    carry: Sun's frame in the old assembly (H) ((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0), (0.0, 0.0, 5.5)); in RangeBox_r2 per mode {'H': ((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0), (0.0, 0.0, 5.5)), 'N': ((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0), (0.0, 0.0, 5.5)), 'L': ((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0), (0.0, 0.0, 5.5))}
+ok      carry: each carried component at its pose against its anchor, as it stood in H of the old assembly, in every mode of RangeBox_r2 where it is resolved (49 reads): off none; not read none
+ok      carry, H shown: every body at its frame on record (6.6e-10 at Planet copy 2); no mate in error ; every app gear free True ; no interference ; RangeSlv along Output reads 34.500000 mm, the record -34.500000 (SolidWorks gives a distance without its sign), RangeSlv's Front plane at z -34.500000: agree; bands and dogs where the app's read puts them to 0.0001 mm ; engaged ['HighDog'] as the app's ['HighDog']
+fact    carry, H: measured bands {'whole': (-34.5, -24.5)}, dogs {'HighDog': (-34.5, -29.5), 'LowDog': (-19.5, -14.5)}, hub None; RangeSlv moved -5.000000 mm from N; least running gap 5.0 at [('whole', 'LowDog')]; relief holds []
+ok      carry, N shown: every body at its frame on record (6.6e-10 at Planet copy 2); no mate in error ; every app gear free True ; no interference ; RangeSlv along Output reads 29.500000 mm, the record -29.500000 (SolidWorks gives a distance without its sign), RangeSlv's Front plane at z -29.500000: agree; bands and dogs where the app's read puts them to 0.0001 mm ; engaged [] as the app's []
+fact    carry, N: measured bands {'whole': (-29.5, -19.5)}, dogs {'HighDog': (-34.5, -29.5), 'LowDog': (-19.5, -14.5)}, hub None; RangeSlv moved +0.000000 mm from N; least running gap 0.0 at [('whole', 'HighDog'), ('whole', 'LowDog')]; relief holds []
+ok      carry, L shown: every body at its frame on record (6.6e-10 at Planet copy 2); no mate in error ; every app gear free True ; no interference ; RangeSlv along Output reads 24.500000 mm, the record -24.500000 (SolidWorks gives a distance without its sign), RangeSlv's Front plane at z -24.500000: agree; bands and dogs where the app's read puts them to 0.0001 mm ; engaged ['LowDog'] as the app's ['LowDog']
+fact    carry, L: measured bands {'whole': (-24.5, -14.5)}, dogs {'HighDog': (-34.5, -29.5), 'LowDog': (-19.5, -14.5)}, hub None; RangeSlv moved +5.000000 mm from N; least running gap 5.0 at [('whole', 'HighDog')]; relief holds []
+ok      carry: every mate's flag in every mode as on record, the couplings on only in their modes: wrong none
+fact    carry: interference with the carried components per mode: SolidWorks {}; the carry named none
+ok      carry: every interference SolidWorks reports with a carried component the carry's post-check named, and none other:  unnamed none, unseen none
+ok      carry: SprocketConf-1 inserted in Z20, read back in every mode: {'H': 'Z20', 'N': 'Z20', 'L': 'Z20'}
+ok      carry: R read SprocketConf-1's referenced configuration 'Z20' beside its document's 'Default' (REFERENCED_CONFIGURATION_READ)
+fact    carry: SprocketLight-1, lightweight, read its file's configurations closed (ISldWorks.GetConfigurationNames(path)): ('Default',); carried True
+ok      carry: RangeBox_r2 holds the carried items unsaved (GetSaveFlag True)
+ok      read RangeBox.xlsx: ok
+        warning Gears!K2: Sun: Arcs stand in for the involute on this gear to within 34.7 µm.
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side. This workbook's Gears sheet has no Start band (mm) and End band (mm) columns, which give a sleeve toothed bands with a relief between them: type both headers on row 1 of the Gears sheet (after Slides, as a new workbook has them) and save.
+        6 shafts · 7 gears · 2 meshes; gate ''
+footer  (carry, after the build, the finish's sentence standing) [green] Built 2 parts, RangeBox_r2_Layout, RangeBox_r2_Carrier_Carrier and RangeBox_r2.SLDASM, reusing the 4 parts already built; no interference between the gears in any mode, where they stand. Its turning gears are mated to turn in each of its 3 modes, one configuration each (H, N and L), and SolidWorks reports no mate in error in any of them: it opens in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. RangeSlv slides along Output, to its place in each mode. The 3 copies of Planet turn on Carrier, and RangeBox_r2_Carrier_Carrier holds Carrier's axes and planes only: a plate and pins are yours to add. Ring stays fixed where it is placed: its shaft does not turn. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. 1 thing to do by hand: Assign a material to each of the 2 parts; the build leaves it unset. Carried into RangeBox_r2, unsaved: your Sprocket-1 (was Sprocket-2), Sprocket-2 (was Sprocket-1), Sprocket-3 (was Sprocket-9) and 14 other components, each where it stood, and 25 of your 31 mates, each on in the modes it was on in. UserAsm6 is on a plane of RangeBox.SLDASM itself, which Gear Generator did not read while SprocketLight-1 was lightweight in it, so it is not made again. UserAxis9 is on Sprocket-9, which is suppressed in H, the mode RangeBox.SLDASM showed, so it could not be read and is not made again. UserSunFace was on a face of Sun, and Sun's part is new because its Flank changed, so it is not made again. UserGearFillet was on a face of Sun, and Sun's part is new because its Flank changed, so it is not made again. UserAxisLight is on SprocketLight-1, which was lightweight in RangeBox.SLDASM, so what it joins could not be read, and it is not made again. Your User Keyway Sketch and User Keyway stay in Gear_m1.25_N29, which Sun's new part replaces because its Flank changed (RangeBox.SLDASM and that file keep them). Housing-1 and Sprocket-9 (was Sprocket-8) are fixed where they stood in RangeBox_r2: with your UserLock8a made again SolidWorks reads Sun unable to turn, so it was not kept; UserAngle8b beside it was. Your components were placed where they stood in H, the mode RangeBox.SLDASM showed; one no mate holds stands there in every mode. Assembly features, display states and appearances stay behind; pattern instances come over as components of their own. If a part of yours was made in context of RangeBox.SLDASM, it still refers to that assembly's parts. SprocketLight-1 was lightweight in RangeBox.SLDASM and is resolved there now: SolidWorks loaded its part to carry it. Save RangeBox_r2 in SolidWorks to keep what was carried.
+        button 'Build again…' on; Update SolidWorks shown on primary
+footer  (carry, after the build, the finish's sentence gone) [green] SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move. It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. Carrier (the carrier) is axes and planes only, so it has nothing to drag. As read at 07:10, Update SolidWorks leaves your Sprocket-1, Sprocket-2, Sprocket-3, 14 other components and 25 mates as they are. RangeBox_r2 holds what Build again… carried of yours, not saved: save it in SolidWorks to keep it.
+        button 'Build again…' on; Update SolidWorks shown on primary
+fact    carry: the footer with the finish's sentence standing asks for the save; §9.4's line is not in it; with the sentence gone it says §9.4's line; the carry finished
+ok      carry: the record on disk at schema 10 holds the carry (how open, 17 components, 25 mates, 5 named), unsaved_at 1795002865.128523 against the file's 1795002865.128523; the footer says 'RangeBox_r2 holds what Build again… carried of yours, not saved: save it in SolidWorks to keep it.'
+PATCH   findings.CARRY_INSERTS_ON_2024 back to None
+PATCH   findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 back to None
+PATCH   findings.REFERENCED_CONFIGURATION_READ_ON_2024 back to None
+PATCH   findings.CARRY_REMAKE_KINDS_ON_2024 back to None
+PATCH   findings.CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 back to None
+-- carry  the user saves RangeBox_r2 (and nothing else): the footer's line goes
+read    lightweight in RangeBox_r2.SLDASM: none
+ok      read RangeBox.xlsx: ok
+        warning Gears!K2: Sun: Arcs stand in for the involute on this gear to within 34.7 µm.
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side. This workbook's Gears sheet has no Start band (mm) and End band (mm) columns, which give a sleeve toothed bands with a relief between them: type both headers on row 1 of the Gears sheet (after Slides, as a new workbook has them) and save.
+        6 shafts · 7 gears · 2 meshes; gate ''
+ok      carry: after the save the footer's carry line is gone: ''
+propose CARRY_INSERTS_ON_2024 = True  # carry: the inserts' own lines (components, states, poses, anchors, unsaved, fallback_fixed, same_error: not stopped, nothing moved), the old untouched (a STOP otherwise); the mates' lines feed the kinds and the gear-mate gate; every condition: {'outcome': True, 'components': True, 'fallback': True, 'fallback_fixed': True, 'same_error': True, 'anchors': True, 'states': True, 'definitions': True, 'flags': True, 'fixed_every_mode': True, 'free': True, 'poses': True, 'interference': True, 'configuration': True, 'referenced_read': True, 'unsaved': True}
+propose CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 = True  # carry: SprocketConf-1 inserted in Z20 by AddComponent5 with its configuration, read back in every mode
+propose REFERENCED_CONFIGURATION_READ_ON_2024 = True  # carry: ReferencedConfiguration read Z20 on SprocketConf-1 beside its document's Default (R2)
+fact    carry: the kind 'coincident' stood on ['UserAxis1', 'UserAxis10', 'UserAxis11', 'UserAxis2', 'UserAxis4', 'UserAxis5', 'UserAxis6', 'UserAxis7', 'UserAxisConf', 'UserChainAxis', 'UserFaceCoin', 'UserHousingRight']
+fact    carry: the kind 'concentric' stood on ['UserFaceConc']
+fact    carry: the kind 'parallel' stood on ['UserHousingPar']
+fact    carry: the kind 'distance' stood on ['UserChainDist', 'UserDist4', 'UserHousingDist']
+fact    carry: the kind 'angle' stood on ['UserAngle4', 'UserAngle8b']
+fact    carry: the kind 'limit distance' stood on ['UserLimit10']
+fact    carry: the kind 'lock' stood on ['UserLock1', 'UserLock2', 'UserLock3']
+fact    carry: the kind 'gear' stood on ['UserGear6', 'UserGearRoot']
+propose CARRY_REMAKE_KINDS_ON_2024 = ('coincident', 'concentric', 'parallel', 'distance', 'angle', 'limit distance', 'lock', 'gear')  # carry: the kinds whose every mate was made again as expected, read back equal and on in the modes it was on in (perpendicular, tangent and limit angle are not in the fixture)
+propose CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 = True  # carry: UserGear6 made again on the new Sun's Gear Axis with its ratio and sense read back (remade); UserGearRoot on a root cylinder remade
+propose CARRY_INSERTS_A_SUBASSEMBLY_ON_2024 = None  # no user sub-assembly in M9's fixture; a sub-assembly would go in by open_document + add_component, not the measured read-only insert (W9D-REVIEW-A)
+propose CARRY_REMAKES_ON_A_LEAF_ON_2024 = None  # no target grammar for a leaf is written (package A names every leaf mate)
+propose VIRTUAL_READ_ON_2024 = None  # no virtual component in the fixture; IsVirtual is never read by the worker
+propose PATTERN_INSTANCE_READ_ON_2024 = None  # no component pattern in the fixture; IsPatternInstance is never read by the worker
+propose ORIGIN_ENTITY_READ_ON_2024 = None  # no mate on an origin in the fixture; no route for one is written
+propose PERSIST_REFERENCE_ROUTE_FOR_VERTICES_ON_2024 = None  # no mate on a vertex in the fixture
+ok      carry, the copy's end: carry ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox.xlsx']), no open document by a file name it holds ([])
+time    carry: 2990 s; 0 failed; SolidWorks 5.57 GB private, 8.95 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 5.33 GB private, 9.15 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 0, 'Updating...': 0, 'Opening': 4, 'Loading...': 0}; other windows the watch logged: 4
+awake   display and system released (previous state -0x7ffffffd)
+result  written to C:\Users\M0obo\Documents\GearGeneratorProbe\w9d-demo-sw2024-20261118-060436\w9d-demo-20261118-060738.json; masters kept {'rangebox': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9-s0-sw2024-20261116-064725\\out\\rangebox.master', 'setup': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9a-confirm-sw2024-20261117-002313\\out\\setup.master', 'reducer': ''}
+noted   SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)
+noted   SolidWorks' notification box came up while GetNextSubFeature was in progress (exempt by the coordinator's ruling; nothing answers it)
+noted   SolidWorks' notification box came up while GetNextSubFeature was in progress (exempt by the coordinator's ruling; nothing answers it)
+noted   SolidWorks' notification box came up while GetNextFeature was in progress (exempt by the coordinator's ruling; nothing answers it)
+done    0 failed: []; 4 noted; 0 STOP(s), a hung worker included: []

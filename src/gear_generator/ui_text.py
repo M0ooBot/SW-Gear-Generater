@@ -5741,10 +5741,38 @@ def carry_sentence(fore, again) -> str:
     """The Build again? question's clauses on the user's work (W9D-INTERFACES §9.1; replaces W9a's
     :func:`stays_behind_sentence`), from ``workbook.update.CarryForesight``: with ``CARRY_INSERTS`` set on the
     SolidWorks the record last saw, what is carried and what is not, with the time it was read, one sentence per kind
-    of thing, the findings named once at the end; not set, W9a's sentence led by the finding; not known, W9c's mixed
-    form. ``""`` with no assembly on record."""
+    of thing, the findings named once at the end; not set, W9a's sentence led by the finding; with no version on
+    record, what holds whichever version the press meets (:func:`_on_any_version`), or W9c's mixed form where
+    ``CARRY_INSERTS`` itself differs. ``""`` with no assembly on record."""
+    if fore is not None and fore.year == "?" and getattr(fore, "per_year", ()):
+        return " ".join(_on_any_version(fore.per_year, again))
+    return " ".join(_carry_texts(fore, again))
+
+
+def _on_any_version(per_year, again) -> List[str]:
+    """The question with no version on record and ``CARRY_INSERTS`` alike on every version known (the coordinator's
+    ruling, 2026-11-18): it is foreseen as on each version (``CarryForesight.per_year``); a sentence every version
+    says is said as fact, its version words made general (*on the SolidWorks it runs on*, *findings.…_ON_<year>*),
+    and only what differs is said as may, first, each version's own sentences behind *If the press runs on SolidWorks
+    2024:*, the rest then behind *Whichever it runs on:*. Never *not yet shown on the SolidWorks it runs on* for what
+    every version has shown."""
+    def general(text: str, year: str) -> str:
+        return text.replace(f"SolidWorks {year}", "the SolidWorks it runs on").replace(f"_ON_{year}", "_ON_<year>")
+    said = [(year, [t for t in _carry_texts(fore, again) if t]) for year, fore in per_year]
+    common = set.intersection(*[{general(t, year) for t in texts} for year, texts in said])
+    first_year, first = said[0]
+    alike = [general(t, first_year) for t in first if general(t, first_year) in common]
+    differing = [f"If the press runs on SolidWorks {year}: " + " ".join(own) for year, texts in said
+                 for own in [[t for t in texts if general(t, year) not in common]] if own]
+    if differing and alike:
+        alike[0] = f"Whichever it runs on: {alike[0]}"
+    return differing + alike
+
+
+def _carry_texts(fore, again) -> List[str]:
+    """The clauses of :func:`carry_sentence` as a list of sentences, for one version (or none known)."""
     if fore is None:
-        return ""
+        return []
     name = getattr(again, "name", "") or fore.name or "the new revision"
     old = _file(fore.assembly) if fore.assembly else "the old assembly"
     stays = fore.stays
@@ -5753,15 +5781,15 @@ def carry_sentence(fore, again) -> str:
         stays = StaysBehind(None, fore.assembly)
     if fore.inserts is None:
         found = [f"CARRY_INSERTS_ON_{y}" for y in fore.unshown]
-        return _joined(f"Whether {name} takes your work depends on the SolidWorks in use: Gear Generator has been "
+        return [_joined(f"Whether {name} takes your work depends on the SolidWorks in use: Gear Generator has been "
                        f"shown to do so on {_and('SolidWorks ' + y for y in fore.shown)}, not yet on "
                        f"{_and('SolidWorks ' + y for y in fore.unshown)} ({_and(_finding_ref(f) for f in found)}), "
                        "and the press reads which it runs on.",
-                       f"The press reads {old} again first, and says whatever it cannot carry.")
+                       f"The press reads {old} again first, and says whatever it cannot carry.")]
     if not fore.inserts:
         lead = (f"Gear Generator has not yet been shown to carry your work into a new revision on "
                 f"{_on_version(fore.year)} ({_finding_ref('CARRY_INSERTS_ON_' + fore.year)}), so ")
-        return lead + _stays_text(stays, again, "as read at")
+        return [lead + _stays_text(stays, again, "as read at")]
     refs: List[str] = []
     entry = fore.entry
     texts: List[str] = []
@@ -5769,7 +5797,7 @@ def carry_sentence(fore, again) -> str:
         texts.append(f"Anything you added to {old} in SolidWorks the press reads first and carries into {name} "
                      "where it can, saying whatever it cannot.")
         texts.append(_not_open_clause(fore, old, refs))
-        return " ".join(texts + _findings_sentence(refs, fore.year))
+        return texts + _findings_sentence(refs, fore.year)
     at = read_time(entry.read_at)
     plan = fore.plan
     carries = plan is None or bool(plan.components or plan.mates)
@@ -5857,7 +5885,7 @@ def carry_sentence(fore, again) -> str:
         # Must-fix 2: a sub-assembly the question names as not carried keeps the rigid clause out.
         subs_left = plan is not None and any(c.kind == "assembly" and c.name not in comps for c in entry.components)
         texts.append(_standing(fore.year, subassembly_left=subs_left))
-    return " ".join([t for t in texts if t] + _findings_sentence(refs, fore.year))
+    return [t for t in texts if t] + _findings_sentence(refs, fore.year)
 
 
 def _foresight_silences(fore, entry, plan) -> Tuple[List[str], Dict[str, List[str]]]:

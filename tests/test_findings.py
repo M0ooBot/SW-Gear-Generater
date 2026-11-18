@@ -2822,13 +2822,14 @@ def test_w9d_findings_are_not_measured_until_a_reviewed_log_sets_them():
     """W9D-INTERFACES.md §8: every name W9d reads is in findings.py, None on both versions until a reviewed run sets
     it: on 2026 the probes' two runs set §8.1's and M9's second run the five of W9D-DEMONSTRATION-REVIEW.md's last
     section, §4; on 2024 the probes' run set the same fourteen reads, each to its 2026 twin (W9D-PROBES-REVIEW.md's
-    last section, 23107c2; each pinned below). Every other one stays None: on 2026 the six M9's fixture does not reach,
-    on 2024 those and every write M9 sets, its demonstration not yet run there."""
+    last section, 23107c2) and M9's confirming run the same five as 2026, each to its 2026 twin
+    (W9D-DEMONSTRATION-REVIEW.md, the 2024 run, §2, e51de95; each pinned below). Every other one stays None on both
+    versions: the six M9's fixture does not reach."""
     for name in W9D_FINDINGS + ("COMPONENT_STATE_PER_CONFIGURATION_ROUTE",):
         for year in (2026, 2024):
             if year == 2026 and name in W9D_SET_ON_2026 + W9D_SET_BY_M9_ON_2026:
                 continue
-            if year == 2024 and name in W9D_SET_ON_2026:
+            if year == 2024 and name in W9D_SET_ON_2026 + W9D_SET_BY_M9_ON_2026:
                 assert getattr(findings, f"{name}_ON_2024") == getattr(findings, f"{name}_ON_2026"), name
                 assert getattr(findings, f"{name}_ON_2024") is not None, name
                 continue
@@ -2945,12 +2946,12 @@ def test_w9d_2024_findings_rest_on_the_probes_2024_run():
     assert state["read_only"]["global_kept"] is True
     assert p24[169] == ("dialogs progress boxes seen {'Calculating Interference Detection': 0, 'Updating...': 0, "
                         "'Opening': 3, 'Loading...': 0}; other windows the watch logged: 0")   # 2026's file, no dialog
-    # Stay None on 2024: one configuration each, IsVirtual and IsPatternInstance negative only, nothing for the rest.
+    # Not set from this run: one configuration each, IsVirtual and IsPatternInstance negative only, nothing for the
+    # rest. REFERENCED_CONFIGURATION_READ and M9's writes were set since from the 2024 demonstration (pinned below).
     assert "'Sprocket-1': ('Default', 'Default', ['Default'])" in p24[91]
     assert "'Sprocket-1': (False, False)" in p24[92]
-    for name in W9D_KEPT_NONE_BY_M9 + ("REFERENCED_CONFIGURATION_READ",):
-        assert getattr(findings, f"{name}_ON_2024") is None, name
-    for name in W9D_SET_BY_M9_ON_2026 + (W9D_LIGHTWEIGHT_FACT,):          # the 2024 demonstration has not run
+    assert not [line for line in p24 if line.startswith("propose REFERENCED_CONFIGURATION_READ")]
+    for name in W9D_KEPT_NONE_BY_M9:
         assert getattr(findings, f"{name}_ON_2024") is None, name
 
 
@@ -2961,10 +2962,10 @@ W9D_DEMO_2 = (LATEST.parent / "w9d-demo-20261118-042519.json",
 W9D_KINDS = ("coincident", "concentric", "parallel", "distance", "angle", "limit distance", "lock", "gear")
 
 
-def test_w9d_demonstration_findings_are_set_on_2026_as_its_review_allows_and_none_on_2024():
-    """findings.py, M9's block (W9D-DEMONSTRATION-REVIEW.md, the second run on 2026, §4, 7996089): five set on 2026,
-    six kept None there, every one None on 2024; the lightweight fact a pair (the coordinator's ruling), True on 2026,
-    None on 2024."""
+def test_w9d_demonstration_findings_are_set_on_2026_as_its_review_allows_and_on_2024_as_their_twins():
+    """findings.py, M9's blocks (W9D-DEMONSTRATION-REVIEW.md, the second run on 2026, §4, 7996089, and the 2024 run,
+    §2, e51de95): five set on 2026 and the same five on 2024 as their twins, six kept None on both; the lightweight
+    fact a pair (the coordinator's ruling), True on both."""
     assert findings.CARRY_INSERTS_ON_2026 is True
     assert findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2026 is True
     assert findings.REFERENCED_CONFIGURATION_READ_ON_2026 is True
@@ -2974,9 +2975,14 @@ def test_w9d_demonstration_findings_are_set_on_2026_as_its_review_allows_and_non
     assert not {"perpendicular", "tangent", "limit angle"} & set(findings.CARRY_REMAKE_KINDS_ON_2026)
     for name in W9D_KEPT_NONE_BY_M9:
         assert getattr(findings, f"{name}_ON_2026") is None, name
-    for name in W9D_SET_BY_M9_ON_2026 + W9D_KEPT_NONE_BY_M9 + (W9D_LIGHTWEIGHT_FACT,):
+    for name in W9D_KEPT_NONE_BY_M9:
         assert hasattr(findings, f"{name}_ON_2024") and getattr(findings, f"{name}_ON_2024") is None, name
-    assert getattr(findings, f"{W9D_LIGHTWEIGHT_FACT}_ON_2026") is True
+    for name in W9D_SET_BY_M9_ON_2026 + (W9D_LIGHTWEIGHT_FACT,):
+        assert getattr(findings, f"{name}_ON_2024") == getattr(findings, f"{name}_ON_2026") is not None, name
+        assert type(getattr(findings, f"{name}_ON_2024")) is type(getattr(findings, f"{name}_ON_2026")), name
+    assert findings.CARRY_REMAKE_KINDS_ON_2024 == W9D_KINDS
+    assert getattr(findings, f"{W9D_LIGHTWEIGHT_FACT}_ON_2026") is True is getattr(findings,
+                                                                                  f"{W9D_LIGHTWEIGHT_FACT}_ON_2024")
 
 
 def test_w9d_demonstration_findings_on_2026_rest_on_the_second_runs_two_logs():
@@ -3050,3 +3056,90 @@ def test_w9d_demonstration_findings_on_2026_rest_on_the_second_runs_two_logs():
                                "and placed in H, and at its pose against RangeSlv in every mode, N and L with "
                                "RangeSlv slid (contradiction 6): ")
     assert two[861].startswith("time    carry-closed: 1208 s; 0 failed")
+
+
+W9D_DEMO_24_1 = (LATEST.parent / "sw2024" / "w9d-demo-20261118-060738.json",
+                 LATEST.parent / "sw2024" / "w9d-demo-sw2024-20261118-1-fixture-gates-carry-clean.log")
+W9D_DEMO_24_2 = (LATEST.parent / "sw2024" / "w9d-demo-20261118-073438.json",
+                 LATEST.parent / "sw2024" / "w9d-demo-sw2024-20261118-2-carry-closed-clean.log")
+
+
+def test_w9d_demonstration_findings_on_2024_rest_on_the_confirming_runs_two_logs():
+    """24-1 (fixture, carry-gates and carry at 5aca9c1 on 32.5.0) proposes each 2024 value as set, and the lines the
+    2024 comment cites hold, the memory, the time and the face prefilter's narrowing among them; 24-2 (carry-closed
+    alone) shows the closed path clean."""
+    data, one = _w9a_run(*W9D_DEMO_24_1, "5aca9c1", (32, 5, 0))
+    assert data["stops"] == [] and data["fails"] == []
+    assert one[1586] == "done    0 failed: []; 4 noted; 0 STOP(s), a hung worker included: []"
+    proposal = data["proposal"]
+
+    def proposed(number, name):
+        line = one[number]
+        assert line.startswith(f"propose {name}_ON_2024 = "), (number, line)
+        return line[len(f"propose {name}_ON_2024 = "):].split("  #")[0]
+    for number, name in ((1556, "CARRY_INSERTS"), (1557, "CARRY_INSERTS_IN_A_CONFIGURATION"),
+                         (1558, "REFERENCED_CONFIGURATION_READ"), (1567, "CARRY_REMAKE_KINDS"),
+                         (1568, "CARRY_GEAR_MATE_ON_AN_APP_GEAR"), (1409, W9D_LIGHTWEIGHT_FACT)):
+        value = getattr(findings, f"{name}_ON_2024")
+        assert proposed(number, name) == repr(value), name
+        got = proposal[f"{name}_ON_2024"]
+        assert (tuple(got) if isinstance(got, list) else got) == value == getattr(findings, f"{name}_ON_2026"), name
+    for number, name in zip(range(1569, 1575), ("CARRY_INSERTS_A_SUBASSEMBLY", "CARRY_REMAKES_ON_A_LEAF",
+                                                "VIRTUAL_READ", "PATTERN_INSTANCE_READ", "ORIGIN_ENTITY_READ",
+                                                "PERSIST_REFERENCE_ROUTE_FOR_VERTICES")):
+        assert proposed(number, name) == "None" and f"{name}_ON_2024" in proposal, name
+        assert proposal[f"{name}_ON_2024"] is None is getattr(findings, f"{name}_ON_2024"), name
+    assert one[1556].endswith("every condition: {'outcome': True, 'components': True, 'fallback': True, "
+                              "'fallback_fixed': True, 'same_error': True, 'anchors': True, 'states': True, "
+                              "'definitions': True, 'flags': True, 'fixed_every_mode': True, 'free': True, 'poses': "
+                              "True, 'interference': True, 'configuration': True, 'referenced_read': True, 'unsaved': "
+                              "True}")
+    kinds = {"coincident": 12, "concentric": 1, "parallel": 1, "distance": 3, "angle": 2, "limit distance": 1,
+             "lock": 3, "gear": 2}
+    for number, kind in zip(range(1559, 1567), W9D_KINDS):
+        assert one[number].startswith(f"fact    carry: the kind '{kind}' stood on ["), one[number]
+        assert len(ast.literal_eval(one[number].split(" stood on ", 1)[1])) == kinds[kind], kind
+    assert one[1478] == ("ok      carry: every component carried (17), or named only as a component suppressed in the "
+                         "mode showing may be: none; wrongly none")
+    assert one[1487] == ("ok      carry: every mate expected to be made again was, its definition and entities in "
+                         "RangeBox_r2 as the old one's, by the script's own reads: all; every one reached")
+    assert one[1489] == ("ok      carry: every mate expected to be made again on in the modes it was on in, read "
+                         "again: all; every one reached")
+    assert one[1506] == "ok      carry: every app gear free to turn in every mode with the carried mates on: all"
+    assert one[1508] == ("ok      carry: each carried component at its pose against its anchor, as it stood in H of "
+                         "the old assembly, in every mode of RangeBox_r2 where it is resolved (49 reads): off none; "
+                         "not read none")
+    assert one[1518] == ("ok      carry: SprocketConf-1 inserted in Z20, read back in every mode: {'H': 'Z20', 'N': "
+                         "'Z20', 'L': 'Z20'}")
+    assert one[1519] == ("ok      carry: R read SprocketConf-1's referenced configuration 'Z20' beside its document's "
+                         "'Default' (REFERENCED_CONFIGURATION_READ)")
+    assert one[1521] == "ok      carry: RangeBox_r2 holds the carried items unsaved (GetSaveFlag True)"
+    assert one[1403].startswith("fact    carry: SprocketLight-1 in the old assembly, lightweight as the user set it, "
+                                "read 1 before the press and 2 after")
+    assert one[1405].startswith("ok      carry: the old assembly and every user file unchanged on disk (size, time, "
+                                "hash): ")
+    assert one[1407] == ("ok      carry: no write, show, rebuild, save or close of the old assembly or a user document "
+                         "in the traced calls, and nothing saved after RangeBox_r2.SLDASM's first save")
+    # The caveats: memory, time, the face prefilter, no constrained status 5.
+    assert one[1397].startswith("        in 1388.6 s; SolidWorks 11.03 GB private, 8.62 GB free")
+    assert one[592].startswith("        in 429.2 s; SolidWorks 6.34 GB private")
+    assert one[1576].startswith("time    carry: 2990 s; 0 failed; SolidWorks 5.57 GB private")
+    assert "87 carried" in one[829] and "('face', 235, 29, " in one[829] and "('face', 235, 58, " in one[829]
+    assert "'Sprocket-9 as Sprocket-3': '2 (swUnderConstrained)'" in one[1505] and "'5 (" not in one[1505]
+
+    data2, two = _w9a_run(*W9D_DEMO_24_2, "5aca9c1", (32, 5, 0))
+    assert data2["stops"] == [] and data2["fails"] == [] and data2["proposal"] == {}
+    assert two[773] == ("ok      carry-closed: read read-only (read-only), L showing as saved, nothing left open [] or "
+                        "marked []; unread []")
+    assert two[779] == ("ok      carry-closed: every component carried (17), or named only as a component suppressed "
+                        "in the mode showing may be: none; wrongly none")
+    assert two[786] == ("ok      carry-closed: every mate expected to be made again was, its definition and entities "
+                        "in RangeBox_r2 as the old one's, by the script's own reads: all; every one reached")
+    assert two[788] == ("ok      carry-closed: every mate expected to be made again on in the modes it was on in, read "
+                        "again: all; every one reached")
+    assert two[820].startswith("ok      carry-closed: Sprocket-2 as Sprocket-1 placed against RangeSlv, read in L "
+                               "and placed in H, and at its pose against RangeSlv in every mode, N and L with "
+                               "RangeSlv slid (contradiction 6): ")
+    assert two[706].startswith("        in 1160.6 s; SolidWorks 9.12 GB private")
+    assert "87 carried" in two[132]
+    assert two[870] == "done    0 failed: []; 1 noted; 0 STOP(s), a hung worker included: []"

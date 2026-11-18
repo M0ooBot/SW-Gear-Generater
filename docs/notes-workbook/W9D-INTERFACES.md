@@ -791,7 +791,7 @@ read with no positive case in the probe, is patched True in M9's process and set
 | `PERSIST_REFERENCE_ROUTE_FOR_VERTICES` (new) | read | a route string | tier 1 on vertices | nothing in W9d: None (2026: `…-1.log:1571`) |
 | `PERSIST_REFERENCE_SURVIVES_RELOAD` (new) | read | True | tier 1 on the not-open path | W9d probe `faces` (d), r3's references: the kind, the place in the part (a plane's offset, a cylinder's or circle's axis) and a face's area, the part unmarked by the resolve (S-c): 2026 `w9d…-2.log:103-104`; 2024 `p24:105-106` |
 | `COAXIAL_FACE_READ` (new) | read | True | `OldEntity.coaxial` and `radius_mm` on a cylindrical face: §4.4's "bore" (with the radius) and §4.3's gear-mate rule on a face | W9d probe `faces` (b), r3's part-level face: the bore True, every plane False, **Sun's User Keyway (off-axis) False** (S-d), Sun's root fillets False: 2026 `w9d…-2.log:92-93`; 2024 `p24:89-90`, the same counts |
-| `REFERENCED_CONFIGURATION_READ` (new) | read | True | the referenced configuration read on a file of several configurations; unset, such a component is named | **M9** (the re-check's R2; the probe logs the read as a fact and proposes nothing): 2026 **True**, M9's second run on 34.1.1, SprocketConf-1 in Z20 (`w9d-demo…-1.log:823, 1438, 1516`, proposal 1555; read-only, `…-2.log:738`); 2024 its run |
+| `REFERENCED_CONFIGURATION_READ` (new) | read | True | the referenced configuration read on a file of several configurations; unset, such a component is named | **M9** (the re-check's R2; the probe logs the read as a fact and proposes nothing): 2026 **True**, M9's second run on 34.1.1, SprocketConf-1 in Z20 (`w9d-demo…-1.log:823, 1438, 1516`, proposal 1555; read-only, `…-2.log:738`); 2024 **True**, M9's confirming run on 32.5.0, SprocketConf-1 in Z20 (`…-1…log:820, 1519`, proposal 1558) |
 | `VIRTUAL_READ` (new) | read | True | `IsVirtual` instead of the `^` rule | probe reads it negative only: None until a run meets a virtual component (2026: M9's fixture has none, `w9d-demo…-1.log:1568`; 2024 negative only, `p24:92`) |
 | `PATTERN_INSTANCE_READ` (new) | read | True | `IsPatternInstance`: the per-instance sentence (D12) | probe reads it negative only: None until a run meets a pattern (2026: M9's fixture has none, `…-1.log:1569`; 2024 negative only, `p24:92`) |
 | `ORIGIN_ENTITY_READ` (new) | read | True | an origin as a mate entity | nothing in W9d: None (2026: `…-1.log:1570`) |
@@ -800,12 +800,12 @@ read with no positive case in the probe, is patched True in M9's process and set
 | `SUBASSEMBLY_READ_ONLY_INSERT` (new) | read | True | a sub-assembly opened read-only, then inserted | W9d probe `sub` (b): 2026 `w9d…-1.log:138-139`; 2024 `p24:160-161` |
 | `SUBASSEMBLY_INSERT_ROUTE` | read (set, both) | its route string | the insert itself | W9c probes p2 |
 | `CARRY_INSERT_MARKS_USER_DOCUMENTS` (new) | a fact | — (True or False) | nothing: True adds a sentence (§9.2) | W9d probe `faces` (c): 2026 `w9d…-2.log:101-102`; 2024 `p24:98-104` |
-| `CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY` (new) | a fact | — (True or False) | nothing: the worker reads the old instance before and after whatever it holds, and the result says what it read (D10 †); nothing in `src` reads the finding | M9 `carry` (SprocketLight-1), as read: 2026 **True** (`w9d-demo…-1.log:1402, 1408, 1410`; the result's sentence 1397), added to `findings.py` as a pair by the coordinator's ruling; 2024 its run |
-| `CARRY_INSERTS` (new) | write | True | user parts inserted, placed, fixed, their states set in every mode and read back | M9: 2026 **True** (`w9d-demo…-1.log:1477-1518`, proposal 1553; closed, `…-2.log:777-834`); 2024 its run |
-| `CARRY_INSERTS_IN_A_CONFIGURATION` (new) | write | True | an insert in a referenced configuration other than the document's active one | M9: 2026 **True** (`…-1.log:859-860, 1515`, proposal 1554); 2024 its run |
+| `CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY` (new) | a fact | — (True or False) | nothing: the worker reads the old instance before and after whatever it holds, and the result says what it read (D10 †); nothing in `src` reads the finding | M9 `carry` (SprocketLight-1), as read: 2026 **True** (`w9d-demo…-1.log:1402, 1408, 1410`; the result's sentence 1397), added to `findings.py` as a pair by the coordinator's ruling; 2024 **True** (`…-1…log:1403, 1409, 1411`; the result 1398) |
+| `CARRY_INSERTS` (new) | write | True | user parts inserted, placed, fixed, their states set in every mode and read back | M9: 2026 **True** (`w9d-demo…-1.log:1477-1518`, proposal 1553; closed, `…-2.log:777-834`); 2024 **True** (`w9d-demo-sw2024…-1…log:1478-1537`, proposal 1556; closed, `…-2…log:773-836`) |
+| `CARRY_INSERTS_IN_A_CONFIGURATION` (new) | write | True | an insert in a referenced configuration other than the document's active one | M9: 2026 **True** (`…-1.log:859-860, 1515`, proposal 1554); 2024 **True** (`…-1…log:1518`, proposal 1557) |
 | `CARRY_INSERTS_A_SUBASSEMBLY` (new) | write | True | a user sub-assembly inserted by its file | M9, if its fixture holds one (else None): 2026 None, the fixture has none (`…-1.log:1566`); while unset the standing list does not say *sub-assemblies come over rigid* (§9.1) |
-| `CARRY_REMAKE_KINDS` (new) | write | the kind's word is in the tuple | which kinds are remade (§4.5, D4) | M9: 2026 the eight shown, `coincident`, `concentric`, `parallel`, `distance`, `angle`, `limit distance`, `lock`, `gear` (`…-1.log:1484, 1486, 1499, 1556-1563`, proposal 1564; closed, `…-2.log:784, 786, 800`); perpendicular, tangent and limit angle not in the fixture, so named; 2024 its run |
-| `CARRY_GEAR_MATE_ON_AN_APP_GEAR` (new) | write | True | §4.3's rule | M9: 2026 **True** (`…-1.log:1457, 1464, 1484`, proposal 1565; closed, `…-2.log:784`); 2024 its run |
+| `CARRY_REMAKE_KINDS` (new) | write | the kind's word is in the tuple | which kinds are remade (§4.5, D4) | M9: 2026 the eight shown, `coincident`, `concentric`, `parallel`, `distance`, `angle`, `limit distance`, `lock`, `gear` (`…-1.log:1484, 1486, 1499, 1556-1563`, proposal 1564; closed, `…-2.log:784, 786, 800`); perpendicular, tangent and limit angle not in the fixture, so named; 2024 the same eight (`…-1…log:1487, 1489, 1502, 1559-1566`, proposal 1567; closed, `…-2…log:786, 788, 802`) |
+| `CARRY_GEAR_MATE_ON_AN_APP_GEAR` (new) | write | True | §4.3's rule | M9: 2026 **True** (`…-1.log:1457, 1464, 1484`, proposal 1565; closed, `…-2.log:784`); 2024 **True** (`…-1…log:1487`, proposal 1568; closed, `…-2…log:786`) |
 | `CARRY_REMAKES_ON_A_LEAF` (new) | write | True | a mate on a leaf of a user sub-assembly | nothing in W9d: None (2026: `…-1.log:1567`) |
 
 Dropped after the review: `ROOT_COMPONENT_UNRESOLVED_READ` (should-fix 12; the probe cannot tell whether that read marks,
@@ -865,7 +865,7 @@ run on SolidWorks 2026 (34.1.1), and `41afa37`*, §4, `7996089`). "Log 1" is
 `carry-gates`, `carry`, `carry-closed`), "log 2" `…-2-carry-closed-clean.log` (snapshot `41afa37`, `carry-closed`
 alone). The five writes were patched True together in that run's process (log 1:794-798, log 2:80-84), the kinds as
 all eleven. `findings.py`'s M9 block carries each caveat in full; `tests/test_findings.py` pins the values to the logs.
-`_ON_2024` stays None for every one until W9d's demonstration runs on 2024 and is reviewed (its probes have run there, §8.3).
+Each `_ON_2024` is set since from M9's confirming run on 2024, to its 2026 twin (§8.4).
 
 | Finding | `_ON_2026` | Rests on (log 1 unless said) | Its main caveat |
 |---|---|---|---|
@@ -878,9 +878,8 @@ all eleven. `findings.py`'s M9 block carries each caveat in full; `tests/test_fi
 | `CARRY_INSERTS_A_SUBASSEMBLY`, `CARRY_REMAKES_ON_A_LEAF`, `VIRTUAL_READ`, `PATTERN_INSTANCE_READ`, `ORIGIN_ENTITY_READ`, `PERSIST_REFERENCE_ROUTE_FOR_VERTICES` | stay **None** | proposals 1566-1571 | none is in the fixture; each item is named with its finding and left in the old assembly |
 
 What this leaves settled, by version: on **2026** every gate of §8 but the six of the last row, the probes' reads on
-34.0.0 (§8.1) and M9's writes on 34.1.1 (this table); on **2024** the three W9c routes marked *set, both* in §8's table
-and the probes' fourteen reads on 32.5.0 (§8.3), and no write, so a carry on 2024 names every component with
-`CARRY_INSERTS_ON_2024` until the 2024 demonstration is run and reviewed.
+34.0.0 (§8.1) and M9's writes on 34.1.1 (this table); on **2024** the same, from the probes' fourteen reads on 32.5.0
+(§8.3) and M9's confirming run on 32.5.0 (§8.4), each 2024 value its 2026 twin's.
 
 ### 8.3 The values for SolidWorks 2024 (32.5.0)
 
@@ -910,9 +909,9 @@ reviewed*, `23107c2`). `p24` is `probe/results/sw2024/w9d-probes-sw2024-20261118
 | `SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED` | `False` | 163-164 |
 
 Stay None on 2024, as on 2026: `REFERENCED_CONFIGURATION_READ` (every component references its file's only
-configuration, `p24:91`; the 2024 demonstration's SprocketConf-1 sets it, as M9 did on 2026), `VIRTUAL_READ` and
+configuration, `p24:91`; the 2024 demonstration's SprocketConf-1 set it since, as M9 did on 2026, §8.4), `VIRTUAL_READ` and
 `PATTERN_INSTANCE_READ` (negative only, `p24:92`), `ORIGIN_ENTITY_READ` and `PERSIST_REFERENCE_ROUTE_FOR_VERTICES`
-(nothing in W9d). Every `CARRY_*` write and the lightweight fact wait for the 2024 demonstration.
+(nothing in W9d). Every `CARRY_*` write and the lightweight fact are the 2024 demonstration's (§8.4).
 
 **Measured differing from 2026** (facts; nothing in `src` changed for them):
 - r3's walks did not grow on 2024: every 163-face walk took 2.26-2.36 s through the session, five repeats 1.68-2.07 s,
@@ -928,6 +927,41 @@ configuration, `p24:91`; the 2024 demonstration's SprocketConf-1 sets it, as M9 
 - Searchflag, Traverse True and each dependency's place were read for the first time, on 2024 only (`p24:141-142,
   145-146, 165`): Searchflag False (the app's) gives the stored paths, so a plainly copied folder is refused, as ruled;
   Traverse True lists a sub-assembly's parts, a 2024 fact only, so R.2 keeps refusing a sub-assembly dependency.
+
+### 8.4 The values M9 set for SolidWorks 2024 (32.5.0)
+
+Measured in M9's confirming run on **32.5.0** from `5aca9c1`, in two fresh sessions, 0 failed and no STOP, and set as
+its review gives them (`W9D-DEMONSTRATION-REVIEW.md`, *The confirming run on SolidWorks 2024 (32.5.0), reviewed*, §2
+and §3, `e51de95`). "24-1" is `probe/results/sw2024/w9d-demo-sw2024-20261118-1-fixture-gates-carry-clean.log`
+(`fixture`, `carry-gates`, `carry`; JSON `w9d-demo-20261118-060738.json`), "24-2" `…-2-carry-closed-clean.log`
+(`carry-closed`; JSON `…-073438.json`). With numbers and instance names masked every `ok` line is 2026's. Each value
+is **its 2026 twin's**, written in `findings.py` as that twin; the 2026 caveats of §8.2 hold word for word, and
+`findings.py`'s 2024 M9 block adds those below. `tests/test_findings.py` pins the values to 24-1's proposals and JSON
+and to the lines cited; `test_workbook_carry.py` carries a Build again… end to end on the fake at 32.5.0 with nothing
+patched.
+
+| Finding | `_ON_2024` | Rests on (24-1 unless said) |
+|---|---|---|
+| `CARRY_INSERTS` | `True` | proposal 1556, every condition True; 1405, 1407, 1478-1485, 1492, 1506, 1508, 1515, 1517, 1521, 1537; closed, 24-2:773, 779-784, 791, 808, 810, 820, 836 |
+| `CARRY_INSERTS_IN_A_CONFIGURATION` | `True` | 1518; proposal 1557 |
+| `REFERENCED_CONFIGURATION_READ` | `True` | 820, 1519; proposal 1558 |
+| `CARRY_REMAKE_KINDS` | the eight kinds | 1487, 1489, 1502, kinds 1559-1566 (the same mates as 2026's); proposal 1567; 24-2:786, 788, 802 |
+| `CARRY_GEAR_MATE_ON_AN_APP_GEAR` | `True` | 1487; proposal 1568; 24-2:786 |
+| `CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY` | `True`, a fact | 1403, 1409, 1411; the result 1398 |
+| the six of §8.2's last row | stay **None** | proposals 1569-1574: none is in the fixture |
+
+**Measured differing from 2026** (the review's §3; caveats on every 2024 value):
+- *Memory:* SolidWorks 2024 reached 11.03 GB private by the end of `carry`'s Build again… (24-1:1397) and 9.12 GB in
+  `carry-closed`'s (24-2:706), against about 6.4 GB for a build with nothing carried (24-1:80, 592); it was given back
+  when the copy closed (5.57 and 3.59 GB), and free memory never fell under 8.4 GB. On 2026 SolidWorks stayed under
+  2.4 GB. The app reads no memory in a press; whether the question should say so on 2024 is for a ruling (the review
+  recommends a known limit only).
+- *Time:* the carrying Build again… took 1389 and 1161 s against 723 and 625 s; a build with nothing carried 429 s, so
+  the carry adds about 16 to 20 minutes on 2024; R's entity reads 3.7-6.5 s each against 2.1-3.0 s.
+- *The face prefilter:* on Sun's 235 faces the area key kept 29 and 58, 87 carried (24-1:829, 24-2:132), against 1
+  and 2, 3 carried, on 2026; so on 2024 the 200-candidate cap comes at about 100 teeth for a fillet and 200 for a root,
+  and then names the mate. Time, not a wrong answer.
+- *Constrained status 5* did not come on 2024 (24-1:1505); nothing in the app reads it.
 
 ## 9. What the user sees (`ui_text`)
 
@@ -983,7 +1017,14 @@ added as they apply, each in the result too:
   on SolidWorks 2024 (findings.CARRY_INSERTS_ON_2024), so as read at 14:02, …*;
 - the version not known (a record no job of this version wrote): W9c's mixed form, *Whether RangeBox_r2 takes your
   work depends on the SolidWorks in use: Gear Generator has been shown to do so on SolidWorks 2026, not yet on
-  SolidWorks 2024 (findings.CARRY_INSERTS_ON_2024), and the press reads which it runs on.*;
+  SolidWorks 2024 (findings.CARRY_INSERTS_ON_2024), and the press reads which it runs on.*; *as built after the
+  coordinator's ruling of 2026-11-18:* the mixed form only where `CARRY_INSERTS` itself differs between the versions.
+  Where it is alike, the question is foreseen as on each version (`CarryForesight.per_year`): what every version says
+  is said as fact, its version words made general (*on the SolidWorks it runs on*, *findings.…_ON_<year>*), and only
+  what differs as may, each version's own sentences first behind *If the press runs on SolidWorks 2024:*, the rest
+  behind *Whichever it runs on:*. It never says carrying is *not yet shown on the SolidWorks it runs on* when it is
+  shown on both (it did, once both were set, until this ruling); with `CARRY_INSERTS` unset on both it says so of
+  either, led by `findings.CARRY_INSERTS_ON_<year>`;
 - nothing on record: *Anything you added to RangeBox.SLDASM in SolidWorks the press reads first and carries into
   RangeBox_r2 where it can, saying whatever it cannot.*;
 - **the standing list of what is not carried as it was**, once, at the end, whenever anything of the user's is on

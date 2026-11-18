@@ -2185,7 +2185,7 @@ PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2024 = PERSIST_REFERENCE_SURVIVES_RELOAD_ON
 COAXIAL_FACE_READ_ON_2026 = True
 COAXIAL_FACE_READ_ON_2024 = COAXIAL_FACE_READ_ON_2026
 REFERENCED_CONFIGURATION_READ_ON_2026 = True
-REFERENCED_CONFIGURATION_READ_ON_2024 = None
+REFERENCED_CONFIGURATION_READ_ON_2024 = REFERENCED_CONFIGURATION_READ_ON_2026
 VIRTUAL_READ_ON_2026 = None
 VIRTUAL_READ_ON_2024 = None
 PATTERN_INSTANCE_READ_ON_2026 = None
@@ -2201,23 +2201,24 @@ SUBASSEMBLY_READ_ONLY_INSERT_ON_2024 = SUBASSEMBLY_READ_ONLY_INSERT_ON_2026
 CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2026 = False
 CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2024 = CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2026
 CARRY_INSERTS_ON_2026 = True
-CARRY_INSERTS_ON_2024 = None
+CARRY_INSERTS_ON_2024 = CARRY_INSERTS_ON_2026
 CARRY_INSERTS_IN_A_CONFIGURATION_ON_2026 = True
-CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 = None
+CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 = CARRY_INSERTS_IN_A_CONFIGURATION_ON_2026
 CARRY_INSERTS_A_SUBASSEMBLY_ON_2026 = None
 CARRY_INSERTS_A_SUBASSEMBLY_ON_2024 = None
 CARRY_REMAKE_KINDS_ON_2026 = ("coincident", "concentric", "parallel", "distance", "angle", "limit distance", "lock",
                               "gear")
-CARRY_REMAKE_KINDS_ON_2024 = None
+CARRY_REMAKE_KINDS_ON_2024 = CARRY_REMAKE_KINDS_ON_2026
 CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2026 = True
-CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 = None
+CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 = CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2026
 CARRY_REMAKES_ON_A_LEAF_ON_2026 = None
 CARRY_REMAKES_ON_A_LEAF_ON_2024 = None
-# A fact, read by nothing in src (the worker reads CarryResult.resolved_in_old itself and the result says it); kept so
-# the 2024 run has a name to set (the coordinator's ruling on W9D-DEMONSTRATION-REVIEW.md's open point). Its evidence
-# is in the M9 block below.
+# A fact, read by nothing in src (the worker reads CarryResult.resolved_in_old itself and the result says it), kept as a
+# pair by the coordinator's ruling on W9D-DEMONSTRATION-REVIEW.md's open point. Its evidence is in the M9 blocks below
+# (2026, then 2024).
 CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2026 = True
-CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2024 = None
+CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2024 = (
+    CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2026)
 #
 # W9d's probes on SolidWorks 2026 (34.0.0), set as W9D-PROBES-REVIEW.md (94fbebf) and W9D-INTERFACES §8.1 give them.
 # -1.log is probe/results/w9d-probes-sw2026-20261117-1-face-routes-none.log (snapshot 23ed8c5), -2.log is
@@ -2279,7 +2280,9 @@ CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2024 = None
 #   235), resolved _Ok to a face, IsSame both ways, unmarked at its start and after. Differs from 2026: the walks did
 #   not grow through the session (every 163-face walk 2.26-2.36 s, p24:80-85; five repeats 1.68-2.07 s, p24:93;
 #   component_frame x100 1.20 s before and 1.33 s after, private memory flat at 3.064 GB, p24:95). Nothing in src
-#   changes for it: the cap (CARRY_WALK_CANDIDATES, CARRY_WALK_SECONDS) stays the answer on both versions.
+#   changes for it: the cap (CARRY_WALK_CANDIDATES, CARRY_WALK_SECONDS) stays the answer on both versions. On Sun's
+#   faces the area prefilter barely narrows on 2024 (87 carried, against 3 on 2026), so the cap comes sooner on a
+#   many-toothed gear and then names the mate: the 2024 M9 block's caveat (24-1:829, 24-2:132).
 # - PERSIST_REFERENCE_ROUTE_FOR_EDGES: r3, as 2026 (p24:87): one circular edge, 482 walked in 6.75 s (p24:68, 83).
 #   Differs from 2026: on 2024 the edge prefilter costs more than the walk: ("circle", 0.005) kept 82 of 482 in 8.05 s
 #   and its walk took 0.83 s, against 5.07 s for the full walk (p24:94); the prefilter lost no match (p24:97). The cost
@@ -2326,18 +2329,19 @@ CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2024 = None
 #   job's own) modified (p24:160-161).
 # - SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED False: loaded as a component of an open host, OpenDoc6 warning 128, the flag
 #   False before, after the open and after the insert (p24:163-164).
-# Stay None on 2024, as on 2026: REFERENCED_CONFIGURATION_READ (every component here references its file's only
-# configuration, p24:91; the 2024 demonstration's SprocketConf-1 sets it, as M9 did on 2026); VIRTUAL_READ and
-# PATTERN_INSTANCE_READ (read negative only, p24:92); ORIGIN_ENTITY_READ and PERSIST_REFERENCE_ROUTE_FOR_VERTICES
-# (nothing in W9d). Every CARRY_* write and the lightweight fact wait for the 2024 demonstration.
+# Not set from this run: REFERENCED_CONFIGURATION_READ (every component here references its file's only configuration,
+# p24:91; the 2024 demonstration's SprocketConf-1 set it since, as M9 did on 2026, in the block after the 2026 M9
+# block); VIRTUAL_READ and PATTERN_INSTANCE_READ (read negative only, p24:92); ORIGIN_ENTITY_READ and
+# PERSIST_REFERENCE_ROUTE_FOR_VERTICES (nothing in W9d). Every CARRY_* write and the lightweight fact are the 2024
+# demonstration's, set in that block. The face prefilter's narrowing on Sun on 2024 is a caveat there too.
 #
 # W9d's demonstration M9 on SolidWorks 2026 (34.1.1), set as the last section of W9D-DEMONSTRATION-REVIEW.md
 # ("The second run on SolidWorks 2026 (34.1.1), and 41afa37", §4, 7996089) gives them. "Log 1" is
 # probe/results/w9d-demo-sw2026-20261118-1-whole-closed-read-mode-fault.log (snapshot f7c2f0d, JSON
 # w9d-demo-20261118-031226.json), "log 2" …-2-carry-closed-clean.log (snapshot 41afa37, carry-closed alone, JSON
 # …-042519.json). The five writes were patched True together in that run's process for the measurement only (log
-# 1:794-798, log 2:80-84); the probes' reads were committed. _ON_2024 stays None for every one here: W9d's
-# demonstration has not run on 2024 (its probes have, and set their own reads in the block before this one).
+# 1:794-798, log 2:80-84); the probes' reads were committed. The _ON_2024 twins are set from the 2024 run in the
+# block after this one.
 # Every value here carries these caveats (the review's "All"):
 # - measured on 34.1.1 at f7c2f0d, whose src differs from the commit that set these only in W9c's _ON_2024 values and
 #   the review's two wording must-fixes; carry-closed rerun at 41afa37, whose fix is the script's alone;
@@ -2398,3 +2402,44 @@ CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2024 = None
 # virtual component, a pattern, an origin and a vertex, an old assembly open with unsaved changes and a user part open
 # with unsaved edits, a fixed state that differs by mode, and an app gear reused as the same file under a user gear
 # mate.
+#
+# W9d's demonstration M9 on SolidWorks 2024 (32.5.0), the confirming run from 5aca9c1, set as the last section of
+# W9D-DEMONSTRATION-REVIEW.md ("The confirming run on SolidWorks 2024 (32.5.0), reviewed", §2 and §3, e51de95) gives
+# them: each _ON_2024 is its _ON_2026 twin, written as that twin. "24-1" is
+# probe/results/sw2024/w9d-demo-sw2024-20261118-1-fixture-gates-carry-clean.log (fixture, carry-gates and carry; JSON
+# w9d-demo-20261118-060738.json), "24-2" …-2-carry-closed-clean.log (carry-closed alone; JSON …-073438.json), both
+# snapshot 5aca9c1, two fresh sessions, 0 failed and no STOP (24-1:1586, 24-2:870). With numbers and instance names
+# masked, every ok line of fixture, carry-gates and carry is 2026's line for line, and carry-closed's differ only in
+# the suppressed pair's new names and the other version's file. Every caveat of the 2026 block above holds on 2024
+# word for word (measured at 5aca9c1, whose src differs from head only in d496cfd's planet-copy lookup, which no body
+# of the fixture takes, and a comment), and these are added:
+# - CARRY_INSERTS True: proposal 24-1:1556, every condition True; 1405, 1407, 1478-1485, 1492, 1506, 1508, 1515, 1517,
+#   1521, 1537; the closed path 24-2:773, 779-784, 791, 808, 810, 820 (contradiction 6), 836.
+# - CARRY_INSERTS_IN_A_CONFIGURATION True: SprocketConf-1 in Z20, read back in every mode (24-1:1518), proposal 1557.
+# - REFERENCED_CONFIGURATION_READ True: Z20 beside the document's Default (24-1:820, 1519), proposal 1558.
+# - CARRY_REMAKE_KINDS the eight kinds: 24-1:1487, 1489, 1502, the kinds 1559-1566 (the same mates as 2026's),
+#   proposal 1567; closed, 24-2:786, 788, 802.
+# - CARRY_GEAR_MATE_ON_AN_APP_GEAR True: UserGear6 and UserGearRoot made again (24-1:1487), proposal 1568; 24-2:786.
+# - CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY True, a fact: SprocketLight-1 read 1 before the press and
+#   2 after, set apart as ruled (24-1:1403); the worker's line (1411); the proposal (1409); the result's sentence
+#   (1398). Read by nothing in src.
+# - Stay None on 2024, each because the fixture has none (24-1:1569-1574), as on 2026: CARRY_INSERTS_A_SUBASSEMBLY,
+#   CARRY_REMAKES_ON_A_LEAF, VIRTUAL_READ, PATTERN_INSTANCE_READ, ORIGIN_ENTITY_READ,
+#   PERSIST_REFERENCE_ROUTE_FOR_VERTICES.
+# Measured differing from 2026 (the review's §3), caveats on every 2024 value above:
+# - Memory: SolidWorks 2024 reached 11.03 GB private by the end of carry's Build again… (24-1:1397) and 9.12 GB in
+#   carry-closed's (24-2:706), the press bracket's readings before any read of the script's own, against about 6.4 GB
+#   for a build with nothing carried (24-1:79-80, 592); so carrying 17 components adds about 4 to 5 GB on 2024 (which
+#   part of the carry costs most is not separated: the reviewer's inference). It was given back when the copy closed
+#   (5.57 and 3.59 GB, 24-1:1576, 24-2:863); free memory never fell under 8.4 GB. The app reads no memory in a press.
+# - Time: the carrying Build again… took 1389 s and 1161 s (24-1:1397, 24-2:706), against 723 and 625 s on 2026; a
+#   build with nothing carried took 429 s (24-1:592), so the carry adds about 16 to 20 minutes on 2024; R's 53 entity
+#   reads took 3.7-6.5 s each, against 2.1-3.0 s; the sections 1.5 to 1.7 times 2026's.
+# - The face prefilter barely narrowed Sun's faces on 2024: the area key kept 29 of 235 for UserGearRoot and 58 for
+#   UserGearFillet, 87 carried (24-1:829, 24-2:132), where 2026 kept 1 and 2, 3 carried (2026 log 1:832); IsSame still
+#   found exactly one each and nothing was capped. On 2024 a face mate on a gear's root cylinder or fillet therefore
+#   carries about one candidate per tooth (two for a fillet), so the 200-candidate cap (swbuild.CARRY_WALK_CANDIDATES)
+#   comes at about 100 teeth for a fillet and 200 for a root, and then only names the mate (a true sentence).
+# - Constrained status 5 was not read on 2024: the old Sprocket-9, suppressed in H and unmated (carried as
+#   Sprocket-3), read 2 there (24-1:1505). Nothing in the app reads 5.
+# - Instance numbers differ from 2026's (Sprocket-9 as Sprocket-3); the result names each with its old name.

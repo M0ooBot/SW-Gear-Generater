@@ -658,6 +658,178 @@ both stand in H), and `carry-closed` prints no proposal.
 virtual component, a pattern instance, an origin and a vertex; perpendicular, tangent and limit angle mates; a
 distance or angle mate whose FlipDimension reads 1; the state route's None path (D2), which is 2024's.
 
+## The confirming run on SolidWorks 2024 (2026-11-18, from 5aca9c1, SolidWorks 2024 32.5.0)
+
+**Setup.**
+- Run folder `<probe folder>\w9d-demo-sw2024-20261118-060436`, snapshot `snap` a `git archive` of 5aca9c1 with
+  `SNAPSHOT_COMMIT` beside `src`. Its `--self-check` (the Linux venv, on the snapshot) read 62 ok, 0 failed before
+  SolidWorks was started. 5aca9c1's `src` holds the fourteen 2024 probe reads (a3e05fe) and every W9d write gate None
+  on 2024, so `carry` and `carry-closed` patched the five writes in their own process and put them back (log 1:791-795,
+  1538-1542; log 2:81-85, 837-841).
+- Two sessions of SolidWorks 2024 (32.5.0 in both logs and both JSON files), each started for its invocation and
+  exited after it: PID 52508 for `fixture,carry-gates,carry`, PID 32312 for `carry-closed`. Each log reads
+  `open before: []` (line 5). No other SolidWorks, Excel or Python was running before either (the operator's
+  account, by `tasklist`); each invocation started and quit its own Excel. Each SolidWorks exited on a plain close
+  request (`taskkill` without `/F`) within 45 s, nothing of the run open.
+- Masters, only copied: S0's 2024 `rangebox.master` (`<probe folder>\w9-s0-sw2024-20261116-064725\out`) and W9a's
+  2024 `setup.master` (`<probe folder>\w9a-confirm-sw2024-20261117-002313\out`); the second session took the
+  `w9d-fixture.master` the first kept in the same `out` (log 2:11). `--other-version-file`: `RangeBox_r2.SLDASM` of the
+  second 2026 run's `carry` (`<probe folder>\w9d-demo-sw2026-20261118-031029\out\carry`), read closed only. The md5 of
+  every file of the two master folders and of that file was the same before and after (the operator's account).
+- Both invocations with `--close-outlived-whats-wrong` (log 1:8, log 2:8). The second also named `--master` and
+  `--user-master`, as `W9D-PROBES-REVIEW.md`'s 2024 command line does; it used neither.
+- Logs `probe/results/sw2024/w9d-demo-sw2024-20261118-1-fixture-gates-carry-clean.log` (with
+  `w9d-demo-20261118-060738.json`) and `…-2-carry-closed-clean.log` (with `w9d-demo-20261118-073438.json`).
+- SolidWorks time about 2 h: the first invocation 84 min, the second 34 min, plus starting and exiting.
+
+| Section | Session | Time | ok | FAIL | STOP | SolidWorks private after (largest logged) |
+|---|---|---|---|---|---|---|
+| fixture | 1 | 846 s | 20 | 0 | 0 | 1.77 GB (6.41 GB after the quiet press, 1:80) |
+| carry-gates | 1 | 1228 s | 27 | 0 | 0 | 2.71 GB (6.34 GB after the build, 1:592) |
+| carry | 1 | 2990 s | 45 | 0 | 0 | 5.57 GB (11.03 GB after the build, 1:1397) |
+| carry-closed | 2 | 2054 s | 46 | 0 | 0 | 3.59 GB (9.12 GB after the build, 2:706) |
+
+Each log ends `done 0 failed: []; … 0 STOP(s)` (1:1586, 2:870). The least free memory logged was 8.62 GB (1:1397);
+the operator's samples between log lines never read under 8.48 GB. Between sections SolidWorks stood at 1.77, 2.71
+and 5.57 GB private, under the 7 GB at which the session would have been ended, so session 1 ran its three sections
+through; inside `carry`'s build it reached 11 GB, and inside `carry-closed`'s 9.1 GB, against 2.4 GB at most on 2026.
+
+**No FAIL, no STOP, no script change.** Nothing in `probe/w9d_demonstration.py` or `src` was changed for this run, and no
+check was changed.
+
+**The boxes, every one.**
+- **No What's Wrong** came in either session, and the close path never fired: neither log has an *outlived* line.
+- **SolidWorks' notification box** (Title, Description, two buttons, two links; exempt by the coordinator's ruling,
+  nothing answers it) came five times:
+  - in `carry`'s Build again…: at 1:856-857, between R's entity reads and the first insert, "while no SolidWorks call
+    was in progress", and at 1:959-960, while `GetNextSubFeature` was in progress, during the remakes;
+  - at the script's own reads after that press: 1:1400-1401 (`GetNextSubFeature`) and 1:1482-1483 (`GetNextFeature`);
+  - in `carry-closed`'s Build again…: 2:265-266, while `GetNextSubFeature` was in progress.
+  Each job went on and returned its result; the run's summary lists them as noted (1:1582-1585, 2:869).
+- **SolidWorks' open-progress window** (`Opening Component …`, `Opened 15 Components … Post load updating`, with a
+  Close button) came at 1:24 and 1:42 (the fixture's opens), and at 2:20, 2:76 and 2:105; 2:105 is inside the job's
+  read-only open of the old assembly. Each closed by itself.
+- **SOLIDWORKS CAM's box** on saving an assembly with a lightweight component did not come. The script saved no
+  assembly holding one: SprocketLight-1 read lightweight alone before the press (1:755), came out resolved (below),
+  and RangeBox_r2 read no lightweight component before the user's save (1:1544).
+
+**Against the plan's Done-when (`carry`, log 1):**
+- after Sun's Flank change and a shaft Aux added, classify sends it to Build again… as RangeBox_r2 (789); Build again…
+  made RangeBox_r2 (1389 s, 1399), saved as today, the old assembly read open (1410);
+- both clusters carried, all 17 components (1478), each placed against the fixture's anchor, Housing-1 by its world
+  frame as ruled (1481), at its pose against its anchor in every mode where it is resolved, 49 reads, none off (1508);
+  every mate expected made again (1477), its definition and entities read back equal by the script's own read (1487),
+  on in the modes it was on in (1489), kept under its own name (1502);
+- the mate on Sun's end face named: UserSunFace `part new`, its Flank changed (1472), named by name in the question
+  (799); UserGearFillet likewise (1475); UserGearRoot made again on the new Sun's Gear Axis (1477, 1568);
+- the Keyway in Sun's part named in the question, made new because its Flank changed, with the time read (797), and in
+  the result with why (1471);
+- every app gear free to turn in every mode with the carried mates on (1506), and W9b's read clean in H, N and L
+  (1509-1515); no interference with a carried component, none named (1517);
+- the carried items left unsaved, GetSaveFlag True (1521); the record at schema 10 with `unsaved_at` the file's time
+  and the footer's carry line (1537); after the user's save of RangeBox_r2, nothing in it reading lightweight (1544),
+  the line goes (1555);
+- the old assembly and every user file unchanged on disk (1405), its save flag, mode, frames, states, mates, flags and
+  entities as before but M1 (b)'s set-apart (1404, 1409), no traced write, show, rebuild, save or close of either and
+  nothing saved after the first save (1407);
+- confirmed on 2024: this run, reviewed in `W9D-DEMONSTRATION-REVIEW.md`'s last section (e51de95), which allows the
+  2024 findings; they are set in `findings.py` (e7a3577).
+
+**Further items of §15 shown:**
+- the fixture (log 1): the three parts of their own built by the strip (11-13); every mate made (67) and on in H at
+  code 0, Sun reading 3 (swFullyConstrained) with UserAngle8b's tie on (70-71); Sprocket-7 suppressed in L alone and
+  Sprocket-9 in H alone (72); SprocketConf-1 referencing Z20 in every mode by the put (73); the quiet press went
+  through in 458 s and recorded the inventory whole (80, 88-89);
+- the tied cluster alone fell back by `FELL_TIE`, UserLock8a deleted, UserAngle8b kept, Housing-1 and Sprocket-8
+  (carried as Sprocket-9) fixed (1479), both reading fixed in every mode at the same frame, Housing-1 at its world
+  frame in the old assembly (1490-1492); UserAngle8b between the two read code 0 in every mode (1503);
+- Sprocket-7 suppressed in L alone and Sprocket-9 in H alone, by the script's shown read, the route and the carry
+  (1484); every other component resolved everywhere (1485);
+- SprocketConf-1 inserted in Z20 and read Z20 in every mode (1518), R reading Z20 beside its document's Default (1519,
+  820); SprocketLight-1's configurations read from its file closed, `('Default',)` (1520);
+- UserAsm6 named `unread` beside the lightweight SprocketLight-1, UserAxisLight `lightweight`, UserAxis9 `unread` as
+  suppressed in H, the mode showing (1473-1476), each as `expected_outcome` says (1477); UserAxis7 in L, where
+  Sprocket-7 is suppressed, set on and read on, not judged (1488);
+- the result names a fallen component with its old name, *Housing-1 and Sprocket-9 (was Sprocket-8) are fixed where
+  they stood* (1398), the review's must-fix 1 as it now reads on SolidWorks;
+- `carry-gates` (log 1): the question led by `CARRY_INSERTS_ON_2024` with the Keyway (154); the press built
+  RangeBox_r2 (429 s, 594) and carried nothing, 48 items named (653), no r3 walk (652), the result W9a's sentence led
+  by the finding (654), the record at schema 10 with `unsaved_at` 0 and no footer line (670-671), nothing written to
+  the old assembly or a user file (596-599); each gate's own refusal by `plan_carry` on that read keeps its items back
+  (683, 694, 705, 716, 727);
+- `carry-closed` (log 2): R.2 refused the copy as copied (75); after the save with L showing (78), R read the old
+  assembly read-only (`open_read_only` 3.0 s, 106), L showing, by `GetComponentSuppressionState(Name2)`, nothing left
+  open or marked (724, 773), the job closing it again (`close_unsaved` 0.3 s, 160; 774); the old assembly and every user
+  file unchanged on disk (709), the traced calls on them the job's own `OpenDoc6`/`QuitDoc` of the old assembly and
+  the opens of the user's parts for their inserts, as on 2026 (710-711); UserAsm6 and UserAxisLight made again, only
+  UserSunFace, UserAxis7 (suppressed in L, the mode showing) and UserGearFillet named (775-778); all 17 carried (779),
+  the tie fallen back with Housing-1 (as Housing-2) and Sprocket-8 fixed in every mode (780, 789-791); every remade
+  mate equal and on as before (786, 788); contradiction 6, Sprocket-2 read in L and placed against RangeSlv in H, at
+  its pose against it in every mode (820); the record another version wrote refused (843), and the 2026-saved file,
+  read as 19000 against this SolidWorks' 17000 (844, 846), refused by closed reads only (847); RangeBox_r2 closed
+  unsaved and a later Update (86 s) said the carry was lost, its mark gone (849-861).
+
+**Facts logged** (log 1 unless said):
+- One FixComponent in H fixes a component in every mode on 2024 too: Housing-1 and the fallen Sprocket-8 read
+  `IsFixed` True in H, N and L with frames that do not move (1490-1492; log 2:789-791).
+- FlipDimension and `IMate2.Flipped` of every distance and angle mate read 0 and False before and after
+  (1494-1499; log 2:793-799, UserAsm6 too). Which of the two stands for AddMate5's Flip is still not told apart.
+- A gear mate's alignment read 2 before and 2 after on UserGear6 and UserGearRoot (1500-1501), not judged.
+- `GetObjectByPersistReference3`'s out code: not in the return and the by-reference parameter 0 after the call, every
+  time; `IEntity.GetType` 2 on faces, 5 on axes, 4 on planes, as on 2026.
+- `GetConstrainedStatus` of the carried components read 2 or 3 in every mode in both sections (1505; log 2:807). No 5
+  was read on 2024.
+- Sun's frame in the old assembly and in each mode of RangeBox_r2 the same, at z 5.5 (1507; log 2:809).
+- Component instance numbers in RangeBox_r2 followed insertion order and differed between the two sections
+  (Sprocket-8 as Sprocket-9 in `carry`, Housing-1 as Housing-2 in `carry-closed`); the poses and mates held either way.
+
+**What differs from 2026** (measured; the 2026 figures are the second 2026 run's):
+- **Time.** Sections 846, 1228, 2990 and 2054 s against 564, 773, 1716 and 1208 s: 1.5 to 1.7 times. The builds: 429 s
+  in `carry-gates` (270 s), 1389 s in `carry` (723 s), 1161 s in `carry-closed` (654 and 625 s); the fixture's quiet
+  press 458 s.
+- **Memory.** SolidWorks 2024 rose to 11.03 GB private in `carry`'s build and 9.12 GB in `carry-closed`'s, and gave
+  most of it back once the copy closed (5.57 and 3.59 GB after the sections); 2026 stayed under 2.4 GB. Free memory
+  never went under 8.4 GB, so nothing was cut for it.
+- **R's reads are slower.** `entity_reference` took 3.7 to 6.5 s each in `carry` (53 reads) and 3.5 to 4.4 s in
+  `carry-closed` (27), against 2.1 to 2.8 s. The r3 walks carried the same candidates: 3.1 to 4.4 s per candidate on
+  Chain-2, Chain-1 and Sprocket-5 in `carry` (823-827) and 2.2 to 2.7 s in `carry-closed` (2:126-130), against 1.16 to
+  1.69 s; Sun's 87 candidates at 0.095 and 0.072 s each (829; 2:132). Nothing was capped. That the walks did not
+  grow through either session is read from these few lines only.
+- **The face prefilter barely narrowed Sun's faces.** On Sun's part (235 faces) the area key kept 29 for UserGearRoot
+  and 58 for UserGearFillet, 87 carried (829; 2:132), where on 2026 it kept 1 and 2, 3 carried (2026 log 1:832);
+  `IsSame` still found exactly one each. That the 2024-built Sun's equal tooth faces read equal areas to within the
+  key's tolerance, where 2026's did not, is the review's likely reason, not traced. On 2024 a face mate on a gear's
+  root cylinder or fillet therefore carries about one candidate per tooth (two for a fillet), so the 200-candidate cap
+  comes at about 100 teeth for a fillet and 200 for a root, and then names the mate; the cost is time, not a wrong
+  answer.
+- **Constrained status 5 did not come.** On 2026 the old Sprocket-9, suppressed in H with no mate on it in the new
+  assembly, read 5 there (2026 log 1:1502); on 2024 the same component (carried as Sprocket-3) read 2 in H (1505). So
+  the review's *suppressed and unmated* pattern for 5 is 2026's only; nothing in the app depends on 5 (the review's §6).
+- Everything the checks judge read the same as on 2026: the outcomes per mate, the names, the fallback, the states,
+  the anchors and poses, the configuration, the record, the footer, R.2's refusals and the lost line. SprocketLight-1
+  came out resolved in the old assembly on 2024 too (1409).
+
+**Gate proposals printed for 2024** (`carry`, log 1; set since in findings.py as the review allows, e7a3577):
+- 1409: `CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2024 = True`, SprocketLight-1 read 1 before
+  and 2 after, set apart: its state and its file going from not open to open, unmarked;
+- 1556: `CARRY_INSERTS_ON_2024 = True`, every condition True;
+- 1557: `CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 = True`;
+- 1558: `REFERENCED_CONFIGURATION_READ_ON_2024 = True`;
+- 1567: `CARRY_REMAKE_KINDS_ON_2024 = ('coincident', 'concentric', 'parallel', 'distance', 'angle', 'limit distance',
+  'lock', 'gear')`, the mates standing for each kind at 1559-1566, the same mates as on 2026;
+- 1568: `CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 = True`, UserGear6 on the new Sun's Gear Axis, UserGearRoot remade;
+- 1569-1574: `CARRY_INSERTS_A_SUBASSEMBLY`, `CARRY_REMAKES_ON_A_LEAF`, `VIRTUAL_READ`, `PATTERN_INSTANCE_READ`,
+  `ORIGIN_ENTITY_READ` and `PERSIST_REFERENCE_ROUTE_FOR_VERTICES` `_ON_2024 = None`, none of them in the fixture.
+
+Each is its 2026 twin's value. `carry-closed` prints no proposal; its lines above are the closed path's evidence.
+
+**Not measured by this run:** `FELL_NEW_ERROR` and `FELL_OVER_DEFINED`; a user sub-assembly, a leaf, a virtual
+component, a pattern instance, an origin and a vertex; perpendicular, tangent and limit angle mates; a distance or
+angle mate whose FlipDimension reads 1; a gear mate of the other sense remade; the state route's None path (D2), which
+no version now takes; a What's Wrong during a carry, and with it the close path under W9d (no box came); an edge mate,
+and so the edge prefilter's cost the probe review flagged (the fixture has none); the user's work in error at a Build
+again….
+
 ## Command lines
 
 2026 (fresh session; `RUN` the run folder with `snap` the repo snapshot):

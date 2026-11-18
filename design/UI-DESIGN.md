@@ -1583,8 +1583,13 @@ instances as components of their own.*; while that finding is unset a
 sub-assembly is named and left, the review of the second 2026 run's must-fix 2);
 and *(Not yet shown on SolidWorks 2026: findings.…)*.
 Foreseeing nothing carried, it asks no save and says no closed clause. With
-`CARRY_INSERTS` unset on that SolidWorks (today) the question says W9a's clause
-led by that finding; with no version on record, W9c's mixed form.
+`CARRY_INSERTS` unset on that SolidWorks the question says W9a's clause led by
+that finding. With no version on record (the coordinator's ruling, 2026-11-18)
+it says only what is true whichever version the press meets: what every
+version's findings say alike is said as fact, as for a known version, its
+version words general (*on the SolidWorks it runs on*); only what differs is
+said as may (*If the press runs on SolidWorks 2024: …* first, then *Whichever it
+runs on: …*); W9c's mixed form where `CARRY_INSERTS` itself differs.
 
 **The result** (`ui_text.carried_status`, after the build's own sentence):
 *Carried into RangeBox_r2, unsaved: your Sprocket-1, … each where it stood
