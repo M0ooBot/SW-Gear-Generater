@@ -162,7 +162,9 @@ GEARS = SheetDef("Gears", (
     Column("hand", "Hand", blank="right", words=HANDS, aliases={"r": "right", "l": "left"}, width=8),
     Column("groove", "Groove", "mm", blank="none", numeric=True, width=13),
     Column("profile_shift", "Profile shift", "× m", blank="0", numeric=True, width=18),
-    Column("backlash", "Backlash", "mm", blank="0.3 × module", numeric=True, width=15),
+    # F1 (PLAN-PRINTED §2.1): a blank Backlash is the Box's Process's default.
+    Column("backlash", "Backlash", "mm", blank="printed: 0.3, or 0.3 × module below module 1; machined: 0.3 × module",
+           numeric=True, width=15),
     Column("fillet", "Fillet", "mm", blank="0.38 × module", numeric=True, width=12),
     Column("rim", "Rim", "mm", blank="root + 6 × module", numeric=True, width=10),
     Column("slides", "Slides", blank="doesn't slide", width=20, help="Named positions from At: H=-10, N=0, L=+10."),

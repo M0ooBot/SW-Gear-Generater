@@ -18,7 +18,7 @@ from dataclasses import dataclass, field, replace
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 from ..gears.base import ERROR, WARNING, Diagnostic
-from ..spec import PROCESS_MACHINED, GearSpec
+from ..spec import PROCESS_MACHINED, PROCESS_PRINTED, GearSpec
 from . import schema
 from .schema import FRAME, NAME_PATTERN, Column, SheetDef
 from .xlsx import Book, Cell, NewSheet, Sheet, make_ref, number_text
@@ -48,6 +48,26 @@ class Box:
 
     def efficiency_text(self) -> str:
         return self.efficiency.strip() or "98"
+
+
+def checked_process(box: Box) -> str:
+    """The Box's Process as a gear's spec takes it (F1, the coordinator's ruling 3 of 2026-11-18): the word in lower
+    case when it is Printed or Machined in any case, else ``""``, the spec's blank, which is machined. A word that
+    does not read is an error at its Box cell (:func:`_read_box`), said there once; the gears are not told it again.
+    A blank is ``""`` too: :func:`assess.assess` resolves it as built before any spec is made from the Box."""
+    word = str(box.process).strip().lower()
+    return word if word in schema.PROCESS_WORDS else ""
+
+
+def checked_nozzle(box: Box) -> str:
+    """The Box's Nozzle as a gear's spec takes it (ruling 3): the text when it reads as a number above zero, else
+    ``""`` (0.4 mm, ``spec.NOZZLE_DEFAULT``). One that does not is an error at its Box cell, said there once."""
+    text = str(box.nozzle).strip()
+    try:
+        value = float(text.replace("−", "-"))
+    except ValueError:
+        return ""
+    return text if math.isfinite(value) and value > 0 else ""
 
 
 @dataclass(frozen=True)
@@ -143,8 +163,10 @@ class Gear:
             name=self.part_name,
             start_band=self.start_band,
             end_band=self.end_band,
-            process=box.process,            # F1: the Box's word, resolved by assess before any spec is planned
-            nozzle=box.nozzle,
+            # F1: the Box's word, resolved by assess before any spec is planned, and its nozzle; only values that
+            # checked (the coordinator's ruling 3), so a bad Box cell is said once, at the Box, never at every row.
+            process=checked_process(box),
+            nozzle=checked_nozzle(box),
         )
 
     def positions(self) -> Dict[str, float]:
@@ -345,6 +367,19 @@ def _table(reader: _Reader, sheet: Sheet, sheet_def: SheetDef) -> List[Tuple[int
     return rows
 
 
+def _check_word(reader: _Reader, where: str, setting: schema.Setting, text: str) -> str:
+    """A word setting's value (F1: Process) as the model keeps it, its canonical lower case word, read in any case
+    (the coordinator's ruling 7); else an error at its cell and the text as typed, as :func:`_check_value` keeps a
+    cell it could not read. The Box has no drop-down lists, so this is where the word is checked."""
+    word = text.strip().lower()
+    if word in setting.words:
+        return word
+    said = [w.capitalize() for w in setting.words]
+    choices = " or ".join(said) if len(said) <= 2 else ", ".join(said[:-1]) + " or " + said[-1]
+    reader.error(where, f"{setting.name} is {choices} (got {text!r}).")
+    return text
+
+
 def _read_box(reader: _Reader, sheet: Optional[Sheet]) -> Box:
     if sheet is None:
         reader.error("Box", "the workbook has no Box sheet.")
@@ -364,7 +399,12 @@ def _read_box(reader: _Reader, sheet: Optional[Sheet]) -> Box:
         text = _cell_text(reader, sheet, value_cell, None)
         if setting.numeric and text:
             column = Column(setting.key, setting.name, setting.unit, numeric=True)
+            before = len(reader.diagnostics)
             text = _check_value(reader, where, column, text, bool(value_cell and value_cell.percent))
+            if setting.key == "nozzle" and len(reader.diagnostics) == before and float(text) <= 0:
+                reader.error(where, f"Nozzle must be more than zero (got {text!r}).")
+        elif setting.words and text:
+            text = _check_word(reader, where, setting, text)
         values[setting.key] = text
         rows[setting.key] = row
 
@@ -380,11 +420,15 @@ def _read_box(reader: _Reader, sheet: Optional[Sheet]) -> Box:
     if fmt != schema.FORMAT:
         reader.error(at("format"), f"this workbook is format {fmt}; this version of the app reads format "
                                    f"{schema.FORMAT}.")
+    # F1 (PLAN-PRINTED §1.3): Process is kept as the user left it, "" for a blank cell or no row at all, never resolved
+    # here: assess.assess gives a blank its meaning (assess.blank_process, D11). process_cell says which of the two a
+    # "" is, for the Workbook panel (F1-INTERFACES §5): where the value was read, or "" when the sheet has no row.
     return Box(name=values.get("name", ""), output_folder=values.get("output_folder", ""),
                part_template=values.get("part_template", ""),
                assembly_template=values.get("assembly_template", ""),
                pressure_angle=values.get("pressure_angle", ""), efficiency=values.get("efficiency", ""),
-               format=fmt)
+               format=fmt, process=values.get("process", ""), nozzle=values.get("nozzle", ""),
+               process_cell=at("process") if "process" in rows else "")
 
 
 def from_book(book: Book) -> Tuple[GearboxSpec, List[Diagnostic]]:
@@ -650,5 +694,6 @@ def to_sheets(spec: GearboxSpec) -> List[NewSheet]:
 
 
 def template(name: str = "Gearbox") -> GearboxSpec:
-    """A blank workbook's model: the Box filled, every other sheet a header only."""
-    return GearboxSpec(box=Box(name=name))
+    """A blank workbook's model: the Box filled, every other sheet a header only. F1 (PLAN-PRINTED §1.3, D2): a new
+    gearbox is printed, so *New workbook…* writes Process printed and a 0.4 mm Nozzle."""
+    return GearboxSpec(box=Box(name=name, process=PROCESS_PRINTED, nozzle="0.4"))

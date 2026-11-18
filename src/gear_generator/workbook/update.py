@@ -53,7 +53,7 @@ from .. import findings, store, swbuild
 from ..gears import bevel, clutch, equations, kind_for, spur
 from ..gears import base
 from ..gears.base import GlobalVariable
-from ..spec import GearSpec, InputError
+from ..spec import PROCESS_MACHINED, PROCESS_PRINTED, GearSpec, InputError
 from ..store import GearboxRecord, LinkRecord, MateEntry, PartEntry, ShaftEntry, Sidecar
 from ..swbuild import (MARK_MISMATCHED, MARK_UNSAVED, POSE_TOLERANCE, DocumentValues, GearboxUpdate, LockLink, MateRef, MeshLink, MotionUpdate, Placement,
                        _caps_with_arc, on_in, plan_features, same_frame, structural_change)
@@ -3198,7 +3198,10 @@ _SPEC_COLUMNS = (("name", "Part name"), ("kind", "Kind"), ("teeth_side", "Side")
                  ("face_width", "Face width"), ("bore", "Bore"), ("helix_angle", "Helix angle"), ("hand", "Hand"),
                  ("groove", "Groove"), ("profile_shift", "Profile shift"), ("backlash", "Backlash"),
                  ("fillet", "Fillet"), ("rim", "Rim"), ("start_band", "Start band"), ("end_band", "End band"),
-                 ("shaft_angle", "shaft angle"), ("mate_teeth", "mate's Teeth"))
+                 ("shaft_angle", "shaft angle"), ("mate_teeth", "mate's Teeth"),
+                 # F1 (PLAN-PRINTED §6): the Box's Process, which each part's spec carries; a part made new because
+                 # of it says *its Process changed*. Its Nozzle changes no plan, so no part is made new for it.
+                 ("process", "Process"))
 
 WHY_NEW_UNSAVED = "it had changes from Update SolidWorks that were not saved"
 WHY_NEW_MISMATCHED = "it did not hold what the record says, as the last job in SolidWorks found"
@@ -3207,13 +3210,26 @@ WHY_NEW_CARRIER = "its carrier part is new with this revision"
 WHY_NEW_VALUES = "its values changed"
 
 
+_COLUMN_DEFAULTS = {"teeth_side": "external", "process": PROCESS_MACHINED}
+
+
+def _process_word(text: str) -> str:
+    """A form's Process as :func:`_changed_columns` compares it: printed in any case, else machined (blank, machined,
+    or a word that does not read, which ``GearSpec.to_dict`` never writes)."""
+    return PROCESS_PRINTED if text.strip().lower() == PROCESS_PRINTED else PROCESS_MACHINED
+
+
 def _changed_columns(built: Mapping[str, Any], wanted: Mapping[str, Any]) -> List[str]:
-    """The Gears columns whose values differ between two parts' forms (``GearSpec.to_dict``), in sheet order; a blank
-    and its default compare the same way ``gearbox.same_part`` reads them, as text without spaces."""
+    """The Gears columns whose values differ between two parts' forms (``GearSpec.to_dict``), in sheet order (the Box's
+    Process last); a blank and its default compare the same way ``gearbox.same_part`` reads them, as text without
+    spaces. F1: a form with no ``process`` was built machined (a part built before F1, or machined after it, whose
+    ``to_dict`` leaves the key out), and the word is read in any case, as ``GearSpec.is_printed`` reads it."""
     out = []
     for key, column in _SPEC_COLUMNS:
-        default = "external" if key == "teeth_side" else ""
+        default = _COLUMN_DEFAULTS.get(key, "")
         was, now = (str(values.get(key, default) or default) for values in (built, wanted))
+        if key == "process":
+            was, now = (_process_word(v) for v in (was, now))
         if swbuild._squash(was) != swbuild._squash(now):
             out.append(column)
     return out
@@ -3223,12 +3239,15 @@ def _why_part_new(entry: Optional[PartEntry], gear: str, again: Any) -> str:
     """B's phrase for why ``gear``'s part in the new revision is a new file (``CarryBody.why_new``): a part that would
     have been reused but for Update's unsaved changes or a live check (``again.made_new``), else the Gears columns that
     changed (*its Flank changed*, *its Teeth and Face width changed*), else *its values changed*."""
+    # F1: a planet's copy ("Planet copy 2") is made from its row's part, so its row ("Planet") finds the job; before,
+    # a copy found none and said *its values changed* whatever had changed.
+    row = planetary.copy_of(gear)[0]
     for made in getattr(again, "made_new", ()) or ():
-        if gear in made.gear_ids and made.why == gearbox.UNSAVED:
+        if (gear in made.gear_ids or row in made.gear_ids) and made.why == gearbox.UNSAVED:
             return WHY_NEW_UNSAVED
-        if gear in made.gear_ids and made.why == gearbox.MISMATCHED:
+        if (gear in made.gear_ids or row in made.gear_ids) and made.why == gearbox.MISMATCHED:
             return WHY_NEW_MISMATCHED
-    job = next((j for j in getattr(again, "build", ()) or () if gear in j.gear_ids), None)
+    job = next((j for j in getattr(again, "build", ()) or () if gear in j.gear_ids or row in j.gear_ids), None)
     if entry is not None and entry.spec and job is not None:
         columns = _changed_columns(entry.spec, job.spec.to_dict())
         if columns:

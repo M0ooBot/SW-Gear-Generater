@@ -16,7 +16,7 @@ from dataclasses import dataclass, field, replace
 from itertools import combinations
 from typing import Dict, List, Optional, Tuple
 
-from ..gears import helical, internal as internal_gears, pair as pairs, spur
+from ..gears import bevel as bevel_gears, helical, internal as internal_gears, pair as pairs, spur
 from ..gears.base import ERROR, WARNING, Diagnostic
 from . import fixes as fixes_mod, geometry, kinematics, modes as modes_mod, planetary
 from .fixes import Fix
@@ -27,6 +27,10 @@ CENTRE_TOLERANCE = 0.005      # mm: half the last digit of a distance typed to t
 NEAR_MESH_BAND = 0.1          # × module: two unlisted gears this near their mesh distance would mesh (a warning);
                               # nearer than that they jam, and that is a clash
 CLASH_GAP = 0.5               # × module: the least room between gears that do not mesh
+# F1 (PLAN-PRINTED §2.2): the tip clearance two printed surfaces take, mm, less a rounding tolerance (at module 0.75
+# an unshifted pair's computes as 0.2999999999999998). Said at a printed pair's Meshes row only.
+PRINTED_CLEARANCE = 0.3
+PRINTED_CLEARANCE_TOLERANCE = 1e-9
 
 
 @dataclass
@@ -466,6 +470,8 @@ def _check_mesh(report: Report, spec: GearboxSpec, mesh, a: Placed, b: Placed, w
     except ValueError as exc:
         _error(report, where, f"{a.gear} and {b.gear}: {exc}")
         return
+    if _printed(a, b):
+        _check_printed_clearance(report, where, a, b, pinion, other, pa_a, beta)
     placed_at = geometry.centre_distance(a, b)
     report.centres[(a.gear, b.gear)] = (needed, placed_at)
     report.contact[(a.gear, b.gear)] = epsilon
@@ -501,6 +507,42 @@ def _check_mesh(report: Report, spec: GearboxSpec, mesh, a: Placed, b: Placed, w
     elif a.herringbone and abs(a.z - b.z) > CENTRE_TOLERANCE:
         _error(report, where, f"{a.gear} and {b.gear} are herringbones whose middles are {_n(abs(a.z - b.z))} mm "
                               "apart along the axis; a herringbone pair meshes middle to middle.")
+
+
+def _printed(a: Placed, b: Placed) -> bool:
+    """Whether a pair is printed (F1): either gear's derived gear says so (its ``printed`` property, its nozzle set),
+    which is the Box's Process, one for the whole gearbox. A machined pair is told nothing new."""
+    return bool(getattr(a.derived, "printed", False) or getattr(b.derived, "printed", False))
+
+
+def _printed_clearance_warning(report: Report, where: str, a: Placed, b: Placed, clearance: float,
+                               shifted: bool) -> None:
+    """F1 (PLAN-PRINTED §2.2; F1-INTERFACES §8): a printed pair's tip clearance under the 0.3 mm two printed surfaces
+    take, at its Meshes row. The depth is left alone; the advice names less profile shift only when the pair has a
+    shift to take off."""
+    if clearance >= PRINTED_CLEARANCE - PRINTED_CLEARANCE_TOLERANCE:
+        return
+    cure = "use a larger module or less profile shift" if shifted else "use a larger module"
+    _warning(report, where, f"{a.gear} and {b.gear}: Printed, the tip clearance is {_n(clearance)} mm, under the "
+                            f"{_n(PRINTED_CLEARANCE)} mm two printed surfaces take; {cure}.")
+
+
+def _check_printed_clearance(report: Report, where: str, a: Placed, b: Placed, pinion: Placed, other: Placed,
+                             pressure_angle: float, beta: float) -> None:
+    """A printed pair on parallel shafts: its tip clearance at the working centre distance, by
+    ``pair.tip_clearance`` outside and ``pair.ring_tip_clearance`` for a pinion in a ring (package A's maths). A
+    shift the pair maths cannot answer is said elsewhere in this file, so nothing is said here."""
+    shift_a, shift_b = (getattr(g.derived, "shift", 0.0) or 0.0 for g in (a, b))
+    try:
+        if a.internal or b.internal:
+            clearance = pairs.ring_tip_clearance(a.module, pinion.teeth, other.teeth, pressure_angle, beta,
+                                                 getattr(pinion.derived, "shift", 0.0) or 0.0,
+                                                 getattr(other.derived, "shift", 0.0) or 0.0)
+        else:
+            clearance = pairs.tip_clearance(a.module, a.teeth, b.teeth, pressure_angle, beta, shift_a, shift_b)
+    except (ValueError, ArithmeticError):
+        return
+    _printed_clearance_warning(report, where, a, b, clearance, bool(shift_a or shift_b))
 
 
 def internal_working_centre(module: float, pinion_teeth: int, ring_teeth: int, pressure_angle: float,
@@ -637,6 +679,10 @@ def _check_turned(report: Report, spec: GearboxSpec, a: Placed, b: Placed, laid:
                               "gears share one.")
         return False
     if kind_a == "bevel":
+        if _printed(a, b):
+            # Gleason's clearance (bevel.WHOLE_DEPTH less WORKING_DEPTH, 0.188 × module), the same along the face.
+            _printed_clearance_warning(report, where, a, b,
+                                       (bevel_gears.WHOLE_DEPTH - bevel_gears.WORKING_DEPTH) * a.module, False)
         if laid.placed > CENTRE_TOLERANCE:
             shafts = {x.id: x for x in spec.shafts}
             point = geometry._add(b.centre, b.axis, -float(gb.at or 0))
@@ -663,6 +709,13 @@ def _check_turned(report: Report, spec: GearboxSpec, a: Placed, b: Placed, laid:
         _error(report, where, f"{a.gear} and {b.gear} are crossed helical gears with profile shift; crossed gears are "
                               "built without it: set both shifts to 0.")
         return False
+    if _printed(a, b):
+        # Unshifted, each tip stands the depth less two addenda from the other's root, whatever the helix angles.
+        try:
+            _printed_clearance_warning(report, where, a, b, pairs.tip_clearance(a.module, a.teeth, b.teeth, pa_a),
+                                       False)
+        except (ValueError, ArithmeticError):
+            pass
     tilt = geometry._reduce_line(-(a.hand_sign * a.derived.helix_angle_deg + b.hand_sign * b.derived.helix_angle_deg))
     lines = min(laid.shaft_angle, 180.0 - laid.shaft_angle)
     foot_a, foot_b = geometry.lines_closest(a.centre, a.axis, b.centre, b.axis)
