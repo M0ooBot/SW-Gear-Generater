@@ -791,7 +791,8 @@ grows with β (the review's must-fix M1).
 **A helical face too narrow to measure.** Both jaws must lie whole on the flanks, so a helical gear needs
 `b ≥ W_n · sin β_b + Δb` with `Δb = 3 mm` (KHK's text: "Δb > 3 mm to make a stable measurement"). Below that the row
 says the face is too narrow and gives no figure. For a herringbone gear, `b` is one half,
-`HelicalDerived.half_width` (the face less the groove, halved; `helical.py:183`).
+`HelicalDerived.toothed_width` (the face less the groove, halved; `helical.py:180-183`; the first revision called it
+`half_width`).
 
 **Which gears show it.**
 
@@ -1178,6 +1179,10 @@ files** will write), press **Print files**. Do the same three more times, changi
 *Optional, recommended:* a fifth gear, **Coupon_E**: Module **2**, Teeth **30**, Face **8**, no bore. A single size
 cannot tell a fixed flank growth from PLA's shrink, which grows with the part (a few tenths of a per cent, about
 0.02 mm a flank across 11 mm). Two sizes can. It adds about twenty minutes of printing.
+
+- **If your shaft is over 18 mm**, your four coupons are already Module 2, Teeth 30, so Coupon_E is the other size:
+  Module **1.5**, Teeth **20**, Face **8**, no bore. Its span is then over 3 teeth (11.209 mm), and the four coupons'
+  over 4 (21.223 mm). Printed at the same size as the others it would measure nothing new.
 
 **Where the files are.** Each press of **Print files** makes a new folder inside the `print` folder of the Output
 folder you built into, named by the date and time of the press, for example `print\2026-11-19 10.05.12`. It holds
@@ -2073,3 +2078,16 @@ session's ruling on repeat presses. Each change is by section, with why.
   (the 65 is the floor). The *Done when* gains the interface review, the findings commit's review, the boards and
   documents, and the stage review's should-fixes.
 
+
+## Changes after F2-0's review
+
+2026-11-18. To F2-0's review (`docs/notes-printed/F2-0-REVIEW.md`, `0c4b7c3`) and the coordinating session's rulings on
+F2-0's twenty decisions (all accepted as the review recommends; recorded in `docs/notes-printed/F2-0.md`).
+
+- **§3.2, Coupon_E for a shaft over 18 mm.** It is then Module 1.5, Teeth 20, the other size, since the four coupons are
+  already Module 2, Teeth 30 (the re-check's should-fix, ruled).
+- **§3.0, a citation.** The herringbone's half is `HelicalDerived.toothed_width` (`helical.py:180-183`), not
+  `half_width`.
+- The probe's changes for its run (`probe/f2_probes.py`, `F2-PROBES.md`): `PART_WINDOW_READ` is proposed only from a
+  reading of a part open in its own window but not active, the case the job uses it for (M1); `STEP_EXPORT` needs the
+  spur's file to be the spur's size (S1); step 7c, the lightweight case, runs last (S2).

@@ -258,7 +258,7 @@ Every sentence a user reads. C owns the words; B hands it the structure above.
   measure*; "narrow_face" *face too narrow to measure: it needs 13.0 mm*; "no_contact" *no span: no k has both jaws on
   the involute*. The Measured line, for a reading typed (C computes): `e = (reading − w_mm) / 2`, `j = 2 (e + 0.04) / cos
   α_n` never under 0.1 (said when it holds there), and said when `j > 0.3 × module`: *your printer adds 0.041 mm a flank;
-  0.22 mm a gear keeps the running play*.
+  0.172 mm a gear keeps the running play* (2 (0.041 + 0.04) / cos 20°; corrected from 0.22 by F2-0-REVIEW's S6).
 - `print_refusal(refusal: Refusal) -> str`: §2.3's sentence.
 - `print_result(result: PrintResult) -> str`: the status after a press: the files written and the folder, or the
   refusal; a flag turned on and the active document not put back said.
