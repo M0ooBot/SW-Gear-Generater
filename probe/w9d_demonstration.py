@@ -365,7 +365,7 @@ def definition_problems(old, new, kind):
     out = []
     if old["type"] != new["type"]:
         out.append(f"type {old['type']} -> {new['type']}")
-    if old["alignment"] != new["alignment"]:
+    if old["alignment"] != new["alignment"] and kind != "gear":   # AddMate5 ignores a gear mate's alignment (D3)
         out.append(f"alignment {old['alignment']} -> {new['alignment']}")
     # A gear's sense is compared below; a distance's or an angle's Flip now stands for its FlipDimension (7e3ad9a,
     # ruling 1 on the audit) and its side is the pose check's: flipped compared for the other kinds only.
@@ -587,15 +587,18 @@ def fix_sentences(facts, lead):
 
 def flip_dimensions(old_defs, new_defs, remade, kind_of, facts):
     """Each distance or angle mate made again: its FlipDimension read by the script in the old assembly before the
-    press and in RangeBox_r2 after, beside the worker's own sentence for it. Rows (old, kept, before, after, worker)."""
+    press and in RangeBox_r2 after, beside the worker's own sentence for it. Rows (old, kept, before, after, worker,
+    (IMate2.Flipped before, after)): nothing measured says which of the two stands for AddMate5's Flip, so both are
+    recorded (the audit review's D1)."""
     rows = []
     for o, k, _ in remade:
         if kind_of.get(o) not in FLIP_DIMENSION_KINDS:
             continue
         before = ((old_defs.get(o) or {}).get("values") or {}).get("FlipDimension", "unread")
         after = ((new_defs.get(k) or {}).get("values") or {}).get("FlipDimension", "unread")
+        flipped = ((old_defs.get(o) or {}).get("flipped", "unread"), (new_defs.get(k) or {}).get("flipped", "unread"))
         said = next((f for f in facts if f.startswith(f"{k} made again with Flip")), "none")
-        rows.append((o, k, before, after, said))
+        rows.append((o, k, before, after, said, flipped))
     return rows
 
 
@@ -1218,8 +1221,11 @@ def self_check():
                            {"UserDist4": {"values": {"FlipDimension": 1.0}}}, [("UserDist4", "UserDist4", ()),
                                                                                 ("UserAxis1", "UserAxis1", ())],
                            {"UserDist4": "distance", "UserAxis1": "coincident"}, facts)
-    ok(rows == [("UserDist4", "UserDist4", 1.0, 1.0, facts[3])],
-       "7e3ad9a: each distance or angle mate's FlipDimension before and after, beside the worker's sentence")
+    ok(rows == [("UserDist4", "UserDist4", 1.0, 1.0, facts[3], ("unread", "unread"))]
+       and definition_problems(old, dict(old, alignment=2), "gear") == []
+       and definition_problems(dict(old, type=0), dict(old, type=0, alignment=2), "coincident") != [],
+       "7e3ad9a: each distance or angle mate's FlipDimension and IMate2.Flipped before and after, beside the worker's "
+       "sentence (D1); a gear mate's alignment not judged, another's still (D3)")
     ok(kind_mates({"A": "distance", "B": "limit distance", "C": "distance"}, {"A": "remade", "B": "unread",
                                                                             "C": "remade"}, {"C"})
        == {"distance": ["A"]} and kinds_clean({"A": "distance", "B": "limit distance"},
@@ -2207,10 +2213,15 @@ def judge_carry(label, desk, fx, result, closed, light, out, old_before, old_box
     say(f"fact    {label}: the worker's sentence after the fallback: {fix_sentences(cr.facts, 'fell back in')}; for "
         f"the components fixed in the old assembly: {fix_sentences(cr.facts, 'fixed as in')} (the first reading of "
         f"what one FixComponent does across configurations: the script read {every.get('fixed')})")
-    for o, k, before, after, said in flip_dimensions(old_before.get("definitions") or {}, new_defs, cr.remade,
-                                                     kind_of, cr.facts):
-        say(f"fact    {label}: {o} as {k}: FlipDimension {before} in the old assembly, {after} in RangeBox_r2 (the "
-            f"script's reads); the worker: {said}")
+    for o, k, before, after, said, flipped in flip_dimensions(old_before.get("definitions") or {}, new_defs,
+                                                              cr.remade, kind_of, cr.facts):
+        say(f"fact    {label}: {o} as {k}: FlipDimension {before} in the old assembly, {after} in RangeBox_r2; "
+            f"IMate2.Flipped {flipped[0]} before, {flipped[1]} after (the script's reads); the worker: {said}")
+    for o, k, _ in cr.remade:
+        if kind_of.get(o) == "gear":
+            a, b = (old_before.get("definitions") or {}).get(o, {}), new_defs.get(k, {})
+            say(f"fact    {label}: {o} as {k}, a gear mate: alignment {a.get('alignment', 'unread')} before, "
+                f"{b.get('alignment', 'unread')} after (not judged: AddMate5 ignores a gear mate's alignment)")
     renamed = renames_problems(cr.remade, cr.facts)
     check(not renamed, f"{label}: every remade mate kept under its old name, or the worker said the name SolidWorks "
                        f"kept: {renamed or [(o, k) for o, k, _ in cr.remade if o != k] or 'every one its own'}")

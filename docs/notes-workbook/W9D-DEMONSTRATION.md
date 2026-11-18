@@ -510,7 +510,10 @@ Run 2's `carry-closed` (401 s, 8 failed) is superseded by run 3: its closed read
     carry; which of the worker's two sentences it gave (one FixComponent, or "had to be fixed") is printed. This is
     the first measurement of what one FixComponent does across configurations;
   - **FlipDimension** of each distance or angle mate, read in the old assembly before the press and in RangeBox_r2
-    after, printed side by side with the worker's sentence (a fact);
+    after, with `IMate2.Flipped` read both times too (nothing measured says which of the two stands for AddMate5's
+    Flip; UserAngle8b has never been made), printed side by side with the worker's sentence (a fact; the audit
+    review's D1);
+  - a gear mate's alignment is printed before and after and not judged, since AddMate5 ignores it (D3);
   - **kept names**: every remade mate's name against its old one, a check that passes when equal and, when not, only
     if the worker said `<old> is carried as <kept>`. Every mate check finds the mate under its kept name.
 
