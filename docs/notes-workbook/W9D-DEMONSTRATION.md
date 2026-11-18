@@ -672,10 +672,20 @@ About 1 h 30 to 1 h 45. 2024, after the 2024 W9d probes, in fresh sessions (each
 
 ```
 python.exe RUN\snap\probe\w9d_demonstration.py RUN\snap\src RUN\out24 --pid PID --log RUN\w9d-demo-sw2024-1.log ^
-    --sections fixture,carry-gates,carry --master <2024 rangebox.master> --user-master <2024 setup.master>
+    --sections fixture,carry-gates,carry --master <2024 rangebox.master> --user-master <2024 setup.master> ^
+    --close-outlived-whats-wrong
 python.exe RUN\snap\probe\w9d_demonstration.py RUN\snap\src RUN\out24 --pid PID --log RUN\w9d-demo-sw2024-2.log ^
-    --sections carry-closed --other-version-file <a 2026-saved assembly>
+    --sections carry-closed --other-version-file <a 2026-saved assembly> --close-outlived-whats-wrong
 ```
+
+`--close-outlived-whats-wrong` (2024 only; the coordinator's ruling of 2026-11-18 on a What's Wrong that outlives its
+job, extended the same day to every demonstration run on 2024 that asks for it, `ISSUE-1-PLAN.md`): W9c's close
+path, wired by W9d's own `main` (not inherited: W9d calls W9a's `main`, never W9c's). A What's Wrong owned by
+SolidWorks' frame, the frame enabled, still up 60 s after a job is logged as having outlived it, with the job and the
+call it came at, and closed with its own Close button (a visible, enabled Button; `BM_CLICK`, then its `WM_COMMAND`
+as a second try), gone within 10 s of the last try; the log says which press closed it. Anything else stays the
+STOP, so one such box no longer ends an unattended 2024 run. Without the flag the run is as before. Not given on
+2026, where no box shows and the path is not in force anyway.
 
 The second run finds `w9d-fixture.master` in the same `RUN\out24`, or takes `--fixture-master`. Folders are written
 `<probe folder>\…` in any note about a run.

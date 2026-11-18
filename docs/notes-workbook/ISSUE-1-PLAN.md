@@ -1119,6 +1119,12 @@ box's own checkbox while an Update runs; a Build with the user's work in error; 
 modes; other kinds of mate error; a box longer than 23 s in an Update that rebuilt; "show errors every rebuild" off.
 *Measured since the list above:* a box that outlives its job (twice, each closed by the script's press of its Close).
 
+**2026-11-18, the close path extended.** The coordinating session's ruling, the user's to overrule: the closing of a
+What's Wrong that outlives its job, as ruled above, applies to every demonstration run on SolidWorks 2024 that asks for
+it by the flag, not W9c's alone, since one such box would end an unattended run. `probe/w9d_demonstration.py` takes
+`--close-outlived-whats-wrong` and puts W9c's close path into W9a's harness as W9c's own flag does; off without it,
+and every other rule as above.
+
 
 ## Changes after W9b, W9c's probes and the review of W9c's packages
 

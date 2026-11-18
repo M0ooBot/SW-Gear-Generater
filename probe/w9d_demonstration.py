@@ -6,7 +6,16 @@ the window's ``_start_build`` now runs it: ``old_assembly`` as ``before`` and ``
     python w9d_demonstration.py <src> <out> --pid PID [--log FILE] [--sections fixture,carry-gates,...] [--redo]
         [--master <S0's rangebox.master>] [--user-master <W9a's setup.master>]
         [--fixture-master <this script's w9d-fixture.master>] [--other-version-file <a file the other SolidWorks saved>]
+        [--close-outlived-whats-wrong]
     python w9d_demonstration.py --self-check      (no SolidWorks, no Excel)
+
+``--close-outlived-whats-wrong`` (the coordinator's ruling of 2026-11-18 on a What's Wrong that outlives its job,
+extended the same day to every demonstration run on SolidWorks 2024 that asks for it; ISSUE-1-PLAN.md): off unless
+given. Given, W9c's close path (``w9c_demonstration.close_outlived_on``) is put into W9a's harness for this run, as
+W9c's own flag does: on 2024 only, a What's Wrong owned by SolidWorks' frame, the frame enabled, still up 60 s after a
+job is said to have outlived it, with the job and the call it came at, and is closed with its own Close button (the
+control checked to be a visible, enabled Button, a BM_CLICK, then its WM_COMMAND as a second try), gone within 10 s of
+the last try with the frame enabled; anything else stays the STOP. The app is not changed by it.
 
 It runs W9a's script's ``main`` with its own sections (as W9b's and W9c's do), so it inherits the attach and PID
 check, the dialog watch with the What's Wrong rule per version, keep-awake, the JSON after every section, APPDATA in
@@ -703,6 +712,14 @@ def edit_spec(rb):
     return dataclasses.replace(rb, shafts=rb.shafts + (Shaft(**AUX_SHAFT, row=rows[1]),), gears=gears)
 
 
+CLOSE_FLAG = "--close-outlived-whats-wrong"      # W9c's WW_CLOSE_FLAG, the same words (the self-check holds them equal)
+
+
+def close_path_asked(argv):
+    """Whether this run asks for the close path of a What's Wrong that outlives its job (the ruling's flag, exactly)."""
+    return CLOSE_FLAG in argv
+
+
 def _head(name):
     """A probe script's pure part (its source up to its own self-check), run as a module: importing it would run its
     self-check, or its live part."""
@@ -1281,6 +1298,55 @@ def self_check():
        "every gate this script patches is None in findings.py on 2024, and every one it keeps None is None on both "
        "versions (so a 2024 run proposes, never sets)")
     ok(propose("X", True, "e") == "propose X = True  # e", "propose's form")
+    # The ruling extended to W9d on 2024 (2026-11-18): the close path is W9c's, wired by the flag only.
+    ok(close_path_asked(["w9d_demonstration.py", "src", "out", CLOSE_FLAG]) and not close_path_asked(
+        ["w9d_demonstration.py", "src", "out"]) and not close_path_asked(["--close-outlived"])
+       and c9.WW_CLOSE_FLAG == CLOSE_FLAG,
+       "the close path: asked by W9c's own flag, exactly, and off without it")
+
+    class _Io:
+        def __init__(self):
+            self.up, self.t, self.lines, self.pressed = [(7, True)], 0.0, [], []
+
+        def boxes(self):
+            return list(self.up)
+
+        def enabled(self):
+            return True
+
+        def others(self):
+            return []
+
+        def children(self, h):
+            return [{"hwnd": 70, "text": "&Close", "class": "Button", "visible": True, "enabled": True, "id": 2}]
+
+        def click(self, c):
+            self.pressed.append("BM_CLICK")
+            self.up = []
+
+        def command(self, h, c):
+            self.pressed.append("WM_COMMAND")
+
+        def clock(self):
+            return self.t
+
+        def sleep(self, s):
+            self.t += s
+
+        def say(self, line):
+            self.lines.append(line)
+
+    record = {"what": "Build again…", "seen": [{"hwnd": 7}], "unowned": []}
+    io = _Io()
+    c9.close_outlived_with(record, 60.2, 2024, io)
+    closed = record["outlived"]
+    record26 = {"what": "Build again…", "seen": [{"hwnd": 7}], "unowned": []}
+    io26 = _Io()
+    c9.close_outlived_with(record26, 60.2, 2026, io26)
+    ok(not closed["stop"] and closed["closed_by"] == "BM_CLICK" and io.lines and io.lines[0].startswith(
+        "fact    Build again…: What's Wrong outlived its job") and record26["outlived"]["stop"] and not io26.pressed,
+       "the close path as W9d meets it: a box outliving a W9d job said with that job and closed by its Close on 2024; "
+       "on 2026 not pressed, the STOP")
     print(f"fact    the self-check took {time.monotonic() - started:.0f} s")
     print(f"done    {len(bad)} failed")
     return 0 if not bad else 1
@@ -2786,6 +2852,8 @@ def main():
         A.CHOSEN = list(ORDER)
     A.done_here = done_here
     A.RUN_TITLE, A.JSON_STEM = "W9d demonstration", "w9d-demo"
+    if close_path_asked(A.ARGS):             # off unless the run asks: every other run as before
+        C9.close_outlived_on()
     return A.main()
 
 
