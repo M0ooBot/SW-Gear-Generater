@@ -5676,6 +5676,16 @@ def assembly_rebuild_settled(revision: Sequence[int]) -> Optional[Dict[str, bool
     return read
 
 
+def whats_wrong_stays(revision: Sequence[int]) -> bool:
+    """Whether SolidWorks of ``revision`` is measured to leave its What's Wrong box up when an Update has left a part
+    in error and nothing rebuilds after the activation that raised it (findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_
+    ON_<year> True, 2024); False where it is False (2026), unmeasured, or the revision is not known. Pure."""
+    year = release_year(int(revision[0])) if revision else None
+    if year is None:
+        return False
+    return getattr(findings, f"WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_{year}", None) is True
+
+
 def whats_wrong_shows_in_update(revision: Sequence[int]) -> Optional[bool]:
     """For package B's sentence: whether SolidWorks shows its What's Wrong box during an Update with the user's work
     in error on the version in use — True where either findings.WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_

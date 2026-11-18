@@ -1812,8 +1812,13 @@ WHATS_WRONG_OPENS_IN_UPDATE_WITH_PART_FEATURE_IN_ERROR_ON_2024 = True
 #   211-212, 220-223).
 #   Lifetimes 3 to 23 s in Updates; 0.5 s at the script's own activate-and-rebuild step (above).
 #   Only b1 and b2 checked the frame and a second connection's read WHILE the box was up; the confirming runs check
-#   the frame at the job's end. Not run: a person pressing FeatureXpert, or the "Display What's Wrong during rebuild"
-#   box, during the job; a box that outlives its job (none did); a Build with the user's work in error (the again
+#   the frame at the job's end. Since then a box has outlived an app press, and it blocked nothing: in remake-m3's
+#   second pass (24-5, the review of 1dc9350) the Update pressed again straight after a stop that left the ring in
+#   error raised What's Wrong at ActivateDoc3, 5.56 s in, and returned its result while it stood (24-5:433, 440-443);
+#   60.24 s after the press it was still up, owned by the frame, the frame enabled, and only the script's press of its
+#   Close took it down (24-5:438-439). That press stopped before any rebuild and nothing of the user's was in error;
+#   WHATS_WRONG_STAYS_WITHOUT_A_REBUILD below is that case. Not run: a person pressing FeatureXpert, or the "Display
+#   What's Wrong during rebuild" box, during the job; a Build with the user's work in error (the again
 #   sections never ran on 2024); the mate case on a gearbox without modes; an Update that puts by route (c1) with
 #   the user's work in error and a lock carried; mate errors of other kinds than two over-defined distance mates;
 #   any box longer than the 23 s seen; "show errors every rebuild" off.
@@ -1821,6 +1826,30 @@ WHATS_WRONG_OPENS_IN_UPDATE_WITH_PART_FEATURE_IN_ERROR_ON_2024 = True
 #   148-161, 786-800).
 WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2026 = False
 WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2024 = False
+#
+# Whether the What's Wrong box SolidWorks raises at the first activation after an Update left a part in error stays
+# when nothing rebuilds after it (W9C-RUNS-REVIEW.md, the review of 1dc9350, §3; the coordinator's ruling of
+# 2026-11-18: the app never closes the box and tells the user truly what it does). WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_
+# ON_<year>; swbuild.whats_wrong_stays reads it for ui_text's WHATS_WRONG_STAYS and WHATS_WRONG_NEXT.
+# - 2024: True. remake-m3 on 32.5.0 from c2d95cc (24-5: probe/results/sw2024/w9c-demo-sw2024-20261118-5-remake-m3-
+#   second-pass-assembly-flag.log, with w9c-demo-20261118-045156.json). The app's press again straight after step 1
+#   left the ring in error: the box came 5.56 s in, the worker in ActivateDoc3 (24-5:433), the press returned its
+#   still-in-error stop with it up (24-5:440, 443), and 60.24 s after the press it was still up, owned by the frame,
+#   the frame enabled, closed only by the script's BM_CLICK on its own Close (24-5:438-439). The script's own read
+#   before step 2 in the first pass, the first activation there: up at 0.41 s in ActivateDoc3, still up 60.18 s after,
+#   closed the same way (24-5:119, 122-123); and 06d5141's same read (24-4:310-314, still up at the end). The JSON's
+#   two whats_wrong_lifetimes entries: the read's (kind script) and the press's (kind app), each closed_by BM_CLICK.
+#   Not raised at a second activation (step 2's press, 24-5:127-178) or in a press that rebuilt (step 3, 24-5:236-322).
+#   Caveats: which document's ActivateDoc3 raised it in the press is not logged; a person's own activation (bringing
+#   the assembly forward by hand) was not run; how long it stays past 60 s, and closing the documents with it up, were
+#   not run; a press stopping before any rebuild with the user's own work in error was not run; "Display What's Wrong
+#   during rebuild" was on, as found.
+# - 2026: False. No box: in run 11's M3 (w9c-demo-sw2026-20261117-11-final-remake-step2-assembly-flag.log, 34.0.0) the
+#   script's read after step 1 and step 2's press ran under the any-dialog STOP (log 11:7) and no window came (log
+#   11:307-361). Caveat: there the press was the second activation since step 1, so this rests on run 11's log alone
+#   until a 2026 run measures the press as the first activation (remake-m3's second pass on 2026).
+WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2026 = False
+WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2024 = True
 
 # ---------------------------------------------------------------------------------------------------------------------
 # W9c's probes (ISSUE-1-PLAN §4 P1, M1's leftovers, S5 and P2) on SolidWorks 2026 34.1.1, as their review sets them
@@ -2018,10 +2047,12 @@ SUBASSEMBLY_MISSING_PART_READS_ON_2024 = SUBASSEMBLY_MISSING_PART_READS_ON_2026
 # modes-memory-stop.log with w9c-demo-20261117-171926.json; 24-2 …-2-remove.log with …-192454.json; 24-3 …-3-bands-off-
 # m4.log with …-194351.json; 24-4 …-4-remake-whats-wrong-stop.log with …-195231.json). Every check line run 10 printed
 # on 2026 is printed there too, and every traced press made the same calls by member. Caveats for all five on 2024,
-# beside each one's 2026 caveats above, which hold here too: measured at 4315774; head's Update also reads each user
-# mate entity's kind (W9d's D5), which has not run inside an Update on 2024 and judges nothing; and SolidWorks 2024's
-# first press on a freshly opened RangeBox grew it by 3.3 to 4 GB private, a refused press included, held until the
-# assembly was closed (24-1:990-991, 1372, 1400; 24-4:70, 97).
+# beside each one's 2026 caveats above, which hold here too: measured at 4315774; and SolidWorks 2024's first press on
+# a freshly opened RangeBox grew it by 3.3 to 4 GB private, a refused press included, held until the assembly was
+# closed (24-1:990-991, 1372, 1400; 24-4:70, 97). Head's Update also reads each user mate entity's kind (W9d's D5);
+# those reads judge nothing, and they have since run inside every press of remake-m3 on 2024 (24-5:
+# w9c-demo-sw2024-20261118-5-remake-m3-second-pass-assembly-flag.log with w9c-demo-20261118-045156.json, snapshot
+# c2d95cc; "inventory read yes" at 24-5:62, 130, 188, 240, 375, 441), marking nothing of the user's across step 2.
 # - UPDATE_INSERTS_A_GEAR_ON_2024 True. fixed: the Update ended ok, Hub built, inserted, mated and read on in every
 #   mode and resolved there, the second press quiet with every save flag False (24-1:1243, 1245, 1262, 1308, 1316).
 #   Caveats: a hub only; the interference is said after the press; in one mode of the press one pair's volume read by
@@ -2039,11 +2070,15 @@ SUBASSEMBLY_MISSING_PART_READS_ON_2024 = SUBASSEMBLY_MISSING_PART_READS_ON_2026
 #   2 GB free, ending at 0.94 GB free (24-1:1755, 1758), and passed.
 # - UPDATE_MAKES_MATES_WITH_MODES_ON_2024 True. remake: the four gear mates of 28/14/56 remade with modes, the user's
 #   items kept, every flag as on record, L reading 3.0, the change press making run 11's calls by member (24-4:103,
-#   180, 181, 190, 199, 203). Caveats: measured on 28/14/56. M3 is shown on 2024 to step 1 only: the set-straight press
-#   stops in the ring and names RangeBox (24-4:255, 308, 309). The press made again without closing is not measured on
-#   2024: What's Wrong came at the script's own activation of the assembly with the ring in error, before that press,
-#   and outlived its job (24-4:310-314), a STOP. M3 is not this gate's evidence (step 1 makes no mate, step 2 is the
+#   180, 181, 190, 199, 203). Caveats: measured on 28/14/56. M3 is shown on 2024 to step 3 by remake-m3 (24-5):
+#   pressed again without closing it stops before any write under the strict check (24-5:178), with only the parts'
+#   windows closed it stops again (24-5:182, 234), and after closing everything it goes through routed by way of 53
+#   with the four gear mates remade (24-5:322). M3 is not this gate's evidence (step 1 makes no mate, step 2 is the
 #   check phase's version-free stop, step 3's remake is the first part's write), so the gate rests on the first part.
+#   A fact, nothing reads it: 2024 marks the open assembly at its first open-and-activate after a press changed its
+#   parts and stopped before reaching it, not at the change (W9C-RUNS-REVIEW.md, the review of 1dc9350, §2: RangeBox
+#   False after step 1 and True after the next press, 24-5:486-488 and the JSON's first_press.flags; already marked
+#   when read_now's first flags were read, straight after its activation, 24-5:124).
 #   A removal through Update on a gearbox with modes is measured end to end on the fake only.
 # - EXTERNAL_REFERENCES_READ_ON_2024 stays None, as on 2026: m4 made no positive case (24-3:154). As facts, not a route:
 #   the same five calls answered on every user part and Sun without an error and marked nothing (24-3:153).

@@ -2717,6 +2717,57 @@ def test_w9c_gates_on_2024_rest_on_the_confirming_run_on_32_5_0():
                                                                      "What's Wrong is still up after 60 s (1)")
 
 
+W9C_2024_5 = (W9C_2024 / "w9c-demo-20261118-045156.json",
+              W9C_2024 / "w9c-demo-sw2024-20261118-5-remake-m3-second-pass-assembly-flag.log")
+
+
+def test_whats_wrong_stays_without_a_rebuild_rests_on_remake_m3_on_2024_and_run_11_on_2026():
+    """findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_<year> (W9C-RUNS-REVIEW.md, the review of 1dc9350, §3): on 2024
+    the box raised at the first activation after a stop left a part in error was still up 60 s after the app's press
+    and after the script's read, each closed only by the script's BM_CLICK; on 2026 run 11's read and press after
+    step 1 met no window under the any-dialog STOP. Also the 24-5 lines for M3's steps 2 to 3."""
+    assert findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2024 is True
+    assert findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2026 is False
+    data, s5 = _w9a_run(*W9C_2024_5, "c2d95cc", (32, 5, 0))
+    assert s5[8].startswith("rule    --close-outlived-whats-wrong: ") and s5[8].endswith("in force here")
+    assert s5[433] == ("fact    Update SolidWorks: What's Wrong came up 5.56 s into the job, the worker in ActivateDoc3, "
+                       "owned by SolidWorks' frame: as the app's Update shows it (the ruling: a fact, not a STOP)")
+    assert s5[438] == ("fact    Update SolidWorks: What's Wrong outlived its job: 1 still up 60.24 s after it, owned by "
+                       "SolidWorks' frame [True], the frame enabled True (the coordinator's ruling of 2026-11-18)")
+    assert s5[439].startswith("fact    Update SolidWorks: What's Wrong showed during the job, as the app's Update shows "
+                              "it: came at [5.56] s, stayed [] s; after the job it was still up after 60.24 s (allowed "
+                              "60); the script pressed its own Close ('&Close', a Button) by BM_CLICK")
+    assert s5[440].startswith("        in 191.6 s;")
+    assert s5[443].startswith("status  [red] Ring_m1.25_N55 is still open in SolidWorks as an earlier Update")
+    assert s5[119].startswith("fact    read remake, M3: before step 2: What's Wrong came up 0.41 s into the job, the "
+                              "worker in ActivateDoc3, owned by SolidWorks' frame")
+    assert s5[122].startswith("fact    read remake, M3: before step 2: What's Wrong outlived its job: 1 still up "
+                              "60.18 s after it")
+    assert "closed by the BM_CLICK" in s5[123]
+    lifetimes = data["whats_wrong_lifetimes"]
+    assert [(w["job"], w["kind"], w["came"], w["stayed"], w["still_up"]) for w in lifetimes] == [
+        ("read remake, M3: before step 2", "script", [0.41], [], 0), ("Update SolidWorks", "app", [5.56], [], 0)]
+    assert [(w["outlived"]["waited"], w["outlived"]["closed_by"], w["outlived"]["presses"]) for w in lifetimes] == [
+        (60.18, "BM_CLICK", ["BM_CLICK"]), (60.24, "BM_CLICK", ["BM_CLICK"])]
+    # No box at the second activation (step 2's press) or in the press that rebuilt (step 3).
+    assert not any("What's Wrong" in line for line in s5[127:179] + s5[236:323])
+    # M3 on 2024, steps 2 to 3 (the comment on UPDATE_MAKES_MATES_WITH_MODES_ON_2024).
+    assert s5[178].startswith("ok      remake, M3: step 2 stopped before any write")
+    assert s5[182].startswith("fact    remake, M3: closed ['Gear_m1.25_N13.SLDPRT', 'Gear_m1.25_N29.SLDPRT', "
+                              "'Ring_m1.25_N55.SLDPRT'] with RangeBox.SLDASM left open")
+    assert s5[234].startswith("ok      remake, M3: stopped again on Ring_m1.25_N55.SLDPRT with only the parts' windows "
+                              "closed")
+    assert s5[322].startswith("ok      remake, M3: after closing without saving, the press goes through routed by way "
+                              "of 53")
+    # The second pass's one FAIL, ruled a fact of SolidWorks 2024 (2026-11-18): the assembly's flag alone.
+    assert data["sections"]["remake-m3"]["first_press"]["wrote"] == ["flags [('RangeBox.SLDASM', False, True)]"]
+    assert s5[488].startswith("FAIL    remake-m3, the second pass:")
+    _, run11 = _w9a_run(W9C_RUN11, W9C_RUN11_LOG, "3a9e592 with probe/w9c_demonstration.py from eabf14e", (34, 0, 0))
+    assert run11[7] == "rule    What's Wrong: swbuild.whats_wrong_shows_in_update reads False; What's Wrong during a job is a STOP, as any dialog"
+    assert run11[307].startswith("ok      remake, M3: the press set straight stops in Ring_m1.25_N55")
+    assert not any("What's Wrong" in line or line.startswith(("DIALOG", "STOP")) for line in run11[307:362])
+
+
 W9D_FINDINGS = ("OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN", "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS", "FILE_VERSION_READ",
                 "DEPENDENCIES_READ",
                 "COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED", "PERSIST_REFERENCE_ROUTE_FOR_FACES",
