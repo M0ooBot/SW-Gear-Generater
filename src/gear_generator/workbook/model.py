@@ -18,7 +18,7 @@ from dataclasses import dataclass, field, replace
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 from ..gears.base import ERROR, WARNING, Diagnostic
-from ..spec import GearSpec
+from ..spec import PROCESS_MACHINED, GearSpec
 from . import schema
 from .schema import FRAME, NAME_PATTERN, Column, SheetDef
 from .xlsx import Book, Cell, NewSheet, Sheet, make_ref, number_text
@@ -33,6 +33,10 @@ class Box:
     pressure_angle: str = ""
     efficiency: str = ""
     format: str = schema.FORMAT
+    # F1 (PLAN-PRINTED §1.3): the Box's Process and Nozzle. In code a gearbox that does not say is machined; the
+    # user's blank is "" as read, resolved by assess.assess (assess.blank_process, D11) before any gear's spec.
+    process: str = PROCESS_MACHINED
+    nozzle: str = ""
 
     def pressure_angle_text(self) -> str:
         return self.pressure_angle.strip() or "20"
@@ -134,6 +138,8 @@ class Gear:
             name=self.part_name,
             start_band=self.start_band,
             end_band=self.end_band,
+            process=box.process,            # F1: the Box's word, resolved by assess before any spec is planned
+            nozzle=box.nozzle,
         )
 
     def positions(self) -> Dict[str, float]:
@@ -601,7 +607,10 @@ def to_sheets(spec: GearboxSpec) -> List[NewSheet]:
     box_values = {"format": spec.box.format or schema.FORMAT, "name": spec.box.name,
                   "output_folder": spec.box.output_folder, "part_template": spec.box.part_template,
                   "assembly_template": spec.box.assembly_template, "pressure_angle": spec.box.pressure_angle,
-                  "efficiency": spec.box.efficiency}
+                  "efficiency": spec.box.efficiency,
+                  # F1: the word as held, so a gearbox built in code is written machined, never with a blank Process
+                  # that would read back Printed (PLAN-PRINTED §2.8 item 5).
+                  "process": spec.box.process, "nozzle": spec.box.nozzle}
     for setting in schema.BOX_SETTINGS:
         value = box_values.get(setting.key, setting.default if setting.key == "units" else "")
         if setting.numeric and value:

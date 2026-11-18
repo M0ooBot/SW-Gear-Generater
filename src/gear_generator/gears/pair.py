@@ -49,6 +49,8 @@ from ..spec import (
     KIND_SPUR,
     MESH_EXTERNAL,
     MESH_INTERNAL,
+    NOZZLE_DEFAULT,
+    PROCESS_MACHINED,
     GearSpec,
     InputError,
     PairSpec,
@@ -204,6 +206,28 @@ def tip_clearance(module: float, teeth_1: int, teeth_2: int, pressure_angle: flo
     return min(centre - tip_1 - (tip_2 - depth), centre - tip_2 - (tip_1 - depth))
 
 
+def ring_tip_clearance(module: float, teeth_1: int, teeth_2: int, pressure_angle: float = 20.0,
+                       helix_angle: float = 0.0, shift_1: float = 0.0, shift_2: float = 0.0) -> float:
+    """A pinion's and its ring's smaller tip-to-root gap, mm (PLAN-PRINTED §2.2): the pinion's tip to the ring's
+    root and the ring's tip to the pinion's root. Of :func:`tip_clearance`'s signature, ``teeth_2`` the ring's.
+
+    STUB, F1-0's (docs/notes-printed/F1-INTERFACES.md item 4): package A owns it and makes it real. Until then it
+    returns :func:`tip_clearance`'s figure and never raises.
+    """
+    return tip_clearance(module, teeth_1, teeth_2, pressure_angle, helix_angle, shift_1, shift_2)
+
+
+def printed_tip_thickness(module: float, teeth: int, pressure_angle: float = 20.0, helix_angle: float = 0.0,
+                          shift: float = 0.0, nozzle: float = 0.4) -> float:
+    """A printed gear's transverse tooth thickness at its tip circle, mm, after the printed default backlash is taken
+    off it (PLAN-PRINTED §2.5), for the test against ``nozzle``.
+
+    STUB, F1-0's (docs/notes-printed/F1-INTERFACES.md item 4): package A owns it and makes it real. Until then it
+    returns :func:`tip_thickness` (no backlash taken off) and never raises.
+    """
+    return tip_thickness(module, teeth, pressure_angle, helix_angle, shift)
+
+
 def tip_thickness(module: float, teeth: int, pressure_angle: float = 20.0, helix_angle: float = 0.0,
                   shift: float = 0.0) -> float:
     """A gear's transverse tooth thickness at its tip circle, mm, with no backlash.
@@ -290,7 +314,7 @@ def _shifted(row: Candidate, centre: float, pressure_angle: float, limit_1: floa
 
 
 def shift_for_centre(module: float, teeth_1: int, teeth_2: int, centre: float, pressure_angle: float = 20.0,
-                     helix_angle: float = 0.0) -> Tuple[float, float]:
+                     helix_angle: float = 0.0, printed: bool = False) -> Tuple[float, float]:
     """The profile shifts ``(x1, x2)`` that put an outside pair exactly at ``centre``, or a sentence why not.
 
     The same sum the solver's shifted rows use, shared out by :func:`split_shift`
@@ -300,6 +324,9 @@ def shift_for_centre(module: float, teeth_1: int, teeth_2: int, centre: float, p
     than solved for: a workbook's shafts (PLAN-WORKBOOK §3.6). Full precision is
     returned; rounding it to look tidy moves the centre (x 0.085 instead of
     0.084550 misses 64 mm by 0.0013 mm).
+
+    ``printed`` (F1, PLAN-PRINTED §2.5): test the tip after the printed backlash and the clearance against 0.3 mm.
+    STUB keyword, F1-0's: accepted and ignored until package A makes it real.
     """
     m, z1, z2, beta = module, teeth_1, teeth_2, helix_angle
     alpha_t = helical.transverse_pressure_angle(pressure_angle, beta) if beta else pressure_angle
@@ -389,7 +416,8 @@ def solve(centre: float, ratio: float, pressure_angle: float = 20.0, module: Opt
           limit: int = DEFAULT_LIMIT, kind: str = KIND_SPUR, helix_angle: Optional[float] = None,
           helix_range: Tuple[float, float] = helical.DEFAULT_RANGE[helical.KIND_HELICAL],
           face_width: Optional[float] = None, mesh: str = MESH_EXTERNAL, shafts: str = "parallel",
-          shaft_angle: float = 90.0, opposite: bool = False) -> List[Candidate]:
+          shaft_angle: float = 90.0, opposite: bool = False, process: str = PROCESS_MACHINED,
+          nozzle: float = NOZZLE_DEFAULT) -> List[Candidate]:
     """Every candidate worth listing, best first.
 
     For the helical kinds ``module`` and ``pressure_angle`` are normal, and
@@ -402,6 +430,9 @@ def solve(centre: float, ratio: float, pressure_angle: float = 20.0, module: Opt
     ``mesh`` internal makes the driven gear a ring round the driver: the ratio
     must then be more than one. ``opposite`` makes a crossed pair's hands
     opposite, so its shaft angle is the helix angles' difference.
+
+    ``process`` and ``nozzle`` (F1, PLAN-PRINTED §2.5): a printed pair's rows are ranked and marked against the
+    nozzle. STUB keywords, F1-0's: accepted and ignored until package A makes them real; machined by default.
     """
     if kind == KIND_BEVEL:
         return _solve_bevel(centre, ratio, shaft_angle, pressure_angle, module, series, min_teeth, max_teeth, limit)

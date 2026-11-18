@@ -27,10 +27,12 @@ touches Tk, COM or the file system.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import List, Sequence, Tuple
+from dataclasses import dataclass, field, replace
+from typing import List, Optional, Sequence, Tuple
 
+from .. import store
 from ..gears.base import Diagnostic
+from ..spec import PROCESS_MACHINED, PROCESS_PRINTED, GearSpec
 from . import build, checks, fixes, geometry, motion
 from .build import PartsPlan
 from .checks import Report
@@ -145,15 +147,42 @@ def build_refusal(parts: PartsPlan, diagnostics: Sequence[Diagnostic], folder: s
     return ""
 
 
+def blank_process(record: Optional[store.LinkRecord]) -> str:
+    """What a blank Process on the Box sheet means for the gearbox ``record`` describes (PLAN-PRINTED §1.3, D11 ruled
+    (B) by the coordinating session, 2026-11-18): *as built*.
+
+    Machined when the record lists current parts (:meth:`store.LinkRecord.current_parts`) and none was built
+    printed (no part entry's ``spec`` reads printed; a part built before F1, or built machined after it, holds no
+    ``process``). Printed otherwise: no record, a record with no parts, or any part built printed. The rule goes by
+    the parts, never by the record's schema number, which any F1 write moves to 11.
+
+    This body is D11's one switch: under (A) it returns :data:`PROCESS_PRINTED` always. The window passes no record
+    when the one beside the workbook is another workbook's (package C).
+    """
+    parts = record.current_parts() if record is not None else []
+    if not parts:
+        return PROCESS_PRINTED
+    if any(GearSpec.from_dict(dict(p.spec or {})).is_printed() for p in parts):
+        return PROCESS_PRINTED
+    return PROCESS_MACHINED
+
+
 def assess(read: GearboxSpec, read_diagnostics: Sequence[Diagnostic], folder: str, part_template: str = "",
-           chosen: Sequence[Fix] = (), provisional: bool = False) -> Assessment:
+           chosen: Sequence[Fix] = (), provisional: bool = False,
+           blank_process: str = PROCESS_PRINTED) -> Assessment:
     """The read worked through: the chosen fixes made, every gear planned, the gearbox checked.
 
     A gear with an error of its own — from the read or the strip's checks — is
     left out of the parts and the gearbox checks (the error says where), and
     then out of the layout too (:attr:`geometry.Layout.left_out`). A
     ``provisional`` read offers no fixes (``report.fixes`` is empty).
+
+    F1 (PLAN-PRINTED §1.3): a Box whose Process is blank (``""``, the user's blank as read) takes ``blank_process``,
+    in the assessment's ``read`` and ``spec`` both, so no Assessment holds a blank Process. The window passes
+    :func:`blank_process` of the record beside the workbook; a gearbox built in code says machined and never meets it.
     """
+    if not str(read.box.process).strip():
+        read = replace(read, box=replace(read.box, process=blank_process))
     spec = read
     for fix in chosen:
         spec = fixes.apply(spec, fix)

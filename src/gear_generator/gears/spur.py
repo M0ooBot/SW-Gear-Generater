@@ -44,7 +44,7 @@ from __future__ import annotations
 import math
 import re
 from dataclasses import asdict, dataclass
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from .. import findings
 from ..spec import KIND_BEVEL, RECIPE_ARCS, RECIPE_INVOLUTE, GearSpec, InputError
@@ -84,6 +84,10 @@ KIND = "spur"
 RECIPES = {RECIPE_INVOLUTE: "Involute", RECIPE_ARCS: "Arcs"}
 
 BACKLASH_FACTOR = 0.3      # the user's own "Backlash"= 0.3 * "Module"
+# F1 (PLAN-PRINTED D3, §2.1): a printed gear's blank backlash is the smaller of 0.3 mm and 0.3 × module, per gear,
+# written as IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 ): never more than the machined equation's.
+PRINTED_BACKLASH = 0.3                 # mm, from module PRINTED_BACKLASH_UP_TO_MODULE up
+PRINTED_BACKLASH_UP_TO_MODULE = 1.0    # at and below this module, BACKLASH_FACTOR × module as machined
 FILLET_FACTOR = 0.38       # the user's own "Fillet Radius"= 0.38 * "Module"
 MIN_TEETH = 6
 PRESSURE_ANGLE_MIN = 10.0
@@ -182,6 +186,19 @@ class SpurDerived:
     flank_arc_radius: float
     tip_thickness: float
     shift: float = 0.0     # profile shift coefficient x; the rack moved x × module outward
+    # F1 (PLAN-PRINTED §1.1): the line width in mm when the gear is printed, None when it is not. Left out of
+    # to_dict while None, so a machined gear's record is W9's.
+    nozzle: Optional[float] = None
+
+    @property
+    def printed(self) -> bool:
+        """Whether the gear is made printed (F1): it then carries its nozzle."""
+        return self.nozzle is not None
+
+    @property
+    def backlash_printed(self) -> bool:
+        """A printed gear whose Backlash was left blank: its backlash is the printed default (§2.1)."""
+        return self.printed and not self.backlash_typed
 
     @property
     def rp(self) -> float:
@@ -253,7 +270,58 @@ class SpurDerived:
         }
 
     def to_dict(self) -> Dict[str, float]:
-        return asdict(self)
+        return derived_dict(self)
+
+
+def derived_dict(section: Any) -> Dict[str, Any]:
+    """A derived section as :func:`dataclasses.asdict` gives it, with ``nozzle`` left out while None (F1,
+    PLAN-PRINTED §1.1): what every derived gear's ``to_dict`` writes into a record."""
+    values = asdict(section)
+    if values.get("nozzle", 0) is None:
+        values.pop("nozzle")
+    return values
+
+
+def printed_backlash(module: float) -> float:
+    """A printed gear's blank backlash, mm (F1, §2.1): :data:`BACKLASH_FACTOR` × module up to
+    :data:`PRINTED_BACKLASH_UP_TO_MODULE`, :data:`PRINTED_BACKLASH` above it."""
+    return BACKLASH_FACTOR * module if module <= PRINTED_BACKLASH_UP_TO_MODULE else PRINTED_BACKLASH
+
+
+def printed_backlash_expression(module_name: str = MODULE) -> str:
+    """The printed default's equation, ``IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )``, of the global
+    ``module_name`` (unquoted). It is the IIF form the depth already takes, which P1 probed."""
+    m = _q(module_name)
+    return (f"IIF ( {m} <= {equations.literal(PRINTED_BACKLASH_UP_TO_MODULE)} , {BACKLASH_FACTOR} * {m} , "
+            f"{equations.literal(PRINTED_BACKLASH)} )")
+
+
+def blank_backlash(spec: GearSpec, module: float) -> float:
+    """What a blank Backlash means for this spec, mm: the printed default when it is printed, else the machined
+    ``0.3 × Module``. Each kind's derive takes its backlash from here when the cell is blank."""
+    return printed_backlash(module) if spec.is_printed() else BACKLASH_FACTOR * module
+
+
+def backlash_expression(section: Any, module: str = "") -> str:
+    """The ``"Backlash"`` global's text for a derived section: its literal when typed, the printed default's IIF when it
+    is printed and blank, else ``0.3 * "Module"``. ``module`` is the module's text as the machined equation writes it
+    (default ``"Module"`` quoted); the five variable writers share this."""
+    if section.backlash_typed:
+        return equations.literal(section.backlash)
+    if getattr(section, "nozzle", None) is not None:
+        return printed_backlash_expression(MODULE)
+    return f"{BACKLASH_FACTOR} * {module or _q(MODULE)}"
+
+
+def spec_nozzle(spec: GearSpec) -> Optional[float]:
+    """The nozzle a derived section carries (F1): the spec's line width in mm when printed, None when not. A printed
+    spec's Nozzle that does not read is :func:`field_errors`' to say; here it raises GeometryError with its sentence."""
+    if not spec.is_printed():
+        return None
+    try:
+        return spec.nozzle_mm()
+    except InputError as exc:
+        raise GeometryError(str(exc)) from None
 
 
 def tooth_depth(module: float) -> float:
@@ -393,7 +461,7 @@ def profile(teeth: int, module: float, pressure_angle_deg: float, face_width: fl
             backlash: float, fillet: float, backlash_typed: bool = False, fillet_typed: bool = False,
             transverse_module: Optional[float] = None, transverse_backlash: Optional[float] = None,
             addendum: Optional[float] = None, whole_depth: Optional[float] = None,
-            space_change: float = 0.0, shift: float = 0.0) -> SpurDerived:
+            space_change: float = 0.0, shift: float = 0.0, nozzle: Optional[float] = None) -> SpurDerived:
     """Every size of one tooth space's section, the one sketch every kind of gear cuts.
 
     A spur gear's section is its only section. A helical gear's is the
@@ -410,6 +478,8 @@ def profile(teeth: int, module: float, pressure_angle_deg: float, face_width: fl
     ``shift`` is the profile shift coefficient ``x``: the addendum becomes
     ``m (1 + x)`` and the space shrinks by ``2 x m tan α``. With a helical
     gear's transverse ``α`` and normal ``m`` that is its normal shift ``xn``.
+
+    ``nozzle`` (F1) is the printed gear's line width, None when it is not printed; it changes no size.
     """
     m = module
     mt = module if transverse_module is None else transverse_module
@@ -452,7 +522,7 @@ def profile(teeth: int, module: float, pressure_angle_deg: float, face_width: fl
         t2=math.sqrt((tip_cap_d / db) ** 2 - 1.0),
         form_d=form_d, flank_arc_radius=rp * math.sin(alpha),
         tip_thickness=2.0 * (da / 2.0) * (math.pi / n - tip_angle),
-        shift=shift,
+        shift=shift, nozzle=nozzle,
     )
 
 
@@ -711,10 +781,10 @@ class SpurGear:
         typed_fillet = spec.fillet_mm()
         return profile(
             spec.teeth_count(), m, spec.pressure_angle_deg(), spec.face_width_mm(), spec.bore_mm(),
-            BACKLASH_FACTOR * m if typed_backlash is None else typed_backlash,
+            blank_backlash(spec, m) if typed_backlash is None else typed_backlash,
             FILLET_FACTOR * m if typed_fillet is None else typed_fillet,
             backlash_typed=typed_backlash is not None, fillet_typed=typed_fillet is not None,
-            shift=spec.profile_shift_value(),
+            shift=spec.profile_shift_value(), nozzle=spec_nozzle(spec),
         )
 
     # -- checking --------------------------------------------------------
@@ -740,7 +810,7 @@ class SpurGear:
         wherever trig makes the two differ.
         """
         g = derived
-        backlash =equations.literal(g.backlash) if g.backlash_typed else f"{BACKLASH_FACTOR} * {_q(MODULE)}"
+        backlash = backlash_expression(g)
         fillet = equations.literal(g.fillet) if g.fillet_typed else f"{FILLET_FACTOR} * {_q(MODULE)}"
         if g.shift:
             # The user's own two, with the rack moved out: a wider tip and a thicker tooth.
@@ -1072,6 +1142,10 @@ def field_errors(spec: GearSpec, kind: str = KIND, internal: bool = False) -> Li
     fillet = read("fillet", spec.fillet_mm)
     if fillet is not None and fillet <= 0:
         out.append(Diagnostic(ERROR, f"Fillet must be more than zero (got {spec.fillet.strip()!r}).", "fillet"))
+    # F1: the process word, and a printed gear's nozzle (a machined gear's is not read, as before F1).
+    read("process", spec.process_value)
+    if spec.is_printed():
+        read("nozzle", spec.nozzle_mm)
     shift = read("profile_shift", spec.profile_shift_value)
     if shift is not None and shift != 0:
         if internal:

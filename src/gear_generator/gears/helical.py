@@ -77,7 +77,6 @@ from .spur import (
     ARC_LENGTH,
     AXIS_NAME,
     BACKLASH,
-    BACKLASH_FACTOR,
     BLANK,
     BORE,
     DEPTH,
@@ -249,8 +248,18 @@ class HelicalDerived:
             out.update({GROOVE_WIDTH: self.groove, TOOTHED_WIDTH: self.toothed_width, GROOVE_DIAMETER: self.groove_d})
         return out
 
+    @property
+    def printed(self) -> bool:
+        """Whether the gear is made printed (F1): its section's."""
+        return self.section.printed
+
+    @property
+    def backlash_printed(self) -> bool:
+        """Its section's: printed, with the Backlash left blank (F1)."""
+        return self.section.backlash_printed
+
     def to_dict(self) -> Dict[str, Any]:
-        data = asdict(self.section)
+        data = spur.derived_dict(self.section)
         data.update({key: value for key, value in asdict(self).items() if key != "section"})
         return data
 
@@ -330,7 +339,7 @@ class HelicalGear:
         mt = mn / cos_beta
         typed_backlash = spec.backlash_mm()
         typed_fillet = spec.fillet_mm()
-        j = BACKLASH_FACTOR * mn if typed_backlash is None else typed_backlash
+        j = spur.blank_backlash(spec, mn) if typed_backlash is None else typed_backlash
         width = spec.face_width_mm()
         # The normal shift: in the transverse section it moves the tip out x·mn and
         # thickens the tooth by 2·x·mn·tan αt, which is what spur.profile does with these.
@@ -339,7 +348,7 @@ class HelicalGear:
             spec, spec.teeth_count(), mn, transverse_pressure_angle(normal, beta), width, j,
             self.fillet_factor * mn if typed_fillet is None else typed_fillet,
             backlash_typed=typed_backlash is not None, fillet_typed=typed_fillet is not None,
-            transverse_module=mt, transverse_backlash=j / cos_beta, **shift,
+            transverse_module=mt, transverse_backlash=j / cos_beta, nozzle=spur.spec_nozzle(spec), **shift,
         )
         lead = math.pi * section.d / math.tan(math.radians(beta))
         path = width / 2.0 + mn if self.kind == KIND_HERRINGBONE else width + 2.0 * mn
@@ -368,7 +377,7 @@ class HelicalGear:
         """From ``"Outer Diameter"`` to the end of the section's globals."""
         s = g.section
         beta = _q(HELIX_ANGLE)
-        backlash = equations.literal(s.backlash) if s.backlash_typed else f"{BACKLASH_FACTOR} * {_q(MODULE)}"
+        backlash = spur.backlash_expression(s)
         fillet = equations.literal(s.fillet) if s.fillet_typed else f"{FILLET_FACTOR} * {_q(MODULE)}"
         tm = _q(TRANSVERSE_MODULE)
         if s.shift:

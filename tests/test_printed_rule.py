@@ -69,14 +69,20 @@ GEARS = {
 }
 
 
-def _spec(name: str) -> GearSpec:
-    return GearSpec(**GEARS[name])
+def _spec(name: str, **marked: str) -> GearSpec:
+    return GearSpec(**{**GEARS[name], **marked})
 
 
-def strip_print(name: str) -> str:
+# F1-0's interface commit: the same gears said machined in so many words, as the form's row and a workbook's Box
+# write them (§1.3), and with a nozzle typed, which a machined gear does not read. Each must be the pin.
+MACHINED = (dict(process="machined"), dict(process="Machined"), dict(process=" MACHINED ", nozzle="0.6"),
+            dict(process=""))
+
+
+def strip_print(name: str, **marked: str) -> str:
     """Everything the strip makes and says of one gear: its file name, warnings, globals in both trig variants and
     every step of each recipe's plan, described in both."""
-    spec = _spec(name)
+    spec = _spec(name, **marked)
     kind = kind_for(spec)
     derived = kind.derive(spec)
     out = [spec.default_stem(), spec.stem(), repr(kind.recipe_for(spec))]
@@ -125,6 +131,12 @@ STRIP = {
 @pytest.mark.parametrize("name", sorted(GEARS))
 def test_every_kind_and_recipe_plans_says_and_names_as_at_the_cut(name):
     assert strip_print(name) == STRIP[name]
+
+
+@pytest.mark.parametrize("marked", MACHINED, ids=repr)
+@pytest.mark.parametrize("name", sorted(GEARS))
+def test_a_gear_marked_machined_plans_says_and_names_as_at_the_cut(name, marked):
+    assert strip_print(name, **marked) == STRIP[name]
 
 
 # -- the three pair assembly plans -------------------------------------------------------------------------------
@@ -243,9 +255,9 @@ RECORDED = ("spur", "spur_shifted", "helical", "herringbone_grooved", "ring", "r
             "sleeve", "sleeve_banded", "hub")
 
 
-def sidecar_text(name: str) -> str:
+def sidecar_text(name: str, **marked: str) -> str:
     """The .gear.json the strip writes for this gear (`gui.GearApp._write_sidecar`'s call), with a fixed id and stamp."""
-    spec = _spec(name)
+    spec = _spec(name, **marked)
     kind = kind_for(spec)
     derived = kind.derive(spec)
     plan = kind.plan(spec, derived, kind.recipe_for(spec), TEMPLATE, OUT + spec.stem() + ".SLDPRT")
@@ -259,9 +271,9 @@ def sidecar_text(name: str) -> str:
     return store.to_json(sidecar)
 
 
-def entry_text(name: str) -> str:
+def entry_text(name: str, **marked: str) -> str:
     """The part's entry in a link record, as `link_record_to_json` writes it."""
-    spec = _spec(name)
+    spec = _spec(name, **marked)
     kind = kind_for(spec)
     derived = kind.derive(spec)
     entry = store.PartEntry(path=OUT + spec.stem() + ".SLDPRT", gears=["G1"], revision=0, kind=spec.kind,
@@ -306,6 +318,13 @@ def test_a_machined_parts_gear_json_and_record_entry_are_byte_for_byte_as_at_the
     assert _sha(text) == SIDECARS[name]
     assert json.loads(text)["schemaVersion"] == (2 if name == "sleeve_banded" else 1)
     assert _sha(entry_text(name)) == ENTRIES[name]
+
+
+@pytest.mark.parametrize("marked", MACHINED, ids=repr)
+@pytest.mark.parametrize("name", RECORDED)
+def test_a_part_marked_machined_is_recorded_byte_for_byte_as_at_the_cut(name, marked):
+    assert _sha(sidecar_text(name, **marked)) == SIDECARS[name]
+    assert _sha(entry_text(name, **marked)) == ENTRIES[name]
 
 
 # -- a record written before F1: Update, the strip and Build again… find nothing to do ----------------------------
@@ -372,3 +391,182 @@ def test_a_strip_record_written_before_f1_has_nothing_for_update_values(name):
     assert "process" not in sidecar.record.spec
     form = GearSpec.from_dict(sidecar.record.spec)
     assert gui.GearApp._update_target(strip_form(sidecar, form))[0] == 0
+
+
+@pytest.mark.parametrize("box_process", ["", "machined", "Machined"])
+def test_a_record_written_before_f1_is_nothing_to_do_against_a_workbook_marked_machined_or_left_blank(
+        monkeypatch, box_process):
+    """D11 ruled (B): against a Box whose Process is blank, a gearbox built before F1 is Machined, as built, and
+    nothing changes; against one marked Machined, nothing changes either (§2.7). F1-0's interface commit."""
+    from test_workbook_gearbox import FOLDER, WORKBOOK
+    from test_workbook_model import reducer
+    _gearbox_findings(monkeypatch)
+    disk, record, text = built_reducer()
+    assert _sha(text) == RECORD_BEFORE_F1 and assess.blank_process(record) == "machined"
+    read = replace(reducer(), box=replace(reducer().box, process=box_process), source_path=WORKBOOK)
+    a = assess.assess(read, [], FOLDER, blank_process=assess.blank_process(record))
+    assert a.lay_out_refusal() == "" and a.read.box.process == a.spec.box.process == (box_process or "machined")
+    plan, again, columns, matches = nothing_to_do(record, disk, a)
+    assert (plan.refusal, plan.structural, plan.missing, plan.replaced, plan.moved_shafts) == ("", (), (), (), ())
+    assert [p.changed for p in plan.parts] == [False] * 4 and plan.record_matches
+    assert again.refusal == "" and list(again.build) == [] and len(again.reuse) == 4
+    assert columns == [[]] * 4 and matches == [True] * 4
+
+
+@pytest.mark.parametrize("marked", MACHINED, ids=repr)
+@pytest.mark.parametrize("name", RECORDED)
+def test_a_strip_record_written_before_f1_against_a_form_marked_machined_has_nothing_for_update_values(name, marked):
+    sidecar = store.from_json(sidecar_text(name))
+    form = replace(GearSpec.from_dict(sidecar.record.spec), **marked)
+    assert gui.GearApp._update_target(strip_form(sidecar, form))[0] == 0
+
+
+# -- F1-0's interface (PLAN-PRINTED §2.8 items 1 to 7; docs/notes-printed/F1-INTERFACES.md), held so that packages A,
+# -- B and C build on it. Each package tests its own work in its own files; these hold only what F1-0 lands.
+
+def test_the_spec_says_its_process_and_leaves_both_keys_out_unless_printed():
+    from gear_generator import spec as spec_module
+    from gear_generator.spec import InputError
+    assert (spec_module.PROCESS_PRINTED, spec_module.PROCESS_MACHINED, spec_module.NOZZLE_DEFAULT) == (
+        "printed", "machined", 0.4)
+    assert (GearSpec().process, GearSpec().nozzle) == ("machined", "")
+    for word in ("", "machined", "Machined", "wood", "  "):
+        values = GearSpec(process=word, nozzle="0.6").to_dict()          # never raises, whatever the word
+        assert "process" not in values and "nozzle" not in values
+    assert GearSpec(process="Printed").to_dict()["process"] == "Printed"
+    assert GearSpec(process="printed").to_dict()["nozzle"] == ""
+    assert [GearSpec(process=w).is_printed() for w in ("printed", " PRINTED ", "machined", "", "wood")] == [
+        True, True, False, False, False]
+    assert [GearSpec(process=w).process_value() for w in ("Printed", "machined", "")] == [
+        "printed", "machined", "machined"]
+    with pytest.raises(InputError, match=r"Process must be printed or machined \(got 'wood'\)\."):
+        GearSpec(process="wood").process_value()
+    assert GearSpec().nozzle_mm() == 0.4 and GearSpec(nozzle="0.6").nozzle_mm() == 0.6
+    for bad, said in (("x", r"Nozzle must be a number"), ("0", r"Nozzle must be more than zero")):
+        with pytest.raises(InputError, match=said):
+            GearSpec(nozzle=bad).nozzle_mm()
+    assert GearSpec(process="printed").default_stem() == "Gear_m1.5_N25_P"
+    assert GearSpec(process="printed", teeth="15", profile_shift="0.09").default_stem() == "Gear_m1.5_N15_x0.09_P"
+    assert GearSpec(process="printed", name="Mine").stem() == "Mine"
+    assert GearSpec.from_dict(GearSpec(process="printed", nozzle="0.6").to_dict()) == GearSpec(
+        process="printed", nozzle="0.6")
+
+
+def test_the_record_is_at_link_schema_11_and_a_printed_part_at_sidecar_schema_3():
+    assert (store.LINK_SCHEMA_VERSION, store._W9D_LINK_SCHEMA) == (11, 10)
+    assert (store.SCHEMA_VERSION, store.PRINTED_SCHEMA, store.BANDED_SCHEMA, store.PLAIN_SCHEMA) == (3, 3, 2, 1)
+    assert store.sidecar_schema(GearSpec(process="printed").to_dict()) == 3
+    assert store.sidecar_schema(GearSpec(process="Printed", start_band="2", end_band="2").to_dict()) == 3
+    assert store.sidecar_schema(GearSpec(process="machined").to_dict()) == 1
+    assert store.sidecar_schema(GearSpec(start_band="2", end_band="2").to_dict()) == 2
+
+
+# Each of the five variable writers, and a sleeve, dog and hub through the spur and ring kinds they are built from.
+WRITERS = ("spur", "helical", "ring", "ring_helical", "bevel", "bevel_crown", "bevel_internal", "sleeve_banded", "dog",
+           "hub", "herringbone_grooved", "ring_herringbone")
+IIF = 'IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )'
+
+
+@pytest.mark.parametrize("name", WRITERS)
+def test_a_printed_gear_with_a_blank_backlash_writes_the_printed_default_and_carries_its_nozzle(name):
+    from gear_generator.gears import spur
+    assert spur.printed_backlash_expression() == spur.printed_backlash_expression("Module") == IIF
+    spec = _spec(name, process="printed", nozzle="0.6")
+    kind = kind_for(spec)
+    g = kind.derive(spec)
+    backlash = [v for v in kind.variables(spec, g) if v.name == "Backlash"]
+    assert [(v.expression, v.radian_expression or v.expression) for v in backlash] == [(IIF, IIF)]
+    assert g.printed and g.backlash_printed and g.nozzle == 0.6
+    data = g.to_dict()
+    assert (data["section"] if "section" in data else data)["nozzle"] == 0.6
+    typed = _spec(name, process="printed", backlash="0.2")
+    held = kind.derive(typed)
+    assert held.printed and not held.backlash_printed and held.nozzle == 0.4
+    assert [v.expression for v in kind.variables(typed, held) if v.name == "Backlash"] == ["0.2"]
+    machined = kind.derive(_spec(name))
+    assert not machined.printed and not machined.backlash_printed and machined.nozzle is None
+    assert "nozzle" not in json.dumps(machined.to_dict())
+
+
+@pytest.mark.parametrize("module, backlash", [("0.5", 0.15), ("1", 0.3), ("1.5", 0.3), ("3", 0.3)])
+def test_the_printed_default_is_the_smaller_of_0_3_mm_and_0_3_module(module, backlash):
+    from gear_generator.gears import spur
+    printed = kind_for(GearSpec()).derive(GearSpec(module=module, process="printed"))
+    machined = kind_for(GearSpec()).derive(GearSpec(module=module))
+    assert printed.backlash == pytest.approx(backlash) and printed.backlash <= machined.backlash + 1e-12
+    assert spur.printed_backlash(float(module)) == pytest.approx(backlash)
+    assert (spur.PRINTED_BACKLASH, spur.PRINTED_BACKLASH_UP_TO_MODULE) == (0.3, 1.0)
+
+
+def test_a_printed_specs_unreadable_nozzle_or_process_word_is_an_error_at_its_field():
+    kind = kind_for(GearSpec())
+    said = [(d.message, d.field) for d in kind.validate(GearSpec(process="printed", nozzle="x"))]
+    assert said == [("Nozzle must be a number (got 'x').", "nozzle")]
+    said = [(d.message, d.field) for d in kind.validate(GearSpec(process="wood"))]
+    assert said == [("Process must be printed or machined (got 'wood').", "process")]
+    assert kind.validate(GearSpec(nozzle="x")) == kind.validate(GearSpec())         # a machined gear's is not read
+
+
+def test_the_pair_stubs_answer_as_the_machined_maths_until_package_a_fills_them():
+    assert pair.ring_tip_clearance(1.5, 20, 60) == pair.tip_clearance(1.5, 20, 60)
+    assert pair.printed_tip_thickness(1, 20, 20.0, 0.0, 0.0, 0.4) == pair.tip_thickness(1, 20, 20.0, 0.0, 0.0)
+    assert pair.solve(60, 3, process="printed", nozzle=0.6) == pair.solve(60, 3)
+    assert pair.shift_for_centre(2, 15, 30, 46, printed=True) == pair.shift_for_centre(2, 15, 30, 46)
+
+
+def test_the_box_says_process_and_nozzle_and_a_gearbox_built_in_code_is_written_machined():
+    from gear_generator.workbook import model, schema
+    from test_workbook_model import reducer
+    settings = {s.key: s for s in schema.BOX_SETTINGS}
+    keys = [s.key for s in schema.BOX_SETTINGS]
+    assert keys.index("process") == keys.index("efficiency") + 1 and keys.index("units") == keys.index("nozzle") + 1
+    assert settings["process"].words == ("printed", "machined") and not settings["process"].numeric
+    assert settings["process"].note == ("Printed or Machined; blank: Printed for a new gearbox, as built for one "
+                                        "already built")
+    assert (settings["nozzle"].title, settings["nozzle"].numeric, settings["nozzle"].default) == (
+        "Nozzle (mm)", True, "0.4")
+    assert (model.Box().process, model.Box().nozzle) == ("machined", "")
+    box = {row[0]: row[1] for row in model.to_sheets(reducer())[0].rows[1:]}
+    assert (box["Process"], box["Nozzle (mm)"]) == ("machined", "")
+    printed = replace(reducer(), box=replace(reducer().box, process="printed", nozzle="0.6"))
+    box = {row[0]: row[1] for row in model.to_sheets(printed)[0].rows[1:]}
+    assert box["Process"] == "printed" and float(box["Nozzle (mm)"]) == 0.6
+    gear = reducer().gears[0]
+    assert gear.gear_spec(printed.box).process == "printed" and gear.gear_spec(printed.box).nozzle == "0.6"
+    assert gear.gear_spec(reducer().box).to_dict() == gear.gear_spec(model.Box()).to_dict()
+
+
+def _entry(**spec):
+    return store.PartEntry(path="C:\\P\\G.SLDPRT", gears=["G1"], spec=GearSpec(**spec).to_dict())
+
+
+@pytest.mark.parametrize("record, word", [
+    (None, "printed"),
+    (store.LinkRecord(workbook="W.xlsx"), "printed"),
+    (store.LinkRecord(workbook="W.xlsx", parts=[_entry()]), "machined"),
+    (store.LinkRecord(workbook="W.xlsx", parts=[store.PartEntry(path="C:\\P\\G.SLDPRT", gears=["G1"])]), "machined"),
+    (store.LinkRecord(workbook="W.xlsx", parts=[_entry(), _entry(process="printed")]), "printed"),
+    (store.LinkRecord(workbook="W.xlsx", parts=[_entry(process="Printed")]), "printed"),
+], ids=["no record", "no parts", "machined", "v1 part", "one printed", "Printed"])
+def test_a_blank_process_is_as_built(record, word):
+    """D11 (B): machined when every current part was built machined, printed otherwise; the same after a record is
+    written forward to 11, since the rule reads the parts and never the schema number."""
+    assert assess.blank_process(record) == word
+    if record is not None:
+        again = store.link_record_from_json(store.link_record_to_json(record))
+        assert again.schema_version == 11 and assess.blank_process(again) == word
+
+
+def test_assess_resolves_a_blank_process_in_the_read_and_the_spec_and_leaves_a_word_alone():
+    from test_workbook_model import reducer
+    blank = replace(reducer(), box=replace(reducer().box, process=""), source_path="C:\\B\\W.xlsx")
+    for given, want in (({}, "printed"), (dict(blank_process="machined"), "machined")):
+        a = assess.assess(blank, [], OUT, **given)
+        assert a.read.box.process == a.spec.box.process == want
+    said = replace(blank, box=replace(blank.box, process="machined"))
+    a = assess.assess(said, [], OUT, blank_process="printed")
+    assert a.read.box.process == a.spec.box.process == "machined"
+
+
+def test_the_form_shares_process_and_nozzle_between_a_pairs_gears():
+    assert gui.GEAR_COMPOUND == ("kind", "recipe", "process", "nozzle")

@@ -73,7 +73,6 @@ from .spur import (
     ARC_LENGTH,
     AXIS_NAME,
     BACKLASH,
-    BACKLASH_FACTOR,
     BASE,
     BASE_RADIUS,
     BLANK,
@@ -194,6 +193,18 @@ class InternalDerived:
     transverse_module: float
     tip_thickness: float = 0.0
     bore: float = 0.0          # a ring has none; read by what draws gears
+    # F1 (PLAN-PRINTED §1.1): the line width in mm when printed, None when not; left out of to_dict while None.
+    nozzle: Optional[float] = None
+
+    @property
+    def printed(self) -> bool:
+        """Whether the ring is made printed (F1): it then carries its nozzle."""
+        return self.nozzle is not None
+
+    @property
+    def backlash_printed(self) -> bool:
+        """A printed ring whose Backlash was left blank: its backlash is the printed default (§2.1)."""
+        return self.printed and not self.backlash_typed
 
     @property
     def rp(self) -> float:
@@ -258,13 +269,13 @@ class InternalDerived:
         }
 
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        return spur.derived_dict(self)
 
 
 def section(teeth: int, module: float, pressure_angle_deg: float, face_width: float, rim: Optional[float],
             backlash: float, fillet: float, backlash_typed: bool = False, fillet_typed: bool = False,
             transverse_module: Optional[float] = None, transverse_backlash: Optional[float] = None,
-            whole_depth: Optional[float] = None) -> InternalDerived:
+            whole_depth: Optional[float] = None, nozzle: Optional[float] = None) -> InternalDerived:
     """Every size of a ring's tooth-space section; ``rim`` None is the root plus six modules.
 
     As :func:`spur.profile`: a helical ring passes its transverse module,
@@ -296,7 +307,7 @@ def section(teeth: int, module: float, pressure_angle_deg: float, face_width: fl
         inv_alpha=inv_alpha, phi=-(psi_s + inv_alpha), tip_cap_d=da - 2.0 * m, flank_start_d=start,
         flank_end_d=end, t1=math.sqrt(max(0.0, (start / db) ** 2 - 1.0)),
         t2=math.sqrt(max(0.0, (end / db) ** 2 - 1.0)), flank_arc_radius=d / 2.0 * math.sin(alpha),
-        transverse_module=mt,
+        transverse_module=mt, nozzle=nozzle,
     )
     tip = max(g.ra, g.flank_start_d / 2.0)
     return replace(g, tip_thickness=g.ra * (2.0 * math.pi / n - 2.0 * half_space_angle(g, tip)))
@@ -875,9 +886,10 @@ class InternalSpurGear:
         typed_fillet = spec.fillet_mm()
         return section(
             spec.teeth_count(), m, spec.pressure_angle_deg(), spec.face_width_mm(), spec.rim_mm(),
-            BACKLASH_FACTOR * m if typed_backlash is None else typed_backlash,
+            spur.blank_backlash(spec, m) if typed_backlash is None else typed_backlash,
             FILLET_FACTOR * m if typed_fillet is None else typed_fillet,
             backlash_typed=typed_backlash is not None, fillet_typed=typed_fillet is not None,
+            nozzle=spur.spec_nozzle(spec),
         )
 
     def validate(self, spec: GearSpec, derived: Optional[InternalDerived] = None) -> List[Diagnostic]:
@@ -892,7 +904,7 @@ class InternalSpurGear:
 
     def variables(self, spec: GearSpec, derived: InternalDerived) -> List[GlobalVariable]:
         g = derived
-        backlash = equations.literal(g.backlash) if g.backlash_typed else f"{BACKLASH_FACTOR} * {_q(MODULE)}"
+        backlash = spur.backlash_expression(g)
         fillet = equations.literal(g.fillet) if g.fillet_typed else f"{FILLET_FACTOR} * {_q(MODULE)}"
         return [
             GlobalVariable(TEETH, equations.literal(g.teeth)),
@@ -970,7 +982,7 @@ class InternalHelicalGear(helical.HelicalGear):
     def _section_variables(self, spec: GearSpec, g: Any, beta_rad: str) -> List[GlobalVariable]:
         s = g.section
         beta = _q(helical.HELIX_ANGLE)
-        backlash = equations.literal(s.backlash) if s.backlash_typed else f"{BACKLASH_FACTOR} * {_q(MODULE)}"
+        backlash = spur.backlash_expression(s)
         fillet = equations.literal(s.fillet) if s.fillet_typed else f"{FILLET_FACTOR} * {_q(MODULE)}"
         tm = _q(helical.TRANSVERSE_MODULE)
         return [

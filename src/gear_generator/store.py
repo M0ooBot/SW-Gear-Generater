@@ -32,7 +32,10 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 # as an unbanded one; a part without bands stays at 1 (:func:`sidecar_schema`), byte for byte as before.
 PLAIN_SCHEMA = 1
 BANDED_SCHEMA = 2
-SCHEMA_VERSION = BANDED_SCHEMA
+# F1 (PLAN-PRINTED §1.2): a printed part is written at 3, since an older app would drop its process and nozzle and
+# reuse it as a machined part; a machined part stays at 1 or 2, byte for byte as W9 writes it.
+PRINTED_SCHEMA = 3
+SCHEMA_VERSION = PRINTED_SCHEMA
 SIDECAR_SUFFIX = ".gear.json"
 RECENT_LIMIT = 10
 
@@ -86,8 +89,10 @@ class Sidecar:
 
 
 def sidecar_schema(spec: Dict[str, Any]) -> int:
-    """The schema a part's ``.gear.json`` is written at: :data:`BANDED_SCHEMA` when its form has a band, else
-    :data:`PLAIN_SCHEMA` (W9b)."""
+    """The schema a part's ``.gear.json`` is written at: :data:`PRINTED_SCHEMA` when its form is printed (F1), else
+    :data:`BANDED_SCHEMA` when it has a band, else :data:`PLAIN_SCHEMA` (W9b)."""
+    if str((spec or {}).get("process", "") or "").strip().lower() == "printed":     # spec.PROCESS_PRINTED
+        return PRINTED_SCHEMA
     return BANDED_SCHEMA if any(str((spec or {}).get(k, "") or "").strip() for k in ("start_band", "end_band")) \
         else PLAIN_SCHEMA
 
@@ -423,7 +428,13 @@ _W8_LINK_SCHEMA = _W7_LINK_SCHEMA + 1        # the schema W8 left (ISSUE-1-PLAN 
 _W9A_LINK_SCHEMA = _W8_LINK_SCHEMA + 1       # the schema W9a left (ISSUE-1-PLAN §2.4: W9b's is one past it)
 _W9B_LINK_SCHEMA = _W9A_LINK_SCHEMA + 1      # the schema W9b left (the coordinator's ruling: W9c's is one past it)
 _W9C_LINK_SCHEMA = _W9B_LINK_SCHEMA + 1      # the schema W9c left (W9D-INTERFACES §7: W9d's is one past it)
-LINK_SCHEMA_VERSION = _W9C_LINK_SCHEMA + 1   # the link record's own schema, apart from the .gear.json's SCHEMA_VERSION
+_W9D_LINK_SCHEMA = _W9C_LINK_SCHEMA + 1      # the schema W9d left (PLAN-PRINTED §1.2: F1's is one past it)
+LINK_SCHEMA_VERSION = _W9D_LINK_SCHEMA + 1   # the link record's own schema, apart from the .gear.json's SCHEMA_VERSION
+# Schema 11 (F1, PLAN-PRINTED §1.2): a part entry's ``spec`` may hold ``process`` and ``nozzle``, written only for a
+# printed part (GearSpec.to_dict leaves them out otherwise). Every F1 write moves a record to 11 whatever its parts'
+# process, as W9b's 8 did, so a W9-era app, which would read a printed part's spec as machined and write it back so,
+# refuses a schema 11 record and leaves it byte-identical. A v1-v10 record reads as v11 as it read as v10 (no part
+# holds a process: every part machined) and is written forward as v11.
 # Schema 10 (W9d, W9D-INTERFACES §7): a Build again… that carried the user's work keeps what it carried on the new
 # revision's gearbox (``GearboxRecord.carry``, a CarryEntry: the old assembly it read and how, each component carried and
 # each mate made again, everything named with its reason, each cluster fixed, a stop, and ``unsaved_at`` while the new

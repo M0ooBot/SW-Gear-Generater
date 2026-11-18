@@ -13,6 +13,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
+from ..spec import PROCESS_MACHINED, PROCESS_PRINTED
+
 FORMAT = "1"
 
 
@@ -80,6 +82,7 @@ SIDES = ("external", "internal")
 HANDS = ("right", "left")
 FLANKS = ("involute", "arcs")
 FLANK_RECIPE = {"involute": "A", "arcs": "B"}
+PROCESS_WORDS = (PROCESS_PRINTED, PROCESS_MACHINED)     # F1: the Box's Process (PLAN-PRINTED §1.3)
 
 # -- Box: two columns, a setting per row --------------------------------------
 
@@ -93,6 +96,9 @@ class Setting:
     default: str = ""
     numeric: bool = False
     note: str = ""
+    # F1 (PLAN-PRINTED §1.3): the words a word setting takes, canonical lower case (Process: printed, machined). The
+    # Box has no drop-down lists, so they are checked as the cell is read.
+    words: Tuple[str, ...] = ()
 
     @property
     def title(self) -> str:
@@ -109,6 +115,10 @@ BOX_SETTINGS: Tuple[Setting, ...] = (
             note="used where a gear's own cell is blank"),
     Setting("efficiency", "Efficiency per mesh", unit="%", default="98", numeric=True,
             note="used where a mesh's own cell is blank"),
+    # F1 (PLAN-PRINTED §1.3): how the gearbox's gears are made, and the printer's line width.
+    Setting("process", "Process", words=PROCESS_WORDS,
+            note="Printed or Machined; blank: Printed for a new gearbox, as built for one already built"),
+    Setting("nozzle", "Nozzle", unit="mm", default="0.4", numeric=True, note="the printer's line width; blank: 0.4"),
     Setting("units", "Units", default="mm · degrees · rpm · N·m", note="fixed; shown so the file explains itself"),
 )
 BOX = SheetDef("Box", (

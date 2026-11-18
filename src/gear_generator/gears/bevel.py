@@ -67,7 +67,6 @@ from .spur import (
     BACKLASH,
     BLANK,
     BLANK_SKETCH,
-    BACKLASH_FACTOR,
     BORE,
     DEPTH,
     FACE_WIDTH,
@@ -229,6 +228,18 @@ class RackSection:
     s: float
     p: float
     teeth: float = math.inf
+    # F1 (PLAN-PRINTED §1.1): the line width in mm when printed, None when not; left out of the record while None.
+    nozzle: Optional[float] = None
+
+    @property
+    def printed(self) -> bool:
+        """Whether the crown gear is made printed (F1): it then carries its nozzle."""
+        return self.nozzle is not None
+
+    @property
+    def backlash_printed(self) -> bool:
+        """Printed, with the Backlash left blank: the printed default (§2.1)."""
+        return self.printed and not self.backlash_typed
 
     @property
     def h(self) -> float:
@@ -391,8 +402,18 @@ class BevelDerived:
             return {k: (None if isinstance(v, float) and not math.isfinite(v) else v) for k, v in data.items()}
 
         data = finite({key: value for key, value in asdict(self).items() if key != "section"})
-        data["section"] = finite(asdict(self.section))
+        data["section"] = finite(spur.derived_dict(self.section))
         return data
+
+    @property
+    def printed(self) -> bool:
+        """Whether the gear is made printed (F1): its section's."""
+        return self.section.printed
+
+    @property
+    def backlash_printed(self) -> bool:
+        """Its section's: printed, with the Backlash left blank (F1)."""
+        return self.section.backlash_printed
 
 
 def _field_errors(spec: GearSpec) -> List[Diagnostic]:
@@ -449,7 +470,8 @@ def derive(spec: GearSpec) -> BevelDerived:
     cos_delta = 0.0 if form == FORM_CROWN else math.cos(math.radians(delta))
     typed_backlash = spec.backlash_mm()
     typed_fillet = spec.fillet_mm()
-    j = BACKLASH_FACTOR * m if typed_backlash is None else typed_backlash
+    j = spur.blank_backlash(spec, m) if typed_backlash is None else typed_backlash
+    nozzle = spur.spec_nozzle(spec)
     space_change = -2.0 * (ha - m) * math.tan(math.radians(alpha))
     section: Any
     if form == FORM_CROWN:
@@ -460,6 +482,7 @@ def derive(spec: GearSpec) -> BevelDerived:
             fillet=FILLET_FACTOR * m if typed_fillet is None else typed_fillet,
             backlash_typed=typed_backlash is not None, fillet_typed=typed_fillet is not None,
             alpha=math.radians(alpha), addendum=ha, dedendum=hf, space=space, s=m * math.pi - space, p=m * math.pi,
+            nozzle=nozzle,
         )
     elif form == FORM_INTERNAL:
         # The back cone's ring: Nv = N / |cos δ| teeth, its centre on the tips' side of the pitch cone.
@@ -468,6 +491,7 @@ def derive(spec: GearSpec) -> BevelDerived:
         section = internal.section(
             virtual, m, alpha, width, None, j, RING_FILLET_FACTOR * m if typed_fillet is None else typed_fillet,
             backlash_typed=typed_backlash is not None, fillet_typed=typed_fillet is not None, whole_depth=ha + hf,
+            nozzle=nozzle,
         )
     else:
         virtual = n / cos_delta
@@ -475,7 +499,7 @@ def derive(spec: GearSpec) -> BevelDerived:
         section = spur.profile(
             virtual, m, alpha, width, 0.0, j, FILLET_FACTOR * m if typed_fillet is None else typed_fillet,
             backlash_typed=typed_backlash is not None, fillet_typed=typed_fillet is not None,
-            addendum=ha, whole_depth=ha + hf, space_change=space_change,
+            addendum=ha, whole_depth=ha + hf, space_change=space_change, nozzle=nozzle,
         )
     sin_delta = math.sin(math.radians(delta))
     return BevelDerived(
@@ -637,7 +661,7 @@ def variables(spec: GearSpec, g: BevelDerived) -> List[GlobalVariable]:
     if g.crown:
         # The formula's denominator is zero at a crown gear; it is built as exactly 90°.
         pitch_cone = GlobalVariable(PITCH_CONE, "90")
-    backlash = equations.literal(s.backlash) if s.backlash_typed else f"{BACKLASH_FACTOR} * {m}"
+    backlash = spur.backlash_expression(s, m)
     factor = RING_FILLET_FACTOR if g.ring else FILLET_FACTOR
     fillet = equations.literal(s.fillet) if s.fillet_typed else f"{factor} * {m}"
     # A ring's back cone is on the far side of its axis: its pitch cone's supplement is what it is square to.

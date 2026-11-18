@@ -53,6 +53,16 @@ MODES = (MODE_SINGLE, MODE_PAIR)
 
 BAND_FIELDS = ("start_band", "end_band")     # W9b: GearSpec.to_dict leaves them out while both are blank
 
+# F1 (PLAN-PRINTED §1.1; docs/notes-printed/F1-INTERFACES.md): how a gear is made. A spec that does not say, in code or
+# in a record written before F1, is machined; only the form's Process row and a Box sheet's blank are the user's
+# Printed. GearSpec.to_dict leaves both fields out of any spec that is not printed, so a machined record is W9's.
+PROCESS_PRINTED = "printed"
+PROCESS_MACHINED = "machined"
+PROCESSES = (PROCESS_PRINTED, PROCESS_MACHINED)
+PROCESS_FIELDS = ("process", "nozzle")
+NOZZLE_DEFAULT = 0.4          # mm, a printed gear's line width when its Nozzle is blank
+PRINTED_STEM_MARK = "_P"      # D10: a part built printed ends _P (Gear_m1.5_N25_P)
+
 
 class InputError(Exception):
     """A field on the form could not be read."""
@@ -157,12 +167,21 @@ class GearSpec:
     # the whole face. Never on the strip's form.
     start_band: str = ""
     end_band: str = ""
+    # F1 (PLAN-PRINTED §1.1): "printed" or "machined"; blank or anything else is not printed. The dataclass default is
+    # machined, what a spec written before F1 or built in code means; the form and a workbook's Box write the word.
+    process: str = PROCESS_MACHINED
+    nozzle: str = ""              # mm, the printer's line width; "" = NOZZLE_DEFAULT. Read by checks only.
 
     def to_dict(self) -> Dict[str, Any]:
-        """Every field, but the bands left out while both are blank: an unbanded part's record is what it was."""
+        """Every field, but the bands left out while both are blank, and the process and nozzle left out of a spec
+        that is not printed (F1, PLAN-PRINTED §1.1): an unbanded machined part's record is byte for byte W9's.
+        Never raises, whatever the process says; a machined spec's typed nozzle is not kept (nothing reads it)."""
         values = asdict(self)
         if not str(self.start_band).strip() and not str(self.end_band).strip():
             for key in BAND_FIELDS:
+                values.pop(key, None)
+        if not self.is_printed():
+            for key in PROCESS_FIELDS:
                 values.pop(key, None)
         return values
 
@@ -237,6 +256,29 @@ class GearSpec:
     def is_internal(self) -> bool:
         return str(self.teeth_side).strip().lower() == TEETH_INTERNAL
 
+    def process_value(self) -> str:
+        """``printed`` or ``machined``, in any case; a blank is machined (a spec that does not say). Raises InputError on
+        any other word, as :meth:`teeth_side_value` does."""
+        process = str(self.process).strip().lower() or PROCESS_MACHINED
+        if process not in PROCESSES:
+            raise InputError(f"Process must be {' or '.join(PROCESSES)} (got {str(self.process).strip()!r}).")
+        return process
+
+    def is_printed(self) -> bool:
+        """Whether the gear is made printed: ``printed`` in any case. Never raises; anything else is not printed."""
+        return str(self.process).strip().lower() == PROCESS_PRINTED
+
+    def nozzle_mm(self) -> float:
+        """The printer's line width, mm: :data:`NOZZLE_DEFAULT` when blank. Raises InputError naming Nozzle on a value
+        that does not read or is not more than zero."""
+        text = str(self.nozzle).strip()
+        if not text:
+            return NOZZLE_DEFAULT
+        value = parse_float(text, "Nozzle")
+        if value <= 0:
+            raise InputError(f"Nozzle must be more than zero (got {text!r}).")
+        return value
+
     def has_bands(self) -> bool:
         """Whether either band is typed (W9b): the part is then a banded sleeve's, with a relief between."""
         return bool(str(self.start_band).strip() or str(self.end_band).strip())
@@ -296,6 +338,8 @@ def default_stem(spec: GearSpec, prefix: str = "") -> str:
     herringbone ends with its groove, ``Herringbone_m2_N20_30R_G8``. A shifted
     gear ends with its shift, ``Gear_m2_N15_x0.09`` (``_x-0.09`` negative), since
     it is a different part from the unshifted gear of the same module and teeth.
+    A printed gear ends ``_P`` after everything else (F1, D10): ``Gear_m1.5_N25_P``,
+    ``Pinion_m2_N15_x0.09_P``. A machined gear's name is as it was.
     """
     words = {KIND_HELICAL: "Helical", KIND_HERRINGBONE: "Herringbone", KIND_BEVEL: "Bevel"}
     internal = spec.is_internal() and spec.kind != KIND_BEVEL
@@ -314,6 +358,8 @@ def default_stem(spec: GearSpec, prefix: str = "") -> str:
             stem += f"_S{_angle_text(spec.shaft_angle)}"
     if spec.kind != KIND_BEVEL and _shifted(spec.profile_shift):
         stem += f"_x{_shift_name(spec.profile_shift)}"
+    if spec.is_printed():
+        stem += PRINTED_STEM_MARK         # F1, D10: a different part from the machined gear of the same sizes
     return sanitize_stem(stem)
 
 

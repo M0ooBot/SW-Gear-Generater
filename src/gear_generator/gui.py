@@ -79,8 +79,9 @@ GEAR_VARS = (
     ("mate_teeth", "mate_teeth"),
     ("name", "name"),
 )
-# Shared by both gears.
-GEAR_COMPOUND = ("kind", "recipe")
+# Shared by both gears. F1 (PLAN-PRINTED §1.3): Process and Nozzle are the pair's, as Kind and Flank are; package C
+# gives them their rows and puts them into each gear in _gear_spec.
+GEAR_COMPOUND = ("kind", "recipe", "process", "nozzle")
 # W9b: GearSpec fields only a workbook row fills (a sleeve's bands); the strip leaves them blank, as GearSpec() does.
 GEAR_WORKBOOK_ONLY = ("start_band", "end_band")
 
