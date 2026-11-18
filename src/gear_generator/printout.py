@@ -167,6 +167,28 @@ class PrintPart:
 
 
 @dataclass(frozen=True)
+class BoreFigures:
+    """F3 (PLAN-PRINTED §4.1.1; F3-INTERFACES §7): a part's hole as built, for the print list's bore line, in mm:
+    ``bore`` the shaft's size (Bore; 0 with no bore), ``allowance`` the allowance it was cut with (0 for every part built
+    before F3), ``flat`` the shaft's Flat when the hole is a D, else None."""
+
+    bore: float = 0.0
+    allowance: float = 0.0
+    flat: Optional[float] = None
+
+
+def bore_figures(part: "PrintPart") -> BoreFigures:
+    """The part's hole as built (F3, §4.1.1): from ``spec.as_built(part.spec, part.variables)``, never from the spec
+    alone, so a part cut at 8 says 8 and one cut at 8.2 says 8 and 0.2. **F3-0's stub: the bore as recorded, no
+    allowance and no flat**, what every part built before F3 holds; package B fills it."""
+    try:
+        bore = part.spec.bore_mm() if part.spec.has_bore() else 0.0
+    except Exception:  # noqa: BLE001 - a recorded bore that does not read: no figure
+        bore = 0.0
+    return BoreFigures(bore=bore)
+
+
+@dataclass(frozen=True)
 class PrintPlan:
     """A press as planned: a refusal (then no parts and no folder), or the parts and the press's own new folder, chosen
     here by M3's rule and made by the job. F2-0's additions, for the job and the list's head: ``revision`` is the version

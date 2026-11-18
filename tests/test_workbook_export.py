@@ -94,7 +94,7 @@ def test_a_shift_into_a_workbook_without_the_column_adds_its_header(tmp_path):
     spec, _ = read(path)
     _move, shift = checks.check(spec).fixes["Meshes!A2"]
     done = export.export(str(path), spec, [shift], None)
-    assert done.added_headers == ["Gears!W1 Profile shift (× m)"]
+    assert done.added_headers == ["Gears!Z1 Profile shift (× m)"]      # after the last column, Notes (Y since F3)
     again, diagnostics = read(path)
     assert diagnostics == [] and [g.profile_shift for g in again.gears[:2]] == ["0.08455", "0.08455"]
     assert [d.message for d in checks.check(again).diagnostics if d.is_error] == []
@@ -157,7 +157,7 @@ def test_two_fixes_needing_the_same_missing_column_add_one_header(tmp_path):
     shifts = [report.fixes[m][1] for m in ("Meshes!A2", "Meshes!A3")]
     assert all(shifts)
     done = export.export(str(path), spec, shifts, None)
-    assert done.added_headers == ["Gears!W1 Profile shift (× m)"] and done.refused == []
+    assert done.added_headers == ["Gears!Z1 Profile shift (× m)"] and done.refused == []
     again, diagnostics = read(path)
     assert diagnostics == [] and all(g.profile_shift for g in again.gears)
     assert [d.message for d in checks.check(again).diagnostics if d.is_error] == []

@@ -230,11 +230,20 @@ class RackSection:
     teeth: float = math.inf
     # F1 (PLAN-PRINTED §1.1): the line width in mm when printed, None when not; left out of the record while None.
     nozzle: Optional[float] = None
+    # F3 (PLAN-PRINTED §4.1; F3-INTERFACES §2), as on spur.SpurDerived: the allowance the bore is cut with, mm, left out
+    # of the record while 0. A bevel gear takes no D-flat (G5), so its bore_flat stays None, left out likewise.
+    bore_allowance: float = 0.0
+    bore_flat: Optional[float] = None
 
     @property
     def printed(self) -> bool:
         """Whether the crown gear is made printed (F1): it then carries its nozzle."""
         return self.nozzle is not None
+
+    @property
+    def bore_as_cut(self) -> float:
+        """The hole's diameter as cut, mm (F3): the bore plus its allowance, 0 with no bore."""
+        return self.bore + self.bore_allowance if self.bore > 0 else 0.0
 
     @property
     def backlash_printed(self) -> bool:

@@ -20,8 +20,9 @@ def test_the_columns_are_the_ones_the_plan_settled():
     assert [c.title for c in schema.GEARS.columns] == [
         "Gear", "Shaft", "At (mm)", "Kind", "Side", "Teeth", "Module (mm)", "Pressure angle (°)",
         "Face width (mm)", "Bore (mm)", "Flank", "Helix angle (°)", "Hand", "Groove (mm)", "Profile shift (× m)",
-        "Backlash (mm)", "Fillet (mm)", "Rim (mm)", "Slides", "Start band (mm)", "End band (mm)", "Part name",
-        "Notes"]                       # W9b: the two bands after Slides (W9B-INTERFACES §1)
+        "Backlash (mm)", "Fillet (mm)", "Rim (mm)", "Slides", "Start band (mm)", "End band (mm)", "Bore allowance (mm)",
+        "Drive", "Flat (mm)", "Part name", "Notes"]   # W9b: the two bands after Slides (W9B-INTERFACES §1); F3: the bore
+                                                      # as cut after them (PLAN-PRINTED §4.6 item 4, F3-INTERFACES §4)
     assert [c.title for c in schema.MESHES.columns] == ["Gear A", "Gear B", "Efficiency (%)", "Notes"]
     assert [s.title for s in schema.BOX_SETTINGS] == [
         "Format", "Name", "Output folder", "Part template", "Assembly template", "Pressure angle (°)",
@@ -154,9 +155,9 @@ def test_columns_may_be_in_any_order_and_extra_ones_are_ignored(tmp_path):
     spec, diagnostics = read(path)
     assert diagnostics == []
     assert [g.teeth for g in spec.gears] == ["17", "68", "17", "51"]
-    edit(path, "Gears", {"X2": 17.5})       # Teeth is now column X, the 24th (W9b's two bands are before it)
-    _, diagnostics = read(path)
-    assert messages(diagnostics) == ["Gears!X2: Teeth must be a whole number (got '17.5')."]
+    edit(path, "Gears", {"AA2": 17.5})      # Teeth is now column AA, the 27th (W9b's two bands and F3's three bore
+    _, diagnostics = read(path)             # columns are before it)
+    assert messages(diagnostics) == ["Gears!AA2: Teeth must be a whole number (got '17.5')."]
 
 
 def test_comment_and_blank_rows_are_skipped(tmp_path):

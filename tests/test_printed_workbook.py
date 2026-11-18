@@ -364,7 +364,7 @@ def test_a_blank_process_is_as_built_for_each_kind_of_record(make, word):
     assert assess.blank_process(record) == word
     if record is not None:
         again = store.link_record_from_json(store.link_record_to_json(record))
-        assert again.schema_version == store.LINK_SCHEMA_VERSION == 11 and assess.blank_process(again) == word
+        assert again.schema_version == store.LINK_SCHEMA_VERSION == 12 and assess.blank_process(again) == word
 
 
 # -- the gearbox build and its records at the new schemas (§1.2) ---------------------------------------------------
@@ -376,7 +376,7 @@ def _stem(path):
 def test_a_printed_gearbox_builds_p_parts_recorded_with_their_process_at_link_11_and_sidecar_3():
     d = printed_desk()
     rec = d.record
-    assert rec.schema_version == 11
+    assert rec.schema_version == 12
     assert [_stem(p.path) for p in rec.parts] == [
         "Gear_m1.25_N29_P", "Gear_m1.25_N13_P", "Ring_m1.25_N55_P", "Dog_m1.25_N17_P", "Sleeve_m1.25_N17_P"]
     assert all(p.spec["process"] == "printed" and p.spec["nozzle"] == "" for p in rec.parts)
@@ -391,7 +391,7 @@ def test_a_machined_gearbox_built_after_f1_records_no_process_and_its_sidecars_s
     """The record's link schema is 11 whatever the parts (§1.2); a machined part's spec and .gear.json are W9's, at
     sidecar 1 or 2 (the bytes are test_printed_rule's pins)."""
     d = machined_desk()
-    assert d.record.schema_version == 11
+    assert d.record.schema_version == 12
     for part in d.record.parts:
         assert "process" not in part.spec and "nozzle" not in part.spec
         assert d.disk.read_sidecar(store.sidecar_path(part.path)).schema_version in (1, 2)
@@ -437,7 +437,7 @@ def test_a_gearbox_w9_built_opens_machined_with_nothing_changed_and_nothing_writ
     assert _footer(a, record, again, up) == w9_footer
     # Nothing written: the record as read is W9's text, byte for byte but the number a write would move, after every
     # plan above; and the .gear.json files as W9 wrote them.
-    assert store.link_record_to_json(record).replace('"link_schema_version": 11', '"link_schema_version": 10') == \
+    assert store.link_record_to_json(record).replace('"link_schema_version": 12', '"link_schema_version": 10') == \
         snap["record"]
     assert disk.sidecars == snap["sidecars"]
 
@@ -523,7 +523,7 @@ def test_printed_typed_on_a_built_gearbox_is_one_update_writing_each_backlash_an
     assert desk.sw.frames.get("Sprocket-1") is not None
     # The record: link 11, each part printed under its old file name, its .gear.json at sidecar 3.
     rec = desk.record
-    assert rec.schema_version == 11 and sorted(_stem(p.path) for p in rec.parts) == names
+    assert rec.schema_version == 12 and sorted(_stem(p.path) for p in rec.parts) == names
     for part in rec.parts:
         assert part.spec["process"] == "printed"
         assert dict(part.variables)["Backlash"] == 'IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )'

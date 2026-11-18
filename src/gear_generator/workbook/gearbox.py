@@ -449,6 +449,16 @@ def _matches(spec_dict: Mapping[str, Any], variables: Sequence[Sequence[str]], t
     return _variables_match(variables, trig, _variables_of(job))
 
 
+def as_built_job(job: PartJob, variables: Optional[Sequence[Sequence[str]]]) -> PartJob:
+    """F3 (PLAN-PRINTED §4.1.1; F3-INTERFACES §6): the job replanned for the part on record whose globals are
+    ``variables``: its spec through ``spec.as_built(job.spec, variables)``, and its derived and plan from that spec, so that
+    a blank Bore allowance plans the hole the part holds. None (no part on record) gives the job as planned. The reuse
+    match is tried per candidate entry through it (``_matches``, ``_Parts.find``), and Update (``update._part``), Build
+    again…'s rows made new (ruling 1), and W9d's ``carry_for`` plan through it too. **F3-0's stub: gives the job as it
+    is**; package B fills it."""
+    return job
+
+
 def _variables_of(job: PartJob) -> Tuple[GlobalVariable, ...]:
     return tuple(kind_for(job.spec).variables(job.spec, job.derived))
 

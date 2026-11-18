@@ -35,7 +35,13 @@ BANDED_SCHEMA = 2
 # F1 (PLAN-PRINTED §1.2): a printed part is written at 3, since an older app would drop its process and nozzle and
 # reuse it as a machined part; a machined part stays at 1 or 2, byte for byte as W9 writes it.
 PRINTED_SCHEMA = 3
-SCHEMA_VERSION = PRINTED_SCHEMA
+# F3 (PLAN-PRINTED §4.3, must-fix M2): a part whose globals hold "Bore Allowance" or "Bore Flat" is written at 4, decided
+# from what the part holds and not from its spec's keys, so a printed part built with a blank allowance (its global the
+# default's) is 4 too. An F2-era app refuses it and leaves it byte-identical, rather than open it and write its record
+# back without the global. Every other part stays at 3, 2 or 1, byte for byte as before.
+BORE_SCHEMA = 4
+SCHEMA_VERSION = BORE_SCHEMA
+BORE_GLOBALS = ("Bore Allowance", "Bore Flat")     # spec.BORE_ALLOWANCE_GLOBAL, spec.BORE_FLAT_GLOBAL
 SIDECAR_SUFFIX = ".gear.json"
 RECENT_LIMIT = 10
 
@@ -88,9 +94,13 @@ class Sidecar:
     record: GearRecord = field(default_factory=GearRecord)
 
 
-def sidecar_schema(spec: Dict[str, Any]) -> int:
-    """The schema a part's ``.gear.json`` is written at: :data:`PRINTED_SCHEMA` when its form is printed (F1), else
-    :data:`BANDED_SCHEMA` when it has a band, else :data:`PLAIN_SCHEMA` (W9b)."""
+def sidecar_schema(spec: Dict[str, Any], variables: Optional[Sequence[Sequence[str]]] = None) -> int:
+    """The schema a part's ``.gear.json`` is written at: :data:`BORE_SCHEMA` when the part's globals (``variables``, as
+    the record holds them) hold ``"Bore Allowance"`` or ``"Bore Flat"`` (F3, §4.3, M2: from what the part holds, never
+    from the spec's keys); else :data:`PRINTED_SCHEMA` when its form is printed (F1), else :data:`BANDED_SCHEMA` when it
+    has a band, else :data:`PLAIN_SCHEMA` (W9b). ``variables`` None (the default) asks the spec alone, as before F3."""
+    if any(len(pair) >= 1 and str(pair[0]).strip() in BORE_GLOBALS for pair in (variables or ())):
+        return BORE_SCHEMA
     if str((spec or {}).get("process", "") or "").strip().lower() == "printed":     # spec.PROCESS_PRINTED
         return PRINTED_SCHEMA
     return BANDED_SCHEMA if any(str((spec or {}).get(k, "") or "").strip() for k in ("start_band", "end_band")) \
@@ -384,8 +394,8 @@ def built_sidecar(
         created=kept.created if kept and kept.created else stamp, last_built=stamp,
         last_updated=kept.last_updated if kept else "",
     )
-    return Sidecar(part_path=part_path, part_title=part_title, schema_version=sidecar_schema(record.spec),
-                   written_by=written_by, record=record)
+    return Sidecar(part_path=part_path, part_title=part_title,
+                   schema_version=sidecar_schema(record.spec, record.variables), written_by=written_by, record=record)
 
 
 def updated_sidecar(sidecar: Sidecar, spec: Dict[str, Any], derived: Dict[str, Any],
@@ -400,7 +410,7 @@ def updated_sidecar(sidecar: Sidecar, spec: Dict[str, Any], derived: Dict[str, A
         changes["unsaved_since"] = float(unsaved_since)
     record = GearRecord(**{**asdict(sidecar.record), **changes})
     return Sidecar(part_path=sidecar.part_path, part_title=sidecar.part_title,
-                   schema_version=sidecar_schema(record.spec),
+                   schema_version=sidecar_schema(record.spec, record.variables),
                    written_by=sidecar.written_by, record=record)
 
 
@@ -429,7 +439,14 @@ _W9A_LINK_SCHEMA = _W8_LINK_SCHEMA + 1       # the schema W9a left (ISSUE-1-PLAN
 _W9B_LINK_SCHEMA = _W9A_LINK_SCHEMA + 1      # the schema W9b left (the coordinator's ruling: W9c's is one past it)
 _W9C_LINK_SCHEMA = _W9B_LINK_SCHEMA + 1      # the schema W9c left (W9D-INTERFACES §7: W9d's is one past it)
 _W9D_LINK_SCHEMA = _W9C_LINK_SCHEMA + 1      # the schema W9d left (PLAN-PRINTED §1.2: F1's is one past it)
-LINK_SCHEMA_VERSION = _W9D_LINK_SCHEMA + 1   # the link record's own schema, apart from the .gear.json's SCHEMA_VERSION
+_F1_LINK_SCHEMA = _W9D_LINK_SCHEMA + 1       # the schema F1 left, and F2 (PLAN-PRINTED §4.3: F3's is one past it)
+LINK_SCHEMA_VERSION = _F1_LINK_SCHEMA + 1    # the link record's own schema, apart from the .gear.json's SCHEMA_VERSION
+# Schema 12 (F3, PLAN-PRINTED §4.3): a part entry's ``spec`` may hold ``bore_allowance``, ``drive`` and ``flat``, each
+# written only when not at its default (GearSpec.to_dict), and its ``variables`` "Bore Allowance" and "Bore Flat". Every
+# F3 write moves a record to 12 whatever its parts, as F1's 11 did, so an F2-era app, which would read a part's bore as
+# round and uncompensated and could write a record back without them, refuses a schema 12 record and leaves it
+# byte-identical. A v1-v11 record reads as v12 as it read as v11 (no part holds the keys or the globals: every part
+# round, with no allowance, which is how spec.as_built reads a blank allowance on record) and is written forward as v12.
 # Schema 11 (F1, PLAN-PRINTED §1.2): a part entry's ``spec`` may hold ``process`` and ``nozzle``, written only for a
 # printed part (GearSpec.to_dict leaves them out otherwise). Every F1 write moves a record to 11 whatever its parts'
 # process, as W9b's 8 did, so a W9-era app, which would read a printed part's spec as machined and write it back so,

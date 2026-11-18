@@ -1305,8 +1305,14 @@ def build_many(sw: SolidWorks, plans: Sequence[BuildPlan],
 STRUCTURAL = ("kind", "recipe", "hand", "teeth_side")
 
 
-def structural_change(built: Mapping[str, str], wanted: Mapping[str, str]) -> str:
+def structural_change(built: Mapping[str, str], wanted: Mapping[str, str],
+                      built_variables: Optional[Sequence[Sequence[str]]] = None) -> str:
     """Why a change cannot go through the equations, as a sentence; empty when it can.
+
+    F3 (PLAN-PRINTED §4.1.1; F3-INTERFACES §6): ``built_variables`` are the built part's globals as its record holds them
+    (None: not known). *Has an allowance* and *has a flat* are read on the built side from them (``"Bore Allowance"``,
+    ``"Bore Flat"`` present) and on the wanted side from the resolved figure, beside ``has_shift``. **F3-0's stub: the
+    argument is accepted and not yet read**; package B fills it, with ``drive`` in :data:`STRUCTURAL`.
 
     The sketch's topology is fixed when it is built: another recipe or kind is
     different entities, and a bore that appears or vanishes is a feature that

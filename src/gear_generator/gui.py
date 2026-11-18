@@ -87,12 +87,18 @@ GEAR_VARS = (
     ("shaft_angle", "shaft_angle"),
     ("mate_teeth", "mate_teeth"),
     ("name", "name"),
+    # F3 (PLAN-PRINTED §4.6 item 5; F3-INTERFACES §5): the bore as cut. Package C gives them their rows under Bore.
+    ("bore_allowance", "bore_allowance"),
+    ("drive", "drive"),
+    ("flat", "flat"),
 )
 # Shared by both gears. F1 (PLAN-PRINTED §1.3): Process and Nozzle are the pair's, as Kind and Flank are; package C
 # gives them their rows and puts them into each gear in _gear_spec.
 GEAR_COMPOUND = ("kind", "recipe", "process", "nozzle")
 # W9b: GearSpec fields only a workbook row fills (a sleeve's bands); the strip leaves them blank, as GearSpec() does.
 GEAR_WORKBOOK_ONLY = ("start_band", "end_band")
+# F3 (§4.1.1): GearSpec fields no form or row fills: the allowance a part on record holds, which spec.as_built sets.
+GEAR_RECORD_ONLY = ("built_allowance",)
 
 # Every PairSpec field, and the app attribute holding it.
 PAIR_VARS = (

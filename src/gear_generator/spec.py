@@ -15,8 +15,8 @@ from __future__ import annotations
 
 import math
 import re
-from dataclasses import asdict, dataclass, field, fields
-from typing import Any, Dict, Optional, Tuple
+from dataclasses import asdict, dataclass, field, fields, replace
+from typing import Any, Dict, Optional, Sequence, Tuple
 
 
 KIND_SPUR = "spur"
@@ -62,6 +62,21 @@ PROCESSES = (PROCESS_PRINTED, PROCESS_MACHINED)
 PROCESS_FIELDS = ("process", "nozzle")
 NOZZLE_DEFAULT = 0.4          # mm, a printed gear's line width when its Nozzle is blank
 PRINTED_STEM_MARK = "_P"      # D10: a part built printed ends _P (Gear_m1.5_N25_P)
+
+# F3 (PLAN-PRINTED §4.1, §4.2; docs/notes-printed/F3-INTERFACES.md): the bore as cut. A Bore allowance is on the
+# diameter, so the hole is cut at Bore + allowance and Bore stays the shaft's size; a Drive of flat cuts a D whose Flat
+# is the shaft's size across its flat. GearSpec.to_dict leaves the three out at their defaults, so a record without
+# them is byte for byte what it was before F3.
+DRIVE_ROUND = "round"
+DRIVE_FLAT = "flat"
+DRIVES = (DRIVE_ROUND, DRIVE_FLAT)
+BORE_FIELDS = ("bore_allowance", "drive", "flat")
+RECORD_ONLY_FIELDS = ("built_allowance",)   # set by as_built only: never on a form, never written, never compared
+BORE_ALLOWANCE_GLOBAL = "Bore Allowance"    # spur.BORE_ALLOWANCE, the part's global; here so as_built can read it
+BORE_FLAT_GLOBAL = "Bore Flat"              # spur.BORE_FLAT
+# mm on the diameter: what a blank Bore allowance is for a printed part not yet built. A placeholder until the user's
+# coupons give their printer's figure (§3.2, V1), which replaces this one constant (spur.BORE_ALLOWANCE_DEFAULT is it).
+BORE_ALLOWANCE_DEFAULT = 0.2
 
 
 class InputError(Exception):
@@ -171,6 +186,14 @@ class GearSpec:
     # machined, what a spec written before F1 or built in code means; the form and a workbook's Box write the word.
     process: str = PROCESS_MACHINED
     nozzle: str = ""              # mm, the printer's line width; "" = NOZZLE_DEFAULT. Read by checks only.
+    # F3 (PLAN-PRINTED §4.1, §4.2): the bore as cut. "" allowance = as built for a part on record (built_allowance),
+    # else BORE_ALLOWANCE_DEFAULT printed and 0 machined; typed = that figure, negative allowed (a press fit).
+    bore_allowance: str = ""
+    drive: str = DRIVE_ROUND      # "round" or "flat"; blank is round
+    flat: str = ""                # mm, the shaft across its flat, read with Drive flat
+    # F3 (§4.1.1): the allowance the part on record holds, set only by as_built ("" = not on record). Never written by
+    # to_dict, never read by from_dict; bore_allowance_mm reads it after a typed figure and before the default.
+    built_allowance: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         """Every field, but the bands left out while both are blank, and the process and nozzle left out of a spec
@@ -183,11 +206,22 @@ class GearSpec:
         if not self.is_printed():
             for key in PROCESS_FIELDS:
                 values.pop(key, None)
+        # F3 (§4.3): the bore's three keys left out at their defaults, a record's built allowance always (§4.1.1).
+        if not str(self.bore_allowance).strip():
+            values.pop("bore_allowance", None)
+        if str(self.drive).strip().lower() in ("", DRIVE_ROUND):
+            values.pop("drive", None)
+        if not str(self.flat).strip():
+            values.pop("flat", None)
+        for key in RECORD_ONLY_FIELDS:
+            values.pop(key, None)
         return values
 
     @classmethod
     def from_dict(cls, raw: Dict[str, Any]) -> "GearSpec":
-        known = {f.name for f in fields(cls)}
+        """The spec a record's ``spec`` holds. Unknown keys are dropped, and so is ``built_allowance`` should a record
+        hold one: only :func:`as_built` sets it, from the part's globals (§4.1.1)."""
+        known = {f.name for f in fields(cls)} - set(RECORD_ONLY_FIELDS)
         return cls(**{k: str(v) for k, v in (raw or {}).items() if k in known})
 
     # -- reading the fields ------------------------------------------------
@@ -279,6 +313,40 @@ class GearSpec:
             raise InputError(f"Nozzle must be more than zero (got {text!r}).")
         return value
 
+    def bore_allowance_mm(self) -> float:
+        """The allowance the hole is cut with, mm on the diameter (F3, §4.1.1), in this order: a typed figure (any sign,
+        0 included); else the part's as built (:attr:`built_allowance`, set by :func:`as_built` for a part on record);
+        else :data:`BORE_ALLOWANCE_DEFAULT` for a printed gear; else 0. Raises InputError naming Bore allowance on a
+        figure that does not read. Whether the gear has a bore is not asked here: see :meth:`bore_as_cut_mm`."""
+        text = str(self.bore_allowance).strip()
+        if text:
+            return parse_float(text, "Bore allowance")
+        built = str(self.built_allowance).strip()
+        if built:
+            return parse_float(built, "Bore allowance")
+        return BORE_ALLOWANCE_DEFAULT if self.is_printed() else 0.0
+
+    def bore_as_cut_mm(self) -> float:
+        """The hole's diameter as cut, mm: Bore plus :meth:`bore_allowance_mm`, or 0 with no bore."""
+        return self.bore_mm() + self.bore_allowance_mm() if self.has_bore() else 0.0
+
+    def drive_value(self) -> str:
+        """``round`` or ``flat``, in any case; a blank is round. Raises InputError on any other word."""
+        drive = str(self.drive).strip().lower() or DRIVE_ROUND
+        if drive not in DRIVES:
+            raise InputError(f"Drive must be {' or '.join(DRIVES)} (got {str(self.drive).strip()!r}).")
+        return drive
+
+    def has_flat(self) -> bool:
+        """Whether the bore is a D (Drive flat, in any case). Never raises; anything else is round."""
+        return str(self.drive).strip().lower() == DRIVE_FLAT
+
+    def flat_mm(self) -> Optional[float]:
+        """The shaft's size across its flat, mm, or None when blank. Raises InputError naming Flat on text that does
+        not read. Read with Drive flat; the gears' checks say a flat with no Flat, or one out of bounds."""
+        text = str(self.flat).strip()
+        return parse_float(text, "Flat") if text else None
+
     def has_bands(self) -> bool:
         """Whether either band is typed (W9b): the part is then a banded sleeve's, with a relief between."""
         return bool(str(self.start_band).strip() or str(self.end_band).strip())
@@ -316,9 +384,41 @@ class GearSpec:
         return sanitize_stem(self.name) if self.name.strip() else self.default_stem()
 
     def with_values(self, **changes: str) -> "GearSpec":
+        """The spec with ``changes``, through :meth:`to_dict`; a built allowance set by :func:`as_built` is kept unless
+        changed, since it says what the part on record holds, not what the form says."""
         values = self.to_dict()
+        values.update(built_allowance=self.built_allowance)
         values.update(changes)
         return GearSpec(**values)
+
+
+def as_built(spec: GearSpec, variables: Optional[Sequence[Sequence[str]]]) -> GearSpec:
+    """F3's one rule, and its one home (PLAN-PRINTED §4.1.1): a blank Bore allowance on a part on record is the figure
+    the part holds, so a default that moves later (V1) rebuilds nothing already built, as D11's (B) does for Process.
+
+    ``variables`` are the part's globals as its record holds them (``[name, expression]``, a ``GearRecord``'s or a
+    ``PartEntry``'s ``variables``), or None for a spec with no part on record. The spec comes back with
+    :attr:`GearSpec.built_allowance` set:
+
+    - to the literal of ``"Bore Allowance"`` in ``variables``, spaces aside, when they are given and the spec's Bore
+      allowance is blank;
+    - to ``"0"`` when they are given, the allowance is blank and the part holds no such global, as no part built before
+      F3 does. An empty ``variables`` reads the same way: a part on record whose record lists no globals (a v1 record,
+      or the build journal's entries, which ``gearbox.journal`` writes with none) reads as built with no allowance;
+    - to ``""`` otherwise: no part on record (None), or a typed allowance, which means what it says.
+
+    Nothing else changes, and ``to_dict`` never writes the field, so a record written from the result holds the spec
+    it held. :meth:`GearSpec.bore_allowance_mm` reads the field after a typed figure and before the default, so every
+    derive and plan of the result sees the hole as built. Pure; never raises (a recorded text that is not a number
+    raises only when bore_allowance_mm reads it, naming Bore allowance)."""
+    if variables is None or str(spec.bore_allowance).strip():
+        return replace(spec, built_allowance="") if spec.built_allowance else spec
+    held = "0"
+    for pair in variables:
+        if len(pair) >= 2 and str(pair[0]).strip() == BORE_ALLOWANCE_GLOBAL:
+            held = "".join(str(pair[1]).split()) or "0"
+            break
+    return replace(spec, built_allowance=held)
 
 
 CLUTCH_WORDS = {"sleeve": "Sleeve", "dog": "Dog", "hub": "Hub"}   # a workbook sleeve's, dog's and hub's stem word

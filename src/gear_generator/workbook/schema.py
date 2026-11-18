@@ -13,7 +13,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
-from ..spec import PROCESS_MACHINED, PROCESS_PRINTED
+from ..spec import BORE_ALLOWANCE_DEFAULT, DRIVES, PROCESS_MACHINED, PROCESS_PRINTED
 
 FORMAT = "1"
 
@@ -83,6 +83,7 @@ HANDS = ("right", "left")
 FLANKS = ("involute", "arcs")
 FLANK_RECIPE = {"involute": "A", "arcs": "B"}
 PROCESS_WORDS = (PROCESS_PRINTED, PROCESS_MACHINED)     # F1: the Box's Process (PLAN-PRINTED §1.3)
+DRIVE_WORDS = DRIVES                                      # F3: a gear's Drive, round or flat (PLAN-PRINTED §4.2)
 
 # -- Box: two columns, a setting per row --------------------------------------
 
@@ -174,6 +175,18 @@ GEARS = SheetDef("Gears", (
                 "side. With End band, the span between is a relief bore."),
     Column("end_band", "End band", "mm", blank="teeth over the whole face", numeric=True, width=14,
            help="A sleeve only: its toothed length at the end of its face."),
+    # F3 (PLAN-PRINTED §4.1, §4.2, G3; F3-INTERFACES §4): the bore as cut, after the bands as W9b placed them. The
+    # allowance is on the diameter; the blank's words follow spec.BORE_ALLOWANCE_DEFAULT, the one constant V1 moves.
+    Column("bore_allowance", "Bore allowance", "mm",
+           blank=f"{BORE_ALLOWANCE_DEFAULT:g} printed for a new part, as built for a part on record, 0 machined",
+           numeric=True, width=19,
+           help="Added to Bore when the hole is cut, on the diameter: Bore stays your shaft's size. Negative for a "
+                "press fit. Not on a ring or a sleeve."),
+    Column("drive", "Drive", blank="round", words=DRIVE_WORDS, width=8,
+           help="flat cuts a D-shaped hole for a shaft with a flat: give Flat. Not on a bevel gear, a ring or a "
+                "sleeve."),
+    Column("flat", "Flat", "mm", numeric=True, width=10,
+           help="With Drive flat: your shaft's size across its flat, from the flat to the opposite round side."),
     Column("part_name", "Part name", blank="as the strip names it", width=20),
     Column("notes", "Notes", width=30),
 ))

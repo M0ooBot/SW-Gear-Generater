@@ -309,7 +309,7 @@ def test_build_makes_the_parts_the_layout_and_the_assembly_and_records_them(desk
         sidecar = store.read_sidecar(desk.part(stem))
         assert sidecar is not None and store.same_path(sidecar.record.workbook, window.link.path)
     raw = json.loads(record_bytes(window))
-    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 11            # F1's (PLAN-PRINTED §1.2)
+    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 12            # F3's (PLAN-PRINTED §4.3)
     record = record_of(window)
     assert record.gearbox.revision == 0 and store.same_path(record.gearbox.assembly, desk.part(NAME, ".SLDASM"))
     assert store.same_path(record.assembly, record.gearbox.assembly)
@@ -1626,7 +1626,7 @@ def test_a_refused_mate_greys_build_for_that_read_and_a_changed_workbook_offers_
         "same mates. Update SolidWorks waits until Build has made the assembly.")
     assert not window.footer().build_enabled
 
-    save_in_excel(window, {"Gears": {"W2": "pinion, checked"}})    # any save (Notes, W since W9b)
+    save_in_excel(window, {"Gears": {"Z2": "pinion, checked"}})    # any save (Notes, W since W9b, Z since F3)
     footer = window.footer()
     assert footer.build_enabled and footer.ok and not footer.update_enabled
     assert window.read_line.get().endswith(" · changed since its assembly was refused")

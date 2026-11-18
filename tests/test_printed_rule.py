@@ -460,10 +460,22 @@ def test_the_spec_says_its_process_and_leaves_both_keys_out_unless_printed():
         process="printed", nozzle="0.6")
 
 
-def test_the_record_is_at_link_schema_11_and_a_printed_part_at_sidecar_schema_3():
-    assert (store.LINK_SCHEMA_VERSION, store._W9D_LINK_SCHEMA) == (11, 10)
-    assert (store.SCHEMA_VERSION, store.PRINTED_SCHEMA, store.BANDED_SCHEMA, store.PLAIN_SCHEMA) == (3, 3, 2, 1)
+def test_the_record_is_at_link_schema_12_and_a_printed_part_at_sidecar_schema_3_or_4_by_its_globals():
+    """F1's link 11 and sidecar 3, moved by F3 (PLAN-PRINTED §4.3): the link record to 12 whatever its parts, with F1's
+    11 kept beside it, and a part whose globals hold "Bore Allowance" or "Bore Flat" to sidecar 4 (M2), decided from
+    those globals; a printed part without them, as every part built before F3, stays at 3, and so does a spec asked
+    alone (no globals given)."""
+    assert (store.LINK_SCHEMA_VERSION, store._F1_LINK_SCHEMA, store._W9D_LINK_SCHEMA) == (12, 11, 10)
+    assert (store.SCHEMA_VERSION, store.BORE_SCHEMA, store.PRINTED_SCHEMA, store.BANDED_SCHEMA, store.PLAIN_SCHEMA) == (
+        4, 4, 3, 2, 1)
     assert store.sidecar_schema(GearSpec(process="printed").to_dict()) == 3
+    printed = GearSpec(process="printed")
+    kind = kind_for(printed)
+    held = [[v.name, v.expression] for v in kind.variables(printed, kind.derive(printed)) if v.name != "Bore Allowance"]
+    assert store.sidecar_schema(printed.to_dict(), held) == 3                                      # built before F3
+    assert store.sidecar_schema(printed.to_dict(), held + [["Bore Allowance", "0.2"]]) == 4
+    assert store.sidecar_schema(GearSpec().to_dict(), [["Bore Flat", "7"]]) == 4                    # whatever the spec
+    assert store.sidecar_schema(GearSpec(process="machined").to_dict(), []) == 1
     assert store.sidecar_schema(GearSpec(process="Printed", start_band="2", end_band="2").to_dict()) == 3
     assert store.sidecar_schema(GearSpec(process="machined").to_dict()) == 1
     assert store.sidecar_schema(GearSpec(start_band="2", end_band="2").to_dict()) == 2
@@ -551,11 +563,11 @@ def _entry(**spec):
 ], ids=["no record", "no parts", "machined", "v1 part", "one printed", "Printed"])
 def test_a_blank_process_is_as_built(record, word):
     """D11 (B): machined when every current part was built machined, printed otherwise; the same after a record is
-    written forward to 11, since the rule reads the parts and never the schema number."""
+    written forward to 11, and since F3 to 12, since the rule reads the parts and never the schema number."""
     assert assess.blank_process(record) == word
     if record is not None:
         again = store.link_record_from_json(store.link_record_to_json(record))
-        assert again.schema_version == 11 and assess.blank_process(again) == word
+        assert again.schema_version == 12 and assess.blank_process(again) == word
 
 
 def test_assess_resolves_a_blank_process_in_the_read_and_the_spec_and_leaves_a_word_alone():
@@ -1053,8 +1065,13 @@ def _f2_part_blocks(text):
 
 
 def _f2_strip_form(sidecar, form):
-    """What the strip holds with the record open and its form as recorded (strip_form, the record's own derive)."""
-    return strip_form(sidecar, form)
+    """What the strip holds with the record open and its form as recorded: its derive through spec.as_built with the
+    record's globals, as F3-INTERFACES §5 has the strip derive while a record is open (package C's)."""
+    from gear_generator.spec import as_built
+    held = as_built(form, sidecar.record.variables)
+    return SimpleNamespace(_loaded=sidecar, _snapshot={"path": sidecar.part_path, "title": "Gear_m1.5_N25"},
+                           mode=SimpleNamespace(get=lambda: gui.MODE_SINGLE),
+                           _derived={"a": kind_for(held).derive(held)}, _gear_spec=lambda which: form)
 
 
 @pytest.mark.parametrize("name", sorted(F2_BUILT["strip"]))
@@ -1068,7 +1085,7 @@ def test_a_printed_part_built_from_the_form_before_f3_reads_after_it_as_it_did(n
     assert form.is_printed() and form.has_bore() and float(variables["Bore Diameter"]) == form.bore_mm()
     assert form.to_dict() == sidecar.record.spec and store.to_json(sidecar) == held["sidecar"]
     assert update._changed_columns(sidecar.record.spec, form.to_dict()) == []
-    assert swbuild.structural_change(sidecar.record.spec, form.to_dict()) == ""
+    assert swbuild.structural_change(sidecar.record.spec, form.to_dict(), built_variables=sidecar.record.variables) == ""
     assert gui.GearApp._update_target(_f2_strip_form(sidecar, form))[0] == held["update_target"] == 0
     path = held["path"]
     plan = printout.form_print(sidecar, path, OUT, F2_VERSION, now=0.0, exists=lambda p: store.same_path(p, path),
@@ -1127,3 +1144,154 @@ def test_a_gearbox_built_before_f3_reads_after_it_as_it_did(name):
     for text in held["sidecars"].values():
         car = store.from_json(text)
         assert car.schema_version == (3 if printed_parts else (2 if car.record.spec.get("start_band") else 1))
+
+
+
+# -- F3-0's interface (PLAN-PRINTED §4.6 items 2 to 7; docs/notes-printed/F3-INTERFACES.md), held so that packages A,
+# -- B and C build on it. Each package tests its own work in its own files; these hold only what F3-0 lands, and the
+# -- as-built rule (spec.as_built, written whole here) on every part on record above.
+
+def test_the_spec_says_its_bore_and_leaves_the_three_keys_out_at_their_defaults_and_the_built_allowance_always():
+    from gear_generator import spec as spec_module
+    from gear_generator.spec import InputError
+    assert (spec_module.DRIVES, spec_module.BORE_FIELDS, spec_module.RECORD_ONLY_FIELDS) == (
+        ("round", "flat"), ("bore_allowance", "drive", "flat"), ("built_allowance",))
+    assert (spec_module.BORE_ALLOWANCE_GLOBAL, spec_module.BORE_FLAT_GLOBAL, spec_module.BORE_ALLOWANCE_DEFAULT) == (
+        "Bore Allowance", "Bore Flat", 0.2)
+    g = GearSpec()
+    assert (g.bore_allowance, g.drive, g.flat, g.built_allowance) == ("", "round", "", "")
+    for quiet in (dict(), dict(drive="Round"), dict(drive=" "), dict(bore_allowance=" "), dict(built_allowance="0.2"),
+                  dict(process="printed", built_allowance="0")):
+        assert not set(GearSpec(**quiet).to_dict()) & {"bore_allowance", "drive", "flat", "built_allowance"}
+    said = GearSpec(bore_allowance="0", drive="flat", flat="7").to_dict()
+    assert (said["bore_allowance"], said["drive"], said["flat"]) == ("0", "flat", "7")       # a typed 0 is kept
+    assert GearSpec.from_dict({"bore": "8", "built_allowance": "0.2"}) == GearSpec(bore="8")    # never read
+    assert GearSpec(built_allowance="0.3").with_values(teeth="30").built_allowance == "0.3"
+    # bore_allowance_mm: typed, else as built, else the printed default, else 0.
+    assert [GearSpec(**v).bore_allowance_mm() for v in (
+        dict(), dict(process="printed"), dict(process="printed", built_allowance="0"),
+        dict(process="printed", built_allowance="0.3", bore_allowance="-0.1"), dict(built_allowance="0.25"),
+        dict(bore_allowance="0"))] == [0.0, 0.2, 0.0, -0.1, 0.25, 0.0]
+    assert GearSpec(process="printed", bore="8").bore_as_cut_mm() == pytest.approx(8.2)
+    assert GearSpec(process="printed", bore="").bore_as_cut_mm() == 0.0
+    assert [GearSpec(drive=w).drive_value() for w in ("", "round", "Flat", " FLAT ")] == ["round", "round", "flat", "flat"]
+    assert [GearSpec(drive=w).has_flat() for w in ("flat", "Flat", "round", "", "square")] == [
+        True, True, False, False, False]
+    assert GearSpec().flat_mm() is None and GearSpec(flat="7").flat_mm() == 7.0
+    for bad, call, said in ((dict(drive="square"), "drive_value", r"Drive must be round or flat \(got 'square'\)\."),
+                            (dict(flat="x"), "flat_mm", r"Flat must be a number \(got 'x'\)\."),
+                            (dict(bore_allowance="x"), "bore_allowance_mm", r"Bore allowance must be a number")):
+        with pytest.raises(InputError, match=said):
+            getattr(GearSpec(**bad), call)()
+
+
+@pytest.mark.parametrize("variables, typed, built", [
+    (None, "", ""),                                             # no part on record: the default's to come
+    ((), "", "0"),                                              # on record, no globals listed: as built, 0 (F3-INTERFACES)
+    ([["Bore Diameter", "10"]], "", "0"),                       # built before F3: no global
+    ([["Bore Diameter", "10"], ["Bore Allowance", " 0.2 "]], "", "0.2"),
+    ([["Bore Allowance", "-0.1"]], "", "-0.1"),
+    ([["Bore Allowance", "0.2"]], "0.3", ""),                   # typed: what it says
+], ids=["not on record", "no globals", "no global", "0.2", "negative", "typed"])
+def test_as_built_is_the_figure_the_part_holds(variables, typed, built):
+    from gear_generator.spec import as_built
+    for process in ("printed", "machined"):
+        spec = GearSpec(process=process, bore_allowance=typed, built_allowance="9")
+        got = as_built(spec, variables)
+        assert got.built_allowance == built and got.to_dict() == spec.to_dict()
+        assert got == replace(spec, built_allowance=built)
+        want = float(typed or built or (0.2 if process == "printed" else 0.0))
+        assert got.bore_allowance_mm() == pytest.approx(want)
+
+
+@pytest.mark.parametrize("name", sorted(GEARS))
+def test_a_machined_gear_read_as_built_from_its_record_plans_says_and_names_as_at_the_cut(name):
+    """A machined part on record holds no "Bore Allowance": read through as_built it is the gear it was."""
+    from gear_generator.spec import as_built
+    spec = _spec(name)
+    kind = kind_for(spec)
+    held = [[v.name, v.expression_for(DEGREES)] for v in kind.variables(spec, kind.derive(spec))]
+    assert as_built(spec, held).built_allowance == "0"
+    assert strip_print(name, built_allowance="0") == STRIP[name]
+    assert _sha(sidecar_text(name, built_allowance="0")) == SIDECARS.get(name, _sha(sidecar_text(name)))
+
+
+def _f2_entries():
+    out = []
+    for name, held in sorted(F2_BUILT["workbooks"].items()):
+        record = store.link_record_from_json(held["record"])
+        out += [(name, p.spec, p.variables) for p in record.current_parts()]
+    for name, held in sorted(F2_BUILT["strip"].items()):
+        record = store.from_json(held["sidecar"]).record
+        out.append((name, record.spec, record.variables))
+    return out
+
+
+def test_every_part_f1_and_f2_built_reads_as_built_with_no_allowance():
+    from gear_generator.spec import as_built
+    for name, spec_dict, variables in _f2_entries():
+        built = as_built(GearSpec.from_dict(spec_dict), variables)
+        assert built.built_allowance == "0" and built.bore_allowance_mm() == 0.0, name
+        assert built.bore_as_cut_mm() == built.bore_mm() and built.to_dict() == spec_dict, name
+
+
+def test_the_gears_names_and_the_derived_fields_left_out_at_their_defaults():
+    from gear_generator.gears import bevel, spur
+    from gear_generator import spec as spec_module
+    assert (spur.BORE_ALLOWANCE, spur.BORE_FLAT, spur.BORE_ALLOWANCE_DEFAULT) == (
+        spec_module.BORE_ALLOWANCE_GLOBAL, spec_module.BORE_FLAT_GLOBAL, spec_module.BORE_ALLOWANCE_DEFAULT)
+    assert (spur.FLAT_LEAST_H, spur.FLAT_LEAST_DEPTH) == (0.25, 0.3)
+    assert store.BORE_GLOBALS == (spur.BORE_ALLOWANCE, spur.BORE_FLAT)
+    for name in ("spur", "helical", "herringbone", "bevel", "bevel_crown", "dog", "hub", "ring"):
+        g = kind_for(_spec(name)).derive(_spec(name))
+        text = json.dumps(g.to_dict())
+        assert "bore_allowance" not in text and "bore_flat" not in text, name
+    g = kind_for(GearSpec()).derive(GearSpec())
+    assert (g.bore_allowance, g.bore_flat, g.bore_as_cut) == (0.0, None, 10.0)
+    cut = replace(g, bore_allowance=0.2, bore_flat=7.0)
+    assert cut.bore_as_cut == pytest.approx(10.2) and spur.derived_dict(cut)["bore_flat"] == 7.0
+    assert spur.derived_dict(cut)["bore_allowance"] == 0.2
+    crown = kind_for(_spec("bevel_crown")).derive(_spec("bevel_crown")).section
+    assert isinstance(crown, bevel.RackSection) and (crown.bore_allowance, crown.bore_flat) == (0.0, None)
+
+
+def test_the_gears_sheet_takes_the_bore_after_the_bands_and_a_row_passes_it_to_its_gear():
+    from gear_generator.workbook import model, schema
+    from test_workbook_model import reducer
+    keys = [c.key for c in schema.GEARS.columns]
+    assert keys[keys.index("end_band") + 1:keys.index("part_name")] == ["bore_allowance", "drive", "flat"]
+    columns = {c.key: c for c in schema.GEARS.columns}
+    assert columns["bore_allowance"].blank == ("0.2 printed for a new part, as built for a part on record, "
+                                               "0 machined")
+    assert columns["bore_allowance"].numeric and columns["flat"].numeric and columns["flat"].unit == "mm"
+    assert columns["drive"].words == ("round", "flat") and columns["drive"].blank == "round"
+    gear = reducer().gears[0]
+    assert (gear.bore_allowance, gear.drive, gear.flat) == ("", "", "")
+    values = gear.spec_values(reducer().box)
+    assert (values["bore_allowance"], values["drive"], values["flat"], values["built_allowance"]) == (
+        "", "round", "", "")
+    flat = replace(gear, bore_allowance="0.3", drive="flat", flat="7").gear_spec(reducer().box)
+    assert (flat.bore_allowance, flat.drive, flat.flat, flat.built_allowance) == ("0.3", "flat", "7", "")
+    assert gear.gear_spec(reducer().box).to_dict() == gear.gear_spec(model.Box()).to_dict()
+
+
+def test_the_form_has_the_three_rows_fields_and_no_built_allowance():
+    fields_ = [f for f, _ in gui.GEAR_VARS]
+    assert fields_[-3:] == ["bore_allowance", "drive", "flat"] and gui.GEAR_RECORD_ONLY == ("built_allowance",)
+
+
+def test_the_stubs_are_importable_and_neutral_until_their_packages_fill_them():
+    """F3-0's stubs (§4.6 item 7): each answers what a part built before F3 reads, and says whose it is."""
+    from gear_generator import printout, swbuild
+    from gear_generator.workbook import gearbox as gb
+    import inspect
+    assert "built_variables" in inspect.signature(swbuild.structural_change).parameters
+    assert swbuild.structural_change({"bore": "8"}, {"bore": "8"}, built_variables=[["Bore Diameter", "8"]]) == ""
+    job = SimpleNamespace(spec=GearSpec(process="printed"))
+    assert gb.as_built_job(job, None) is job
+    part = printout.print_part("C:\\Out\\G.SLDPRT", GearSpec(process="printed", bore="8").to_dict(),
+                               variables=[["Bore Diameter", "8"]])
+    assert printout.bore_figures(part) == printout.BoreFigures(bore=8.0, allowance=0.0, flat=None)
+    for stub, owner in ((swbuild.structural_change, "package B"), (gb.as_built_job, "package B"),
+                        (printout.bore_figures, "package B")):
+        assert "F3-0's stub" in stub.__doc__ and owner in stub.__doc__

@@ -80,7 +80,10 @@ if "--help" in sys.argv or "-h" in sys.argv:
 
 PRINTED_TEXT = 'IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )'     # §2.1, spur.printed_backlash_expression()
 MACHINED_TEXT = '0.3 * "Module"'                                    # the user's own rule, as every gear before F1
-PRINTED_SCHEMA, MACHINED_SCHEMA, LINK_SCHEMA = 3, 1, 11             # §1.2: sidecar 3 printed, 1 machined; link 11
+PRINTED_SCHEMA, MACHINED_SCHEMA, F1_LINK_SCHEMA = 3, 1, 11          # §1.2: sidecar 3 printed, 1 machined; F1's link 11
+# A master built before F1 is below F1_LINK_SCHEMA, which stays true. The record a run writes is held to the link schema
+# the app itself writes, store.LINK_SCHEMA_VERSION: 11 when F1 was shown on SolidWorks, 12 since F3 (PLAN-PRINTED
+# §4.3), as W9d's script was brought to it in e0a8d62 when F1 moved 10 to 11.
 NOZZLE = 0.4
 VALUE_TOL = 1e-9           # mm: a global's value against the figure (W9a's go holds Sun's Backlash to 1e-9)
 SAME_VOLUME = 1e-6         # relative: two parts of the same geometry (printed and machined at module 0.8)
@@ -278,8 +281,8 @@ def master_before_f1(master):
 def before_f1_judged(schema, said):
     """A master built before F1: its record below link 11, and no part saying a process."""
     out = []
-    if not isinstance(schema, int) or schema >= LINK_SCHEMA:
-        out.append(f"its record is at link schema {schema!r}, not below {LINK_SCHEMA}")
+    if not isinstance(schema, int) or schema >= F1_LINK_SCHEMA:
+        out.append(f"its record is at link schema {schema!r}, not below {F1_LINK_SCHEMA}")
     if said:
         out.append(f"parts say a process: {said}")
     return out
@@ -350,12 +353,13 @@ def sentence_judged(text, sentence, absent=()):
 
 
 def record_judged(schema, entries, before, sidecars):
-    """The record after the Update, read from its file: at link 11, the same part files as before (no _P), each part's
-    spec printed and its Backlash the IIF; each .gear.json (``sidecars``: stem -> (schema, spec)) at sidecar 3,
-    printed."""
+    """The record after the Update, read from its file: at the link schema the app writes (11 when F1 ran; 12 since
+    F3), the same part files as before (no _P), each part's spec printed and its Backlash the IIF; each .gear.json
+    (``sidecars``: stem -> (schema, spec)) at sidecar 3, printed."""
+    from gear_generator import store
     out = []
-    if schema != LINK_SCHEMA:
-        out.append(f"link schema {schema}, not {LINK_SCHEMA}")
+    if schema != store.LINK_SCHEMA_VERSION:
+        out.append(f"link schema {schema}, not {store.LINK_SCHEMA_VERSION}")
     paths = sorted(path_key(e.path) for e in entries)
     if paths != sorted(path_key(p) for p in before):
         out.append(f"the record's parts {[stem_of(p) for p in paths]} are not the ones before")
@@ -429,8 +433,9 @@ def _self_check(ok, scratch):
 
     ok(squash(spur.printed_backlash_expression()) == squash(PRINTED_TEXT) and spur.BACKLASH_FACTOR == 0.3,
        f"the pinned IIF is the app's: {spur.printed_backlash_expression()!r}")
-    ok((store.PRINTED_SCHEMA, store.LINK_SCHEMA_VERSION) == (PRINTED_SCHEMA, LINK_SCHEMA),
-       f"the pinned schemas are the app's: sidecar {store.PRINTED_SCHEMA}, link {store.LINK_SCHEMA_VERSION}")
+    ok((store.PRINTED_SCHEMA, store._F1_LINK_SCHEMA) == (PRINTED_SCHEMA, F1_LINK_SCHEMA),
+       f"the pinned schemas are the app's: sidecar {store.PRINTED_SCHEMA}, F1's link {store._F1_LINK_SCHEMA} (the app "
+       f"writes {store.LINK_SCHEMA_VERSION})")
     ok(sorted(GearSpec().to_dict()) == sorted(W9_SPEC_KEYS), "a machined GearSpec's to_dict keys are W9's")
 
     # backlash_judged: the app's own figures pass; each wrong way fails.
@@ -655,16 +660,17 @@ def _self_check(ok, scratch):
         e.spec = p.spec.to_dict()
         e.variables = [[v.name, v.expression] for v in p.variables]
     cars = {stem_of(e.path): (PRINTED_SCHEMA, e.spec) for e in rec_after.current_parts()}
-    ok(record_judged(LINK_SCHEMA, rec_after.current_parts(), before, cars) == [],
-       f"record: the parts printed under their old names at link 11, sidecars at 3, holds: "
-       f"{record_judged(LINK_SCHEMA, rec_after.current_parts(), before, cars)}")
+    link = store.LINK_SCHEMA_VERSION
+    ok(record_judged(link, rec_after.current_parts(), before, cars) == [],
+       f"record: the parts printed under their old names at link {link}, sidecars at 3, holds: "
+       f"{record_judged(link, rec_after.current_parts(), before, cars)}")
     ok(record_judged(10, rec_after.current_parts(), before, cars) != []
-       and record_judged(LINK_SCHEMA, rec1.current_parts(), before, cars) != []
-       and record_judged(LINK_SCHEMA, rec_after.current_parts(), before[:4] + ["C:\\Out\\X_P.SLDPRT"], cars) != []
-       and record_judged(LINK_SCHEMA, rec_after.current_parts(), before,
+       and record_judged(link, rec1.current_parts(), before, cars) != []
+       and record_judged(link, rec_after.current_parts(), before[:4] + ["C:\\Out\\X_P.SLDPRT"], cars) != []
+       and record_judged(link, rec_after.current_parts(), before,
                          dict(cars, **{RANGEBOX_PARTS[0]: (1, {})})) != [],
        "record: link 10, the parts still machined, a renamed part and a sidecar at 1 each fail")
-    ok(record_judged(LINK_SCHEMA, rec_after.current_parts(), before, dict(cars, **{RANGEBOX_PARTS[2]: None})) != [],
+    ok(record_judged(link, rec_after.current_parts(), before, dict(cars, **{RANGEBOX_PARTS[2]: None})) != [],
        "record: a .gear.json missing fails alone")
 
     # master_before_f1 and before_f1_judged on W9's own record (link 10, no process), then on one an F1 app wrote.
@@ -675,7 +681,7 @@ def _self_check(ok, scratch):
     schema, said = master_before_f1(master)
     ok((schema, said) == (10, []) and before_f1_judged(schema, said) == [],
        f"master: W9's record reads link {schema}, no part saying a process, and is a master built before F1")
-    ok(before_f1_judged(LINK_SCHEMA, []) != [] and before_f1_judged(7, ["printed"]) != []
+    ok(before_f1_judged(F1_LINK_SCHEMA, []) != [] and before_f1_judged(7, ["printed"]) != []
        and before_f1_judged(None, []) != [],
        "master: one at link 11, one with a part saying a process, and one with no schema each fail")
 
@@ -1154,8 +1160,8 @@ def _rangebox(out, folder, path):
         car = store.read_sidecar(store.sidecar_path(e.path))
         cars[stem_of(e.path)] = (car.schema_version, car.record.spec) if car is not None else None
     wrong = record_judged(raw_record(path).get(store.LINK_SCHEMA_KEY), record.current_parts(), before_paths, cars)
-    check(not wrong, f"rangebox: the record on disk at link {LINK_SCHEMA}, the same five part files, each printed with "
-                     f"the IIF, each .gear.json at sidecar {PRINTED_SCHEMA}: {wrong or 'holds'}")
+    check(not wrong, f"rangebox: the record on disk at link {store.LINK_SCHEMA_VERSION}, the same five part files, each "
+                     f"printed with the IIF, each .gear.json at sidecar {PRINTED_SCHEMA}: {wrong or 'holds'}")
     entities_after = A.entities_of("rangebox, after", desk, folder)
     moved = {n: (entities_before.get(n), v) for n, v in entities_after.items() if entities_before.get(n) != v}
     wrong = (count_judged("the user's mates read before", entities_before, A.RB_USER_MATES)

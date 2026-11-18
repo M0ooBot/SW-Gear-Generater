@@ -47,6 +47,9 @@ from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from .. import findings
+from ..spec import BORE_ALLOWANCE_DEFAULT as SPEC_BORE_ALLOWANCE_DEFAULT
+from ..spec import BORE_ALLOWANCE_GLOBAL as SPEC_BORE_ALLOWANCE_GLOBAL
+from ..spec import BORE_FLAT_GLOBAL as SPEC_BORE_FLAT_GLOBAL
 from ..spec import KIND_BEVEL, RECIPE_ARCS, RECIPE_INVOLUTE, GearSpec, InputError
 from . import equations
 from .properties import property_ops
@@ -100,6 +103,14 @@ SHIFT_MAX = 1.0
 PRINTED_MODULE_NOZZLES = 2.5  # a module under this many nozzle widths rounds the profile off (1.0 at 0.4 mm)
 PRINTED_RIM_NOZZLES = 3.0     # the wall between the bore and the root under this many nozzle widths
 PRINTED_TOLERANCE = 1e-9      # mm; a printed figure this near its floor passes (module 0.75's clearance is 0.29999…)
+# F3 (PLAN-PRINTED §4.1, §4.2; F3-INTERFACES §2): the bore as cut. The two globals, each in a part only when it is
+# needed (an allowance not 0, a D), and the D's bounds, checked on the hole as cut: the flat at least FLAT_LEAST_H × R
+# from the axis (R the hole's radius) and at least FLAT_LEAST_DEPTH deep (R − h, which is the shaft's own D − Flat).
+BORE_ALLOWANCE = SPEC_BORE_ALLOWANCE_GLOBAL          # "Bore Allowance"
+BORE_FLAT = SPEC_BORE_FLAT_GLOBAL                    # "Bore Flat"
+BORE_ALLOWANCE_DEFAULT = SPEC_BORE_ALLOWANCE_DEFAULT  # mm on the diameter, printed and blank, a part not yet built
+FLAT_LEAST_H = 0.25           # × R
+FLAT_LEAST_DEPTH = 0.3        # mm
 
 # The global variables, by name. The first ten are the user's own, byte for byte.
 TEETH = "No. of Teeth"
@@ -193,11 +204,22 @@ class SpurDerived:
     # F1 (PLAN-PRINTED §1.1): the line width in mm when the gear is printed, None when it is not. Left out of
     # to_dict while None, so a machined gear's record is W9's.
     nozzle: Optional[float] = None
+    # F3 (PLAN-PRINTED §4.1, §4.2; F3-INTERFACES §2): the hole as cut. The allowance on the diameter, mm, that the bore
+    # is cut with (GearSpec.bore_allowance_mm), and the shaft's Flat, mm, with Drive flat (None: round). Left out of
+    # to_dict at 0 and None (derived_dict), so a record that has neither is byte for byte what it was. F3-0 declares
+    # them; package A's derive sets them.
+    bore_allowance: float = 0.0
+    bore_flat: Optional[float] = None
 
     @property
     def printed(self) -> bool:
         """Whether the gear is made printed (F1): it then carries its nozzle."""
         return self.nozzle is not None
+
+    @property
+    def bore_as_cut(self) -> float:
+        """The hole's diameter as cut, mm (F3): the bore plus its allowance, 0 with no bore."""
+        return self.bore + self.bore_allowance if self.bore > 0 else 0.0
 
     @property
     def backlash_printed(self) -> bool:
@@ -279,10 +301,15 @@ class SpurDerived:
 
 def derived_dict(section: Any) -> Dict[str, Any]:
     """A derived section as :func:`dataclasses.asdict` gives it, with ``nozzle`` left out while None (F1,
-    PLAN-PRINTED §1.1): what every derived gear's ``to_dict`` writes into a record."""
+    PLAN-PRINTED §1.1), and F3's ``bore_allowance`` while 0 and ``bore_flat`` while None (§4.3): what every derived
+    gear's ``to_dict`` writes into a record."""
     values = asdict(section)
     if values.get("nozzle", 0) is None:
         values.pop("nozzle")
+    if values.get("bore_allowance", None) == 0.0:
+        values.pop("bore_allowance")
+    if "bore_flat" in values and values["bore_flat"] is None:
+        values.pop("bore_flat")
     return values
 
 

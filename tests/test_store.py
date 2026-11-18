@@ -224,7 +224,7 @@ def test_a_link_record_round_trips(tmp_path):
     assert store.read_link_record(workbook) == record
     assert store.open_link_record(workbook) == record
     raw = json.loads((tmp_path / "R.workbook.json").read_text())
-    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 11         # F1's (PLAN-PRINTED §1.2)
+    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 12         # F3's (PLAN-PRINTED §4.3)
     assert raw["schema_version"] == 1          # what a build from before schema 2 checks: see the next test
     assert raw["parts"][0]["revision"] == 0 and raw["gearbox"]["components"][0]["name"] == "Gear_m1.5_N17_r2-1"
 
@@ -830,7 +830,7 @@ def test_a_v3_record_is_written_byte_for_byte_the_same_however_often_it_round_tr
     assert os.stat(path).st_mtime_ns == stamp
 
 
-@pytest.mark.parametrize("newer", [store.LINK_SCHEMA_VERSION + 1, store.LINK_SCHEMA_VERSION + 2, 12])
+@pytest.mark.parametrize("newer", [store.LINK_SCHEMA_VERSION + 1, store.LINK_SCHEMA_VERSION + 2, 13])
 def test_a_newer_record_with_mates_is_refused_and_left_byte_identical(tmp_path, newer):
     """Whatever schema a later phase sets (W7 5, W8 6), this one refuses it: "newer than I know", not a list."""
     raw = _gearbox_raw(turning_record(str(tmp_path / "R.xlsx")))
@@ -1120,7 +1120,7 @@ def test_a_record_the_app_wrote_before_schema_5_reads_writes_and_reads_again(tmp
     target = tmp_path / "R.workbook.json"
     target.write_text(json.dumps(raw))
     first = store.read_link_record(str(tmp_path / "R.xlsx"))
-    assert first.schema_version == store.LINK_SCHEMA_VERSION == 11 and first.gearbox.carriers == []
+    assert first.schema_version == store.LINK_SCHEMA_VERSION == 12 and first.gearbox.carriers == []
     assert all(c.of == "" for c in first.gearbox.components) and all(m.on == "" for m in first.gearbox.mates)
     store.save_link_record(first)
     assert json.loads(target.read_text())["link_schema_version"] == store.LINK_SCHEMA_VERSION
@@ -1416,14 +1416,14 @@ def test_a_w8_field_of_the_wrong_shape_is_refused_with_a_sentence(change, match)
 
 
 def test_a_record_newer_than_schema_6_is_refused_and_left_byte_identical(tmp_path):
-    """W8's reader (schema 6) refused schema 7; since F1 reads 11 (PLAN-PRINTED §1.2), the first schema it refuses is
-    12."""
+    """W8's reader (schema 6) refused schema 7; since F3 reads 12 (PLAN-PRINTED §4.3), the first schema it refuses is
+    13."""
     raw = json.loads(store.link_record_to_json(modes_record("R.xlsx")))
-    raw["link_schema_version"] = 12
+    raw["link_schema_version"] = 13
     target = tmp_path / "R.workbook.json"
     text = json.dumps(raw)
     target.write_text(text)
-    with pytest.raises(store.UnknownSchema, match=r"schema 12, this one reads 11"):
+    with pytest.raises(store.UnknownSchema, match=r"schema 13, this one reads 12"):
         store.read_link_record(str(tmp_path / "R.xlsx"))
     assert target.read_text() == text and sorted(p.name for p in tmp_path.iterdir()) == ["R.workbook.json"]
 
@@ -1593,26 +1593,33 @@ def test_the_e4_record_round_trips_byte_for_byte(tmp_path):
     assert lock["gears"] == ["Carrier carrier", "LoDog"] and lock["modes"] == [] and lock["values"] == {}
 
 
-def test_a_reader_of_sidecar_2_refuses_a_printed_gear_json_and_leaves_it_as_it_is(tmp_path, monkeypatch):
+@pytest.mark.parametrize("holds, schema, reader", [
+    ((), 3, 2),                                         # built before F3: no bore global, so at 3 and refused by W9's 2
+    ((("Bore Allowance", "0.2"),), 4, 3),               # F3 (§4.3, M2): holding the global, at 4 and refused by F2's 3
+], ids=["no bore global", "Bore Allowance"])
+def test_a_reader_of_sidecar_2_refuses_a_printed_gear_json_and_leaves_it_as_it_is(tmp_path, monkeypatch, holds,
+                                                                                     schema, reader):
     """F1 (PLAN-PRINTED §1.2; F1-0's review, should-fix 4): a printed part's .gear.json is written at 3, and a W9-era
-    reader (sidecar 2) refuses it, by load and by the planning read, and leaves the file byte for byte as it was."""
+    reader (sidecar 2) refuses it, by load and by the planning read, and leaves the file byte for byte as it was. F3
+    (§4.3, M2): the schema is decided from the part's globals, so the same printed spec (Bore 10 by default) with
+    "Bore Allowance" among them is written at 4, and an F2-era reader (sidecar 3) refuses it the same way."""
     from gear_generator.gears import kind_for
     from gear_generator.spec import GearSpec
     spec = GearSpec(process="printed", nozzle="0.6")
     kind = kind_for(spec)
     derived = kind.derive(spec)
     part = str(tmp_path / "Gear_m1.5_N25_P.SLDPRT")
+    variables = [[v.name, v.expression] for v in kind.variables(spec, derived) if v.name != "Bore Allowance"]
     sidecar = store.built_sidecar(part, "Gear_m1.5_N25_P.SLDPRT", kind=spec.kind, recipe="A", spec=spec.to_dict(),
-                                  derived=derived.to_dict(),
-                                  variables=[[v.name, v.expression] for v in kind.variables(spec, derived)],
+                                  derived=derived.to_dict(), variables=variables + [list(h) for h in holds],
                                   features=[], dimensions=[], manual_steps=[], template="", trig="degrees",
                                   written_by="test")
-    assert sidecar.schema_version == store.PRINTED_SCHEMA == 3
+    assert sidecar.schema_version == schema and (store.PRINTED_SCHEMA, store.BORE_SCHEMA) == (3, 4)
     target = tmp_path / "Gear_m1.5_N25_P.gear.json"
     store.save(str(target), sidecar)
     before = target.read_bytes()
-    monkeypatch.setattr(store, "SCHEMA_VERSION", store.BANDED_SCHEMA)          # a W9-era reader
-    with pytest.raises(UnknownSchema, match=r"schema 3, this one reads 2"):
+    monkeypatch.setattr(store, "SCHEMA_VERSION", reader)          # a W9-era reader (2), or an F2-era one (3)
+    with pytest.raises(UnknownSchema, match=rf"schema {schema}, this one reads {reader}"):
         store.load(str(target))
     assert store.read_sidecar(part) is None and store.read_sidecar(str(target)) is None
     assert target.read_bytes() == before and sorted(p.name for p in tmp_path.iterdir()) == [target.name]

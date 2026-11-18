@@ -118,6 +118,11 @@ class Gear:
     # ``notes`` so every positional use of the fields before stays as it is.
     start_band: str = ""
     end_band: str = ""
+    # F3 (PLAN-PRINTED §4.1, §4.2; F3-INTERFACES §4): the bore as cut, as typed ("" blank: the allowance as built or
+    # its default, a round drive, no flat). After the bands, so every positional use of the fields before stays.
+    bore_allowance: str = ""
+    drive: str = ""
+    flat: str = ""
     row: int = 0
 
     def kind_word(self) -> str:
@@ -163,6 +168,12 @@ class Gear:
             name=self.part_name,
             start_band=self.start_band,
             end_band=self.end_band,
+            # F3: blank as the row has it; a part on record's blank allowance is its figure as built only once
+            # spec.as_built reads its record (B's planning), so before any record is read it is not on record.
+            bore_allowance=self.bore_allowance,
+            drive=self.drive or "round",
+            flat=self.flat,
+            built_allowance="",
             # F1: the Box's word, resolved by assess before any spec is planned, and its nozzle; only values that
             # checked (the coordinator's ruling 3), so a bad Box cell is said once, at the Box, never at every row.
             process=checked_process(box),
