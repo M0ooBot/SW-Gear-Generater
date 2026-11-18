@@ -1011,9 +1011,10 @@ def test_the_workbook_windows_blank_process_on_a_gearbox_built_machined_is_machi
 # -- Update, every part reused by Build again…, nothing for the strip's Update values, Print files not refused and its
 # -- list's part blocks word for word, no Gears column changed, W9d's "bore" the shaft's own size, and nothing written.
 # -- tests/fixtures/printed/F2_built.json was made by running the code at 08db5ba (a git archive in a scratch
-# -- directory, since deleted), as RangeBox_W9_record.json was made at f3c4873: four printed parts built from the
-# -- form (a spur, a helical and a herringbone gear at GearSpec's default Bore 10, and §3.2's Coupon_C with its
-# -- offset in Bore) and three gearboxes built on the fake as test_workbook_in_place_round_trip.Desk builds them (the
+# -- directory, since deleted), as RangeBox_W9_record.json was made at f3c4873: six printed parts built from the
+# -- form (a spur, a helical and a herringbone gear at GearSpec's default Bore 10, §3.2's Coupon_C with its offset in
+# -- Bore, and, added by F3-0-REVIEW's S1 from the same code, a bevel and a crown gear at Bore 8, whose bore is in the
+# -- revolved blank's link expressions) and three gearboxes built on the fake as test_workbook_in_place_round_trip.Desk builds them (the
 # -- 12 : 1 reducer printed; RangeBox_Fixed printed and machined, its Sun, Planet, dogs and Hub bored), each with what
 # -- the code said of it then.
 
