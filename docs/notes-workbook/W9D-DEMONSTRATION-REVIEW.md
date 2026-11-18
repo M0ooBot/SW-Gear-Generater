@@ -1251,3 +1251,75 @@ holds a user document title (*"open before: []"*).
    - `W9D-DEMONSTRATION.md`: N1-N3;
    - `HANDOFF-WORKBOOK.md`: stale after 2026-11-17 midday, so W9d's state, both 2026 runs and the reviews;
    - `design/UI-DESIGN.md` §9 if must-fix 1 or 2 changes its examples.
+
+## Re-check of `891a707`, `225e3d7`, `e3395d3`, `2b51fbe` and `a3e05fe`, before the 2024 run
+
+*Independent, 2026-11-18, at `2b51fbe`. No SolidWorks was run. I ran no whole suite and changed nothing but this
+file. In a `git archive` scratch copy, deleted after, I ran:*
+- `test_findings.py`, `test_swbuild_carry.py`, `test_workbook_carry.py` and `test_workbook_user_record.py`: 473
+  passed;
+- W9d's `--self-check`: 0 failed;
+- ten flips, one at a time, each against its test file.
+
+**Verdict: fit for the 2024 run. Nothing must be fixed first.**
+
+**The values.**
+- `git diff c2d95cc HEAD -- src/gear_generator/findings.py` changes these assignments and no others:
+  - on 2026, the five my §4 allowed, at exactly those values: the kinds are the eight words, with no perpendicular,
+    tangent or limit angle;
+  - the lightweight fact as a pair, True on 2026 and None on 2024;
+  - on 2024, the fourteen probe reads, each written as its 2026 twin. The two r3 strings are the constant
+    `entity_references` compares (`swcom.py:3947`);
+  - `WHATS_WRONG_STAYS_WITHOUT_A_REBUILD`, from W9c's `29d09da`, which is outside these commits.
+- Every `CARRY_*` write, `REFERENCED_CONFIGURATION_READ`, `VIRTUAL_READ`, `PATTERN_INSTANCE_READ`,
+  `ORIGIN_ENTITY_READ` and the vertex route stay None on 2024.
+- The comments carry the caveats as given, and §8, §8.2 and §8.3 of `W9D-INTERFACES.md` say the same.
+
+**The pins pin.** Each of these flips fails its test:
+- `CARRY_INSERTS_ON_2024` True;
+- `COAXIAL_FACE_READ_ON_2024` False;
+- `REFERENCED_CONFIGURATION_READ_ON_2024` True;
+- the kinds without `gear`, and the kinds with `perpendicular`;
+- the lightweight fact True on 2024;
+- `DEPENDENCIES_READ_ON_2024` changed;
+- the fallback sentence's `(was …)` taken out;
+- the moved sentence's `(was …)` taken out;
+- the rigid clause forced on.
+
+**No test asserts less than before.**
+- The eight tests given `w9d_unmeasured` still assert what they did, with the M9 findings None on both versions.
+- The three tests that held a 2024 value at None now hold it equal to its 2026 twin and not None.
+- The new `test_w9d_2024_findings_rest_on_the_probes_2024_run` pins each value to its `propose` line, and the
+  differing facts to their lines and the JSON's `sections`.
+
+**The wording** (`ui_text.py`) is true in each state that says it:
+- Renamed components:
+  - `_carried_as` takes the new → old map, so a component SolidWorks kept by its name is said alone, as the test's
+    second half holds.
+  - The fallback, moved, clash, sub-assembly and pattern-instance sentences each name a carried component by its new
+    name with its old one beside it.
+  - The moved sentence still finds its anchor by the old name.
+- The rigid clause (`_standing`, `:5879-5891`):
+  - It is said only where `CARRY_INSERTS_A_SUBASSEMBLY` is True on a known version and no sub-assembly is left. That
+    finding is None on both versions today, so it is said nowhere.
+  - In the question, `comps` is read only when there is a plan.
+  - Where nothing is carried, every sub-assembly counts as left.
+- No probe script matches the changed words.
+
+**`carry-gates` on 2024 with the probe reads set and every write None.** This is the state the second 2026 run met,
+with every write None and the reads set, which passed 27 ok:
+- `section_gates` reads the standing gates through `finding_name`, which is `_ON_2024` there;
+- `unset` holds `CARRY_INSERTS_ON_2024`, so the question and the result must lead with it;
+- there is no r3 walk while it is None;
+- each gate's own refusal is checked with the others patched True, and every one of them is None on 2024;
+- `probe_reads(2024)` now gives the 2026 expectations, so `carry` and `carry-closed` take the unshown-states branch
+  and the closed path is read;
+- `test_what_a_carry_is_gated_on_per_version_as_committed` holds that on 2024 `CARRY_INSERTS` alone gates the
+  carry.
+
+**A correction to my probe review's watch list.** Since `f3c4873`, W9d takes `--close-outlived-whats-wrong` (the
+coordinator's extension). Use `W9D-DEMONSTRATION.md`'s 2024 command lines, which carry it, not the ones in
+`W9D-PROBES-REVIEW.md`'s last section. Without the flag, a box that outlives its job is still the STOP.
+
+**Still open, not before the run:** the edge prefilter's should-fix in `swcom.entity_references` (`:3964`). M9's
+fixture has no edge mate.
