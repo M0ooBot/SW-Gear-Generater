@@ -1377,3 +1377,28 @@ unsaved or mismatched.
 - *Remaking by name on a gear part made new is measured on SolidWorks:* UserGear6 on Sun's Gear Axis was made again
   (log 1:1484, 1565). A copy takes that path with its own handle.
 - No rerun is needed.
+
+**Re-check of `d496cfd` (2026-11-18, at `d496cfd`).** I changed no code and started no SolidWorks; the targeted tests
+ran in a `git archive` scratch copy, deleted after.
+
+**Fit, and nothing must be fixed.**
+
+- **The fix is as I gave it.** Both lookups now use the Gears row, `planetary.copy_of(id)[0]`: the job lookup in
+  `carry_for`, and the `made_new` and job tests in `_why_part_new`.
+- **The addition, `update.why_new_of`, is right.**
+  - It keys each reason by body and also, with `setdefault`, by the planet's Gears row. That row is the id
+    `StaysBehind.left` records W9a's features by.
+  - The question (`_features_question`, through `carry_foresight`) and the result (`_parts_left`, through
+    `carried_status`) now find a row such as *Planet* there. Before, they said the feature stays in a part
+    *RangeBox_r2 does not use*, which was untrue.
+  - The new sentence is true in each state that says it. All copies of a row share one part, so the row's reason is
+    every copy's: *"Your PlanetPin stays in Gear_m1.25_N13, which Planet's new part replaces (its Face width changed)"*.
+    With `UNSAVED` it says the unsaved reason with how to keep the part. A gear with no copies keys the same id twice
+    to one reason. A part that is reused gives no reason, as before.
+- **The tests pin.** At head the four carry and update test files and `test_findings.py` pass (581). The three new
+  tests all fail with `7f91037`'s `src`. With only `why_new_of`'s row key taken out, two of them fail: the
+  feature's reason, and the end-to-end carry.
+- **The evidence stands.** M9's fixture on both versions makes only Sun and Aux new. Neither has the copy word, so
+  `copy_of` returns each unchanged, and `why_new_of` returns the same dictionary as before for them. The planets are
+  reused and give no reason. Every body those runs met, on 2026 tonight and in the 2024 demonstration running from
+  `5aca9c1`, therefore takes the same path and gets the same words.
