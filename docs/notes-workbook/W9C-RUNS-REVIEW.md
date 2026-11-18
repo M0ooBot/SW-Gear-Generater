@@ -183,7 +183,406 @@ reach users, because those findings are what turn the hidden false footer into a
 
 ## Addendum: SolidWorks 2024
 
-*(owed: the confirming run now in progress)*
+*Independent, 2026-11-18, at `f7c2f0d`. I started no SolidWorks and changed no code.*
+
+- *What I read:* `06d5141`'s four logs and their JSON, every line, and the note's section "The confirming run on
+  SolidWorks 2024"; checked against run 10 and run 11 (34.0.0) check line by check line, and against the rulings on
+  What's Wrong (`ISSUE-1-PLAN.md`, its last two sections; `W9A-CLOSE-2024-REVIEW.md`).
+- *Citations:*
+  - `24-1:` `w9c-demo-sw2024-20261117-1-landing-fixed-modes-memory-stop.log` (JSON `…-171926.json`);
+  - `24-2:` `…-2-remove.log` (`…-192454.json`);
+  - `24-3:` `…-3-bands-off-m4.log` (`…-194351.json`);
+  - `24-4:` `…-4-remake-whats-wrong-stop.log` (`…-195231.json`);
+  - `log 10:` and `log 11:` as in the 2026 parts above.
+- *Snapshot and version:* each log's line 2 states snapshot `4315774` and its line 4 attaches 2024 revision 32.5.0
+  (PIDs 27368, 64480, 75080 and 66428, each 0.50 to 0.68 GB at attach). Each JSON holds `revision [32, 5, 0]` and
+  `snapshot 4315774`. `open before: []` in every log.
+- *Suite at `f7c2f0d`:* 4099 passed, 1 skipped, 1 failed (the known font-width test).
+- *The script's self-check at `f7c2f0d`* (scratch copy): 88 ok, 1 failed (§2 below; the run itself is not touched by
+  it).
+
+**Verdict.**
+
+- **The six sections that ran whole are sound evidence for `4315774`'s `src`, and for head's gated writes.**
+  landing, fixed, modes, remove, bands-off and m4 are 0 failed with no STOP inside them. Every check line run 10
+  printed is printed here too (numbers masked), and every traced press made the same calls by member as on 2026. The
+  extra checks are the masters this run built. No check passes on nothing, and each proposal is printed from the
+  checks' own results.
+- **remake's first part is sound, and M3 stopped where the note says.** Its proposal stands. M3's step 1 is shown;
+  steps 2, 2b and 3 are not measured on 2024.
+- **The note says one thing the logs contradict, and it matters for the ruling: the What's Wrong box did not go
+  after 60.11 s. It was still up then.** Smaller points follow in §1.
+- **The 2024 evidence carries over to head for every gated write** (§2). The one SolidWorks-side change on an
+  Update's path since `4315774` is a read: the inventory now also reads each user mate entity's kind. It has
+  never run on 2024 inside an Update.
+- **The five findings may be set True on 2024; the other three stay None** (§3).
+- **Must-fix:**
+  - before the 2024 findings commit cites the note: correct its What's Wrong sentence (§1);
+  - before `remake` runs again on 2024: the script's step 2 check holds the ring to code 72, which 2024 never reads,
+    so it would fail on a harmless fact (§4).
+
+### 1. Section by section
+
+- **`landing`** (24-1:11-910, 107 ok, 0 failed). It also built `rangebox.master`: 15 checks that run 10, reusing
+  masters, did not run (24-1:14-750).
+  - The fix is shown: every foreseen change routed clean, every unforeseen one set straight clean, the leftover
+    clean (24-1:909, 812).
+  - Routed one tooth down by way of 54 and 53 (24-1:799, 902): clean.
+  - Set straight, 55 → 54 and 56 → 55 still fail (24-1:807, 814). The short line's solved end lies past the origin,
+    as on 2026 (24-1:810, 817), so the cause reads the same. Only the code differs: Tooth Space and Teeth read 51 and
+    51, where 2026 read 72 and 1 (log 10:70, 77).
+  - **Case 10 differs too, and the note does not say so.** The user's cut reads code 51 before the set (24-1:905),
+    where 2026 read 71 (log 10:166). The route and the outcome are as on 2026: both legs `[False, False]`, ending at
+    54, the user's cut the only feature in error (24-1:902).
+- **`fixed`** (24-1:911-1318, 122 ok, 0 failed). It also built the user parts and `setup.master` with its M1/M2
+  reads and inventory (24-1:913-1035). The checks are run 10's, line for line:
+  - the gates refuse first, with nothing written;
+  - the Update ends ok (24-1:1243);
+  - Hub is built, inserted and mated (24-1:1245), the bands are given (24-1:1246), and Hub reads resolved in every mode
+    (24-1:1262);
+  - the step faces land to 1e-4 on F0, with `GetArea` 114.303 and 114.295 kept as facts, as on 2026 (24-1:1255-1259);
+  - each mode is §3's (24-1:1266-1274), and the second press is quiet with every save flag False (24-1:1308);
+  - it proposes the two findings True (24-1:1316-1317).
+
+  Its five traced presses made the same calls by member as run 10's.
+- **`modes`** (24-1:1319-1854, 80 ok, 0 failed). The 80 check lines are run 10's 80.
+  - H2 is added, and the inventory names H2 where SolidWorks reads each user mate on (24-1:1502-1503).
+  - The footer after the add names no user mate suppressed in H2 (24-1:1554).
+  - N is deleted with the lost flag said (24-1:1683), the mode showing is refused (24-1:1719), and H, the first mode,
+    is removed (24-1:1836).
+  - It proposes both findings True (24-1:1527, 1853).
+  - *Memory, a fact for the rule.* The watch set its memory STOP at 24-1:1680 (1.90 GB free), between N's removal and
+    the mode-showing refusal. The section ran on, by the script's rule ("before the next section",
+    `w9a_demonstration.py:79`). H's removal started at 1.77 GB free and ended at 0.94 GB (24-1:1755-1758). Its
+    checks all passed, and the run ended after the section (24-1:1855).
+- **`remove`** (24-2, 58 ok, 0 failed). It built `reducer.master` (12 extra checks). G4 is taken out with each
+  mate read gone by name (24-2:625), and C6's entry is dropped (24-2:626). The HighDog refusals are as in run 10.
+- **`bands-off`, `m4`** (24-3, 13 and 7 ok). The check lines are identical to run 10's.
+  - The relief call is made script-side only and reads clean (24-3:94).
+  - The same five reference reads answer without error (24-3:153), and no positive case is made (24-3:154).
+- **`remake`, the first part** (24-4:11-203, 0 failed).
+  - The refusal and the change press made exactly run 11's calls by member (24-4:74, 103; log 11:74, 103).
+  - The four gear mates are remade with modes (24-4:180), the user's items are kept (24-4:181), every flag is right
+    (24-4:190), and L reads 3.0 (24-4:199).
+  - The post-check's out-of-step and off-axis lines are run 11's (24-4:106-108).
+  - It proposes the finding True (24-4:203).
+- **`remake`, M3 step 1** (24-4:248-309) is as on 2026, with the same calls (24-4:256).
+  - It stops in the ring, and the record marks it (24-4:308).
+  - The stop names RangeBox and says to answer No (24-4:309).
+- **What's Wrong before step 2** (24-4:310-318). The box came 0.47 s into the script's own `read_now` of the
+  assembly, the worker in `ActivateDoc3`, owned by SolidWorks' frame.
+
+**Is each "0 failed" real?** Yes.
+- Every `ok` line of run 10's landing, fixed, modes, remove, bands-off and m4 has its twin in 24-1 to 24-3, with
+  numbers masked. None is missing.
+- Each `propose` is `proposed(...)` over the `clean` dict its checks built (`w9c_demonstration.py` 2027-2033, 2169,
+  2306, 2497). Each 2024 evidence dict reads all True.
+- The four sections' interference checks judge pairs read from SolidWorks after each press, in every mode.
+
+**What the write-up says that the logs do not bear out:**
+
+1. **"The box went by itself after 60.11 s, against the ruling's 60 s."** It did not go.
+   - The fact line reads "came at [0.47] s, stayed [] s; after the job it took 60.11 s to go (allowed 60); **1 up at
+     the end**" (24-4:313). The JSON's `whats_wrong_lifetimes` holds `stayed []` and `still_up 1`.
+   - `whats_wrong_end` waits while the box is up for at most 60 s, and then prints the time it waited as "took … to
+     go" whether or not the box went (`w9a_demonstration.py:353-382`).
+   - So the box outlived the read by more than 60 s. Nothing logged says it ever went. The commit message repeats
+     the error and cannot be changed; the note can.
+2. *"It was then killed, since it would not close with the copy's changed parts open"* is not in the log. The log
+   says the worker was marked hung, nothing was closed, and SolidWorks was left as it stood (24-4:321). Say it as the
+   operator's account.
+3. *"§0.3's STOP":* the log names W8-PLAN §0.5 (24-4:315). Trivial.
+4. *"Each section took 2.5 to 3.5 times as long as on 2026."*
+   - landing: 987 s against 824 (1.2 times, and 2024's also built a master);
+   - modes: 3886 s against 1115 (3.5);
+   - bands-off: 405 s against 101 (4.0);
+   - m4: 35 s against 17 (2.1);
+   - fixed and remove also built masters on 2024.
+
+   Say "1.2 to 4 times, three of them building their masters too".
+5. *"14.69 GB at its peak":* 14.76 GB is logged (24-1:1758).
+6. **remake's memory is understated.** The watch's STOP line came at 24-4:98, at 7.30 GB private and 1.94 GB free,
+   during the change press.
+   - remake was the session's only section, and the guard acts between sections, so M3 ran after it at 2.71 GB free
+     (24-4:251).
+   - The `done` line does not count that STOP (24-4:329).
+   - The note says only that remake "reached 7.3 GB … and fell back to 2.0 GB".
+7. *"code 51 twice (`swSketchErrorExtRefFail`)":* the name says a cause nobody measured. 51 is what 2024 has given
+   for every feature error seen:
+   - W5's over-defined mates (`findings.py:563-566`, "never reads meaning into the number");
+   - W9a's Sprocket-1;
+   - here, the ring and the user's cut.
+
+   Say "51, the number 2024 gives for any feature in error".
+8. **The interference volumes are described as SolidWorks against the app, but the difference is narrower.**
+   - The app's own reads agree with SolidWorks' in every mode but one per press: N in fixed's press (374.463 against
+     392.129, 24-1:1281) and H2 in modes' press (152.629 against 160.748, 24-1:1520). Both are the RangeSlv–Sprocket-4
+     pair, 4.5 % and 5.1 % low.
+   - modes' own press read N at 392.129 (24-1:1404). The pairs were right in every mode (24-1:1521, 1847).
+   - Across versions, 1408.381 against 1408.364 is a kernel difference with both sides agreeing within each version.
+   - The cause of the low reads is not known.
+
+### 2. Does the evidence stand for today's head?
+
+`git diff 4315774 f7c2f0d -- src` adds 4601 lines, almost all W9d's carry: Build again's read R and carry C, the
+record's schema 10 and the sentences. On an Update's path, call by call:
+
+- **`Session.mate_info`**, in the inventory read of every Update with user mates (`swbuild._read_user_work`). Each
+  entity now also reads:
+  - `IMateEntity2.ReferenceType2`;
+  - for a feature, `Reference` then `Name`;
+  - for a datum plane, the component's `GetModelDoc2` and a feature walk (`FirstFeature`, `GetTypeName2`,
+    `GetNextFeature`, `Name`) to the third `RefPlane` (`swcom.py` `_entity_kind_read`, docstring "UNMEASURED as
+    written here").
+
+  Every failure becomes `("unread", "")`. The result goes only into `UserMate.entities` and the record (D5).
+  `whole` and every judgement of the Update are computed as before, and `.entities` is read only by W9d's carry
+  (`swbuild.py` 7098 onward).
+  - *Fact:* the calls were measured one by one on 2024 by W9c's probes, marking nothing.
+  - *Fact:* the combination ran inside an Update on 2026 only (W9d run 1's fixture, `w9d-demo-sw2026-20261117-1-…`
+    line 90).
+  - *Inference:* they cannot change a gate's outcome on 2024. Their side effects there (a mark, a box, time, memory)
+    are unmeasured.
+- **`swcom._read`** now calls a member that late binding hands back uncalled, under the COM-error guard.
+  `GetSaveFlag`, `GetType`, `GetTypeName2` and `GetConfigurationNames` go through it. These are the same members in
+  the same order; only the wording of a COM error changes.
+- **`find_component`** gains `suppressed_ok`, False by default. No Update path passes it.
+- **`finish_update`** calls `_follow_carry`, which returns at once on a record with no carry. Every W9c record has
+  none.
+- **The record is written at schema 10.** A W9c-era record of schema 9 (this run's masters) reads forward.
+- **`build_gearbox(carry=None)`** is W9a's call for call. It is used here only to build masters.
+- **`ui_text`** (`9cbfc08`, `0b7582f`): the close-without-saving parenthesis now says what closing the assembly
+  costs. M3 steps 1 and 2 and the footer carry it.
+  - I ran the script's predicates on head's sentence: `footer_says_close`, `status_alone`, `says_close_with_assembly`,
+    "set nothing" and "still open in SolidWorks" each hold.
+  - The self-check's one failure is its verbatim sample `apps == still` (`w9c_demonstration.py:1258`), which still
+    holds the old parenthesis. `W9D-REVIEW-B` noted it.
+- **No hunk touches `update_gearbox`, `_update_motion`, the in-place steps, `in_place_gates` or the finish of
+  W9c's writes.** Nothing that W9d adds redefines a name the Update calls (no duplicate `def` in `swbuild` or
+  `swcom`).
+
+**So the 2024 evidence carries over to head for every gate:**
+- inserts, bands, adds, removes and remakes make the same writes in the same order;
+- the refusals and the held-in-error stop are unchanged.
+
+What head adds on 2024 that no run has shown is the inventory's entity reads. A `remake` rerun from head (§5)
+measures them on 2024 at no extra cost: its every press reads the inventory, and the script's flag brackets would
+catch a mark.
+
+### 3. The findings for 2024
+
+| Finding | Set `_ON_2024` | Rests on |
+|---|---|---|
+| `UPDATE_INSERTS_A_GEAR` | **True** | 24-1:1243, 1245, 1262, 1308, 1316 |
+| `UPDATE_BANDS_IN_PLACE` | **True** | 24-1:1246, 1259, 1317 |
+| `UPDATE_ADDS_A_MODE` | **True** | 24-1:1502, 1503, 1515, 1527 (no user mate said suppressed in H2: 1554) |
+| `UPDATE_REMOVES_A_MODE` | **True** | 24-1:1683, 1719, 1725, 1836, 1853 |
+| `UPDATE_MAKES_MATES_WITH_MODES` | **True** | 24-4:103, 180, 181, 190, 199, 203 |
+| `UPDATE_MAKES_A_NEW_COUPLING` | **stays None** | No legal edit reaches it; nothing measured on either version |
+| `UPDATE_SUPPRESSES_THE_RELIEF` | **stays None** | The call was made script-side only, clean (24-3:94, JSON `…_facts`); no Update made it |
+| `EXTERNAL_REFERENCES_READ` | **stays None** | No positive case (24-3:154); the five reads answered, as facts (24-3:153) |
+
+**`UPDATE_MAKES_MATES_WITH_MODES_ON_2024` may be set without the M3 rerun.** M3 is not this gate's evidence:
+- step 1 stops in a part before any mate is made;
+- step 2 is the held-in-error stop of the check phase, version-free code shown on 2026;
+- step 3's remake is the same write as the first part's.
+
+The rerun is owed for the stop's behaviour on 2024 and for should-fix A's premise, not for the gate.
+
+**Each 2024 comment should carry, beside the 2026 caveats it repeats:**
+- **All five:**
+  - measured at `4315774` on 32.5.0;
+  - head's Update also reads each user mate entity's kind (W9d D5), which has not run inside an Update on 2024 and
+    judges nothing (§2);
+  - SolidWorks 2024's first press on a freshly opened RangeBox grew it by 3.3 to 4 GB, held until the assembly was
+    closed (§4).
+- **`UPDATE_INSERTS_A_GEAR`:**
+  - a hub only;
+  - the interference is said after the press;
+  - on 2024 one pair's volume read 4.5 % low in one mode of the press (24-1:1281), with the pairs right.
+- **`UPDATE_BANDS_IN_PLACE`:** giving only; the step faces as on 2026 (24-1:1255-1259).
+- **`UPDATE_ADDS_A_MODE`:** H2's volume read 5.1 % low (24-1:1520), with the pairs right.
+- **`UPDATE_REMOVES_A_MODE`:**
+  - the first mode included, the mode showing refused by name;
+  - H's removal ran under 2 GB free (24-1:1755-1758) and passed.
+- **`UPDATE_MAKES_MATES_WITH_MODES`:**
+  - measured on 28/14/56.
+  - On 2024 M3 is shown to step 1 only: the set-straight press stops in the ring and names RangeBox (24-4:255,
+    308-309).
+  - The press made again without closing is not measured on 2024. What's Wrong came at the script's activation of the
+    assembly with the ring in error and outlived it (24-4:310-314).
+  - A removal with modes is fake-only.
+- **`EXTERNAL_REFERENCES_READ`:** the five candidates of 24-3:153 as facts, as for 2026; no route finding.
+
+**The pins** (`tests/test_findings.py`, through `_w9a_run` with snapshot `"4315774"` and `(32, 5, 0)`; line 4 of
+each log reads `attach  SolidWorks 2024 (revision 32.5.0)`, which `_w9a_run` accepts):
+- **24-1 with `…-171926.json`:**
+  - `data["proposal"]` for the four True;
+  - lines 909, 1243, 1245, 1246, 1262, 1308, 1316, 1317, 1502, 1527, 1554, 1683, 1719, 1836 and 1853 (each line's
+    head);
+  - 807 and 814 for the codes `[('Tooth Space', 51), ('Teeth', 51)]`, as a fact.
+- **24-2 with `…-192454.json`:** line 625.
+- **24-3 with `…-194351.json`:**
+  - the proposal's two None;
+  - lines 94, 153 and 154.
+- **24-4 with `…-195231.json`:**
+  - the proposal's True;
+  - line 103's calls by member exactly;
+  - lines 180, 181, 190, 199, 203, 255, 256, 308 and 309;
+  - the JSON's `whats_wrong_lifetimes` (`stayed []`, `still_up 1`) beside line 313.
+- **The gate list.** Add the re-check's test with no fixture, asserting the committed gate list. With the five set,
+  `in_place_gates(every, Y24, modes=True, remakes=True)` and Y26's are each `[(STEP_COUPLING,
+  "UPDATE_MAKES_A_NEW_COUPLING_ON_<year>")]`.
+
+### 4. The measured differences from 2026
+
+- **The straight one-tooth-down ring fails with 51 on 2024, 72 on 2026.**
+  - *App:* nothing in `src` reads the number. The landing foresight works from the globals, the stop from the rebuild's
+    result and the record's mark (`grep`: 72 appears only in `gears/landing.py`'s docstring, as run 6's fact).
+  - *Sentences:* none says a code.
+  - *Tests and the fake:* `tests/test_swbuild_landing.py:88-90, 234`, `tests/test_swbuild.py:503` and
+    `tests/test_workbook_in_place_round_trip.py:1232-1361` make the fake answer 72, 2026's value. They pin the fake,
+    not a decision.
+  - *Note, low:* `landing.py`'s docstring should add "51 for both features on 2024".
+  - **The script depends on it: a must-fix before the rerun.** `wrote_nothing` appends "the ring reads …, not Tooth
+    Space at 72 and 54 teeth" whenever Tooth Space is not 72 (`w9c_demonstration.py:738-739`). On 2024 step 2 would
+    therefore fail on the code alone.
+    - *Fix:* hold the ring after against the ring before (`ring_before` is already read in `read_all`): the same codes
+      and 54 teeth.
+    - Say the codes as a fact.
+- **The interference volumes.**
+  - *Fact:* the app says the volume in its status and its CHECK lines, and W9d's carry says it in a clash sentence
+    (`ui_text.py:5959`). Nothing compares a volume or acts on it. `Clash` sums per pair, and the demonstration and
+    the app judge pairs.
+  - *So nothing the app tells the user rests on the two reads agreeing,* beyond the number printed. On 2024 that
+    number can be some 5 % off what SolidWorks' own Interference Detection shows the user afterwards.
+  - The handoff should say so. It is not a W9c blocker.
+- **14 GB private in `modes`.** The largest steps are the app's own presses.
+  - The first press on a freshly opened copy grew SolidWorks 2024 by 3.3 to 4 GB, a refused press included, though it
+    only reads:
+    - setup's quiet press, 6.69 → 10.01 GB (24-1:990-991);
+    - modes' refused H2 press, 8.46 → about 12.5 (24-1:1372, 1400);
+    - remake's refused press, 3.59 → 7.09 (24-4:70, 97).
+  - Later presses on the same open copy added 0.3 to 1 GB each, and the script's reads between them about as much.
+  - All of it came back only when the copy was closed: remake, 7.35 → 2.03 GB (24-4:99, 251).
+  - On 2026 the whole run stayed under 2.3 GB.
+  - *So it is a path a real user's Update takes.* The 14 GB is the script's six presses and per-mode reads on one copy
+    kept open, which a user doing several Updates in one sitting could repeat.
+  - *The handoff should tell the user:* on SolidWorks 2024, an Update of a gearbox with modes can take SolidWorks
+    3 to 4 GB more memory, kept until the assembly is closed. On a machine with little free memory, save and close
+    the assembly between rounds of Updates, or restart SolidWorks. The app does not watch memory.
+  - *For the script:* the guard acts only between sections, so on 2024 a section ran to 0.94 GB free. It could check
+    before each press. That is the coordinator's call, and not needed for the rerun if it starts fresh with no other
+    SolidWorks running (session 4 attached at only 3.70 GB free).
+
+### 5. `remake`'s M3 on 2024: the ruling, the script, the rerun
+
+**What the rules say.**
+- The ruling (`ISSUE-1-PLAN.md`, 2026-11-17) makes the frame's box a fact during any job, provided it goes within 60
+  s of the job's end with the frame enabled. It lists "a box that outlives its job (never seen)" as not measured and
+  not relied on.
+- `W9A-CLOSE-2024-REVIEW` §6 measured every box going while SolidWorks kept working. Its only script-step case,
+  s4:115-118, showed the box at `ActivateDoc3` going 1.05 s later during the step's own `ForceRebuild3`.
+
+**What happened here.**
+- `read_now` activates and rebuilds nothing, so nothing came after the activation to take the box down.
+- This is the first box to outlive its job.
+- Raising the allowance would not help: nothing says this box goes by itself at all.
+
+**The app may meet the same box (inference from the code, not measured).** `Session.open_document` always follows
+`OpenDoc6` with `ActivateDoc3` (`swcom.py:3601`). The trace counts `OpenDoc6` and not `ActivateDoc3`, and step 2's
+press opened 8 documents on 2026 (log 11:316), the assembly among them. So on 2024 the app's own step-2 press, made
+with the ring held in error, may raise the same box and leave it standing after the press. A user who presses
+again without closing would then see a What's Wrong that does not go by itself.
+- No W9a sentence promises otherwise there: `WHATS_WRONG_AHEAD` is keyed on the user's work in error.
+- Still, it is the case the ruling never measured. The rerun should be allowed to measure it rather than stop on it.
+
+**Recommended ruling.** On a version where What's Wrong shows (2024):
+- a What's Wrong owned by SolidWorks' frame, the frame enabled, that is still up 60 s after a job ends (the script's
+  own step or the app's press) is logged as having outlived its job;
+- for an app job, that is a fact the ruling and W9a's sentences must take;
+- the script then closes it with the box's own Close button, as a person would, never FeatureXpert or the check box,
+  and the box must be gone within 10 s with the frame still enabled;
+- a box that blocks (frame disabled, or the 120 s stall), one not owned by the frame, one that will not close, and any
+  other window stay the STOP.
+
+Close repairs nothing and changes no setting. That makes it the one control in the box a person uses after an
+activation.
+
+**The exact script change** (reviewed before the run):
+1. In `w9a_demonstration.py` `whats_wrong_end`, after the allowance loop, behind a flag that W9a's own script leaves
+   off (`WW_CLOSE_LEFT = False` there; set True in `w9c_demonstration.main`):
+   - when `up`, `enabled is not False` and no `unowned`, call `W.press_dont_save(h, ("&Close", "Close"))` for each
+     box up;
+   - poll `whats_wrong_boxes` for up to 10 s;
+   - record `outlived: True`, `closed_by_script` and the seconds in `RESULT["whats_wrong_lifetimes"]`;
+   - say the fact line;
+   - re-read `up` and `enabled` before the existing STOP test.
+2. In `w9c_demonstration.py`, `wrote_nothing` takes `ring_before` and checks the ring after against it (the same
+   `in_error`, 54 teeth) in place of the literal 72.
+3. The self-check: replace the stale `still` sample with head's sentence, and add a case with codes 51 and one for
+   the close path's judgement.
+4. *Optional, saves about 20 minutes and the first part's memory peak:* a section `remake-m3`, by name only, that
+   runs `remake_again` alone (`FOLDERS["remake-m3"] = ["remake-again"]`). Its presses read the inventory too, so it
+   still measures §2's reads.
+
+**The rerun.**
+- From a `git archive` of head once those land, in a fresh SolidWorks 2024 session with no other SolidWorks running,
+  in a new run folder.
+- The command line:
+
+```
+python.exe RUN\snap\probe\w9c_demonstration.py RUN\snap\src RUN\out --pid PID ^
+    --log RUN\w9c-demo-sw2024-5-remake-m3.log --sections remake-m3 ^
+    --user-master <probe folder>\w9c-confirm-sw2024-20261117-171854\out\setup.master
+```
+
+- Without item 4, use `--sections remake` (about 26 minutes on 2024).
+- `setup.master` was built at `4315774`. A build at head makes the same files (§2), and its schema 9 record reads
+  forward as a user's would.
+
+**Step 2b on 2026.**
+- *What it decides:* whether the advice must name the assembly at all. That advice now tells the user it discards
+  whatever else is unsaved in the assembly (`9cbfc08`).
+- *Why it matters:* the premise, that a part closed alone stays loaded in error, is reasoned, not measured on either
+  version, and it costs the user real work when they follow it.
+- *The cost on 2026:* `--sections remake` took 697 s in run 11, and M3 alone would take about half that.
+- *Recommendation:* run it on 2026 in the same session as the W9d run's end, before W9c closes. Carrying it as a
+  caveat is acceptable only if the coordinator rules the wording stands either way.
+
+### 6. What remains before W9c can close
+
+Taking in part 5's list and the re-check, with what W9d's package B has since taken marked as taken.
+
+1. **Correct the note's 2024 section** (§1, items 1 to 8): above all, the box did not go.
+2. **Set the five 2024 findings** with the comments and pins of §3, and the no-fixture gate-list test (the re-check's
+   note, not yet taken).
+3. **Rule on a What's Wrong that outlives its job** (§5). Land the script's must-fix (the 72) and the close rule with
+   the self-check, reviewed. Then rerun `remake` (or `remake-m3`) on 2024 from head. This measures steps 2, 2b and 3
+   there, and head's inventory reads.
+4. **Step 2b on 2026** (about 12 minutes), or the caveat by ruling (§5).
+5. **Should-fix A** (part 5 item 2):
+   - the wording landed in `f4eabf5`;
+   - *taken by package B:* the re-check's low should-fix, that closing the assembly loses the user's own unsaved work,
+     is now said inside the parenthesis (`9cbfc08`, `0b7582f`);
+   - its premise is item 4.
+6. **If the rerun shows the app's step-2 press leaving What's Wrong up on 2024:** the ruling's not-measured list, and
+   W9a's sentences if they are said there, take it.
+7. **The handoff:**
+   - the 2024 memory advice (§4) and the interference-volume caveat;
+   - part 5's item 3, caveat (i) in `W9C-INTERFACES.md` §11, still open and not taken by W9d;
+   - item 4's standing items;
+   - item 6: the stale "W9c at the session's close" bullet. It should name runs 10 and 11 and this 2024 run as the
+     evidence, and the suites, now 4099 / 1 / 1 at `f7c2f0d`.
+8. **Low:**
+   - part 5 item 5's notes, unchanged;
+   - the re-check's notes: a part in two gearboxes' assemblies, and `gated_refusal`'s "already True" branch not
+     self-checked, which the 2026 gates now take in every 2026 run;
+   - `landing.py`'s docstring on 51;
+   - the 2026 run-10 section of `W9C-DEMONSTRATION.md` writes its run folder under the Windows account folder,
+     where the house form is `<probe folder>\…`.
+
+*Done already:* part 5's item 1 (`74024a1`, the 2026 findings).
 
 ---
 
