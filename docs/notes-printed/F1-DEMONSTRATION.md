@@ -3,7 +3,7 @@
 The script is `probe/f1_demonstration.py`. It is the SolidWorks part of PLAN-PRINTED §2.8's *Done when*, which the F1
 review (`F1-REVIEW.md` §1, §8) left to do: on SolidWorks 2026, and then on 2024 as the confirming build, one printed
 spur gear built, one printed pair built, and Printed typed on the Box sheet of a copy of W9a's `setup.master` with
-one Update SolidWorks. **It has not run on SolidWorks.** It was written on Linux against the app at `e0a8d62` on
+one Update SolidWorks. **It has run on SolidWorks 2026 and 2024 (2026-11-18, from `c1c9046`), every section clean on both: see the two run sections at the end.** It was written on Linux against the app at `e0a8d62` on
 branch `printed`; its self-check passes there (61 checks, 0 failed, after the review's should-fixes), and its rangebox planning was rehearsed offline
 on scratch copies of both masters (below). Expect script faults on its first live run, as every demonstration had.
 
@@ -355,3 +355,144 @@ The JSON (`f1-demo-<time>.json`) is written beside the log after every section. 
 - for `spur` and `pair`, each case's equations, volume, expected volumes and drive;
 - for `rangebox`, the master's schema, the as-built footer and line, the foreseen carry, the press's fact and
   sentence, and the second press's fact.
+
+## The first run on SolidWorks 2026 (2026-11-18, from c1c9046, SolidWorks 2026 34.1.1)
+
+**Setup.**
+- Run folder `<probe folder>\f1-demo-sw2026-20261118-081411`, `snap` a `git archive` of `c1c9046` with
+  `SNAPSHOT_COMMIT` beside `src` (the log's head names it, 1:2). `--self-check` on the snapshot, under the run's
+  `python.exe`: 61 ok, 0 failed.
+- One session, PID 38876, started for the run with nothing open and exited after it (`taskkill` without `/F`, so
+  SolidWorks' own close; nothing was open by then). No other SolidWorks, no Excel and no python.exe ran before it. The
+  run started and quit its own Excel (PID 6288, 1:9, 1:1058).
+- Master, only copied: W9a's `setup.master` (`<probe folder>\w9a-final-sw2026-20261117-023433\out`). The sha256
+  of every file of both masters' `setup.master` folders (34 files) was the same before the 2026 run, between the
+  versions and after the 2024 run.
+- One invocation, `--sections spur,pair,rangebox`. Log `probe/results/f1-demo-sw2026-20261118-1-spur-pair-rangebox-clean.log`,
+  JSON `f1-demo-20261118-081909.json`.
+- SolidWorks time about 16 min, of which the run 11 min (08:19:09 to 08:30).
+
+| Section | Time | ok | FAIL | STOP | SolidWorks private, peak logged | Free, least logged |
+|---|---|---|---|---|---|---|
+| spur | 78 s | 36 | 0 | 0 | 0.97 GB | 9.73 GB |
+| pair | 113 s | 17 | 0 | 0 | 0.98 GB | 9.55 GB |
+| rangebox | 458 s | 56 | 0 | 0 | 1.67 GB (after the second press) | 9.12 GB |
+
+Plus the run's own check that APPDATA is in the run folder (1:3): 110 ok, 0 failed, 0 noted, 0 STOPs (1:1063). The
+script needed no fix: nothing in `probe/f1_demonstration.py` changed for this run or the 2024 one.
+
+**Against the Done-when (PLAN-PRINTED §2.8):**
+- *A printed spur gear built.* The form opens Printed, Gear_m1.5_N25_P (1:12); it plans and the job builds
+  Gear_m1.5_N25_P.SLDPRT, saved (1:14, 107); its Backlash reads `IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )`, which
+  SolidWorks evaluates to 0.3, the plan's figure at module 1.5 (1:108); clean rebuild, one solid, the volume within
+  0.0016 % of the app's outline, 100 tip corners on the outer radius (1:110-112); its `.gear.json` at sidecar 3,
+  printed, nozzle 0.4 (1:113). Beside it the machined Gear_m1.5_N25 reads `0.3 * "Module"`, 0.45 (1:209), sidecar 1
+  as W9 writes it (1:214); the two volumes are told apart, each its own outline's and not the other's (1:418-419). At
+  module 0.8, Gear_m0.8_N25_P reads the IIF at 0.24 (1:310) and the machined one 0.3 × 0.8 = 0.24 (1:411), one solid
+  to 1e-6 (1:421).
+- *A printed pair built.* Pinion_m1.5_N25_P, Gear_m1.5_N50_P and Pair_m1.5_25T_50T_P named and new (1:425), built by
+  the form's job (1:629), driven 10° to 40°: gear A −30°, gear B +15°, no interference at either end (1:630-631); each
+  part's Backlash the IIF at 0.3 and its sidecar 3 (1:632-635). The machined pair the same without _P, at 0.45 and
+  sidecar 1 (1:638, 842-849), and the printed pair passes the same judgement (1:851).
+- *Printed typed on a copy of setup.master, one Update.* The master's record at link 7 with no process (1:855). Opened
+  as built: the blank Process reads machined, five parts plan machined, no _P, nothing to do (1:880); the footer W9's
+  (1:883); the Process line asks for the row (1:884-885); nothing written by the open (1:886). The person adds
+  `Process` / `Printed` at Box row 10 (1:900); the Box reads printed at `Box!B10` (1:919), the line *Printed, 0.4 mm
+  nozzle* (1:920-921); Backlash alone planned in each of the five parts (1:922); the footer names them (1:918, 928).
+  The press (162.7 s, 1:937): ok, Backlash alone written in each of the five parts, nothing in the layout or carrier
+  (1:1009); nothing made new (1:1010); the carry as foreseen, Sprocket-1 and -3 with Sun and Sprocket-2 with RangeSlv
+  (1:1011); every put an app body or one of those sprockets (1:1012); nothing of the user's in error (1:1013); no
+  SolidWorks file saved (1:1014); C's sentence once, no stale clause (1:1015). Read back: each of the five parts'
+  Backlash the IIF at 0.3 (1:1017-1022); the record at link 11, the same five files, each printed, each sidecar 3
+  (1:1023). *None of the user's items touched:* the eight user mates join what they joined before (1:1025); in H, N
+  and L every app body at its frame on record, each locked sprocket on its gear, no mate in error, Sprocket-4 at
+  −90 mm from Sprocket-3 as set up, the train free (1:1026-1028, as before the press 1:893-895); each user mate on in
+  the modes it was on in (1:1029); the User Keyway code 0 (1:1030); the five user components there, from the copy
+  (1:1031). After the user's save and close (1:1037-1038), Update plans nothing (1:1039) and the second press is
+  quiet, without the sentence (1:1051), every gear where it stood and no document marked (1:1052-1054), the record
+  clean (1:1055). So K11 passed the IIF as SolidWorks stores it.
+
+**Windows.** No dialog during a job but SolidWorks' progress boxes: *Calculating Interference Detection* and *Opening*
+(1:843, 889, named once each), and at the second press an untitled box with *Elapsed time* (1:1042), which W8's watch
+takes as a ticking progress box and does not stop for. Two balloon tips were logged as facts (1:8, 15). No What's
+Wrong (none is expected on 2026).
+
+**Facts logged.**
+- Volumes: printed m1.5 9842.4852 mm³ (+0.0016 %), machined 9717.1250 (+0.0010 %), printed less machined +125.3602
+  measured against +125.2964 by the outlines (1:420); m0.8 both 2170.457157 (−0.0054 %). The farthest tip vertex is
+  1.1e-3 mm (m1.5) and 6.2e-4 mm (m0.8) beyond the outer radius, within small_pinion_check's 0.005.
+- RangeBox.SLDASM reads marked by the time of the user-mate read (`read … marked ['RangeBox.SLDASM']`, 1:897), after
+  W9a's `read_every` showed H, N and L; it read unmarked straight after the copy's open (1:865). It was already so
+  before the press, so the press's own marks were judged by the saved files (1:1014), and after the user's save every
+  document read unmarked before and after the second press (1:1054).
+- The press re-placed the carrier, Sun, the planets, the dogs and RangeSlv in every mode (1:936), with the calls by
+  member `{'OpenDoc6': 14, 'IsSuppressed2': 262, 'GetSystemValue3': 4, 'ForceRebuild3': 51, 'ShowConfiguration2': 3,
+  'SetSuppression2': 40, 'put': 33}` (1:937); the second press `{'OpenDoc6': 9, 'IsSuppressed2': 112,
+  'GetSystemValue3': 1}`, 109.2 s (1:1047).
+
+## The confirming run on SolidWorks 2024 (2026-11-18, from c1c9046, SolidWorks 2024 32.5.0)
+
+**Setup.**
+- Run folder `<probe folder>\f1-demo-sw2024-20261118-083059`, `snap` a `git archive` of `c1c9046` with
+  `SNAPSHOT_COMMIT` (log heads 1:2, 2:2). `--self-check` on the snapshot: 61 ok, 0 failed.
+- Two sessions, each started fresh for its invocation with nothing open and exited after it (`taskkill` without
+  `/F`): PID 49772 for `rangebox`, then PID 43992 for `spur,pair`. The 2026 session had exited first; only one
+  SolidWorks ran at a time. Each invocation started and quit its own Excel.
+- Master, only copied: W9a's 2024 `setup.master` (`<probe folder>\w9a-confirm-sw2024-20261117-002313\out`),
+  hashes unchanged (above).
+- `rangebox` first with `--close-outlived-whats-wrong` and WSL kept idle but for a process check every 15 s; then
+  `spur,pair` into the same `out`, also with the flag (the night's rule for unattended 2024 runs; the note's command
+  line leaves it off there). It never had to act.
+- Logs `probe/results/sw2024/f1-demo-sw2024-20261118-1-rangebox-clean.log` (JSON `f1-demo-20261118-083240.json`)
+  and `…-2-spur-pair-clean.log` (JSON `f1-demo-20261118-084617.json`).
+- SolidWorks time about 18 min (08:31 to 08:49), of which the runs 15 min.
+
+| Section | Run | Time | ok | FAIL | STOP | SolidWorks private, peak logged | Free, least logged |
+|---|---|---|---|---|---|---|---|
+| rangebox | 1 | 711 s | 56 | 0 | 0 | 6.95 GB (after the second press; 6.20 GB after the first) | 9.34 GB |
+| spur | 2 | 84 s | 36 | 0 | 0 | 1.35 GB | 9.97 GB |
+| pair | 2 | 92 s | 17 | 0 | 0 | 2.14 GB | 9.83 GB |
+
+Each invocation 0 failed, 0 noted, 0 STOPs (1:221, 2:857). Free memory never went under 9.3 GB, so neither 6 GB floor
+came near.
+
+**Against the Done-when**, as on 2026, line for line:
+- *Printed spur gear:* 2:12, 14, 106 (built), 107 (IIF, 0.3), 110-112 (volume −0.0035 %, tips), 112 (sidecar 3);
+  the machined one 2:115, 208; told apart 2:417-418; module 0.8 2:309, 410, one solid 2:420.
+- *Printed pair:* 2:424 (names), 628 (built), 630 (gear A −30°, gear B +15°, no interference, fact 2:629), 631-634
+  (Backlash and sidecars); the machined pair 2:841-848; the same judgement 2:849.
+- *Printed typed, one Update:* master at link 7 (1:11); as built 1:37, 40, 42, 43; Printed at `Box!B10` 1:57, 76,
+  78; Backlash alone planned 1:79; footer 1:85-86. The press (305.7 s, 1:94): Backlash alone written 1:166, nothing
+  new 1:167, the carry as foreseen 1:168, the puts 1:169, nothing of the user's in error 1:170, nothing saved 1:171,
+  C's sentence 1:172. Read back 1:174-180. The user's items: mates' entities 1:182; H, N and L 1:183-185 (as before
+  1:50-52); mates on 1:186; the Keyway code 0 1:187; components 1:188. Second press quiet 1:196-212.
+
+**Windows.** Progress boxes only: *Opening* (1:21), and two untitled ticking boxes with *Elapsed time* (1:46 while the
+copy was read before the edit, *Post load updating*; 1:199 at the second press, with *Performance Evaluation*). **No
+What's Wrong box came** in either invocation, so the close path, in force, did nothing; none was expected, nothing of
+the user's being in error.
+
+**Facts logged.** RangeBox.SLDASM read marked before the press after `read_every` (1:54), as on 2026; unmarked
+straight after the copy's open (1:22).
+
+## What differs between the versions
+
+Every check reads the same on both. Measured differences, none judged a fault:
+- **Time and memory of the rangebox presses.** The first press 162.7 s on 2026, 305.7 s on 2024; the second 109.2 s
+  and 129.1 s. SolidWorks 2024's private memory went from 3.14 GB before the first press to 6.20 GB after (+3.06 GB,
+  a little under W9c's 3.3 to 4 GB for the first 2024 press on a freshly opened RangeBox; 1:89-90), and 6.95 GB after the second
+  (1:200); on 2026 it peaked at 1.67 GB. The section took 458 s and 711 s.
+- **The same calls.** Both first presses made the same calls by member, the same puts and the same carry; both
+  second presses likewise (1:937 and 1:94; 1:1047 and 1:204).
+- **The tooth's volume against its outline:** on 2026 +0.0010 % to +0.0016 % at module 1.5 and −0.0054 % at 0.8; on
+  2024 −0.0035 % and −0.0116 %. Printed less machined at 1.5: +125.3602 mm³ on 2026, +125.2969 on 2024, against the
+  outlines' +125.2964. The farthest tip vertex was 1.1e-3 mm beyond the outer radius on 2026 and on it (to 1e-6) on
+  2024. All within small_pinion_check's tolerances (0.1 %, 0.005 mm); the printed and machined teeth were told apart on
+  both by the same margin of about 1.3 %.
+- **The Backlash text and value** read the same on both versions, every part: SolidWorks kept the IIF as typed, spaces
+  and all, so K11 compared equal on both second presses.
+- On 2024 the box at an assembly's open with nothing in error showed *Post load updating* and *Performance
+  Evaluation*; on 2026 neither. Both were progress boxes that went by themselves.
+
+**Not measured by these runs**, beyond the list under *What the script does not measure*: a What's Wrong on 2024 (none
+came; nothing of the user's was in error), and the 6 GB floor's STOP (free memory stayed above 9 GB).

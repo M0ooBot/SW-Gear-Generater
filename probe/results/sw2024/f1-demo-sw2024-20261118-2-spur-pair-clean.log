@@ -1,0 +1,857 @@
+awake   display and system held awake for the run (previous state -0x80000000)
+run     2026-11-18 08:46:17; F1 demonstration from C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2024-20261118-083059\snap\src (snapshot: c1c9046); sections ['spur', 'pair']; masters {'rangebox': '', 'setup': '', 'reducer': ''}; redo False
+ok      the app's settings and Recent list go into this run's folder, not the user's: C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2024-20261118-083059\out\appdata\Gear Generator\recent.json
+attach  SolidWorks 2024 (revision 32.5.0) (revision 32.5.0), PID 43992; SolidWorks 0.66 GB private, 10.34 GB free
+open    before: []
+findings USER_MATE_PUT_ROUTE "put along, the user's locks left on", USER_TIE_RULE 'not COMPONENT_UNDER_DEFINED', WHATS_WRONG_OPENS_ON_PART_REBUILD False, the branches {'USER_MATE_PUT_FIXED_GEAR_ON_2024': None, 'USER_MATE_PUT_FIXED_GEAR_ON_2026': None, 'USER_MATE_PUT_HELD_GEAR_ON_2024': None, 'USER_MATE_PUT_HELD_GEAR_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2024': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_ON_2024': True, 'USER_MATE_PUT_NO_CARRIER_ON_2026': True, 'USER_MATE_PUT_SUBASSEMBLY_ON_2024': None, 'USER_MATE_PUT_SUBASSEMBLY_ON_2026': None}
+rule    What's Wrong: swbuild.whats_wrong_shows_in_update reads True; a What's Wrong box owned by SolidWorks' frame during any job the script waits on is logged as a fact (under an app Update or Build, as the app's Update shows it; under the script's own steps and W8's helpers, as SolidWorks shows it when a person does this), the job waited for, and at its end the box must go within 60 s and the frame be enabled (else a STOP)
+rule    --close-outlived-whats-wrong: a What's Wrong owned by SolidWorks' frame, the frame enabled, still up 60 s after a job is said to have outlived it and closed with its own Close button, to be gone within 10 s; anything else stays the STOP (the coordinator's ruling of 2026-11-18, SolidWorks 2024 only): in force here
+excel   started our own Excel, PID 30792, 16.0 build 20527.0
+== spur  the strip's form as it opens (Printed, Gear_m1.5_N25_P), then Machined beside it, then both at module 0.8: built by the form's own plan and job, its record by its own finish; each read back: the name, Backlash's text and value, the tooth (small_pinion_check), the .gear.json
+form    the strip's GearApp made with its link to SolidWorks not started: this run's worker runs its jobs
+ok      spur: the form opens Printed and names its gear Gear_m1.5_N25_P ('printed')
+form    spur printed m1.5: Process printed, Module 1.5: the form plans Gear_m1.5_N25_P.SLDPRT; its diagnostics none
+ok      spur printed m1.5: the form names it Gear_m1.5_N25_P.SLDPRT (_P), a new file
+        build   Part1 · spur · recipe A · trig degrees
+        ok      new part Part1
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 25
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N25_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2024-20261118-083059\out\spur\printed-m1.5\Gear_m1.5_N25_P.SLDPRT
+status  spur printed m1.5: Built Gear_m1.5_N25_P.SLDPRT. 1 thing to do by hand: Assign a material to Gear_m1.5_N25_P; the build leaves it unset.
+ok      spur printed m1.5: built and saved by the form's job (Gear_m1.5_N25_P.SLDPRT): ok True, failures []
+ok      spur printed m1.5: Backlash reads '"Backlash"= IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )' and SolidWorks evaluates it to 0.3, the app's 0.3 at module 1.5: holds
+        spur printed m1.5: volume 9841.98227 mm³ (outline's 9842.32583, off -0.0035 %); bodies 1; feature errors []; Equation Manager Status 0; largest vertex radius 20.250000 for an outer radius 20.250000; vertices just inside the tips 0
+ok      spur printed m1.5: the rebuild is clean, no feature in error: []
+ok      spur printed m1.5: the volume within 0.1 % of the outline's (-0.0035 %)
+ok      spur printed m1.5: one solid body, the tips intact: 100 tip corners for 25 teeth (4 each), the farthest 1.07e-14 mm beyond the outer radius 20.250000 (within 0.005), no vertex just inside it: []
+ok      spur printed m1.5: its .gear.json at sidecar 3 printed, its process, its 0.4 nozzle and the IIF: holds
+ok      spur printed m1.5: closed, nothing left open under its folder: []
+form    spur machined m1.5: Process machined, Module 1.5: the form plans Gear_m1.5_N25.SLDPRT; its diagnostics none
+ok      spur machined m1.5: the form names it Gear_m1.5_N25.SLDPRT (no _P), a new file
+        build   Part2 · spur · recipe A · trig degrees
+        ok      new part Part2
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 25
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N25; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2024-20261118-083059\out\spur\machined-m1.5\Gear_m1.5_N25.SLDPRT
+status  spur machined m1.5: Built Gear_m1.5_N25.SLDPRT. 1 thing to do by hand: Assign a material to Gear_m1.5_N25; the build leaves it unset.
+ok      spur machined m1.5: built and saved by the form's job (Gear_m1.5_N25.SLDPRT): ok True, failures []
+ok      spur machined m1.5: Backlash reads '"Backlash"= 0.3 * "Module"' and SolidWorks evaluates it to 0.44999999999999996, the app's 0.45 at module 1.5: holds
+        spur machined m1.5: volume 9716.68539 mm³ (outline's 9717.02941, off -0.0035 %); bodies 1; feature errors []; Equation Manager Status 0; largest vertex radius 20.250000 for an outer radius 20.250000; vertices just inside the tips 0
+ok      spur machined m1.5: the rebuild is clean, no feature in error: []
+ok      spur machined m1.5: the volume within 0.1 % of the outline's (-0.0035 %)
+ok      spur machined m1.5: one solid body, the tips intact: 100 tip corners for 25 teeth (4 each), the farthest 7.11e-15 mm beyond the outer radius 20.250000 (within 0.005), no vertex just inside it: []
+ok      spur machined m1.5: its .gear.json at sidecar 1 as W9 records a machined part (no process, no nozzle, 0.3 * "Module"): holds
+ok      spur machined m1.5: closed, nothing left open under its folder: []
+form    spur printed m0.8: Process printed, Module 0.8: the form plans Gear_m0.8_N25_P.SLDPRT; its diagnostics ['Printed, the tooth tip is 0.317 mm thick after backlash, under one 0.4 mm nozzle line, so the slicer will drop or round it; use a larger module or more teeth.', 'Printed, a module of 0.8 mm is under 2.5 nozzle widths (1 mm), below which a 0.4 mm nozzle rounds the profile off.']
+ok      spur printed m0.8: the form names it Gear_m0.8_N25_P.SLDPRT (_P), a new file
+        build   Part3 · spur · recipe A · trig degrees
+        ok      new part Part3
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 25
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m0.8_N25_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2024-20261118-083059\out\spur\printed-m0.8\Gear_m0.8_N25_P.SLDPRT
+status  spur printed m0.8: Built Gear_m0.8_N25_P.SLDPRT. 1 thing to do by hand: Assign a material to Gear_m0.8_N25_P; the build leaves it unset.
+ok      spur printed m0.8: built and saved by the form's job (Gear_m0.8_N25_P.SLDPRT): ok True, failures []
+ok      spur printed m0.8: Backlash reads '"Backlash"= IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )' and SolidWorks evaluates it to 0.24, the app's 0.24 at module 0.8: holds
+        spur printed m0.8: volume 2170.32269 mm³ (outline's 2170.57521, off -0.0116 %); bodies 1; feature errors []; Equation Manager Status 0; largest vertex radius 10.800000 for an outer radius 10.800000; vertices just inside the tips 0
+ok      spur printed m0.8: the rebuild is clean, no feature in error: []
+ok      spur printed m0.8: the volume within 0.1 % of the outline's (-0.0116 %)
+ok      spur printed m0.8: one solid body, the tips intact: 100 tip corners for 25 teeth (4 each), the farthest 6.78e-12 mm beyond the outer radius 10.800000 (within 0.005), no vertex just inside it: []
+ok      spur printed m0.8: its .gear.json at sidecar 3 printed, its process, its 0.4 nozzle and the IIF: holds
+ok      spur printed m0.8: closed, nothing left open under its folder: []
+form    spur machined m0.8: Process machined, Module 0.8: the form plans Gear_m0.8_N25.SLDPRT; its diagnostics none
+ok      spur machined m0.8: the form names it Gear_m0.8_N25.SLDPRT (no _P), a new file
+        build   Part4 · spur · recipe A · trig degrees
+        ok      new part Part4
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 25
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m0.8_N25; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2024-20261118-083059\out\spur\machined-m0.8\Gear_m0.8_N25.SLDPRT
+status  spur machined m0.8: Built Gear_m0.8_N25.SLDPRT. 1 thing to do by hand: Assign a material to Gear_m0.8_N25; the build leaves it unset.
+ok      spur machined m0.8: built and saved by the form's job (Gear_m0.8_N25.SLDPRT): ok True, failures []
+ok      spur machined m0.8: Backlash reads '"Backlash"= 0.3 * "Module"' and SolidWorks evaluates it to 0.24, the app's 0.24 at module 0.8: holds
+        spur machined m0.8: volume 2170.32269 mm³ (outline's 2170.57521, off -0.0116 %); bodies 1; feature errors []; Equation Manager Status 0; largest vertex radius 10.800000 for an outer radius 10.800000; vertices just inside the tips 0
+ok      spur machined m0.8: the rebuild is clean, no feature in error: []
+ok      spur machined m0.8: the volume within 0.1 % of the outline's (-0.0116 %)
+ok      spur machined m0.8: one solid body, the tips intact: 100 tip corners for 25 teeth (4 each), the farthest 6.78e-12 mm beyond the outer radius 10.800000 (within 0.005), no vertex just inside it: []
+ok      spur machined m0.8: its .gear.json at sidecar 1 as W9 records a machined part (no process, no nozzle, 0.3 * "Module"): holds
+ok      spur machined m0.8: closed, nothing left open under its folder: []
+ok      spur m1.5 printed: its volume 9841.9823 mm³ is its own outline's (9842.3258) and not the other process's (9717.0294), to 0.001: told apart
+ok      spur m1.5 machined: its volume 9716.6854 mm³ is its own outline's (9717.0294) and not the other process's (9842.3258), to 0.001: told apart
+fact    spur m1.5: printed less machined +125.2969 mm³ measured, +125.2964 by the app's outlines
+ok      spur m0.8: printed and machined are the same solid (2170.322686, 2170.322686 mm³), as the two backlashes are one value there: the same
+time    spur: 84 s; 0 failed; SolidWorks 1.35 GB private, 9.97 GB free
+== pair  the strip's form as a pair (25 / 50, module 1.5, motion gear mate), Printed then Machined, built by the form's own plan and job; each driven by gear_pairs_check's drive; each part's Backlash and .gear.json
+form    pair printed: Process printed, motion gear mate: the form plans ['Pinion_m1.5_N25_P.SLDPRT', 'Gear_m1.5_N50_P.SLDPRT', 'Pair_m1.5_25T_50T_P.SLDASM']
+ok      pair printed: both parts and the assembly named with _P, new files: ['Pinion_m1.5_N25_P', 'Gear_m1.5_N50_P', 'Pair_m1.5_25T_50T_P']
+        build   Part5 · spur · recipe A · trig degrees
+        ok      new part Part5
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 25
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Pinion_m1.5_N25_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2024-20261118-083059\out\pair\printed\Pinion_m1.5_N25_P.SLDPRT
+        build   Part6 · spur · recipe A · trig degrees
+        ok      new part Part6
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 50
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N50_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2024-20261118-083059\out\pair\printed\Gear_m1.5_N50_P.SLDPRT
+        build   Assem1 · pair · recipe  · trig degrees
+        ok      new assembly Assem1
+        ok      trig units measured: degrees
+        ok      global "Centre Distance"
+        ok      global "Ratio"
+        ok      component Pinion_m1.5_N25_P-1
+        ok      component Gear_m1.5_N50_P-1
+        ok      placed gear1
+        ok      placed gear2
+        ok      unfixed gear1
+        ok      mate coincident gear1:plane1 ~ asm:plane1
+        ok      mate coincident gear1:Gear Axis ~ asm:plane2
+        ok      mate coincident gear1:Gear Axis ~ asm:plane3
+        ok      mate coincident gear2:plane1 ~ gear1:plane1
+        ok      mate coincident gear2:Gear Axis ~ asm:plane2
+        ok      mate distance gear2:Gear Axis ~ asm:plane3 as Centre Distance
+        ok      link "D1@Centre Distance"
+        ok      mate gear gear1:Gear Axis ~ gear2:Gear Axis as Gear Mate
+        ok      2 globals read back and match the maths
+        ok      no interference between the gears
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2024-20261118-083059\out\pair\printed\Pair_m1.5_25T_50T_P.SLDASM
+status  pair printed: Built Pinion_m1.5_N25_P.SLDPRT, Gear_m1.5_N50_P.SLDPRT and Pair_m1.5_25T_50T_P.SLDASM. 2 things to do by hand: Assign a material to Pinion_m1.5_N25_P; the build leaves it unset; Assign a material to Gear_m1.5_N50_P; the build leaves it unset.
+ok      pair printed: the pair built by the form's job: ok True, skipped ''
+fact    pair printed: Pinion_m1.5_N25_P-1 turned -30.000000°, Gear_m1.5_N50_P-1 15.000000°; interference at 10° (0, 0.0), at 40° (0, 0.0)
+ok      pair printed: driven by gear_pairs_check's drive, gear A turns 30° and gear B -0.5 of it, no interference at either end: holds
+ok      pair printed Pinion_m1.5_N25_P: Backlash reads '"Backlash"= IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )' and SolidWorks evaluates it to 0.3, the app's 0.3 at module 1.5: holds
+ok      pair printed Pinion_m1.5_N25_P: its .gear.json at sidecar 3 printed, its process, its 0.4 nozzle and the IIF: holds
+ok      pair printed Gear_m1.5_N50_P: Backlash reads '"Backlash"= IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )' and SolidWorks evaluates it to 0.3, the app's 0.3 at module 1.5: holds
+ok      pair printed Gear_m1.5_N50_P: its .gear.json at sidecar 3 printed, its process, its 0.4 nozzle and the IIF: holds
+ok      pair printed: closed without saving the drive, nothing left open under its folder: []
+form    pair machined: Process machined, motion gear mate: the form plans ['Pinion_m1.5_N25.SLDPRT', 'Gear_m1.5_N50.SLDPRT', 'Pair_m1.5_25T_50T.SLDASM']
+ok      pair machined: both parts and the assembly named without _P, new files: ['Pinion_m1.5_N25', 'Gear_m1.5_N50', 'Pair_m1.5_25T_50T']
+        build   Part7 · spur · recipe A · trig degrees
+        ok      new part Part7
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 25
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Pinion_m1.5_N25; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2024-20261118-083059\out\pair\machined\Pinion_m1.5_N25.SLDPRT
+        build   Part8 · spur · recipe A · trig degrees
+        ok      new part Part8
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 50
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N50; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2024-20261118-083059\out\pair\machined\Gear_m1.5_N50.SLDPRT
+        build   Assem2 · pair · recipe  · trig degrees
+        ok      new assembly Assem2
+        ok      trig units measured: degrees
+        ok      global "Centre Distance"
+        ok      global "Ratio"
+        ok      component Pinion_m1.5_N25-1
+        ok      component Gear_m1.5_N50-1
+        ok      placed gear1
+        ok      placed gear2
+        ok      unfixed gear1
+        ok      mate coincident gear1:plane1 ~ asm:plane1
+        ok      mate coincident gear1:Gear Axis ~ asm:plane2
+        ok      mate coincident gear1:Gear Axis ~ asm:plane3
+        ok      mate coincident gear2:plane1 ~ gear1:plane1
+        ok      mate coincident gear2:Gear Axis ~ asm:plane2
+        ok      mate distance gear2:Gear Axis ~ asm:plane3 as Centre Distance
+        ok      link "D1@Centre Distance"
+        ok      mate gear gear1:Gear Axis ~ gear2:Gear Axis as Gear Mate
+        ok      2 globals read back and match the maths
+        ok      no interference between the gears
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2024-20261118-083059\out\pair\machined\Pair_m1.5_25T_50T.SLDASM
+status  pair machined: Built Pinion_m1.5_N25.SLDPRT, Gear_m1.5_N50.SLDPRT and Pair_m1.5_25T_50T.SLDASM. 2 things to do by hand: Assign a material to Pinion_m1.5_N25; the build leaves it unset; Assign a material to Gear_m1.5_N50; the build leaves it unset.
+ok      pair machined: the pair built by the form's job: ok True, skipped ''
+fact    pair machined: Pinion_m1.5_N25-1 turned -30.000000°, Gear_m1.5_N50-1 15.000000°; interference at 10° (0, 0.0), at 40° (0, 0.0)
+ok      pair machined: driven by gear_pairs_check's drive, gear A turns 30° and gear B -0.5 of it, no interference at either end: holds
+ok      pair machined Pinion_m1.5_N25: Backlash reads '"Backlash"= 0.3 * "Module"' and SolidWorks evaluates it to 0.44999999999999996, the app's 0.45 at module 1.5: holds
+ok      pair machined Pinion_m1.5_N25: its .gear.json at sidecar 1 as W9 records a machined part (no process, no nozzle, 0.3 * "Module"): holds
+ok      pair machined Gear_m1.5_N50: Backlash reads '"Backlash"= 0.3 * "Module"' and SolidWorks evaluates it to 0.44999999999999996, the app's 0.45 at module 1.5: holds
+ok      pair machined Gear_m1.5_N50: its .gear.json at sidecar 1 as W9 records a machined part (no process, no nozzle, 0.3 * "Module"): holds
+ok      pair machined: closed without saving the drive, nothing left open under its folder: []
+ok      pair: the printed pair turns as the machined pair does (each by the same judgement)
+fact    pair: the backlash in the mesh is not measured in SolidWorks (no script measures it); the parts' Backlash globals are what is read
+time    pair: 92 s; 0 failed; SolidWorks 2.14 GB private, 9.83 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 1.90 GB private, 9.96 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 0, 'Updating...': 0, 'Opening': 0, 'Loading...': 0}; other windows the watch logged: 0
+awake   display and system released (previous state -0x7ffffffd)
+result  written to C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2024-20261118-083059\f1-demo-20261118-084617.json; masters kept {'rangebox': '', 'setup': '', 'reducer': ''}
+done    0 failed: []; 0 noted; 0 STOP(s), a hung worker included: []
