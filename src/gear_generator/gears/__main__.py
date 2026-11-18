@@ -9,12 +9,15 @@ The spec keys are ``m`` (module), ``z`` (teeth), ``pa`` (pressure angle),
 ``kind`` (spur, helical, herringbone, bevel), ``beta`` and ``hand`` for the
 helical kinds, ``side`` (external or internal) and ``rim`` for a ring, and
 ``mate`` and ``shaft`` for a bevel gear, ``x`` for a profile shift, and ``g``
-for a herringbone's centre groove::
+for a herringbone's centre groove. ``process`` is printed or machined, as on the form, and ``nozzle`` a
+printed gear's line width in mm (blank 0.4); left out, the gear is machined, as any gear the code builds
+without saying (PLAN-PRINTED §1)::
 
     python -m gear_generator.gears --spec kind=bevel,m=3,z=20,mate=40,b=20,bore=10
     python -m gear_generator.gears --spec side=internal,m=2,z=60
     python -m gear_generator.gears --spec m=2,z=15,x=0.12
     python -m gear_generator.gears --spec kind=herringbone,m=2,z=20,beta=30,b=40,g=8
+    python -m gear_generator.gears --spec m=1,z=20,process=printed,nozzle=0.4
 
 The output is the ordered op log the build would run, globals first, with every
 step a person has to do by hand counted as ``MANUAL``.
@@ -37,6 +40,7 @@ KEYS = {
     "bore": "bore", "j": "backlash", "rho": "fillet", "name": "name",
     "kind": "kind", "beta": "helix_angle", "hand": "hand", "side": "teeth_side", "rim": "rim",
     "mate": "mate_teeth", "shaft": "shaft_angle", "x": "profile_shift", "g": "groove",
+    "process": "process", "nozzle": "nozzle",
 }
 
 

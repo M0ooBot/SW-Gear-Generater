@@ -122,6 +122,9 @@ HELIX_MAX = 45.0
 # HELIX_MAX; a gear of a crossed-axis pair can be steeper, since the two helix
 # angles add up to the shaft angle.
 HELIX_LIMIT = 80.0
+# F1 (PLAN-PRINTED §2.2): a printed gear's flank steeper than this prints as an overhang. Conservative by a few
+# degrees, since the flank's own angle is the base helix angle (41.6° at 45°).
+PRINTED_HELIX_MAX = 45.0
 # What the pair solver searches when the helix angle is left blank, and what
 # the form does not warn about.
 DEFAULT_RANGE = {KIND_HELICAL: (8.0, 25.0), KIND_HERRINGBONE: (20.0, 40.0)}
@@ -442,6 +445,10 @@ class HelicalGear:
             out.append(Diagnostic(WARNING, (
                 f"A helix angle of {_num(g.helix_angle_deg)}° is outside the usual {_num(low)}–{_num(high)}° "
                 f"for a {self.kind} gear."), "helix_angle"))
+        if g.printed and g.helix_angle_deg > PRINTED_HELIX_MAX + 1e-9:
+            out.append(Diagnostic(WARNING, (
+                f"Printed, a helix angle of {_num(g.helix_angle_deg)}° is over {_num(PRINTED_HELIX_MAX)}°, so the "
+                "flanks print as an overhang."), "helix_angle"))
         if self.kind == KIND_HELICAL and g.overlap < 1.0:
             out.append(Diagnostic(WARNING, (
                 f"The teeth overlap {_num(g.overlap, 2)} of a pitch along the face, under one, which loses most "

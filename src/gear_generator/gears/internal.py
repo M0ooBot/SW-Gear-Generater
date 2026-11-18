@@ -129,6 +129,7 @@ RIM_MODULES = 6.0             # a blank rim is the root diameter plus this many 
 RIM_WARNING_MODULES = 2.0     # a rim thinner than this many modules is warned about
 FLANK_END_FILLETS = 3.0       # the involute ends this many fillet radii inside the root
 TIP_THICKNESS_WARNING = 0.3   # × module
+PRINTED_FILLET_FACTOR = 0.3   # × module: the root fillet the printing guides ask for (F1, PLAN-PRINTED §2.2)
 
 # The pair's tip clash, worked out at module 1 with no backlash and scaled.
 CLASH_STEPS = 60              # positions through one pitch
@@ -574,6 +575,8 @@ def section_diagnostics(g: InternalDerived, recipe: str, _undercut_limit: int = 
         out.append(Diagnostic(WARNING, (
             f"The ring's tooth tips are {_num(g.tip_thickness)} mm thick, under 0.3 × module "
             f"({_num(TIP_THICKNESS_WARNING * g.module)} mm)."), "teeth"))
+    if g.printed:
+        out.extend(printed_ring_warnings(g))
     if recipe == RECIPE_INVOLUTE and g.flank_end_d / 2.0 < g.rp + g.module - 1e-9:
         out.append(Diagnostic(WARNING, (
             f"The involute ends at {_num(g.flank_end_d)} mm, inside the {_num(g.d + 2 * g.module)} mm a standard "
@@ -584,6 +587,20 @@ def section_diagnostics(g: InternalDerived, recipe: str, _undercut_limit: int = 
             f"Arcs stand in for the involute on this ring to within "
             f"{_num(flank_deviation(g) * 1000.0, 1)} µm."), "recipe"))
     return out
+
+
+def printed_ring_warnings(g: InternalDerived) -> List[Diagnostic]:
+    """F1 (PLAN-PRINTED §2.2): what a printed ring's section alone says, empty when it is not printed: its tips
+    after backlash under one nozzle line, a module under 2.5 nozzle widths, and its default fillet, which is kept
+    at 0.15 × module (under the guides' 0.3) so a pinion's tips clear it. A typed fillet is the user's, and not said."""
+    if not g.printed:
+        return []
+    found = [spur.printed_tip_warning(g.tip_thickness, g.nozzle, "ring"), spur.printed_module_warning(g.module, g.nozzle)]
+    if not g.fillet_typed and g.fillet < PRINTED_FILLET_FACTOR * g.module - spur.PRINTED_TOLERANCE:
+        found.append(Diagnostic(WARNING, (
+            f"Printed, the ring's {_num(g.fillet)} mm root fillet is 0.15 × module, under the 0.3 × module printed "
+            "gears are given; it is kept small so the pinion's tips clear it."), "fillet"))
+    return [d for d in found if d is not None]
 
 
 def _field_errors(spec: GearSpec, kind: str) -> List[Diagnostic]:

@@ -96,6 +96,10 @@ TIP_THICKNESS_WARNING = 0.3   # × module
 FLANK_START_FILLETS = 3.0     # the involute starts this many fillet radii above the root
 SHIFT_MIN = -1.0              # profile shift coefficient, × module
 SHIFT_MAX = 1.0
+# F1 (PLAN-PRINTED §2.2): what a printed gear is checked against, each in widths of its own nozzle (line width).
+PRINTED_MODULE_NOZZLES = 2.5  # a module under this many nozzle widths rounds the profile off (1.0 at 0.4 mm)
+PRINTED_RIM_NOZZLES = 3.0     # the wall between the bore and the root under this many nozzle widths
+PRINTED_TOLERANCE = 1e-9      # mm; a printed figure this near its floor passes (module 0.75's clearance is 0.29999…)
 
 # The global variables, by name. The first ten are the user's own, byte for byte.
 TEETH = "No. of Teeth"
@@ -944,18 +948,34 @@ def section_diagnostics(g: SpurDerived, recipe: str, undercut_limit: Optional[fl
             least = _least_shift(g.teeth, limit / (1.0 - g.shift))
             if least <= SHIFT_MAX:
                 cure = f" A profile shift of {_num(least, 2)} or more would clear it."
-        out.append(Diagnostic(WARNING, (
-            f"{g.teeth} teeth at {_num(g.pressure_angle_deg)}° is below the undercut limit of "
-            f"{_num(limit, 2)}: a generated gear would lose the bottom of its flanks, which "
-            f"this profile does not show.{cure}"), "teeth"))
-    if g.bore > 0.0 and (g.df - g.bore) / 2.0 < g.module and g.bore < g.df:
-        out.append(Diagnostic(WARNING, (
-            f"The bore leaves {_num((g.df - g.bore) / 2.0)} mm of rim under the teeth, thinner "
-            f"than one module ({_num(g.module)} mm)."), "bore"))
+        if g.printed:
+            # §2.3: nothing generates a printed gear, so it is made as drawn; the generated-gear lead-in is replaced.
+            said = ("Printed, the gear is made as drawn, with no undercut; whether a mate's tip clears its flank "
+                    "below the base circle is not checked here, so turn the pair in SolidWorks.")
+            out.append(Diagnostic(WARNING, (
+                f"{g.teeth} teeth at {_num(g.pressure_angle_deg)}° is below the undercut limit of "
+                f"{_num(limit, 2)}. {said}{cure}"), "teeth"))
+        else:
+            out.append(Diagnostic(WARNING, (
+                f"{g.teeth} teeth at {_num(g.pressure_angle_deg)}° is below the undercut limit of "
+                f"{_num(limit, 2)}: a generated gear would lose the bottom of its flanks, which "
+                f"this profile does not show.{cure}"), "teeth"))
+    if g.bore > 0.0 and g.bore < g.df:
+        rim = (g.df - g.bore) / 2.0
+        if g.printed and PRINTED_RIM_NOZZLES * g.nozzle > g.module:
+            # §2.2: printed, the stricter floor is said; above 3 nozzle widths of module that is today's one module.
+            if rim < PRINTED_RIM_NOZZLES * g.nozzle - PRINTED_TOLERANCE:
+                out.append(printed_rim_warning(rim, g.nozzle))
+        elif rim < g.module:
+            out.append(Diagnostic(WARNING, (
+                f"The bore leaves {_num(rim)} mm of rim under the teeth, thinner "
+                f"than one module ({_num(g.module)} mm)."), "bore"))
     if g.tip_thickness < TIP_THICKNESS_WARNING * g.module:
         out.append(Diagnostic(WARNING, (
             f"The tooth tip is {_num(g.tip_thickness)} mm thick, under 0.3 × module "
             f"({_num(TIP_THICKNESS_WARNING * g.module)} mm)."), "teeth"))
+    if g.printed:
+        out.extend(printed_section_warnings(g))
     if recipe == RECIPE_INVOLUTE and g.flank_start_d > g.form_d + 1e-9:
         out.append(Diagnostic(WARNING, (
             f"The involute starts at {_num(g.flank_start_d)} mm, above the form diameter of "
@@ -966,6 +986,55 @@ def section_diagnostics(g: SpurDerived, recipe: str, undercut_limit: Optional[fl
             f"Arcs stand in for the involute on this gear to within "
             f"{_num(flank_deviation(g) * 1000.0, 1)} µm."), "recipe"))
     return out
+
+
+def printed_tip_warning(thickness: float, nozzle: float, whose: str = "gear") -> Optional[Diagnostic]:
+    """F1 (PLAN-PRINTED §2.2): a printed tooth tip, after backlash, under one nozzle line; None when it is not.
+
+    ``whose`` words it for a ``gear``, a ``ring`` or a bevel gear's ``toe``. The thickness is the transverse one
+    at the tip circle, the one a layer is sliced through when the gear lies on its face. The advice differs: an
+    outside gear's tip thickens with more teeth (module 1: 0.271 mm at 12, 0.401 at 26), a ring's thins toward a
+    rack's (module 0.5: 0.438 mm at 20, 0.341 at 40), so a ring is told only the larger module, and a bevel gear
+    also the narrower face, which brings its toe nearer its heel."""
+    if thickness >= nozzle - PRINTED_TOLERANCE:
+        return None
+    t, n = _num(thickness), _num(nozzle)
+    if whose == "ring":
+        said = (f"Printed, the ring's tooth tips are {t} mm thick after backlash, under one {n} mm nozzle line, so "
+                "the slicer will drop or round them; use a larger module.")
+    elif whose == "toe":
+        said = (f"Printed, the tooth tip at the toe is {t} mm thick after backlash, under one {n} mm nozzle line, so "
+                "the slicer will drop or round it; use a larger module, more teeth or a narrower face.")
+    else:
+        said = (f"Printed, the tooth tip is {t} mm thick after backlash, under one {n} mm nozzle line, so the slicer "
+                "will drop or round it; use a larger module or more teeth.")
+    return Diagnostic(WARNING, said, "teeth")
+
+
+def printed_module_warning(module: float, nozzle: float) -> Optional[Diagnostic]:
+    """F1 (§2.2): a printed gear's module under 2.5 nozzle widths, the guides' floor; None when it is not."""
+    floor = PRINTED_MODULE_NOZZLES * nozzle
+    if module >= floor - PRINTED_TOLERANCE:
+        return None
+    return Diagnostic(WARNING, (
+        f"Printed, a module of {_num(module)} mm is under 2.5 nozzle widths ({_num(floor)} mm), below which a "
+        f"{_num(nozzle)} mm nozzle rounds the profile off."), "module")
+
+
+def printed_rim_warning(rim: float, nozzle: float) -> Diagnostic:
+    """F1 (§2.2): the wall between a printed gear's bore and its root, said when under three nozzle widths."""
+    return Diagnostic(WARNING, (
+        f"Printed, the bore leaves {_num(rim)} mm of rim under the teeth, under three nozzle widths "
+        f"({_num(PRINTED_RIM_NOZZLES * nozzle)} mm)."), "bore")
+
+
+def printed_section_warnings(g: SpurDerived) -> List[Diagnostic]:
+    """The printed checks of one outside section that see only it (§2.2): its tip after backlash, then its module.
+    Empty for a gear that is not printed. A bevel gear's tip is judged at its toe instead (``bevel.validate``)."""
+    if not g.printed:
+        return []
+    found = (printed_tip_warning(g.tip_thickness, g.nozzle), printed_module_warning(g.module, g.nozzle))
+    return [d for d in found if d is not None]
 
 
 @dataclass(frozen=True)

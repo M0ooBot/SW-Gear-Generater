@@ -581,6 +581,12 @@ def toe_root_radius(g: BevelDerived) -> float:
     return along * math.sin(math.radians(g.delta)) - g.dedendum * (along / g.cone_distance) * math.cos(math.radians(g.delta))
 
 
+def toe_tip_thickness(g: BevelDerived) -> float:
+    """The tooth's tip thickness at the toe, mm, backlash included (F1, PLAN-PRINTED §2.1): the heel section's, scaled
+    as the whole tooth is toward the apex, by ``(R − b) / R``."""
+    return g.section.tip_thickness * g.toe_scale
+
+
 def validate(spec: GearSpec, derived: Optional[BevelDerived] = None, recipe: str = "A") -> List[Diagnostic]:
     problems = _field_errors(spec)
     if problems:
@@ -595,13 +601,26 @@ def validate(spec: GearSpec, derived: Optional[BevelDerived] = None, recipe: str
             f"A face width of {_num(g.face_width)} mm is half the cone distance of {_num(g.cone_distance)} mm or more; "
             "the teeth would shrink to nothing toward the apex."), "face_width"))
         return out
+    # F1 (PLAN-PRINTED §2.1, §2.2): a printed bevel gear's tip is judged at its toe, where the tooth is smallest, so
+    # the heel section's own tip sentence is set aside for the toe's.
+    heel_tip = (spur.printed_tip_warning(g.section.tip_thickness, g.section.nozzle, "ring" if g.ring else "gear")
+                if g.printed and not g.crown else None)
     if g.crown:
         out.extend(rack_diagnostics(g.section))
     elif g.ring:
-        out.extend(d for d in internal.section_diagnostics(g.section, recipe) if d.field not in ("rim", "bore"))
+        out.extend(d for d in internal.section_diagnostics(g.section, recipe) if d.field not in ("rim", "bore")
+                   and d != heel_tip)
     else:
         out.extend(d for d in spur.section_diagnostics(g.section, recipe, g.undercut_limit, suggest_shift=False)
-                   if d.field != "bore")
+                   if d.field != "bore" and d != heel_tip)
+    if g.printed and not any(d.is_error for d in out):
+        toe = spur.printed_tip_warning(toe_tip_thickness(g), g.section.nozzle, "toe")
+        if toe is not None:
+            out.append(toe)
+        if g.crown:
+            module = spur.printed_module_warning(g.module, g.section.nozzle)
+            if module is not None:
+                out.append(module)
     if g.ring:
         if g.bore > 0.0:
             out.append(Diagnostic(WARNING, (
@@ -611,6 +630,10 @@ def validate(spec: GearSpec, derived: Optional[BevelDerived] = None, recipe: str
         out.append(Diagnostic(ERROR, (
             f"Bore of {_num(g.bore)} mm reaches within a module of the root at the toe, "
             f"{_num(2.0 * toe_root_radius(g))} mm across; it must be smaller."), "bore"))
+    elif g.printed and g.bore > 0.0:
+        rim = toe_root_radius(g) - g.bore / 2.0
+        if rim < spur.PRINTED_RIM_NOZZLES * g.section.nozzle - spur.PRINTED_TOLERANCE:
+            out.append(spur.printed_rim_warning(rim, g.section.nozzle))
     if g.face_width > g.cone_distance / 3.0 or g.face_width > 10.0 * g.module:
         out.append(Diagnostic(WARNING, (
             f"A face width of {_num(g.face_width)} mm is more than the Gleason limit of the smaller of a third of the "
