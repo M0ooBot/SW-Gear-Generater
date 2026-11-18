@@ -788,6 +788,103 @@ box; the `WM_COMMAND` try has still never been made. Both times the frame read e
 - The first pass's step 2, the second activation, raised no box, as point for a ruling B foresaw: the box comes at
   the first activation with the ring in error.
 
+## `remake-m3` on SolidWorks 2026 (2026-11-18, from 23107c2, SolidWorks 2026 34.1.1)
+
+**Setup.**
+- Run folder `<probe folder>\w9c-remake-m3-sw2026-20261118-053114`, one `git archive` of 23107c2 with
+  `SNAPSHOT_COMMIT` beside `src` (the log's line 2 names it); the snapshot's self-check read 101 ok, 0 failed before
+  the run. `probe/w9c_demonstration.py` at 23107c2 is `eee5ffe`'s, the script the 2024 run above ran.
+- One fresh session of SolidWorks 2026 34.1.1, PID 35548, started for the run with no other SolidWorks running
+  (26-12:4, 10.23 GB free), and exited after by a plain close request; none was left running.
+- The command line under "Command lines" below, **without** `--close-outlived-whats-wrong` (the ruling that allows
+  closing a box is for 2024 alone; on 2026 a What's Wrong box in a job is the STOP, 26-12:7), on this laptop's W9a
+  2026 `setup.master` (`w9a-final-sw2026-20261117-023433`); the section only copied it (17 files into each of
+  `remake-again` and `remake-first`, 26-12:11, 323).
+- Log `probe/results/w9c-demo-sw2026-20261118-12-remake-m3.log` and `w9c-demo-20261118-054420.json`. Citations
+  `26-12:` are that log's lines.
+
+| Section | Time | ok | FAIL | STOP | SolidWorks private |
+|---|---|---|---|---|---|
+| remake-m3 | 989 s | 42 | 1 | 0 | 1.66 GB at most (26-12:429), 0.99 GB after |
+
+Free memory never fell under 8.86 GB (26-12:123). SolidWorks was started at about 05:31 and the script attached at
+05:44: the shell call that started SolidWorks did not return until its own timeout, so the session stood idle about
+13 minutes before the run; it was exited at about 06:01.
+
+**The first pass** (`remake_again`, on `remake-again`):
+- **Step 1** stopped in the ring and marked it, the status naming RangeBox and saying to answer No (26-12:64, 117,
+  118). Its press took 111.2 s (26-12:65; run 11 on 34.0.0, 61.1 s).
+- **The script's own read before step 2** (`read_now`, which opens and activates RangeBox) raised no window, and
+  found RangeBox.SLDASM modified beside step 1's three parts (26-12:119-121), as run 11 and the 2024 run did. No
+  STOP came from `read_now`'s own guard against a flag newly set by the read, so, by the same deduction as the
+  review of the 2024 run (`W9C-RUNS-REVIEW.md`, its §2), RangeBox was already marked when that read's
+  `flags_before` was taken, straight after its open-and-activate. The log has no line of `flags_before` itself.
+- **Step 2, pressed again without closing,** stopped before any write and passed the strict check (26-12:173): no call
+  that changes or shows anything (by member `OpenDoc6` 8, `IsSuppressed2` 112, `GetSystemValue3` 1, 26-12:128,
+  the members and counts of run 11's 11:316 and of the 2024 run), every part's and the assembly's globals, every save
+  flag and file time, the assembly's frames, mates and flags and the gear mates' ratios as before, the ring in error at
+  54 teeth with Tooth Space 72 and Teeth 1 before and after (2024 read 51 and 51; run 11 read 72 and 1). The status
+  was the still-in-error sentence alone, naming the ring and RangeBox and saying to answer No (26-12:171, 172), and so
+  was the footer (26-12:176). The press took 109.1 s (run 11: 41.1 s). No window came in it.
+- **Step 2b, only the parts' windows closed,** ran on SolidWorks 2026 for the first time. After `QuitDoc` of Sun's,
+  Planet's and Ring's windows, SolidWorks still held all three, the ring still in error at 54 teeth with codes 72 and
+  1; only RangeBox.SLDASM read modified, the three parts' flags reading unmarked (26-12:177; the JSON's
+  `parts_closed`). This is what 2024 read (24-5:182): a part closed alone stays loaded, in error, holding the new
+  value, and its save flag no longer says so, so the premise of the advice that names the assembly holds on 2026 too.
+  The press (89.6 s, 26-12:186) stopped again on the ring alone, wrote nothing by its check, and said to close the
+  ring and RangeBox without saving, answering No (26-12:228, 229). In this press SolidWorks' notification box came up
+  while `GetNextFeature` was in progress (26-12:180, 181), logged as the box the coordinator's ruling exempts and
+  answered by nothing; it is not What's Wrong (its controls are `Title`, `Description`, `Button1`, `Button2` and
+  two hyperlinks), and it is the run's one `noted` (26-12:488).
+- **Step 3**, every document closed unsaved, went through routed by way of 53: the ring at 54 with nothing in error,
+  the mark gone, the four gear mates remade, the footer quiet (26-12:319). It took 313.8 s (26-12:239; run 11:
+  110.7 s), and carried Sprocket-1, -3 and -2 with their gears in every mode (26-12:236). Its post-checks of N and H
+  read the three planets out of step with the sun and the ring off axis before the put (26-12:242, 244), the same
+  lines as the 2024 run's (24-5:246, 248). The only windows were the assembly's open-progress box and the
+  interference-detection progress box (26-12:233, 234), both progress boxes the watch passes.
+- Head's inventory read ran inside every press (`inventory read yes`, 26-12:62, 125, 183, 236, and in the second pass 372, 431).
+
+**The second pass** (`remake_first_press`, on `remake-first`):
+- Step 1 as in the first pass: 114.7 s, stopped in the ring and marked it (26-12:374, 375, 427).
+- Read in a job that opens nothing, before the press again: the three parts marked, every other document, RangeBox
+  among them, unmarked (the JSON's `first_press.flags`, first entry).
+- **The app's press again, the first activation since step 1,** raised no window at all: What's Wrong did not come
+  (26-12:476; the JSON's `first_press.whats_wrong`, `came` and `stayed` empty), and no `DIALOG` line lies between
+  the press's start and its end (26-12:428-478). It stopped again on the ring alone with the still-in-error sentence
+  (26-12:433, 476), its calls by member step 2's (26-12:434), and took 93.1 s.
+- The result changed, made, remade and placed nothing and named the ring's failure alone; no traced call changed or
+  showed anything (26-12:476).
+- **The one FAIL** (26-12:478) is the same leg as 2024's: the check that the press wrote nothing by its traced calls,
+  every save flag and file time, and its result. RangeBox.SLDASM's flag read False before the press and True after
+  (`flags [('RangeBox.SLDASM', False, True)]`; the JSON's `first_press.flags`, both entries). Every other flag was
+  as before, no file's time changed, and `changing_calls` is empty.
+  - *Fact:* on 2026 34.1.1 too, step 1 left RangeBox unmarked by a read that activates nothing, and across the app's
+    press it turned marked, with no traced call that changes or shows anything and no file written. In the first pass
+    the script's own activating read found it marked (26-12:119), with no STOP from that read's guard.
+  - *Inference, not shown:* SolidWorks 2026 marks the assembly at its first open-and-activate after step 1, as the
+    review placed it on 2024, whoever makes the activation; on 2026 it does so with no window. Run 11's inference
+    ("it is step 1's press that leaves the assembly modified") does not hold on 2026 either. No read separates
+    `OpenDoc6` on the open document from `ActivateDoc3`.
+  - The check is left as it stands, as the task required; the review of the 2024 run says how it should read (the
+    assembly's mark said as a fact when it is the only flag that changed, no traced call changed anything and no
+    file's time changed). Read that way, this run's second pass would pass.
+
+**What's Wrong.** None came on 2026 in either pass: not at the script's read before step 2, not in steps 2, 2b or 3,
+not in the second pass's step 1, and not in the app's press made as the first activation since step 1. The JSON
+holds no `whats_wrong_lifetimes`, and `stops` is empty. The windows the watch logged were the assembly's open-progress
+box at each open (26-12:20, 233, 331, 370), the interference-detection progress box in step 3 (26-12:234, seen twice by the run's count, 26-12:485), SolidWorks'
+notification box once in 2b (26-12:180), and a balloon tip about the Simplified Interface before any job (26-12:8).
+
+**What this answers** (the review of the 2024 run, `W9C-RUNS-REVIEW.md`, its §2 and §4 item 5):
+- Step 2b is measured on 2026 and reads as on 2024.
+- On 2026, as on 2024, the assembly is unmarked after step 1 and marked at its first activation since; the second
+  pass's flags leg reads that mark as a FAIL on both versions. Whether it is ruled the same fact on 2026 is the
+  coordinator's.
+- On 2026 the first activation with the ring in error raises no What's Wrong box, by the script's read and by the
+  app's press alike, where on 2024 both raised one that outlived its job. This is the reading the proposed
+  `WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2026 = False` rested on with run 11's caveat that its press was the second
+  activation; here the app's press was the first. Nothing is set in `findings.py`.
+
 ## The tenth and eleventh runs on 2026: the final run (2026-11-17, `src` at 3a9e592, SolidWorks 2026 34.0.0)
 
 **Setup.**
@@ -1113,3 +1210,11 @@ python.exe RUN\snap\probe\w9c_demonstration.py RUN\snap\src RUN\out --pid PID ^
 ```
 
 Without the flag the run is as before, and a What's Wrong that outlives its job is the STOP.
+
+SolidWorks 2026, `remake`'s M3 alone (2026-11-18), without the flag, on this laptop's W9a 2026 master:
+
+```
+python.exe RUN\snap\probe\w9c_demonstration.py RUN\snap\src RUN\out --pid PID ^
+    --log RUN\w9c-demo-sw2026-12-remake-m3.log --sections remake-m3 ^
+    --user-master <probe folder>\w9a-final-sw2026-20261117-023433\out\setup.master
+```
