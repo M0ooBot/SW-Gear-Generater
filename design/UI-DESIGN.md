@@ -197,7 +197,12 @@ Transverse α, Lead, Twist on face (face to apex for a herringbone), and
 Overlap εβ. A shifted gear's starts with Profile shift `+0.3 · 0.6`, the
 coefficient and what it comes to in mm. A shifted pair whose tips come within a
 tenth of a module of the other gear's root says so under the table, and one
-whose tips reach it is an error.
+whose tips reach it is an error. A printed pair (F1) is told its tip clearance
+under 0.3 mm (*Printed, the tip clearance is 0.2 mm, under the 0.3 mm two
+printed surfaces take; use a larger module.*) whatever its kind: outside, a
+pinion in a ring, a bevel pair (`pair.mesh_warnings`), and a crossed pair, judged
+unshifted as the workbook judges it, so the form and the workbook never
+disagree. A machined ring, bevel or crossed pair is told nothing new.
 Errors come first, then warnings, each once, in `theme.ERROR`. The form is
 worked out again **120 ms** after the last keystroke. An error disables
 **Build**.
@@ -1661,6 +1666,8 @@ given the Box as read and the Box as assessed):
 | Machined typed | *Machined, as the Box sheet says: type Printed beside Process to print it* |
 | a word that is neither (an error at its cell) | *Process does not read: the Checks panel says why* |
 | Printed, its Nozzle not a number above zero | *Printed; its Nozzle does not read: the Checks panel says why* |
+| blank, the record beside it broken (Build makes a new gearbox) | *Printed, as for a new gearbox: the record of what was built beside this workbook cannot be read, so a blank Process is not read as built; 0.4 mm nozzle* |
+| blank, the record from a newer app (both buttons wait) | *Not known: the record beside this workbook is from a newer Gear Generator, so a blank Process is not read as built here* |
 
 It wraps in its cell as *Worked out as* does. Typing Printed on a gearbox built
 Machined changes each part's Backlash global, so every gear reads *changes on
@@ -1677,7 +1684,10 @@ renames a file, and Build again… makes new parts named with _P if you want the
 mark.* (one part: *Gear_m1.5_N17, now printed, keeps its file name, …*; the
 other way: *… now machined, keeps its file name, with the _P it was built
 printed with: … named without it if you want.*). A part's own tooth count or
-module said in its name is still told as before, the mark set aside.
+module said in its name is still told as before, the mark set aside. It is said
+only on the Update that changes the Process (the F1 review's S2): what a part was
+before the press is read from the record taken at the press (its entry's spec),
+else its recorded Backlash global, and only with neither from its file's name.
 
 Boards: `WorkbookBeforeF1` (the reducer as an app before F1 built it, its
 workbook with no Process row, opened Machined, as built, nothing changed) and

@@ -125,3 +125,27 @@ Not run on SolidWorks (F1's SolidWorks run is the coordinator's).
 - `_kept_name` with the _P set aside, and `_process_names_kept` reading `update.parts[i].spec` by index as
   `_kept_name` already did.
 - That no machined sentence moved: test_printed_rule's `CARD` pins hold.
+
+## The coordinator's rulings on the F1 review (`F1-REVIEW.md`, `be5ae7a`; 2026-11-18, each the user's to overrule)
+
+- **Ruling 1:** the span over k teeth (choice 10) is not part of F1; it is F2's first step, before any print is
+  measured.
+- **Ruling 2:** every choice above is accepted as the review recommends (choices 1 to 9 and 11 as taken), with one
+  change: the form judges printed crossed pairs as the workbook does (choice 12), so the two never disagree.
+- **Ruling 4:** the review's should-fixes are taken, each by the author of its files.
+
+## After the review
+
+- `47a7dcb` **S2.** Update's name sentence is said only on the Update that changes the Process: what a part was before
+  the press is read from the job's record (its entry's spec), else its recorded Backlash global, else its file's name.
+  Tests in `test_ui_text` and through the window (said once when Printed is typed, not again on the next Update of a
+  bore); both fail on the previous `ui_text`.
+- `f526dbf` **S5.** A blank Process beside a record the window cannot read: broken (Build makes a new gearbox),
+  *Printed, as for a new gearbox: the record of what was built beside this workbook cannot be read, so a blank Process
+  is not read as built; 0.4 mm nozzle*; from a newer app (both buttons wait), *Not known: the record beside this
+  workbook is from a newer Gear Generator, so a blank Process is not read as built here*. `WorkbookWindow.process_record`
+  keeps which.
+- `368db90` **Ruling 2.** The strip says a printed crossed pair's clearance as `workbook.checks` computes it (`pair.tip_clearance`
+  unshifted, in `pair.printed_clearance_sentence`'s words); `gen.py` the same; no board changed.
+- **S4, S6, S7** are in A's and B's files (`checks.py`, `test_printed_gears.py`, `pair.py`); none is C's.
+  `design/UI-DESIGN.md` says all of the above.
