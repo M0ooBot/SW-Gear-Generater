@@ -10380,7 +10380,7 @@ def print_parts(sw: SolidWorks, plan: PrintPlan) -> PrintResult:
         restored, turned = _close_and_restore(sw, job.reached, start, before, job.facts)
     return PrintResult(written=tuple(job.written), folder=job.folder, refusal=job.refusal, failed=tuple(job.failed),
                        facts=dict(job.facts), active_restored=restored, flags_turned_on=turned,
-                       warnings=tuple(job.warnings))
+                       warnings=tuple(job.warnings), live_features=tuple(job.live_features))
 
 
 @dataclass
@@ -10395,6 +10395,7 @@ class _PrintJob:
     failed: List[Tuple[str, str]] = field(default_factory=list)
     facts: Dict[str, str] = field(default_factory=dict)
     warnings: List[Tuple[str, Tuple[str, ...]]] = field(default_factory=list)
+    live_features: List[Tuple[str, Tuple[str, ...]]] = field(default_factory=list)
     folder: str = ""
 
 
@@ -10452,6 +10453,8 @@ def _run_print_job(sw: SolidWorks, plan: PrintPlan, year: int, job: _PrintJob) -
         if warned:
             job.warnings.append((part.path, warned))
         live_user[part.path] = tuple(u.name for u in _user_features(part.path, states, part.made))
+        if live_user[part.path]:
+            job.live_features.append((part.path, live_user[part.path]))
     job.refusal = _job_refusal(failures)
     if job.refusal is not None:
         return

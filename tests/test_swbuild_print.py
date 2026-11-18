@@ -497,6 +497,35 @@ def test_the_size_check_once_measured_runs_in_the_job_and_skips_a_part_holding_t
     assert result.facts["Gear_m1.5_N20_P.step|extent"] == "skipped: user features"
 
 
+def test_the_users_features_read_live_are_named_in_the_result_whether_or_not_the_record_lists_them(tmp_path,
+                                                                                                  findings_on):
+    """F2-DEMONSTRATION-REVIEW: the job's live read of the user's features (feature_states against the record's made),
+    per part by name, so the print list can name a feature no record lists (every part printed from the form)."""
+    sw = fake_with()
+    sw.user_features[_key(PART)] = [("User Keyway", "ICE"), ("Boss-Extrude1", "Extrusion")]
+    sw.user_features[_key(PART2)] = [("User Keyway", "ICE")]
+    third = r"C:\Box\Gear_m1_N12_P.SLDPRT"
+    sw.saved[_key(third)] = sw.saved[_key(PART)]
+    listed = part(PART2, user_features=("User Keyway",))                     # the record lists it
+    result = swbuild.print_parts(sw, plan_for(tmp_path, part(PART), listed, part(third)))
+    assert result.refusal is None and len(result.written) == 3
+    assert result.live_features == ((PART, ("User Keyway", "Boss-Extrude1")), (PART2, ("User Keyway",)))
+    assert result.facts["Gear_m1.5_N20_P.step|extent"] == "skipped: user features"     # no record lists them
+    assert result.facts["Gear_m1.5_N40_P.step|extent"] == "skipped: user features"
+    assert result.facts["Gear_m1_N12_P.step|extent"] == "checked"                       # none: not in the result
+
+
+def test_a_result_with_no_user_features_read_names_none_and_with_list_keeps_them(tmp_path, findings_on):
+    sw = fake_with()
+    result = swbuild.print_parts(sw, plan_for(tmp_path))
+    assert result.live_features == () and printout.PrintResult(active_restored=True).live_features == ()
+    sw = fake_with()
+    sw.user_features[_key(PART)] = [("User Keyway", "ICE")]
+    result = swbuild.print_parts(sw, plan_for(tmp_path))
+    listed = printout.with_list(result, "the list")
+    assert listed.list_path and listed.live_features == ((PART, ("User Keyway",)),)
+
+
 def test_a_save_flag_the_job_turned_on_is_said_and_never_saved(tmp_path, findings_on, monkeypatch):
     sw = fake_with(assembly=True, components=[PART], active=ASSEMBLY)
     findings_on(PART_WINDOW_READ="Visible", STEP_EXPORT_FROM_COMPONENT=True)

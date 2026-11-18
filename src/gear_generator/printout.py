@@ -206,6 +206,12 @@ class PrintResult:
     # status composed from a result never says a list was written when it was not.
     list_path: str = ""
     list_error: str = ""
+    # F2-DEMONSTRATION-REVIEW (package B's addition): the user's features the job read live in each part, by name, in
+    # tree order: (part path, names), one entry per part that holds any, read from feature_states against the record's
+    # ``PrintPart.made`` (``swbuild._user_features``), whether or not the record lists them (``PrintPart.user_features``
+    # holds those it lists). A part printed from the form has a record that lists none, so this is the only place its
+    # features are named.
+    live_features: Tuple[Tuple[str, Tuple[str, ...]], ...] = ()
 
 
 # -- the gate (§3 of the interface; checked here at planning and again by swbuild.print_parts) --------------------------
