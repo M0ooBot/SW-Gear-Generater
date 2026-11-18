@@ -38,7 +38,7 @@ def nothing_exists(_path):
 # -- the gate ------------------------------------------------------------------------------------------------------------
 
 
-def test_every_f2_finding_is_unset_so_both_planners_refuse_with_gate_copy_on_both_versions():
+def test_with_every_f2_finding_unset_both_planners_refuse_with_gate_copy_on_both_versions(f2_unmeasured):
     for version in (V2026, V2024, ()):
         assert printout.gate(version) == Refusal(GATE_COPY)
         assert printout.form_print(None, r"C:\G\Gear.SLDPRT", r"C:\Out", version).refusal == Refusal(GATE_COPY)
@@ -47,7 +47,8 @@ def test_every_f2_finding_is_unset_so_both_planners_refuse_with_gate_copy_on_bot
         assert plan.revision == tuple(version)
 
 
-def test_with_save_as_copy_set_a_version_whose_step_export_is_unset_is_gate_by_year_and_revision(monkeypatch):
+def test_with_save_as_copy_set_a_version_whose_step_export_is_unset_is_gate_by_year_and_revision(f2_unmeasured,
+                                                                                                  monkeypatch):
     monkeypatch.setattr(findings, "SAVE_AS_COPY", 2)
     monkeypatch.setattr(findings, "STEP_EXPORT_ON_2026", True)
     assert printout.gate(V2026) is None
@@ -58,7 +59,7 @@ def test_with_save_as_copy_set_a_version_whose_step_export_is_unset_is_gate_by_y
     assert printout.gate(V2026).code == GATE
 
 
-def test_the_planners_answer_the_gate_before_anything_else(monkeypatch):
+def test_the_planners_answer_the_gate_before_anything_else(f2_unmeasured, monkeypatch):
     monkeypatch.setattr(findings, "SAVE_AS_COPY", 2)
     plan = printout.form_print(None, "", "", V2024)              # nothing active, no record: the gate still first
     assert plan.refusal == Refusal(GATE, (), {"year": "2024", "revision": "32.5.0"})
@@ -376,14 +377,15 @@ def test_any_other_schema_is_refused(schema):
     assert printout.check_step(step(schema=schema), GEAR) == printout.SCHEMA
 
 
-@pytest.mark.parametrize("unit,label", [
-    (MM, "MILLI.METRE"),
-    ("( LENGTH_UNIT ( ) NAMED_UNIT ( * ) SI_UNIT ( $, .METRE. ) )", "METRE"),
-    ("( LENGTH_UNIT ( ) NAMED_UNIT ( * ) SI_UNIT ( .CENTI., .METRE. ) )", "CENTI.METRE"),
+@pytest.mark.parametrize("unit,label,per_mm", [
+    (MM, "MILLI.METRE", 1.0),
+    ("( LENGTH_UNIT ( ) NAMED_UNIT ( * ) SI_UNIT ( $, .METRE. ) )", "METRE", 0.001),
+    ("( LENGTH_UNIT ( ) NAMED_UNIT ( * ) SI_UNIT ( .CENTI., .METRE. ) )", "CENTI.METRE", 0.1),
 ])
-def test_an_si_length_unit_with_or_without_a_prefix_reads(unit, label):
-    reading = printout.read_step(step(unit=unit), GEAR)
-    assert (reading.reason, reading.unit) == (None, label)
+def test_an_si_length_unit_with_or_without_a_prefix_reads_and_scales_the_vertices(unit, label, per_mm):
+    points = ((16.5 * per_mm, 0.0, 0.0), (0.0, 0.0, 8.0 * per_mm))
+    reading = printout.read_step(step(unit=unit, points=points), GEAR)
+    assert (reading.reason, reading.unit, reading.extent) == (None, label, "checked")
 
 
 def test_an_inch_file_reads_its_unit_from_the_context_though_it_also_holds_the_si_millimetre(monkeypatch):
@@ -395,7 +397,7 @@ def test_an_inch_file_reads_its_unit_from_the_context_though_it_also_holds_the_s
     text = step(unit=inch, extra=extra, points=((16.5 / 25.4, 0.0, 0.0), (0.0, 0.0, 8.0 / 25.4)))
     reading = printout.read_step(text, GEAR)
     assert (reading.reason, reading.unit) == (None, "INCH")
-    monkeypatch.setattr(printout, "EXTENT_MEASURED", True)
+    monkeypatch.setattr(findings, "EXTENT_MEASURED", True)
     assert printout.read_step(text, GEAR).extent == "checked"               # the vertices read in inches
     # Without the context every LENGTH_UNIT is read, the inch and the millimetre differ, and the unit cannot be read:
     # the reason the context is the one read.
@@ -439,14 +441,19 @@ def test_a_name_inside_a_quoted_string_or_a_comment_is_never_an_instance():
     assert printout.check_step(text, GEAR) is None
 
 
-def test_the_extent_is_a_fact_skipped_while_not_measured():
+def test_the_extent_is_a_fact_skipped_while_not_measured(f2_unmeasured):
     reading = printout.read_step(step(points=((99.0, 0.0, 0.0),)), GEAR)
     assert (reading.reason, reading.extent) == (None, "skipped: not measured")
-    assert printout.EXTENT_MEASURED is False
+
+
+def test_with_the_findings_as_committed_the_gate_is_open_on_both_versions_and_the_size_is_checked():
+    assert printout.gate(V2026) is None and printout.gate(V2024) is None
+    assert printout.read_step(step(), GEAR).extent == "checked"
+    assert printout.check_step(step(points=((17.0, 0.0, 0.0), (0.0, 0.0, 8.0))), GEAR) == printout.EXTENT
 
 
 def test_the_extent_once_measured_checks_d_a_over_2_and_the_face(monkeypatch):
-    monkeypatch.setattr(printout, "EXTENT_MEASURED", True)
+    monkeypatch.setattr(findings, "EXTENT_MEASURED", True)
     assert printout.read_step(step(), GEAR) == printout.StepReading(None, "AUTOMOTIVE_DESIGN", "AP214",
                                                                     "MILLI.METRE", "checked")
     assert printout.check_step(step(points=((16.5, 0.0, 0.0), (0.0, 0.0, 8.009))), GEAR) is None
@@ -463,23 +470,24 @@ def test_the_extent_once_measured_checks_d_a_over_2_and_the_face(monkeypatch):
     (GearSpec(kind="sleeve", module="1", teeth="20", face_width="8", bore=""), "sleeve"),
     (GearSpec(kind="dog", module="1", teeth="20", face_width="8", bore=""), "dog"),
     (GearSpec(kind="hub", module="1", teeth="20", face_width="8", bore=""), "hub"),
+    (GearSpec(kind="herringbone", module="2", teeth="20", helix_angle="15", face_width="14", bore=""), "herringbone"),
 ])
-def test_the_extent_is_never_checked_on_a_bevel_ring_sleeve_dog_or_hub(monkeypatch, spec, why):
-    monkeypatch.setattr(printout, "EXTENT_MEASURED", True)
+def test_the_extent_is_never_checked_on_a_bevel_ring_sleeve_dog_hub_or_herringbone(monkeypatch, spec, why):
+    monkeypatch.setattr(findings, "EXTENT_MEASURED", True)
     part = printout.print_part(r"C:\G\X.SLDPRT", spec.to_dict())
     reading = printout.read_step(step(points=((99.0, 0.0, 0.0),)), part)
     assert (reading.reason, reading.extent) == (None, f"skipped: {why}")
 
 
 def test_the_extent_is_never_a_refusal_for_a_part_holding_the_users_features(monkeypatch):
-    monkeypatch.setattr(printout, "EXTENT_MEASURED", True)
+    monkeypatch.setattr(findings, "EXTENT_MEASURED", True)
     part = printout.print_part(r"C:\G\Gear.SLDPRT", SPUR.to_dict(), user_features=("Boss-Extrude1",))
     reading = printout.read_step(step(points=((40.0, 0.0, 0.0), (0.0, 0.0, 30.0))), part)
     assert (reading.reason, reading.extent) == (None, "skipped: user features")
 
 
 def test_the_extent_is_checked_on_a_machined_gear_too(monkeypatch):
-    monkeypatch.setattr(printout, "EXTENT_MEASURED", True)
+    monkeypatch.setattr(findings, "EXTENT_MEASURED", True)
     part = printout.print_part(r"C:\G\Gear.SLDPRT", GearSpec(module="1.5", teeth="20", face_width="8").to_dict())
     assert part.process == "machined"
     assert printout.read_step(step(), part).extent == "checked"
@@ -489,7 +497,8 @@ def test_the_codes_and_reasons_are_the_interfaces():
     assert printout.REASONS == (printout.FRAME, printout.SCHEMA, printout.SOLIDS, printout.OPEN_SHELL,
                                 printout.SURFACE_MODEL, printout.UNIT, printout.EXTENT)
     assert all(getattr(printout, code) == code for code in printout.CODES)
-    assert set(printout.EXTENT_SKIPPED) >= {"bevel", "ring", "sleeve", "dog", "hub", "user features", "not measured"}
+    assert set(printout.EXTENT_SKIPPED) >= {"bevel", "ring", "sleeve", "dog", "hub", "herringbone", "user features",
+                                            "not measured"}
 
 
 # -- the result and the list ----------------------------------------------------------------------------------------------

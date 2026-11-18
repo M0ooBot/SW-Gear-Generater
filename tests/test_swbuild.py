@@ -2018,18 +2018,33 @@ class FakeSolidWorks:
     # read, as Session.activate (ActivateDoc3, the build document forgotten); ``close_document`` closes a window unsaved
     # (CloseDoc: its changes lost, a component-only part's stay loaded with the assembly); ``export_step`` writes the
     # document calls act on (``current``) as SolidWorks is assumed to, by its object whether active or not, to a file
-    # holding ``step_texts[path]`` (else STEP_TEXT), refusing a path that exists as Session does, answering (0, 0), and
+    # holding ``step_texts[path]`` (else _step_text's, sized to its globals), refusing a path that exists as Session does, answering (0, 0), and
     # marking nothing (a copy). ``exports`` keeps (document written, file, the active document's path then);
     # ``export_fail[path] = (errors, warnings)`` makes SolidWorks answer False with those codes.
 
-    STEP_TEXT = (
+    STEP_TEXT_SHAPE = (
         "ISO-10303-21;\r\nHEADER;\r\nFILE_DESCRIPTION (( 'STEP AP214' ), '1' );\r\n"
         "FILE_NAME ('Gear.STEP', '2026-11-18T22:10:05', ( '' ), ( '' ), 'SwSTEP 2.0', 'SolidWorks 2026', '' );\r\n"
-        "FILE_SCHEMA (( 'AUTOMOTIVE_DESIGN { 1 0 10303 214 3 1 1 }' ));\r\nENDSEC;\r\n\r\nDATA;\r\n"
+        "FILE_SCHEMA (( 'AUTOMOTIVE_DESIGN {{ 1 0 10303 214 3 1 1 }}' ));\r\nENDSEC;\r\n\r\nDATA;\r\n"
         "#1 = ( LENGTH_UNIT ( ) NAMED_UNIT ( * ) SI_UNIT ( .MILLI., .METRE. ) );\r\n"
         "#2 = MANIFOLD_SOLID_BREP ( 'Body', #3 ) ;\r\n#3 = CLOSED_SHELL ( 'NONE', ( ) ) ;\r\n"
-        "#4 = CARTESIAN_POINT ( 'NONE', ( 16.5, 0.0, 0.0 ) ) ;\r\n#5 = VERTEX_POINT ( 'NONE', #4 ) ;\r\n"
+        "#4 = CARTESIAN_POINT ( 'NONE', ( {r!r}, 0.0, 0.0 ) ) ;\r\n#5 = VERTEX_POINT ( 'NONE', #4 ) ;\r\n"
+        "#6 = CARTESIAN_POINT ( 'NONE', ( 0.0, 0.0, {f!r} ) ) ;\r\n#7 = VERTEX_POINT ( 'NONE', #6 ) ;\r\n"
         "ENDSEC;\r\nEND-ISO-10303-21;\r\n")
+    STEP_TEXT = STEP_TEXT_SHAPE.format(r=16.5, f=8.0)        # the m 1.5, z 20, face 8 spur's
+
+    def _step_text(self):
+        """The file SolidWorks is assumed to write for the document calls act on: a whole AP214 file of one solid in
+        millimetres whose vertices reach its "Outer Diameter" / 2 from the axis and span its "Face Width" (F2's probe:
+        the printed spur, helical and 50-tooth gear held to 0.0012 mm); a spur of m 1.5, z 20, face 8 (16.5, 8) when
+        the document holds neither global."""
+        try:
+            values = self.equation_values()
+        except Exception:  # noqa: BLE001 - a document whose equations do not evaluate here
+            values = {}
+        r = float(values.get("Outer Diameter", 33.0)) / 2.0
+        f = float(values.get("Face Width", 8.0))
+        return self.STEP_TEXT_SHAPE.format(r=r, f=f)
 
     def _f2(self):
         for name, value in (("component_only", set()), ("step_texts", {}), ("exports", []), ("export_fail", {})):
@@ -2061,8 +2076,10 @@ class FakeSolidWorks:
         return doc
 
     def window_read(self, doc):
+        """As Session.window_read: only the reads it knows by name ("Visible", "ActiveView") are measured; None, or any
+        other value of PART_WINDOW_READ (F2-REVIEW S7: True, or the probe's prose), answers None."""
         self._log("window_read", doc.path)
-        if self._finding("PART_WINDOW_READ") is None:
+        if self._finding("PART_WINDOW_READ") not in ("Visible", "ActiveView"):
             return None
         return any(_key(d.path) == _key(doc.path) for d in self.open_docs)
 
@@ -2102,7 +2119,7 @@ class FakeSolidWorks:
         if fail is not None:
             raise swcom.StepExportError(path, False, fail[0], fail[1], False)
         with open(path, "w", encoding="latin-1", newline="") as handle:
-            handle.write(self.step_texts.get(_key(self.current or ""), self.STEP_TEXT))
+            handle.write(self.step_texts.get(_key(self.current or ""), self._step_text()))
         return 0, 0
 
     def file_version(self, path):

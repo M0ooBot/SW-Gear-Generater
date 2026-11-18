@@ -3152,12 +3152,112 @@ F2_PER_VERSION = ("STEP_EXPORT", "STEP_EXPORT_NEEDS_ACTIVE", "STEP_EXPORT_FROM_C
                   "OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN", "PART_WINDOW_READ")
 
 
-def test_f2_findings_are_not_measured_until_a_reviewed_probe_run_sets_them():
-    """F2-0 adds the names the probe proposes, every one None; SAVE_AS_SILENT, their neighbour, is as it was; and the
-    first revision's STEP_FILE_CHECK is not among them (M2: the schema and unit are the user's settings)."""
-    assert hasattr(findings, "SAVE_AS_COPY") and findings.SAVE_AS_COPY is None
+def test_f2_findings_are_set_alike_on_both_versions_as_the_probes_review_allows():
+    """F2-0 added the names the probe proposes, each None until a reviewed run set it (this test's first form,
+    test_f2_findings_are_not_measured_until_a_reviewed_probe_run_sets_them); the reruns' review (F2-PROBES-REVIEW.md,
+    e449465) allowed all six alike on both versions, each pinned to its log lines below. Every name is still there on
+    both versions, now at its value, PART_WINDOW_READ at the word Session.window_read compares; SAVE_AS_SILENT, their
+    neighbour, is as it was; the first revision's STEP_FILE_CHECK is not among them (M2: the schema and unit are the
+    user's settings); EXTENT_MEASURED, moved here from printout, is True."""
+    assert hasattr(findings, "SAVE_AS_COPY") and findings.SAVE_AS_COPY == 2 and type(findings.SAVE_AS_COPY) is int
     for name in F2_PER_VERSION:
         for year in (2026, 2024):
-            assert hasattr(findings, f"{name}_ON_{year}") and getattr(findings, f"{name}_ON_{year}") is None, (name, year)
+            assert hasattr(findings, f"{name}_ON_{year}"), (name, year)
+            value = getattr(findings, f"{name}_ON_{year}")
+            assert value == F2_SET[name] and type(value) is type(F2_SET[name]), (name, year, value)
+    assert findings.PART_WINDOW_READ_ON_2026 == findings.PART_WINDOW_READ_ON_2024 == "Visible"
+    assert findings.EXTENT_MEASURED is True
     assert not [n for n in dir(findings) if n.startswith("STEP_FILE_CHECK")]
     assert findings.SAVE_AS_SILENT == 1 and findings.SAVE_AS_CALL == "IModelDocExtension.SaveAs3"
+
+
+F2_SET = {"STEP_EXPORT": True, "STEP_EXPORT_NEEDS_ACTIVE": False, "STEP_EXPORT_FROM_COMPONENT": True,
+          "OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN": True, "PART_WINDOW_READ": "Visible"}
+F2_RERUNS = {
+    2026: (LATEST.parent / "f2-probes-20261118-103547.json",
+           LATEST.parent / "f2-probes-sw2026-20261118-3-rerun-geometry-all-proposed.log", (34, 1, 1)),
+    2024: (LATEST.parent / "sw2024" / "f2-probes-20261118-104015.json",
+           LATEST.parent / "sw2024" / "f2-probes-sw2024-20261118-2-rerun-geometry-all-proposed.log", (32, 5, 0)),
+}
+F2_WINDOW_PROSE = "IModelDoc2.Visible, True for a document open in its own window"
+
+
+def _f2_run(path, log, revision):
+    """One of F2's probe reruns: its JSON and its log by line number from 1, checked for its snapshot (d333ff8), its
+    SolidWorks, no user document open, and no stop or failure."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["revision"] == list(revision) and data["snapshot"] == "d333ff8"
+    assert data["stops"] == [] and data["fails"] == []
+    lines = [""] + _w9_log(log)
+    assert "(snapshot: d333ff8); sections ['export', 'component']" in lines[3]
+    assert lines[5].startswith(f"attach  SolidWorks {2026 if revision[0] == 34 else 2024} (revision "
+                               f"{'.'.join(map(str, revision))})")
+    assert lines[6] == "open    before: []"
+    return data, lines
+
+
+@pytest.mark.parametrize("year", [2026, 2024])
+def test_f2_findings_rest_on_the_probes_rerun_on_each_version(year):
+    """findings.py's F2 block, line by line: each value is its rerun's proposal on that version (from d333ff8, 0 failed,
+    no STOP), PART_WINDOW_READ the word its prose names (F2-PROBES-REVIEW's must-fix), and the facts each comment cites
+    are at the lines it gives."""
+    data, q = _f2_run(*F2_RERUNS[year])
+    assert q[88] == "done    0 failed: []; 0 noted; 0 STOP(s), a hung worker included: []"
+
+    def proposed(number, name):
+        line = q[number]
+        assert line.startswith(f"propose {name} = "), (number, line)
+        return ast.literal_eval(line[len(f"propose {name} = "):].split("  #")[0])
+
+    # SAVE_AS_COPY (q:18-19)
+    assert q[18].startswith("fact    export (1) swconst.tlb: swSaveAsOptions_e Silent 1, Copy 2 (")
+    assert proposed(19, "SAVE_AS_COPY") == findings.SAVE_AS_COPY == 2
+    # STEP_EXPORT (q:20-30): both exports a plain True with codes 0 and no window, every bracket unchanged
+    for number in (20, 25):
+        assert " SaveAs answered True (plain), errors 0 [], warnings 0 [], options 3, in " in q[number], q[number]
+        assert q[number].endswith("windows 0"), q[number]
+        assert q[number + 1].replace("        before ", "") == q[number + 2].replace("        after  ", "")
+    for number in (23, 28):
+        assert "FILE_SCHEMA CONFIG_CONTROL_DESIGN (AP203)" in q[number] and "MANIFOLD_SOLID_BREP 1, CLOSED_SHELL 1, " \
+            "OPEN_SHELL 0, SHELL_BASED_SURFACE_MODEL 0; length unit MILLI.METRE (1.0 mm)" in q[number], q[number]
+    assert proposed(30, f"STEP_EXPORT_ON_{year}") is getattr(findings, f"STEP_EXPORT_ON_{year}") is True
+    # STEP_EXPORT_NEEDS_ACTIVE (q:35-38, :44-46): the spur by its object with the helical active, its own file
+    assert q[35] == ("fact    export (6): the spur's window read with Helical_m2_N20_15R_P.SLDPRT active: "
+                     "{'Visible': True, 'ActiveView': True} (M1)")
+    assert "SaveAs answered True (plain), errors 0 [], warnings 0 []" in q[36]
+    assert q[37].startswith("        before {'active': 'Helical_m2_N20_15R_P.SLDPRT'")
+    assert q[38].startswith("        after  {'active': 'Helical_m2_N20_15R_P.SLDPRT'")
+    assert q[44].startswith("ok      export: the geometry comparison's controls: the spur exported twice (2, 5): same part")
+    assert q[45].startswith("fact    export (6): the file is the spur's own: True")
+    assert proposed(46, f"STEP_EXPORT_NEEDS_ACTIVE_ON_{year}") is \
+        getattr(findings, f"STEP_EXPORT_NEEDS_ACTIVE_ON_{year}") is False
+    # PART_WINDOW_READ (q:57, :74-75): Visible tells a part's own window from a component; set as the word
+    assert "Pair_m1.5_25T_50T_P.SLDASM': {'Visible': True, 'ActiveView': True}" in q[57]
+    assert "Pinion_m1.5_N25_P.SLDPRT': {'Visible': False, 'ActiveView': False}" in q[57]
+    assert "Gear_m1.5_N50_P.SLDPRT': {'Visible': False, 'ActiveView': False}" in q[57]
+    assert proposed(75, f"PART_WINDOW_READ_ON_{year}") == F2_WINDOW_PROSE
+    assert F2_WINDOW_PROSE.split(".")[1].split(",")[0] == getattr(findings, f"PART_WINDOW_READ_ON_{year}") == "Visible"
+    # STEP_EXPORT_FROM_COMPONENT (q:56-63, :72, :77): resolved components, the walk reaching both; lightweight not reached
+    assert "its components' states {" in q[56] and ": 2, " in q[56] and "the document walk reaches {" in q[56]
+    assert q[60].startswith("fact    component (7a) the gear by GetOpenDocumentByName, no activation: SaveAs answered "
+                            "True (plain), errors 0 [], warnings 0 []")
+    assert "the gear's component state 2 -> 2" in q[63]
+    assert q[72].startswith("fact    component (7a): the file is the gear's own (True, ")
+    assert "set lightweight reads 1" in q[76]
+    assert proposed(77, f"STEP_EXPORT_FROM_COMPONENT_ON_{year}") is \
+        getattr(findings, f"STEP_EXPORT_FROM_COMPONENT_ON_{year}") is True
+    assert q[77].endswith("lightweight: not reached")
+    # OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN (q:64-67, :73, :79): for a resolved component
+    assert q[67].startswith("fact    component (7b): opened True, the component resolved before True;")
+    assert q[73].startswith("fact    component (7b): the file is the gear's own (True, ")
+    assert proposed(79, f"OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_{year}") is \
+        getattr(findings, f"OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_{year}") is True
+    # EXTENT_MEASURED (q:23, :28, :70): the size check holds on the spur, the helical and the 50-tooth gear
+    for number in (23, 28, 70):
+        assert q[number].endswith("mm: holds True"), q[number]
+    assert findings.EXTENT_MEASURED is True
+    # the JSON's proposal block says the same, the window read's prose aside
+    for key, value in data["proposal"].items():
+        if key.endswith("_evidence"):
+            continue
+        assert value == (F2_WINDOW_PROSE if key.startswith("PART_WINDOW_READ") else getattr(findings, key)), key

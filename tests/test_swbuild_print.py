@@ -1,9 +1,9 @@
 """Package B of F2: the press's job, ``swbuild.print_parts`` (PLAN-PRINTED §3.1.3, "How each part is reached";
 docs/notes-printed/F2-INTERFACES.md §5), against test_swbuild's ``FakeSolidWorks``, and swcom's members it adds.
 
-Every F2 finding is None on both versions until a reviewed run of the probe sets it, so each test patches the findings
-it needs (``findings_on``, values made up for the test, never what the probe proposed) and says so; the gate's tests
-leave them as committed. The fake is taught each call as the probe is to measure it, by assumption (its docstring)."""
+The F2 findings are set alike on both versions since the probe's reruns were reviewed (F2-PROBES-REVIEW.md); each test
+still sets the per-year ones it needs (``findings_on`` / ``set_findings``, every other one None), so each row of the reach
+table is shown with each finding True, False and None; ``f2_unmeasured`` (conftest) gives the state before. The fake is taught each call as the probe is to measure it, by assumption (its docstring)."""
 
 import os
 
@@ -99,7 +99,7 @@ def written_files(result):
 # -- the gate, again in the job --------------------------------------------------------------------------------------------
 
 
-def test_with_every_finding_as_committed_the_job_refuses_gate_copy_and_touches_nothing(tmp_path):
+def test_with_every_finding_unmeasured_the_job_refuses_gate_copy_and_touches_nothing(tmp_path, f2_unmeasured):
     sw = fake_with()
     result = swbuild.print_parts(sw, plan_for(tmp_path))
     assert result.refusal == Refusal(printout.GATE_COPY) and result.active_restored is True
@@ -144,7 +144,7 @@ def test_a_part_not_open_is_opened_read_written_checked_and_closed_and_the_users
     assert open(result.written[0][1], encoding="latin-1", newline="").read() == FakeSolidWorks.STEP_TEXT
     assert sw.exports == [(PART, result.written[0][1], PART)]          # its own document, as it was written
     assert result.facts == {"Gear_m1.5_N20_P.step|schema": "AUTOMOTIVE_DESIGN", "Gear_m1.5_N20_P.step|unit":
-                            "MILLI.METRE", "Gear_m1.5_N20_P.step|extent": "skipped: not measured"}
+                            "MILLI.METRE", "Gear_m1.5_N20_P.step|extent": "checked"}
     assert opened_and_closed(sw) == [("open_document", (PART,)), ("activate", ("Gear_m1.5_N20_P.SLDPRT",)),
                                      ("close_document", ("Gear_m1.5_N20_P.SLDPRT",))]
     assert result.active_restored is True and sw.active.path == USERS   # the fake's CloseDoc left the user's active
@@ -219,6 +219,24 @@ def test_reach_way_reads_the_sessions_year(monkeypatch):
     monkeypatch.setattr(findings, "STEP_EXPORT_NEEDS_ACTIVE_ON_2024", None)
     assert swbuild.reach_way(2026, found=True, window=True, assembly_open=False) == "object"
     assert swbuild.reach_way(2024, found=True, window=True, assembly_open=False) == "activate"
+
+
+@pytest.mark.parametrize("value", [None, True, "IModelDoc2.Visible, True for a document open in its own window"])
+def test_the_fake_reads_a_window_only_by_a_word_session_knows(findings_on, value):
+    """F2-REVIEW S7: as Session.window_read, any PART_WINDOW_READ but "Visible" or "ActiveView" is unmeasured."""
+    findings_on(PART_WINDOW_READ=value)
+    sw = fake_with(windows=[PART])
+    assert sw.window_read(sw.document_by_path(PART)) is None
+    findings_on(PART_WINDOW_READ="Visible")
+    assert sw.window_read(sw.document_by_path(PART)) is True
+
+
+def test_with_the_findings_as_committed_a_part_in_its_own_window_goes_by_its_object(tmp_path):
+    sw = fake_with(windows=[PART])
+    result = swbuild.print_parts(sw, plan_for(tmp_path, revision=(34, 0, 0)))
+    assert result.refusal is None and opened_and_closed(sw) == []
+    assert sw.exports == [(PART, result.written[0][1], USERS)]
+    assert result.facts["Gear_m1.5_N20_P.step|extent"] == "checked"
 
 
 def test_a_part_open_in_its_window_and_not_active_is_refused_while_its_window_is_unread(tmp_path, findings_on):
@@ -447,12 +465,14 @@ def test_a_file_failing_its_check_is_file_check_and_stays(tmp_path, findings_on)
 
 def test_the_size_check_once_measured_runs_in_the_job_and_skips_a_part_holding_the_users_feature(
         tmp_path, findings_on, monkeypatch):
-    monkeypatch.setattr(printout, "EXTENT_MEASURED", True)
-    sw = fake_with()                                                    # STEP_TEXT: radius 16.5, no axial extent
+    monkeypatch.setattr(findings, "EXTENT_MEASURED", True)
+    sw = fake_with()
+    sw.step_texts[_key(PART)] = FakeSolidWorks.STEP_TEXT_SHAPE.format(r=16.5, f=0.0)     # no axial extent
     result = swbuild.print_parts(sw, plan_for(tmp_path))
     assert result.refusal == Refusal(printout.FILE_CHECK, ("Gear_m1.5_N20_P",),
                                      {"file": "Gear_m1.5_N20_P.step", "reason": printout.EXTENT})
     sw = fake_with()
+    sw.step_texts[_key(PART)] = FakeSolidWorks.STEP_TEXT_SHAPE.format(r=16.5, f=0.0)
     sw.user_features[_key(PART)] = [("Keyway Boss", "Extrusion")]       # read live after the app's own features
     result = swbuild.print_parts(sw, plan_for(tmp_path))
     assert result.refusal is None
