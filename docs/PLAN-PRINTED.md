@@ -924,8 +924,16 @@ of the first revision's forward-looking sentences:
     part marked unsaved or mismatched said as W9a says it; on 2024, a What's Wrong that comes and goes when something
     of the user's is in error.
   - No gear moves: a gear's phase is set by the centre of its tooth space (`workbook/geometry.py:8`, `phases` at
-    `:430-497`), and backlash widens the space evenly about that centre. That is read from the code, not measured.
-    So route (c1)'s puts and K2's refusals are not met.
+    `:430-497`), and backlash widens the space evenly about that centre. That is read from the code, and F1's runs
+    bear it out: every app body stood at its record frame after the press, in H, N and L, on both versions.
+    K2's refusals are not met. **Route (c1)'s puts are made all the same** (measured, F1's SolidWorks runs of
+    2026-11-18, `F1-DEMONSTRATION-RUNS-REVIEW.md`): on SolidWorks 2026 and 2024 alike the Update re-placed the whole
+    train in every mode (the carrier, Sun, the three planet copies, both dogs and RangeSlv, 33 puts, the locked
+    sprockets carried along as the footer foresaw), each gear put where it already stood, harmlessly
+    (`probe/results/f1-demo-sw2026-20261118-1-spur-pair-rangebox-clean.log`:936-939, 1012;
+    `probe/results/sw2024/f1-demo-sw2024-20261118-1-rangebox-clean.log`:93-96, 169). W9a's own value Update of
+    Sun's Backlash does the same (`w9a-final-sw2026-20261117.log`:95, 98). So a user's mate on an app gear's face is
+    re-solved by those puts, as by any of W9a's value Updates; `setup.master` has no such mate, so that was not seen.
   - W9c's landing guard (`swbuild._landing_route`) foresees no landing for this change: by the second review's
     calculation, each tooth line's new start lies about a whole line length from its old end.
   - A user mate on a tooth face re-solves by about 0.035 mm, as for any change of values.

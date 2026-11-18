@@ -365,9 +365,11 @@ The JSON (`f1-demo-<time>.json`) is written beside the log after every section. 
 - One session, PID 38876, started for the run with nothing open and exited after it (`taskkill` without `/F`, so
   SolidWorks' own close; nothing was open by then). No other SolidWorks, no Excel and no python.exe ran before it. The
   run started and quit its own Excel (PID 6288, 1:9, 1:1058).
-- Master, only copied: W9a's `setup.master` (`<probe folder>\w9a-final-sw2026-20261117-023433\out`). The sha256
-  of every file of both masters' `setup.master` folders (34 files) was the same before the 2026 run, between the
-  versions and after the 2024 run.
+- Master, only copied: W9a's `setup.master` (`<probe folder>\w9a-final-sw2026-20261117-023433\out`). **The masters'
+  hashes are the runner's statement, taken outside the script, and are not in the logs** (no list is committed). From
+  WSL, in `<probe folder>`: `find w9a-final-sw2026-20261117-023433/out/setup.master
+  w9a-confirm-sw2024-20261117-002313/out/setup.master -type f -exec sha256sum {} + | sort -k2` (34 files), taken
+  before the 2026 run, between the versions and after the 2024 run; the three outputs matched exactly.
 - One invocation, `--sections spur,pair,rangebox`. Log `probe/results/f1-demo-sw2026-20261118-1-spur-pair-rangebox-clean.log`,
   JSON `f1-demo-20261118-081909.json`.
 - SolidWorks time about 16 min, of which the run 11 min (08:19:09 to 08:30).
@@ -395,7 +397,9 @@ script needed no fix: nothing in `probe/f1_demonstration.py` changed for this ru
   part's Backlash the IIF at 0.3 and its sidecar 3 (1:632-635). The machined pair the same without _P, at 0.45 and
   sidecar 1 (1:638, 842-849), and the printed pair passes the same judgement (1:851).
 - *Printed typed on a copy of setup.master, one Update.* The master's record at link 7 with no process (1:855). Opened
-  as built: the blank Process reads machined, five parts plan machined, no _P, nothing to do (1:880); the footer W9's
+  as built: the blank Process reads machined, five parts plan machined, no _P, nothing to do (1:880; the line says
+  "5 gears planned machined" where it means the five parts' jobs, a slip of the script's wording, left as it ran so the
+  committed logs match the script; the judgement itself compared gear ids); the footer W9's
   (1:883); the Process line asks for the row (1:884-885); nothing written by the open (1:886). The person adds
   `Process` / `Printed` at Box row 10 (1:900); the Box reads printed at `Box!B10` (1:919), the line *Printed, 0.4 mm
   nozzle* (1:920-921); Backlash alone planned in each of the five parts (1:922); the footer names them (1:918, 928).
@@ -439,10 +443,10 @@ Wrong (none is expected on 2026).
   `/F`): PID 49772 for `rangebox`, then PID 43992 for `spur,pair`. The 2026 session had exited first; only one
   SolidWorks ran at a time. Each invocation started and quit its own Excel.
 - Master, only copied: W9a's 2024 `setup.master` (`<probe folder>\w9a-confirm-sw2024-20261117-002313\out`),
-  hashes unchanged (above).
+  hashes unchanged (the runner's statement above, not in the logs).
 - `rangebox` first with `--close-outlived-whats-wrong` and WSL kept idle but for a process check every 15 s; then
   `spur,pair` into the same `out`, also with the flag (the night's rule for unattended 2024 runs; the note's command
-  line leaves it off there). It never had to act.
+  line leaves it off there). It never had to act. The coordinator ruled that fine on 2026-11-18.
 - Logs `probe/results/sw2024/f1-demo-sw2024-20261118-1-rangebox-clean.log` (JSON `f1-demo-20261118-083240.json`)
   and `…-2-spur-pair-clean.log` (JSON `f1-demo-20261118-084617.json`).
 - SolidWorks time about 18 min (08:31 to 08:49), of which the runs 15 min.
@@ -493,6 +497,12 @@ Every check reads the same on both. Measured differences, none judged a fault:
   and all, so K11 compared equal on both second presses.
 - On 2024 the box at an assembly's open with nothing in error showed *Post load updating* and *Performance
   Evaluation*; on 2026 neither. Both were progress boxes that went by themselves.
+
+**Starting SolidWorks for a run.** Start it in the background from WSL, for example
+`nohup cmd.exe /c start "" "C:\Program Files\SOLIDWORKS Corp\SOLIDWORKS (2)\SLDWORKS.exe" >/dev/null 2>&1 &`, then
+read its PID with `tasklist.exe`. A plain `cmd.exe /c start …` awaited in the shell held the shell call for ten
+minutes on the 2026 run (SolidWorks itself started and ran normally); the 2024 sessions, started in the background,
+did not.
 
 **Not measured by these runs**, beyond the list under *What the script does not measure*: a What's Wrong on 2024 (none
 came; nothing of the user's was in error), and the 6 GB floor's STOP (free memory stayed above 9 GB).
