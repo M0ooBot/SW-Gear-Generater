@@ -454,8 +454,8 @@ morning):** measured, written, reviewed and shown on SolidWorks 2026 and 2024. W
     feature names and a vague reason, so a user mate on its Gear Axis was named as on a feature its new part "does not
     have" (conservative, wrong in words); assessed (`7f91037`), fixed (`d496cfd`), re-checked (`12cf15d`), on the fake
     only. The whole suite at `06d818f`, by the coordinator: 4134 passed, 1 skipped, 1 failed (the known font-width
-    test). A last re-check of `e7a3577`, `d8a12f6` and `06d818f` was being written into `W9D-DEMONSTRATION-REVIEW.md`
-    when this was committed.
+    test). The last re-check of `e7a3577`, `d8a12f6` and `06d818f` (`235f658`, in `W9D-DEMONSTRATION-REVIEW.md`): fit
+    to close W9d.
     *What W9d leaves open* (W9D-DEMONSTRATION-REVIEW's last sections, W9D-PROBES-REVIEW's last section):
     - **gates still None on both versions, and what the app says for each:** `CARRY_INSERTS_A_SUBASSEMBLY` (a
       sub-assembly of the user's is named, not carried, and the old assembly keeps it), `CARRY_REMAKES_ON_A_LEAF` (a
