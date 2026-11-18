@@ -2644,6 +2644,12 @@ def test_w9c_gates_on_2024_rest_on_the_confirming_run_on_32_5_0():
                         "after []")
     assert s1[1502] == ("ok      modes: the record's inventory names H2 in its modes and in every user mate's on-list "
                         "where SolidWorks reads it on there, and nowhere it reads suppressed (8 mates): yes")
+    assert s1[1503] == ("ok      modes: H2 made (['H', 'N', 'L', 'H2']), the record's modes ['H', 'N', 'L', 'H2'], H "
+                        "showing before and after (H); each user item said as read there: yes")
+    assert s1[1515] == ("ok      modes, H2: every mate's flag in every mode as on record, the couplings on only in "
+                        "their modes: wrong none")
+    assert s1[1725].startswith("ok      modes: the record keeps the inventory as it was (True) and the refusal, one "
+                               "problem [('mode showing', ['H2'])], read at ")
     assert s1[1520] == ("fact    modes, H2: summed volumes differ from the app's by more than 0.001: {'H2': {'Hub & "
                         "Sprocket-4': (1408.381, 1408.381), 'RangeSlv & Sprocket-4': (160.748, 152.629)}}")
     assert s1[1554] == ("ok      modes: after H2's add, the footer for the next edit names no user mate as suppressed "

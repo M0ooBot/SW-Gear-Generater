@@ -59,8 +59,10 @@ def test_each_step_reads_its_own_gate_while_it_is_none_on_either_version(w9c_unm
 
 def test_the_committed_gates_leave_only_a_new_coupling_unsettled_on_each_version():
     """The re-check of 74024a1 (W9C-RUNS-REVIEW.md) and the addendum "SolidWorks 2024", §3: with no fixture, the gates
-    as committed in findings.py. On each version every step of W9c's in-place work but a coupling newly made is
-    measured, and the delete route is set, so only UPDATE_MAKES_A_NEW_COUPLING stands in the way."""
+    as committed in findings.py. For this ``every`` (a gear added and one removed, a coupling newly made, bands given,
+    a mode added and one removed, a remake with modes) each step is measured on both versions but the new coupling,
+    and the delete route is set, so only UPDATE_MAKES_A_NEW_COUPLING stands in the way. Bands taken away or given back
+    are not in it: they meet UPDATE_SUPPRESSES_THE_RELIEF, still None on both versions, as the second assert holds."""
     every = InPlace(added=(swbuild.AddedGear("Hub", "gear9", "C:\\W\\Hub.SLDPRT"),), removed=(REMOVE_G4,),
                     new_mates=(swbuild.NewMate(base.Mate("m1", "gear", "gear7:Gear Axis", "gear2:Gear Axis"),
                                                on=("H",)),),
@@ -69,6 +71,10 @@ def test_the_committed_gates_leave_only_a_new_coupling_unsettled_on_each_version
     for revision, year in ((Y26, 2026), (Y24, 2024)):
         assert swbuild.in_place_gates(every, revision, modes=True, remakes=True) == [
             (swbuild.STEP_COUPLING, f"UPDATE_MAKES_A_NEW_COUPLING_ON_{year}")], year
+    taken = swbuild.BandChange("RangeSlv", "C:\\W\\Sleeve.SLDPRT", False, (), ("Relief",))
+    for revision, year in ((Y26, 2026), (Y24, 2024)):
+        assert swbuild.in_place_gates(InPlace(bands=(taken,)), revision) == [
+            (swbuild.STEP_RELIEF, f"UPDATE_SUPPRESSES_THE_RELIEF_ON_{year}")], year
 
 
 def test_a_removal_reads_the_delete_findings_as_measured(monkeypatch):
@@ -637,6 +643,32 @@ def test_nothing_of_the_users_is_written_while_a_gear_is_inserted_and_a_mode_add
     assert fake.user_puts == [] and {"UserFlush", "UserLock9"} <= {m.name for m in fake.memory_mates[_key(TC_ASM)]}
     assert result.mates_made == [(name, TC_MODES + ("2L",)) for name in ("Hub on Rear Axis", "Hub along Rear",
                                                                           "RangeSlv splined to Hub")]
+
+
+def test_on_2024_the_committed_gates_let_a_hub_and_a_mode_be_added_in_place_end_to_end(tc_built):
+    """W9C-RUNS-REVIEW.md, the re-check of d0e32bb (should-fix 4): the committed 2024 configuration exercised end to
+    end on the fake at 32.5.0, no W9c gate patched: a hub inserted and a mode added in one Update go through, as the
+    confirming run's fixed and modes measured them, and nothing of the user's is written."""
+    fake, built = tc_built
+    fake.revision = (32, 5, 0)
+    assert all(getattr(findings, f"{n}_ON_2024") is True for n in ("UPDATE_INSERTS_A_GEAR", "UPDATE_ADDS_A_MODE"))
+    _housing(fake)
+    added, placements, changes = _with_hub(built)
+    two_l = _with_2l(built)
+    hub = placements[-1]
+    two_l["mode_placements"] = tuple((m, frames + ((hub,) if m == "2L" else ()))
+                                     for m, frames in two_l["mode_placements"])
+    changes.update(configurations=two_l["configurations"], slide_values=two_l["slide_values"],
+                   mode_placements=tuple((m, f + ((hub,) if m != "2L" else ())) for m, f in two_l["mode_placements"]))
+    motion, _ = _tc_motion(built, "2H")
+    result = swbuild.update_gearbox(fake, assembly=TC_ASM, placements=placements,
+                                    motion=replace(motion, layout_component="layout-1", **changes), exists=fake.exists,
+                                    mtime=lambda _p: 0.0, in_place=InPlace(added=(added,), modes_added=("2L",)))
+    assert result.ok, (result.failures, result.skipped)
+    assert result.inserted == [("Hub", "gear10-1")] and result.modes_added == ["2L"] and "2L" in fake.configs
+    assert result.mates_made == [(name, TC_MODES + ("2L",)) for name in ("Hub on Rear Axis", "Hub along Rear",
+                                                                          "RangeSlv splined to Hub")]
+    assert fake.user_puts == []
 
 
 def test_a_failure_in_another_mode_shows_the_active_mode_again(tc_built, measured):
