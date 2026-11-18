@@ -402,3 +402,73 @@ resolved or not read, and with any lightweight reading (facts only).
 **The rerun's command lines** are the ones above, in a fresh `RUN` snapshotted from the commit that carries these
 changes, both sections on each version: 2026 without and 2024 with `--close-outlived-whats-wrong`. About 2 minutes each,
 as the first runs took.
+
+
+## The rerun on both versions (2026-11-18, from d333ff8), to the coordinator's rulings
+
+**Setup.**
+- Both runs from one `git archive` of **d333ff8** each (F2-0's src with package A's span module; the probe of b49044f),
+  `SNAPSHOT_COMMIT` beside `src`; each snapshot's `--self-check` read 0 failed (125 checks) and `import gear_generator`
+  came from its own `snap\src` before the run. No script change was made.
+- **SolidWorks 2026** 34.1.1, PID 17900, a fresh session started in the background with no other SolidWorks, Excel or
+  Python running, exited after. Run folder `<probe folder>\f2-probes-sw2026-20261118-103409`; the 2026 command line
+  above. Log `probe/results/f2-probes-sw2026-20261118-3-rerun-geometry-all-proposed.log` (`q26:`) with
+  `f2-probes-20261118-103547.json`.
+- **SolidWorks 2024** 32.5.0, PID 4624, a fresh session started after 2026 had exited, exited after. Run folder
+  `<probe folder>\f2-probes-sw2024-20261118-103832`; the 2024 command line above, `--close-outlived-whats-wrong` in force.
+  Log `probe/results/sw2024/f2-probes-sw2024-20261118-2-rerun-geometry-all-proposed.log` (`q24:`) with
+  `f2-probes-20261118-104015.json`.
+- Nothing new was written outside the two run folders (the account's folders searched for files changed since the
+  first run began, and AppData for any part, assembly or STEP file); no user document was open.
+
+**Result.** 0 failed and no STOP on either version (q26:88, q24:88). export 53 s and component 64 s on 2026, 46 s and
+62 s on 2024. **Windows:** on 2026 the exempt *Simplified Interface* balloon (q26:9) and *The sketch is no longer over
+defined* balloon in the pair's build (q26:53); on 2024 the untitled open-progress box (*Opened 2 Components*, *Post load
+updating*, a Close button) as the assembly first opened alone (q24:55; in the first 2024 run it came at 7c's open
+instead), gone by itself. The watch counted no other window on either (q26:85, q24:85); no What's Wrong came, so
+2024's close path did nothing. SolidWorks 2024 reached 2.85 GB private, 2026 about 1.0 GB.
+
+**The proposals**, every one of the six now proposed, the same on both versions:
+
+| Finding | 2026 | 2024 |
+|---|---|---|
+| `SAVE_AS_COPY` | 2 (q26:19) | 2 (q24:19) |
+| `STEP_EXPORT` | True (q26:30) | True (q24:30) |
+| `STEP_EXPORT_NEEDS_ACTIVE` | False (q26:46) | False (q24:46) |
+| `PART_WINDOW_READ` | `IModelDoc2.Visible` (q26:75) | `IModelDoc2.Visible` (q24:75) |
+| `STEP_EXPORT_FROM_COMPONENT` | True, the lightweight part not reached (q26:77) | True, the same (q24:77) |
+| `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN` | True (q26:79) | True (q24:79) |
+
+**The comparison's controls, read in each run, all held:**
+- export (q26:44, q24:44): the spur's two exports (2, 5) the same part (2026: 59 entity kinds, 4698 points, 202 radii;
+  2024: 59, 4429, 273); the spur against the helical not (26 entity kinds counted otherwise); the 8 mm spur against the
+  9 mm one not (the same counts, the points not one to one within 1e-4 mm). Step 5's text still differs from (2)'s, 9093
+  statements on 2026 and 9040 on 2024 (q26:34, q24:34), a fact.
+- component (q26:69, q24:69): the gear's two exports alone the same part (2026: 10946 points, 504 radii; 2024: 10265,
+  681); the gear against the pinion not (16 entity kinds counted otherwise). "The comparison's controls hold True"
+  (q26:71, q24:71).
+- `GetOpenDocumentByName`'s controls held on both: None for a file that does not exist and for the gear closed, the
+  gear's own path when open alone (q26:72, q24:72).
+
+**Each file judged:** step 6's the spur's own (q26:45, q24:45); 7a's and 7b's the gear's own (q26:72-73, q24:72-73); 7c's
+beside file the gear's own, a fact only (q26:78, q24:78).
+
+**Step 6's active-document label** reads `Helical_m2_N20_15R_P.SLDPRT` on both versions, at the spur's window read and in
+the export's bracket before and after (q26:35-38, q24:35-38): the activation took, so the spur's `Visible` True /
+`ActiveView` True is a real reading of a part in its own window, not active. 7d's reading has `Pinion_m1.5_N25_P.SLDPRT`
+active (q26:74, q24:74).
+
+**The lightweight step's facts (7c, q26:76, q24:76), the same on both versions:** the assembly opened again unmarked;
+the gear's component set lightweight reads 1, and **the assembly's flag reads False after the set**; neither the walk nor
+`GetOpenDocumentByName` reaches the part (None), so nothing is exported by object; the not-open path opened the gear,
+exported it (True, errors 0, warnings 0), closed it, the assembly still open; **after that close the assembly's flag
+reads False and the component's state 2** (resolved by the part's opening, before the probe resolves it; 2 again
+after). No window.
+
+**Read as in the first runs:** every SaveAs True plainly with errors and warnings 0, nothing marked or moved; AP203,
+one solid, millimetres, the extent check holding on the spur, the helical and the gear (2026's spur 16.501185 mm, 2024's
+16.500000); 7b's component read resolved before the open (q26:67, q24:67), the assembly unmarked and its component 2 to 2
+after `CloseDoc`; step 8 with the spur active kept the flag on and wrote the changed solid, not the same part as the
+saved spur, extent 9 mm (q26:39-43, q24:39-43). The differences between the versions are those of the first runs: 13
+against 12 members of `swSaveAsOptions_e`, the vertex counts and 2026's 0.001 mm tip, file sizes, 2024's open-progress
+box and its memory.
