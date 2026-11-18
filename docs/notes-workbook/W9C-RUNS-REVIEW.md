@@ -584,6 +584,183 @@ Taking in part 5's list and the re-check, with what W9d's package B has since ta
 
 *Done already:* part 5's item 1 (`74024a1`, the 2026 findings).
 
+### Re-check of `c5f113a`, `d0e32bb` and `b1230ab` (2026-11-18)
+
+*Independent, 2026-11-18, at `b1230ab`. I started no SolidWorks and changed no code; values were flipped and the
+close path driven only in a scratch copy (`git archive b1230ab`), deleted after.*
+
+- *What I read:* the three diffs against this addendum; the four 2024 logs and their JSON again where a claim rests
+  on them; `w9a_demonstration.py`'s What's Wrong harness and W8's `press_dont_save` and watch; `remake_again`;
+  `ui_text`'s two What's Wrong sentences and where they are said.
+- *Suite at `b1230ab`:* 4101 passed, 1 skipped, 1 failed (the known font-width test).
+- *Self-checks at `b1230ab`:* W9c's 96 ok, 0 failed; W9d's 0 failed (it reads W9c's pure head).
+
+**Verdict.** The three commits do what the addendum asked, and the script is **fit for the 2024 `remake-m3` run**
+with `--close-outlived-whats-wrong`. I found no must-fix. Five should-fixes and two points for a ruling follow; the
+first should-fix decides whether the close path can work at all, but if it cannot, the run only stops where 06d5141
+stopped.
+
+#### 1. `d0e32bb`: the five gates, their comments and pins
+
+- **Values.** `UPDATE_INSERTS_A_GEAR`, `UPDATE_BANDS_IN_PLACE`, `UPDATE_ADDS_A_MODE`, `UPDATE_REMOVES_A_MODE` and
+  `UPDATE_MAKES_MATES_WITH_MODES` are True on 2024; the coupling, the relief and the references read stay None with
+  why. That is §3's table.
+- **Comments.** Each carries §3's caveats with the lines §3 names: measured at `4315774`; the entity-kind reads not
+  run inside an Update on 2024; the 3.3 to 4 GB first press (24-1:990-991, 1372, 1400; 24-4:70, 97); the two low
+  volume reads with the pairs right (24-1:1281-1282, 1520-1521); H's removal under 2 GB free; M3 shown to step 1 only,
+  the box having outlived its job, and M3 not the gate's evidence. I checked every number quoted there against its
+  line. "14.7 GB private" for H's removal is 14.69 at its start and 14.76 at its end (24-1:1755, 1758).
+- **Pins.** `test_w9c_gates_on_2024_rest_on_the_confirming_run_on_32_5_0` holds every line §3 asked for, the four
+  JSON proposals, 24-4:103's calls by member equal to run 11's, and `whats_wrong_lifetimes` beside 24-4:313. In the
+  scratch copy each of these failed the tests, one at a time: a gate set None (inserts, bands), the relief or the
+  references read set True, 24-1:1245, 24-1:807's codes, one line dropped from 24-1 (every later number shifts),
+  24-2:625, 24-3:94 and 153, 24-4:180 (inside its pinned prefix), 256's counts, 308, 313, 314, line 2's snapshot,
+  and the JSON's proposal or snapshot. *Not pinned, though the comments cite them:* 24-1:1503, 1515, 1725, 1255,
+  1259, 1282, 1521, 1755 and 1758 (each changed and the tests passed). §3 did not ask for them; they are the
+  evidence column of the adds and removes gates, so pinning 1503, 1515 and 1725 would be cheap (should-fix 4).
+- **No test asserts less.** The one test given `w9c_unmeasured`
+  (`test_while_the_references_read_is_unmeasured_any_user_component_refuses_a_removal`) asserts exactly what it
+  did; its last line needs a 2024 gate None and now says so. The self-check's patch of 2024's gates to None is
+  harmless and also idle: every gate judgement in it uses `rev = (34, 1, 1)`, so no line of it reads a 2024 gate.
+- **The no-fixture test's list is right, its words are not.** For its `every` (bands *given*), the committed gates
+  leave only `UPDATE_MAKES_A_NEW_COUPLING_ON_<year>` on each version, as asserted. But its docstring says every
+  step but a new coupling is measured; bands taken away or given back still meet `UPDATE_SUPPRESSES_THE_RELIEF`,
+  None on both (should-fix 3).
+- **The real 2024 configuration is not exercised end to end on the fake.** No committed test runs an in-place write
+  on a fake at (32, 5, 0) with the committed values: the in-place write tests use `measured`, which patches 2026,
+  and the one 2024 fake test is a removal, which reads no W9c gate. In the scratch copy I ran four such writes at
+  (32, 5, 0) with nothing patched (a mode added and one removed on `tc_built`, Hub inserted, bands given on the
+  train): all four passed (should-fix 4).
+
+#### 2. `b1230ab`: the close path
+
+- **How it finds the box.** `whats_wrong_boxes`: a visible `#32770` of the attached SolidWorks' PID titled exactly
+  "What's Wrong", owned (`GW_OWNER`) by the frame read at the job's start. `close_outlived` refuses unless the
+  version is 2024, every box up is owned by the frame and was read by this job's watch, none unowned came in the job,
+  the frame reads enabled (True, not unread), nothing blocking was named, and W8's watch logged no other SolidWorks
+  window since the last judgement.
+- **What it presses.** `press_dont_save(h, ("&Close", "Close"))`: a `BM_CLICK` posted to the first child of that
+  box whose text is exactly `&Close` or `Close`. On 2024's box (24-4:311) only `&Close` matches;
+  FeatureXpert, the check box and Help do not. It enumerates that box's own children only, so it cannot press a
+  control of another window.
+- **When anything is not as expected.** I drove `whats_wrong_end` with `close_outlived` in the scratch copy, the
+  win32 calls stubbed: a box that closes goes on, with the fact line and the JSON's `outlived` record; a box that
+  stays, no Close control found, 2026, another window logged, an unowned box, a disabled frame, and the close path
+  raising each end in the STOP, the worker marked hung. After the hook `whats_wrong_end` reads the boxes again and
+  stops on any still up, so nothing goes on past a box that did not close.
+- **Off without its flag.** `WW_OUTLIVED` is None unless `main` finds the flag in `sys.argv`; W9d imports both
+  scripts and calls neither `close_outlived_on` nor W9c's `main`. With the hook None the STOP and its text are as
+  before (driven: same STOP, no `outlived` key). On 2026 `whats_wrong_shows_in_update` is False, so
+  `whats_wrong_end` never runs and nothing differs at all.
+- **The reworded end-of-job line.** Only its middle changes, and only where a box is up at the end or was closed: "it
+  was still up after … s" for "it took … s to go", which is kept for a box that went. Nothing reads the live words:
+  the only test quoting them pins 24-4:313 in the committed log. W9d behaves as before but for that wording, and only
+  in a run that then stops.
+- *Note:* `ww_poll` at the job's end adds every owned box to the job's seen list, so the "never read by the watch"
+  refusal can only meet a box that came in the milliseconds between that poll and the close path's read. Its
+  self-check case is theoretical; harmless.
+
+#### 3. `b1230ab`: `remake-m3` and the ring
+
+- **The same steps.** `section_remake_m3` calls `remake_again`, the function `remake` calls after its first
+  part, on its own copy of `setup.master`, so steps 1, 2, 2b and 3 are measured as in `remake`. It omits only the
+  first part and its proposal, which the gate no longer needs.
+- **The master.** The W9c 2024 run's folder is not on this host (I listed it: absent); W9a's 2024
+  `setup.master` is, with its 17 files. Fact: M3 has never run from a W9a-built master. W9c's 2026 runs 1 to 7 read
+  W9a's 2026 `setup.master`, but they predate M3; runs 8 to 11 and the 2024 run used masters built by W9c's own
+  harness. The note's "as W9c's 2026 runs read W9a's 2026 `setup.master`" is true of runs 1 to 7 only. *Inference:*
+  `section_setup` is the same steps at `19651ee` and `4315774` (the diff only wraps W8's helpers in
+  `w8_step`), and step 1's own check reads the premise (the ring stops and is marked), so a master that differs
+  would fail loudly, not pass falsely.
+- **The ring is held strictly enough.** The ring after the press must equal the ring before it, feature by feature
+  and code by code, at 54 teeth, and before it must be in error at 54. That is stricter than the old check, which
+  held Tooth Space alone. A write that leaves the ring's error the same would still show on the other legs of
+  `wrote_nothing`: every part's globals (the ring's included), the traced calls (`ForceRebuild3`, `EditRebuild3`,
+  `SetSuppression2` and the rest of `nothing_changed_calls`), the file times, and the result's own fields.
+- **Self-check.** Each new judgement's failing ways are covered: the ring's codes or features changed, not in error
+  before, not read, not at 54; for the close, each refusal and each failure. The glue (`close_outlived` and the
+  hook in `whats_wrong_end`) has no self-check case; I drove it on stubs as above (should-fix 5).
+
+#### 4. `c5f113a` and the ruling
+
+- **The note now says what the logs bear out.** I checked every corrected figure against its line: the box still up
+  at 24-4:313 with `stayed []`, `still_up 1`; the kill as the operator's account; §0.5 at 24-4:315; 14.19, 14.69
+  and 14.76 GB (24-1:1680, 1755, 1758); 2026's runs 10 and 11 at 2.23 and 2.29 GB at most; remake's 3.59, 7.09, 7.30
+  and 2.03 GB (24-4:70, 97, 98, 251); the times against run 10 (824, 1115, 101, 17 s); 51 and 51 (24-1:807, 814),
+  case 10's 51 against 2026's 71 (24-1:905, log 10:166); the volumes and their percentages.
+- *Two small things left (low):* the table's remake row says 1 FAIL where its own time line says "2 failed" (the FAIL
+  and the cut, 24-4:317); and "a kernel difference" for 1408.381 against 1408.364 is an inference, written as a fact
+  here and in §1 of this addendum.
+- **The ruling is recorded faithfully** in `ISSUE-1-PLAN.md` (its 2026-11-18 paragraph), the script's docstring and
+  the note: 2024 only, a demonstration run only, only with the flag, the frame's box with the frame enabled, still
+  up 60 s after a job, said as having outlived it, closed by its own Close, gone within 10 s, anything else the STOP,
+  the app unchanged. The code is stricter in two ways the ruling allows as "anything else": the frame must also read
+  enabled after the close, and no other window may have been logged.
+
+#### 5. `WHATS_WRONG_AHEAD` and the rerun
+
+- **When each sentence is said.**
+  - `WHATS_WRONG_AHEAD` ("leave it alone, it closes by itself"): in the footer's user-work line before a press
+    (`ui_text._prediction`, `ui_text.py:4596-4601`), when the inventory last read holds a user mate, component
+    or feature with an error code and the record's version shows the box.
+  - `WHATS_WRONG_AFTER`: in the status after a press that changed a document or placed a gear, stopped
+    (`ui_text.py:2053`) or not (`2117`), with something of the user's in error, on that version.
+  - Neither is keyed on the app's own part being held in error.
+- **So in M3 nothing is said.** Step 1 left only the ring in error, with nothing of the user's (24-4:253, "user in
+  error []; user features in error []"). If the app's own press-again opens RangeBox and `ActivateDoc3` raises
+  the box, as at the script's read (24-4:310), the user meets it with no sentence before or after. Step 2 stops in its
+  check phase with no rebuild after the activation, which is the condition in which the one outliving box was seen.
+  If it outlives the press, the user also has a box that does not go by itself. That is inference; the rerun
+  measures it.
+- **Where AHEAD is said, is it right?** Every box measured in an app Update was gone by the job's end, each with
+  the user's work in error and the job rebuilding after it came (W9A-CLOSE-2024-REVIEW §6). AHEAD is also said before a press that will stop before any rebuild: a
+  refusal over the user's work, a gate, or the held-in-error stop while the user's work is in error too. That is the
+  same activation-without-rebuild condition, and it is not measured. Against the worry: the quiet presses of W9a's m3 on 2024, with the
+  user's work in error, raised no box (W9A-CLOSE-2024-REVIEW §4). For it: a script step's activation raised one,
+  gone 1.05 s later in that step's own `ForceRebuild3` (s4:115-118, as §5 above cites).
+- **Recommendation: leave the wording until the rerun.** No measured case contradicts it where it is said. M3
+  cannot test AHEAD itself, since nothing of the user's is in error there, but it tests the mechanism. In the rerun's
+  log, for step 2's press and step 2b's, look in order after "remake, M3: pressed again without closing" (the job is
+  logged as "Update SolidWorks", "as the app's Update shows it"):
+  - whether "What's Wrong came up … into the job" appears, and the call in progress;
+  - and then either "stayed [ … ]" with "it took … s to go" (it went by itself), or "it was still up after 60…"
+    with the close path's "outlived its job" line (it outlived the press);
+  - the JSON's `whats_wrong_lifetimes` entries of kind `app` say the same.
+  - *If the press's box outlives it:* AHEAD should say the box goes by itself once SolidWorks rebuilds, and to close
+    it if the Update stops first; the held-in-error stop on 2024 should gain a sentence; the ruling's not-measured
+    list takes the case.
+  - *If no box comes in the press,* that does not settle a user's own press-again (point for a ruling B).
+- **Point for a ruling B.** The script's own read before step 2 activates RangeBox first, and its box is the one the
+  close path will shut. The app's press is then the second activation with the ring in error, where a user's would be
+  the first. A box in the press decides the question. No box in the press decides nothing. Either the coordinator
+  accepts that, or the reads before step 2 are made without activating RangeBox (`read_now` has `activate=False`,
+  but the ratios read goes through W8's `in_assembly` too), which would change a step measured on 2026.
+
+#### Should-fix
+
+1. **`BM_CLICK` on a box that is not active** (`probe/workbook_assembly_check.py:627-641`, called from
+   `probe/w9c_demonstration.py:3789`). Microsoft documents that `BM_CLICK` to a button of a dialog that is not
+   active may fail. What's Wrong is a popup owned by the frame, and on an unattended run Excel or the console may be
+   in front. W8's earlier presses were on SolidWorks' modal question boxes. If it fails, the box stays, the close fails, and the run
+   stops where `06d5141` did, safe but wasted. A fallback posts to the box the `WM_COMMAND` (the control's ID,
+   `BN_CLICKED`) that the Close button itself sends when clicked. Whether that counts as "its own Close button" is
+   for the coordinator (point for a ruling A).
+2. **The control pressed is not checked** (same function): `found[0]` is taken whatever its class, visibility or
+   enabled state. Pressing only a visible, enabled `Button` would match the ruling's words exactly. The box's
+   template has hidden controls (W9A-CLOSE-2024-REVIEW §5); none is called Close today.
+3. **The no-fixture test's docstring** (`tests/test_swbuild_in_place.py:61-63`): say that bands taken away or
+   given back still meet the relief's gate, or add a band taken away to `every` and assert both gates.
+4. **Pins and fake coverage** (`tests/test_findings.py:2619` onward, `tests/test_swbuild_in_place.py`): pin
+   24-1:1503, 1515 and 1725, which the adds and removes gates rest on. Add one end-to-end in-place Update on a fake at
+   (32, 5, 0) with nothing patched, as the four in my scratch copy.
+5. **The close path's glue in the self-check** (`probe/w9c_demonstration.py:3766`): a case driving
+   `whats_wrong_end` with stubbed `whats_wrong_boxes`, `frame_enabled` and `press_dont_save` (closes; stays;
+   flag off), as I did, would hold it after this run.
+
+*Low:* the note's "as W9c's 2026 runs read W9a's 2026 `setup.master`" (`W9C-DEMONSTRATION.md:653`) should say
+runs 1 to 7, before M3; its time estimate counts about five closes, and a box at every activation with the ring in
+error (step 2's two reads, 2b's reads and presses) could make it ten.
+
 ---
 
 ## The final runs on SolidWorks 2026 (34.0.0), and 007b3aa
