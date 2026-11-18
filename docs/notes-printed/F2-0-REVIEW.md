@@ -196,3 +196,54 @@ entry would be a reading of an active window. 7d's entry is guarded, though, and
 so the proposal still rests on a real background reading whenever 7d runs. The reviewer of the run should read the
 `active` label logged with each entry. **Fit to run unattended**: on SolidWorks 2026 as written, then on SolidWorks 2024
 in a fresh session with `--close-outlived-whats-wrong`.
+
+## Re-check of `b49044f`, `e3dc598` and `d333ff8` (the probe after its first runs, `8d2c5fb`), 2026-11-18
+
+**The geometry comparison is sound for what it judges.** `same_part` reads the DATA section only and requires three
+things within 1e-4 mm: the same count of every entity kind, the same `CARTESIAN_POINT`s one to one (every vertex,
+control point and placement origin), and the same circle, cylinder, sphere and torus radii.
+
+- **Can it pass two different parts?** Not among the ones the probe can meet. Any change of size or shape the app makes
+  moves a vertex or a control point by the whole change, or alters the counts. The probe's alternatives are the other
+  document (helical, pinion: other counts) or another state of the same document (the 9 mm spur: a whole face moves 1
+  mm). It does not compare directions, B-spline weights, ellipse axes or cone angles, so it is not a general test of
+  equality. Package B must not lift it into the app as one.
+- **Can it fail the same part exported twice?** Not on the evidence. The 2026 spur's tip vertex is 0.001185 mm over
+  nominal (16.501185; 2024 writes 16.500000) and its face 8.000031. Those are the kernel's distances from the *design*,
+  the same in every export of the document, not differences *between* exports. The runs' own files agree exactly
+  between exports: the spur twice, the gear twice, and 7a's and 7b's files against 7d's reference across a close and
+  reopen (4698 and 10946 points on 2026, 4429 and 10265 on 2024; `F2-PROBES.md`). So 1e-4 is safe. Were a reopen ever to
+  regenerate a part, the kernel's 1e-3 scale could show here as a false "not the same part". That errs safe: each
+  finding then sends the job to activation, the fallback or a refusal, never to a wrong export.
+- **The controls are real.** Two positives (2 against 5, 7d's gear twice) and three negatives (spur against helical, 8
+  mm against 9 mm, gear against pinion) are read in the run itself. No file is judged unless both sections' controls
+  held, and a control not read does not hold. The negatives are coarse (other counts, or a 1 mm move), but they are the
+  wrong answers the judged steps can actually give. The self-check holds the edges: a 5e-5 mm move the same, 5e-4 not, a
+  radius changed by 0.001, a renumbered and reordered file the same.
+
+**The lightweight reading is sound.** `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN` is proposed only for a component read fully
+resolved before 7b. Both runs read state 2, `swComponentFullyResolved`. 7c's beside path, the assembly's flag after
+its close and the component's state are now facts. `STEP_EXPORT_FROM_COMPONENT` still needs the lightweight part not
+reached by the object route, which both runs found. One small point for B, not blocking: the interface takes
+lightweight as state 1. Reading `swComponentFullyLightweight` (4) as lightweight too costs nothing.
+
+**e3dc598** activates the spur before step 8's change, as decision 16 said, and changes nothing else. The self-check
+gives 125 ok, 0 failed.
+
+**The app's routes.** Every write of an equation or global in `src/` is made on a document the app has just made
+active or has just created. No route writes one on a document reached without activation.
+
+- The gearbox Update's value step opens the part first (`swbuild.py:4151`, `open_document`: `OpenDoc6`, then
+  `ActivateDoc3`, checked by path at `swcom.py:3606`). `update_variables` then refuses unless the active document is
+  that part (`:1431-1440`), and the form's Update values goes through the same `update_variables`.
+- The bands open the sleeve's part first (`:6399`, then `:6406-6408`).
+- The assembly-level Face Z globals and an added gear's globals follow `open_document(assembly)` (`:5027` for
+  `:5073`, `:9818` for `:9876`, `:6668` for `:6682-6700`), with no other document activated between.
+- The build writes into the part or assembly it has just made (`:425`, `:432`).
+- The three non-activating `use_open_document` calls (`:6935`, `:7791`, `:8266`) only read the old assembly.
+- `set_global_variable` reads its put back and raises when it did not take (`swcom.py:1455-1470`). That is how the
+  probe's run 1 failed loudly rather than silently, so a route that broke this rule would refuse, not write the wrong
+  value.
+
+**Fit to rerun unattended** on SolidWorks 2026, then 2024 with `--close-outlived-whats-wrong`, the command lines as in
+`F2-PROBES.md`.
