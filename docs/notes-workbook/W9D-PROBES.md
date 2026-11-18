@@ -254,9 +254,112 @@ made.
 - `state` and `sub` were not run again; their first run's answers stand. In particular, the read-only open's own flag
   without the changed part beside it is not measured, and `state` was left as it is.
 
+## The run on SolidWorks 2024 (2026-11-18, all three sections, from 891a707)
+
+**Setup.**
+- Run folder `<probe folder>\w9d-probes-sw2024-20261118-051527`, one `git archive` of 891a707 with
+  `SNAPSHOT_COMMIT` beside `src` (the log's head names it); the snapshot's `--self-check` read 0 failed before the
+  run. 891a707 was head on this laptop when the run began.
+- SolidWorks 2024 revision **32.5.0**, PID 38728, a fresh session started for the run with no other SolidWorks
+  running, and exited after.
+- The 2024 command line above, with this laptop's masters: `--user-master` W9a's 2024 `setup.master`
+  (`w9a-confirm-sw2024-20261117-002313`) and `--master` S0's 2024 `rangebox.master`. The masters were only
+  copied; no file in either has a time later than 2026-11-17. **`--other-version-file` is not the one the command
+  line names** (`w9c-whole-sw2026-20261117-123612`, on the other host): it is `RangeBox_r2.SLDASM` in
+  `<probe folder>\w9d-demo-sw2026-20261118-031029\out\carry`, an assembly SolidWorks 2026 (34.1.1) saved in W9d's
+  second 2026 demonstration run, outside any master folder, read closed and its time unchanged after.
+- Log `probe/results/sw2024/w9d-probes-sw2024-20261118.log` and `w9d-probes-20261118-051605.json`. Citations
+  `p24:` are that log's lines.
+
+**Result.** 0 failed, no STOP, no dialog but the progress boxes and the exempt notification box; the watch logged no
+other window (p24:169, 172). No script change was made.
+
+| Section | Time | Failed | 2026 |
+|---|---|---|---|
+| faces | 168 s | 0 | 238 s (run 2, r3) |
+| state | 43 s | 0 | 40 s (run 1) |
+| sub | 27 s | 0 | 39 s (run 1) |
+
+About 5 minutes from SolidWorks' start to its exit, against the 40 estimated. SolidWorks 2024 grew to 3.06 GB private
+at most (p24:95); free memory stayed above 9.7 GB.
+
+**The findings the run proposes for 2024** (each as 2026 proposed it; none is set):
+
+| Finding | Proposed | Line |
+|---|---|---|
+| `PERSIST_REFERENCE_ROUTE_FOR_FACES` | r3 (`IComponent2.GetCorresponding` walk, `IsSame`, the part's `GetPersistReference3`) | p24:86 |
+| `PERSIST_REFERENCE_ROUTE_FOR_EDGES` | r3, the same | p24:87 |
+| `COAXIAL_FACE_READ` | True | p24:90 |
+| `CARRY_INSERT_MARKS_USER_DOCUMENTS` | False | p24:104 |
+| `PERSIST_REFERENCE_SURVIVES_RELOAD` | True | p24:106 |
+| `COMPONENT_STATE_PER_CONFIGURATION_ROUTE` | `IConfiguration.GetComponentSuppressionState(Name2)` | p24:137 |
+| `COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED` | True | p24:139 |
+| `FILE_VERSION_READ` | `ISldWorks.VersionHistory(path)`, its last entry against `GetLatestSupportedFileVersion` | p24:144 |
+| `DEPENDENCIES_READ` | `GetDocumentDependencies2(path, False, False, False)`, each one's `VersionHistory` | p24:147 |
+| `OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS` | True | p24:149 |
+| `OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN` | True | p24:151 |
+| `SUBASSEMBLY_OPEN_MARKS` | False | p24:159 |
+| `SUBASSEMBLY_READ_ONLY_INSERT` | True | p24:161 |
+| `SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED` | False | p24:164 |
+
+`REFERENCED_CONFIGURATION_READ`, `VIRTUAL_READ` and `PATTERN_INSTANCE_READ` are not proposed, as on 2026: every
+component references its file's only configuration, `Default`, and none is virtual or a pattern instance (p24:91,
+92).
+
+**What reads as on 2026:**
+- **faces.** r1 and r2 read nothing on every entity (r1's `GetPersistReference3` a type mismatch, r2's reference of
+  70 or 82 bytes resolving `_Invalid`, code 1); r3 clean on all six: one match each, resolved
+  `swPersistReferencedObject_Ok` to its own kind, `IsSame` both ways, the same reference lengths (583, 8096, 599,
+  11576 bytes), every bracket unmarked at its start and marking nothing (p24:51-85). The bore coaxial, the four other
+  faces not, Sun's User Keyway not; Sun's cylinders 29 at 19.375 and 29 at 16.375 mm coaxial, 58 fillets at 0.475 and
+  the keyway at 1.5 not (p24:89). (c) remade all four equal, every component where it stood, nothing marked
+  (p24:98-103); (d) every reference resolved again `_Ok` to its kind, place and area (p24:105).
+- **state.** Candidate 1 agreed with the shown truth everywhere and marked nothing; candidate 2 gave no root in N, the
+  mode not showing; the unsaved suppression read right (p24:133-139). The lightweight Sprocket-1 read state 1, as the
+  other sprockets did, through every read, and 2 once resolved (p24:140). The read-only open beside the open Housing
+  and the changed Sprocket answered warning 32, left both as they were, and read the read-only RangeBox.SLDASM
+  **marked straight after its open**; shown mode by mode, it closed by `QuitDoc` with no dialog, everything it loaded
+  gone, no file's time changed (p24:148-151).
+- **sub.** The healthy sub-assembly's open marked nothing, not loaded (warning 0) or loaded as a component (warning
+  128); opened read-only it inserted with its child, its flag off (p24:158-164).
+
+**What differs from 2026, or was read for the first time:**
+- **r3's walks do not grow on 2024.** Each 163-face sprocket walk took 2.26 to 2.36 s from the first entity to the
+  last, the 482-edge walk 6.75 s and Sun's 235 faces 3.29 s (p24:80-85), where 2026's first walk took 0.26 s and the
+  same walk 8.1 s by the sixth entity. The growth measurement, run for the first time anywhere: five full walks on
+  one sprocket end face at 1.69, 1.68, 1.69, 1.69 and 2.07 s; `component_frame` × 100 at 1.20 s before the walks and
+  1.33 s after; SolidWorks at 3.064 GB private before and after; the script's reading "flat" (p24:93, 95). Whether
+  2026's growth was the session or per call is still not measured on 2026 (its rerun with `--faces-parts` has not
+  been made).
+- **The prefilter, timed for the first time.** For the face, the area filter kept the one match in 0.59 s and its
+  walk took 0.009 s, against 1.69 s for the full walk (p24:93). **For the edge, the circle-radius filter cost more
+  than it saved:** it kept 82 of 482 edges in 8.05 s and their walk took 0.83 s, against 5.07 s for the full walk
+  (p24:94). Both found the full walk's match, `IsSame` (p24:97). This bears on the contract's rule 2 for edges (the
+  review's must-fix 1); it is a fact for the designer, and the run proposes nothing on it.
+- **`FILE_VERSION_READ`'s control reads newer.** The copy this SolidWorks saved reads `['17000[2024/282]']`, last
+  (17000, 2024), against `GetLatestSupportedFileVersion` 17000; the 2026 file reads `['19000[2026/13]']`, last
+  (19000, 2026) (p24:143). So 2024's `VersionHistory` reads a newer version's closed file, as the review inferred
+  and had not measured: no dialog came, the watch logged no window, and no stray document was left at the end
+  (p24:168). On 2026 34.0.0 its own copy's label read 2025, a lag; on 2024 32.5.0 the label is 2024.
+- **Candidate 3, taken apart, marked nothing on 2024 either** (p24:136): `GetRootComponent3(True)` among its calls,
+  which marked in W9c's 2024 run (`w9c24:283`), did not mark here.
+- **The dependencies' places** (first run): all nine named under the copy, on disk, each last saved by 2024; with
+  Traverse True the same set (p24:145, 146).
+- **Searchflag** (first run). On the saved copy, Searchflag False and True both give the nine files beside it, none
+  refused (p24:141). On `d-state-moved`, a plain file copy of the master's folder SolidWorks never opened,
+  **Searchflag False gives the stored paths**, all nine outside the run folder and not on disk, so R.2's
+  copied-folder rule refuses all nine, while **Searchflag True gives the nine files beside the moved assembly**, all
+  on disk (p24:142).
+- **`sub` (t)** (first run): of the closed `DSubHost2.SLDASM`, Traverse False lists `DSub.SLDASM` alone and
+  Traverse True lists `DSub.SLDASM` and its `DSubPart.SLDPRT` (p24:165).
+
+The facts on Searchflag and Traverse True are 2024's only; neither has been read on 2026, so whether R.2 may lean on
+them is for the review and a 2026 read.
+
 ## What is untested
 
-Since the 2026 runs, `faces` (a)–(d), `state` and `sub` have run on 2026 (above). What has **not** run anywhere is what
+*Since 2026-11-18 everything below that was added for the 2024 run has run once, on 2024 only (above); none of it has
+run on 2026.* Since the 2026 runs, `faces` (a)–(d), `state` and `sub` have run on 2026 (above). What has **not** run anywhere is what
 was added for the 2024 run: `faces` (b) growth, `state` (v)'s places and Traverse True read, `sub` (t) and
 `--faces-parts`, and `state` (v)'s Searchflag True read on the copy and the plain copy of the master's folder; only
 `--self-check` (73 checks, 0 failed: the prefilter, the dependency places, the growth's reading, R.2's copied-folder
