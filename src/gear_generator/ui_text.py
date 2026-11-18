@@ -5464,7 +5464,12 @@ def carry_sentence(fore, again) -> str:
                    and str(n.subjects[0]) == _unknown_entity()}
         light = {c.name for c in entry.components if c.state in (1, 4)}
         comps = [i.component.name for i in plan.components]
-        mates = [m.mate.name for m in plan.mates]
+        # The re-check of 11a63ab, item 1: a recorded distance or angle mate is said as *may* while the gate answers
+        # its plain and its limit kind differently, since the record keeps its type, never its type name or range.
+        limit_may = _limit_may(fore, entry, plan)
+        may_items = {m for ms in limit_may.values() for m in ms}
+        carries = carries or bool(may_items)
+        mates = [m.mate.name for m in plan.mates if m.mate.name not in may_items]
         clauses = []
         if comps:
             clauses.append(f"takes your {_and(_components_named(comps))}")
@@ -5477,8 +5482,13 @@ def carry_sentence(fore, again) -> str:
                 # B1's rule, each mate in one sentence: the one mate named is said in error here, not again below.
                 clauses[-1] += (f"; it was in error in {old} as read, and made again it is carried if it reads no "
                                 "error or the one it had, and not if it keeps a gear from turning")
-        texts.append(f"As read at {at}, {name} {' and '.join(clauses)}." if clauses else
-                     f"As read at {at}, nothing of yours in {old} would be carried into {name}.")
+        may_said = _limit_may_sentences(limit_may)
+        if clauses:
+            texts.append(f"As read at {at}, {name} {' and '.join(clauses)}.")
+        elif may_said:
+            may_said[0] = f"As read at {at}, {may_said[0][:1].lower()}{may_said[0][1:]}"
+        else:
+            texts.append(f"As read at {at}, nothing of yours in {old} would be carried into {name}.")
         # M5: a lightweight component's mates are said once, by its own sentence below, as the condition they are.
         # The demonstration's review (item 1): what only the inventory's silence names is said as *may*, never as fact.
         silent_ratio, silent_axis = _foresight_silences(fore, entry, plan)
@@ -5494,12 +5504,13 @@ def carry_sentence(fore, again) -> str:
                 beside_light.setdefault(str(n.subjects[2]), []).append(n.item)
         caused = {m for ms in list(on_suppressed.values()) + list(beside_light.values()) for m in ms}
         named = [n for n in plan.named if n.item not in unknown and n.item not in silent_ratio
-                 and n.item not in axis_items and n.item not in caused
+                 and n.item not in axis_items and n.item not in caused and n.item not in may_items
                  and not (n.why == sb.WHY_LIGHTWEIGHT and n.subjects and str(n.subjects[0]) in light)]
         texts += _named_sentences(named, name=name, old=old, refs=refs)
         texts += _unknown_entities(fore, entry, unknown)
         texts += _may_sentences(silent_ratio, silent_axis)
-        texts += _in_error_before(entry, plan, old)
+        texts += may_said
+        texts += _in_error_before(entry, plan, old, mates)
         if fore.assumed and fore.configuration:
             one = len(fore.assumed) == 1
             refs.extend(_finding_ref(f) for f in fore.configuration if _finding_ref(f) not in refs)
@@ -5575,11 +5586,52 @@ def _may_sentences(ratio: Sequence[str], axis: Mapping[str, Sequence[str]]) -> L
     return out
 
 
-def _in_error_before(entry, plan, old: str) -> List[str]:
+def _limit_may(fore, entry, plan) -> Dict[Tuple[str, bool], List[str]]:
+    """``(kind word, plain allowed) -> mates``: the recorded distance and angle mates whose kind the record cannot
+    tell (``UserMateEntry`` keeps the type, 5 or 6, the same for a plain and a limit mate) while
+    ``CARRY_REMAKE_KINDS`` on the SolidWorks the record last saw allows one of the two kinds and not the other: made
+    again by the plan as plain (plain allowed), or named unmeasured for the plain kind (the limit kind allowed)."""
+    from . import swbuild as sb
+    kinds = _finding_value("CARRY_REMAKE_KINDS", fore.year) if fore.year != "?" else None
+    if not isinstance(kinds, (tuple, list)):
+        return {}
+    split = {w: w in kinds for w in ("distance", "angle") if (w in kinds) != (f"limit {w}" in kinds)}
+    if not split:
+        return {}
+    word_of = {5: "distance", 6: "angle"}
+    recorded = {m.name: word_of.get(m.type) for m in entry.mates}
+    out: Dict[Tuple[str, bool], List[str]] = {}
+    for item in plan.mates:
+        word = recorded.get(item.mate.name)
+        if word in split and split[word]:
+            out.setdefault((word, True), []).append(item.mate.name)
+    for n in plan.named:
+        word = recorded.get(n.item)
+        if (word in split and not split[word] and n.why == sb.WHY_UNMEASURED and n.subjects
+                and str(n.subjects[0]) == word):
+            out.setdefault((word, False), []).append(n.item)
+    return out
+
+
+def _limit_may_sentences(may: Mapping[Tuple[str, bool], Sequence[str]]) -> List[str]:
+    """*Your UserLimit10 is made again if the press reads it as a plain distance mate; a limit distance mate is not
+    made again.*, or, the limit kind the one allowed, *… only if the press reads it as a limit distance mate; a plain
+    distance mate is not made again.*"""
+    out = []
+    for (word, plain), mates in may.items():
+        one = len(mates) == 1
+        said, other = ("plain", "limit") if plain else ("limit", "plain")
+        out.append(f"Your {_and(mates)} {'is' if one else 'are'} made again {'if' if plain else 'only if'} the press "
+                   f"reads {'it as a' if one else 'them as'} {said} {word} {'mate' if one else 'mates'}; "
+                   f"{'a ' if one else ''}{other} {word} {'mate is' if one else 'mates are'} not made again.")
+    return out
+
+
+def _in_error_before(entry, plan, old: str, lead: Optional[Sequence[str]] = None) -> List[str]:
     """The demonstration's review (§6): a mate of the user's the inventory holds in error, which the plan makes again:
     *UserLock8a was in error in RangeBox.SLDASM as read; made again, it is carried if it reads no error or the one it
     had, and not if it keeps a gear from turning.*"""
-    made = {m.mate.name for m in plan.mates}
+    made = set(lead) if lead is not None else {m.mate.name for m in plan.mates}
     if len(made) == 1:
         return []                              # the one mate made again is named, and said in error, in the lead
     bad = [m.name for m in entry.mates if m.name in made and m.code and m.code != -1]
@@ -5797,6 +5849,8 @@ def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[
             clauses.append(f"your {_kept_as(done.remade[0][0], kept_of)}, on in the modes it was on in")
         elif made == total:
             clauses.append(f"your {_plural(total, 'mate')}{among}, each on in the modes it was on in")
+        elif made == 1 and renamed:
+            clauses.append(f"1 of your {_plural(total, 'mate')}, {renamed[0]}, on in the modes it was on in")
         else:
             clauses.append(f"{made} of your {_plural(total, 'mate')}{among}, each on in the modes it was on in")
     texts.append(f"Carried into {name}, unsaved: {', and '.join(clauses)}.")
@@ -5806,7 +5860,10 @@ def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[
         texts.append(_fallback_sentence(fallback, name, old, work.active, getattr(again, "modes_plan", None),
                                         kept_of))
     for mate, code in done.same_error:
-        texts.append(f"Your {_kept_as(mate, kept_of)} was in error in {old} and is in {name} too, as it was.")
+        # The re-check of 11a63ab, item 2: each name beside the assembly it is in.
+        kept = kept_of.get(mate, mate) or mate
+        texts.append(f"Your {mate} was in error in {old} and is in {name} too, as it was." if kept == mate else
+                     f"Your {mate} was in error in {old} and, as {kept}, is in {name} too, as it was.")
     texts += _moved_sentences(done.moved, old_of, anchors)
     for mode, clash in done.clashes:
         names = list(getattr(clash, "gears", ()) or getattr(clash, "components", ()))

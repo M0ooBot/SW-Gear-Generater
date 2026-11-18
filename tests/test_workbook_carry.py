@@ -1552,9 +1552,12 @@ def test_a_renamed_mate_in_error_as_before_and_one_kept_beside_a_fallback_are_sa
     a, b = (m.name for m in work.mates)
     fell = swbuild.CarryFallback(("Sprocket-8",), (a,), (b,), swbuild.FELL_TIE, ("Sun", "H"))
     said = _status(_done(work, remade=[(b, "Mate12", ("H",))], same_error=[(b, 46)], fixed=[fell]))
-    assert f"Your Mate12 (was {b}) was in error in RangeBox.SLDASM and is in RangeBox_r2 too, as it was." in said, said
+    assert f"Your {b} was in error in RangeBox.SLDASM and, as Mate12, is in RangeBox_r2 too, as it was." in said, said
+    assert "1 of your 2 mates, Mate12 (was M1), on in the modes it was on in." in said
     assert (f"Sprocket-8 is fixed where it stood in RangeBox_r2: with your {a} made again SolidWorks reads Sun unable "
             f"to turn, so it was not kept; Mate12 (was {b}) beside it was.") in said, said
+    said = _status(_done(work, remade=[(b, b, ("H",))], same_error=[(b, 46)]))
+    assert f"Your {b} was in error in RangeBox.SLDASM and is in RangeBox_r2 too, as it was." in said, said
 
 
 def test_a_mate_solidworks_would_not_rename_end_to_end_on_package_as_worker(carrying):
@@ -1581,3 +1584,67 @@ def test_a_mate_solidworks_would_not_rename_end_to_end_on_package_as_worker(carr
     assert stays.mates == (kept,)
     assert "Lock3" not in ui_text.carry_footer_line(record) and ui_text.carry_footer_line(record)
     assert "Lock3" not in ui_text.carry_lost_line(box.assembly, carry.old.path)
+
+
+# -- the re-check of 11a63ab (W9D-REVIEW-B.md, 684ac38) --------------------------------------------------------------
+
+def _with_distances(desk, *names):
+    """The record with distance mates of the user's between Sprocket-1 and Housing-1 (type 5: the record cannot tell a
+    limit distance from a plain one)."""
+    record = copy.deepcopy(desk.record)
+    for name in names:
+        record.gearbox.user_work.mates.append(store.UserMateEntry(
+            name, "other", 5, [["user", "Sprocket-1"], ["user", "Housing-1"]], ["H", "N", "L"],
+            entities=[["user", "Sprocket-1", "plane", "plane1"], ["user", "Housing-1", "plane", "plane1"]]))
+    return record
+
+
+def _kinds(monkeypatch, *kinds):
+    monkeypatch.setattr(findings, "CARRY_REMAKE_KINDS_ON_2026", tuple(kinds))
+
+
+def test_a_recorded_distance_is_may_while_the_plain_kind_is_allowed_and_the_limit_kind_not(desk, carrying,
+                                                                                           monkeypatch):
+    """Item 1 on the real plan_carry: ("lock", "coincident", "distance") makes a recorded UserLimit10 again as plain;
+    the press may read it a limit distance, which it does not make again."""
+    _kinds(monkeypatch, "lock", "coincident", "distance")
+    said = _each_mate_once(desk, _with_distances(desk, "UserLimit10"))
+    assert ("Your UserLimit10 is made again if the press reads it as a plain distance mate; a limit distance mate is "
+            "not made again.") in said, said
+    assert "makes your Lock3 again in the modes it was on in." in said
+    said = _each_mate_once(desk, _with_distances(desk, "UserLimit10", "UserLimit11"))
+    assert ("Your UserLimit10 and UserLimit11 are made again if the press reads them as plain distance mates; limit "
+            "distance mates are not made again.") in said, said
+
+
+def test_a_recorded_distance_is_may_while_only_the_limit_kind_is_allowed(desk, carrying, monkeypatch):
+    _kinds(monkeypatch, "lock", "coincident", "limit distance")
+    said = _each_mate_once(desk, _with_distances(desk, "UserLimit10"))
+    assert ("Your UserLimit10 is made again only if the press reads it as a limit distance mate; a plain distance mate "
+            "is not made again.") in said, said
+    assert "has not yet been shown to make distance mates again" not in said
+
+
+@pytest.mark.parametrize("kinds", [("lock", "coincident", "distance", "limit distance"), ("lock", "coincident")])
+def test_a_recorded_distance_is_said_as_fact_where_both_kinds_are_answered_alike(desk, carrying, monkeypatch, kinds):
+    _kinds(monkeypatch, *kinds)
+    said = _each_mate_once(desk, _with_distances(desk, "UserLimit10"))
+    assert "if the press reads it as a" not in said and "plain distance" not in said, said
+    if "distance" in kinds:
+        assert "makes your 2 mates again" in said, said
+    else:
+        assert "UserLimit10 is not made again" in said or "UserLimit10 are not made again" in said, said
+
+
+def test_a_question_whose_only_mate_is_may_keeps_its_time_in_that_sentence(desk, carrying, monkeypatch):
+    """Nothing definite carried: the *may* takes the lead's time, and the question never says nothing is carried."""
+    _kinds(monkeypatch, "coincident", "distance")
+    record = copy.deepcopy(desk.record)
+    entry = record.gearbox.user_work
+    entry.components = []
+    entry.mates = [store.UserMateEntry("UserLimit10", "other", 5, [["app", "Sun"], ["app", "RangeSlv"]], ["H", "N", "L"],
+                                       entities=[["app", "Sun", "plane", "plane1"], ["app", "RangeSlv", "plane", "plane1"]])]
+    said = _each_mate_once(desk, record)
+    assert said.startswith(f"As read at {_at(desk)}, your UserLimit10 is made again if the press reads it as a plain "
+                           "distance mate; a limit distance mate is not made again."), said
+    assert "would be carried" not in said and "holds what it carries unsaved" in said

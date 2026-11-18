@@ -322,6 +322,24 @@ modes it was on in.*) and W9a's sentence of what stays name it so; the footer's 
 mate. Pinned on exact strings, one end to end on A's worker. No fragment the demonstration matches changed; the seven
 printed states are unchanged.
 
+## The re-check of `11a63ab` (`W9D-REVIEW-B.md`, `684ac38`)
+
+- **Item 1, a limit mate foreseen as plain.** The record keeps a mate's type (5 or 6) and nothing that tells a limit
+  mate from a plain one (no type name, no range), so while `CARRY_REMAKE_KINDS` on the SolidWorks the record last saw
+  answers the plain kind and its limit kind differently, a recorded distance or angle mate is said as *may*, grouped by
+  kind: *Your UserLimit10 is made again if the press reads it as a plain distance mate; a limit distance mate is not
+  made again.* (plain allowed: the plan makes it again, and it leaves the lead's count), or *Your UserLimit10 is made
+  again only if the press reads it as a limit distance mate; a plain distance mate is not made again.* (limit allowed:
+  the plan's unmeasured reason for the plain kind gives way to it). Where both kinds are allowed or both refused the
+  question says it as fact, as before. With nothing else definite carried the *may* takes the lead's time (*As read at
+  …, your UserLimit10 is made again if …*) and the question asks the save. Pinned on the real `plan_carry` with gate
+  tuples that split the kinds each way and that do not, every shape through `_each_mate_once`.
+- **Item 2, each name beside its assembly.** *Your Dist9 was in error in RangeBox.SLDASM and, as Mate14, is in
+  RangeBox_r2 too, as it was.*; a name unchanged keeps today's sentence. And the one mate made again among several,
+  renamed: *1 of your 2 mates, Mate12 (was M1), on in the modes it was on in* (no longer *…, Mate12 (was M1) among
+  them, each …*).
+- No fragment the demonstration matches changed.
+
 ## The strings, in full
 
 Made by A's worker on the fake (`Desk`'s RangeBox, W9a's user work: Sprocket-1 locked to Sun, Housing-1 fixed, a
