@@ -5,8 +5,15 @@ SolidWorks, through the Workbook window's own path (W9a's Desk9: the window's pl
     python w9c_demonstration.py <src> <out> --pid PID [--log FILE] [--sections fixed,modes,...] [--redo]
         [--master <S0's rangebox.master>] [--user-master <W9a's setup.master>]
         [--reducer-master <W9a's reducer.master>] [--fixed-master <this script's fixed-updated.master>]
-        [--m4-part <a part with an in-context reference, made by hand>]
+        [--m4-part <a part with an in-context reference, made by hand>] [--close-outlived-whats-wrong]
     python w9c_demonstration.py --self-check      (no SolidWorks, no Excel)
+
+``--close-outlived-whats-wrong`` (the coordinator's ruling of 2026-11-18, ISSUE-1-PLAN.md; off unless given, so every
+other run is as before): on SolidWorks 2024 only, a What's Wrong owned by SolidWorks' frame, the frame enabled, that is
+still up 60 s after a job (W9a's allowance) is said to have outlived its job, and the script then closes it with the
+box's own Close button and requires it gone within 10 s with the frame enabled, and goes on. Anything else (another
+window, another owner, a disabled frame, a box that will not close, another version) stays the STOP. The app is not
+changed by it: it still leaves the box alone and changes no SolidWorks setting.
 
 Every new kind of write is behind a per-version finding that is None (``UPDATE_INSERTS_A_GEAR``,
 ``UPDATE_MAKES_MATES_WITH_MODES``, ``UPDATE_BANDS_IN_PLACE``, ``UPDATE_ADDS_A_MODE``, ``UPDATE_REMOVES_A_MODE``,
@@ -63,6 +70,9 @@ Sections (each can run alone from a kept master; ``fixed`` keeps ``fixed-updated
                 user made by hand with an in-context reference to an app gear (W9C-DEMONSTRATION.md, m4), read-only,
                 and the route proposed from it.
 - ``w9b-part``  W9b's ``part`` section again (88 s on 2026), so its step-face read runs on SolidWorks in this session.
+- ``remake-m3`` (by name only) remake's M3 alone, without its first part: its own copy of setup.master (from
+                ``--user-master``, or this <out>'s; without either, W9a's ``setup`` runs first, building RangeBox too unless
+                ``--master`` gives it). Its folder is ``remake-again``, as in ``remake``.
 
 Time on 2026 (fixed and modes as run 5 measured): fixed 20 min, modes 48, remove 15, remake 30, bands-off 8, m4 5, w9b-part 2: about 2 h 10
 min (the plan's budget 2 h 20 min); add 5 min if setup.master and 4 if the 12 : 1's master must be built first.
@@ -721,27 +731,86 @@ def stopped_again(result, ring_file):
 
 
 def wrote_nothing(changing, globals_before, globals_after, states_before, states_after, result, ring_file, ring,
-                  mates_written, ratios_before, ratios_after):
+                  mates_written, ratios_before, ratios_after, ring_before=None):
     """§6.2: what step 2 wrote, as sentences (empty: nothing). ``changing``: its traced calls that change or show
     anything (``nothing_changed_calls``, ``AddComponent5``, ``SaveAs3``); the globals before and after, every part's
     and the assembly's own (equation writes are not traced); ``states_*``: ``{"flags": {file: GetSaveFlag}, "times":
     {file: mtime}}`` of every document of the copy just before and after; ``result``: the GearboxUpdate's ``changed``,
-    ``mates_made``, ``remade_in_modes``, ``placed``, ``skipped`` and ``failures``; ``ring``: the ring's
-    ``landing_state`` after; ``mates_written``: W9a's ``written`` of ``read_now`` before and after; each gear mate's
-    ratio before and after. Which documents read modified before is a fact (:func:`beyond_step_1`), not a check."""
+    ``mates_made``, ``remade_in_modes``, ``placed``, ``skipped`` and ``failures``; ``ring`` and ``ring_before``: the
+    ring's ``landing_state`` after and before; ``mates_written``: W9a's ``written`` of ``read_now`` before and after;
+    each gear mate's ratio before and after. Which documents read modified before is a fact (:func:`beyond_step_1`),
+    not a check. The ring is held to itself across the press (W9C-RUNS-REVIEW.md's 2024 addendum, §4): in error before
+    it, at 54 teeth, and after it in error with the same features and codes at 54 teeth, whatever the codes are (2026
+    reads Tooth Space 72 and Teeth 1; 2024 reads 51 and 51), the codes said as facts where read."""
     out = wrote_in_press(changing, globals_before, globals_after, states_before, states_after, result)
     if not result.get("skipped"):
         out.append("nothing said skipped")
     if [w for w, _ in result.get("failures") or []] != [ring_file]:
         out.append(f"failures name {[w for w, _ in result.get('failures') or []]}, not the ring's file alone")
-    codes = dict((ring or {}).get("in_error") or [])
-    if codes.get("Tooth Space") != 72 or (ring or {}).get("teeth") != 54.0:
-        out.append(f"the ring reads {ring}, not Tooth Space at 72 and 54 teeth")
+    held = [tuple(e) for e in (ring_before or {}).get("in_error") or []]
+    now = [tuple(e) for e in (ring or {}).get("in_error") or []]
+    if not held or (ring_before or {}).get("teeth") != 54.0:
+        out.append(f"the ring before the press reads {ring_before}, not in error at 54 teeth")
+    if now != held or (ring or {}).get("teeth") != 54.0:
+        out.append(f"the ring reads {now} at {(ring or {}).get('teeth')} teeth after the press, against {held} at "
+                   f"{(ring_before or {}).get('teeth')} before: not the same codes at 54 teeth")
     if mates_written:
         out.append(f"the assembly's read {mates_written}")
     if ratios_before != ratios_after:
         out.append(f"ratios {ratios_before} -> {ratios_after}")
     return out
+
+
+# -- What's Wrong outliving its job: the coordinator's ruling of 2026-11-18 (ISSUE-1-PLAN.md, the section on SolidWorks
+# 2024's confirming runs), on SolidWorks 2024, in a run that asks for it (WW_CLOSE_FLAG) ------------------------------
+
+WW_CLOSE_FLAG = "--close-outlived-whats-wrong"
+WW_CLOSE_YEAR = 2024
+WW_CLOSE_WITHIN = 10.0                   # s: a box the script closed with its own Close button must be gone by then
+WW_CLOSE_BUTTONS = ("&Close", "Close")   # the box's Close, as W8's watch listed its controls on 2024 (24-4:311)
+
+
+def outlived_close_refused(year, boxes, seen, enabled, unowned, blocking, others):
+    """Why a What's Wrong still up WW_ALLOWANCE s after its job may not be closed by the script (empty: it may). The
+    ruling allows it only on SolidWorks 2024 (``year``), only for boxes this job's watch read as owned by SolidWorks'
+    frame (``boxes``: [(hwnd, owned)] up now; ``seen``: the hwnds the watch read so), with none not owned by the frame
+    in the job (``unowned``), the frame read enabled (True, not unread), no blocking box named (``blocking``), and no
+    other window W8's watch logged and nothing judged (``others``). Anything else stays the STOP."""
+    why = []
+    if year != WW_CLOSE_YEAR:
+        why.append(f"SolidWorks {year}: the ruling is for {WW_CLOSE_YEAR} only")
+    if not boxes:
+        why.append("no What's Wrong is up")
+    strange = [h for h, owned in boxes if not owned or h not in seen]
+    if strange:
+        why.append(f"{len(strange)} What's Wrong up that this job's watch did not read as owned by SolidWorks' frame")
+    if unowned:
+        why.append(f"{len(unowned)} What's Wrong not owned by SolidWorks' frame came up in the job")
+    if enabled is not True:
+        why.append(f"SolidWorks' frame enabled reads {enabled}")
+    if blocking:
+        why.append(f"a blocking box was named ({blocking})")
+    if others:
+        why.append(f"another window is up: {others}")
+    return why
+
+
+def outlived_close_failed(pressed, left, enabled, seconds, within=WW_CLOSE_WITHIN):
+    """Why the script's close failed the ruling (empty: every box went in time, the frame enabled). ``pressed``:
+    {hwnd: the button's text pressed, "" where none was found}; ``left``: the What's Wrong boxes still up after the
+    wait; ``enabled``: SolidWorks' frame after; ``seconds``: how long after the press the boxes were read gone (or
+    the wait ended)."""
+    why = []
+    missing = [h for h, button in pressed.items() if not button]
+    if not pressed or missing:
+        why.append(f"no Close button found on {len(missing)} of {len(pressed)} box(es)")
+    if left:
+        why.append(f"{len(left)} still up {seconds:.2f} s after its Close was pressed (allowed {within:g})")
+    elif seconds > within:
+        why.append(f"gone only {seconds:.2f} s after its Close was pressed (allowed {within:g})")
+    if enabled is not True:
+        why.append(f"SolidWorks' frame enabled reads {enabled} after the close")
+    return why
 
 
 # -- --self-check: the edits through the app's own read and classify, on the fake ------------------------------------------
@@ -1225,10 +1294,11 @@ def self_check():
     ok(groove_kept(was, late) != [] and groove_kept(was, dict(now, faces=faces[2:])) != [],
        "groove: one after the relief, or its faces gone, is said")
     ok(propose("X", True, "e") == "propose X = True  # e", "propose's form")
+    # The app's own sentence as head words it (0b7582f: the parenthesis says what closing RangeBox costs).
     still = ("Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding "
              "the new values, so this press set nothing in it: close it and RangeBox in SolidWorks without saving, "
-             "answering No when SolidWorks asks to save them (the files on disk are as before that Update), then press "
-             "Update SolidWorks again.")
+             "answering No when SolidWorks asks to save them (the files on disk are as before that Update; closing "
+             "RangeBox so also discards whatever else is unsaved in it), then press Update SolidWorks again.")
     run11 = ("Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding "
              "the new values, so this press set nothing in it: close it in SolidWorks without saving (the file on disk "
              "is as before that Update), then press Update SolidWorks again.")
@@ -1274,7 +1344,7 @@ def self_check():
     def wrote(**kw):
         args = dict(changing=[], globals_before=glb, globals_after=glb, states_before=states, states_after=states,
                     result=result, ring_file=ring_file, ring=ring, mates_written=[], ratios_before=ratios,
-                    ratios_after=ratios)
+                    ratios_after=ratios, ring_before=ring)
         args.update(kw)
         return wrote_nothing(**args)
     ok(wrote() == [], "M3 step 2: a press that stopped before any write wrote nothing, RangeBox modified since step 1 "
@@ -1305,6 +1375,44 @@ def self_check():
        "M3 step 2: nothing skipped, or a failure not the ring's alone, is said")
     ok(wrote(ring={"in_error": [], "teeth": 54.0}) != [] and wrote(ring=dict(ring, teeth=53.0)) != [],
        "M3 step 2: the ring mended or moved is said")
+    # The 2024 addendum's §4: the ring held to itself across the press, not to 2026's codes.
+    ring51 = {"in_error": [("Tooth Space", 51), ("Teeth", 51)], "teeth": 54.0}
+    ok(wrote(ring=ring51, ring_before=ring51) == [] and wrote(ring=dict(ring51, volume=None), ring_before=ring51) == [],
+       "M3 step 2: 2024's ring, Tooth Space and Teeth at 51 before and after at 54 teeth, wrote nothing")
+    ok(wrote(ring=ring51, ring_before=ring) != [] and wrote(ring=ring, ring_before=ring51) != []
+       and wrote(ring={"in_error": [("Tooth Space", 51)], "teeth": 54.0}, ring_before=ring51) != [],
+       "M3 step 2: the ring's codes or features changed across the press are said")
+    ok(wrote(ring={"in_error": [], "teeth": 54.0}, ring_before={"in_error": [], "teeth": 54.0}) != []
+       and wrote(ring_before=None) != [] and wrote(ring=dict(ring51, teeth=55.0), ring_before=dict(ring51, teeth=55.0))
+       != [],
+       "M3 step 2: a ring not in error before the press, not read, or not at 54 teeth is said")
+    # The coordinator's ruling of 2026-11-18: a What's Wrong that outlived its job, closed by its Close button only
+    # where everything else is as ruled; each other way is the STOP.
+    ok(outlived_close_refused(2024, [(7, True)], [7], True, [], None, []) == [],
+       "What's Wrong outlived its job: on 2024, the frame's own box seen by the watch, the frame enabled, nothing "
+       "else up: the script may close it")
+    refused = {"on 2026": (2026, [(7, True)], [7], True, [], None, []),
+               "nothing up": (2024, [], [7], True, [], None, []),
+               "not owned by the frame": (2024, [(7, False)], [7], True, [], None, []),
+               "never read by the watch": (2024, [(8, True)], [7], True, [], None, []),
+               "an unowned one in the job": (2024, [(7, True)], [7], True, [9], None, []),
+               "the frame disabled": (2024, [(7, True)], [7], False, [], None, []),
+               "the frame unread": (2024, [(7, True)], [7], None, [], None, []),
+               "a blocking box named": (2024, [(7, True)], [7], True, [], "stood 130 s", []),
+               "another window": (2024, [(7, True)], [7], True, [], None,
+                                  ["a SolidWorks window 'SOLIDWORKS' ['&Yes', '&No']"])}
+    ok(all(outlived_close_refused(*args) != [] for args in refused.values()),
+       f"What's Wrong outlived its job: not closed, the STOP, where {list(refused)}: "
+       f"{[k for k, a in refused.items() if outlived_close_refused(*a) == []] or 'each refused'}")
+    ok(outlived_close_failed({7: "&Close"}, [], True, 1.25) == [],
+       "What's Wrong closed by its own Close: gone in 1.25 s, the frame enabled, the run goes on")
+    failed = {"no Close button": ({7: ""}, [], True, 1.0), "nothing pressed": ({}, [], True, 0.0),
+              "still up after 10 s": ({7: "&Close"}, [7], True, 10.1), "gone late": ({7: "&Close"}, [], True, 10.6),
+              "the frame disabled after": ({7: "&Close"}, [], False, 1.0),
+              "the frame unread after": ({7: "&Close"}, [], None, 1.0)}
+    ok(all(outlived_close_failed(*args) != [] for args in failed.values()),
+       f"What's Wrong closed by its own Close: the STOP where {list(failed)}: "
+       f"{[k for k, a in failed.items() if outlived_close_failed(*a) == []] or 'each failed'}")
     ok(wrote(mates_written=["flags [...]"]) != [] and wrote(ratios_after={"Sun meshes Planet copy 1": (29, 13)}) != [],
        "M3 step 2: a mate or a gear mate's ratio changed is said")
     # Step 2b: the parts' windows closed, RangeBox open, pressed once more.
@@ -1338,6 +1446,7 @@ from gear_generator.swcom import call  # noqa: E402
 from gear_generator.workbook import schema as wb_schema  # noqa: E402
 from gear_generator.workbook import update as wb_update  # noqa: E402
 from gear_generator.workbook.model import Mode  # noqa: E402
+import time  # noqa: E402
 
 say, check = W.say, W.check
 OUT = W.OUT
@@ -2609,7 +2718,7 @@ def remake_again(out):
             summary["skipped"] = getattr(second, "skipped", "") if second else ""
             wrote = wrote_nothing(changing, globals_before, globals_after, s_before, s_after, summary, ring_file,
                                   ring_after, A.written(now_before, now_after), ratios_before,
-                                  ratios_after) if second is not None else ["no result"]
+                                  ratios_after, ring_before=ring_before) if second is not None else ["no result"]
             out["second"] = {"status": text, "set_in_parts": set_in, "marked": list(desk.record.unsaved_in_error),
                              "remade_in_modes": summary["remade_in_modes"], "result": summary,
                              "changing_calls": [list(c) for c in changing], "ring_before": ring_before,
@@ -2627,9 +2736,10 @@ def remake_again(out):
             check(not wrote,
                   f"remake, M3: step 2 stopped before any write: no call that changes or shows anything, every part's "
                   f"and the assembly's globals, every document's save flag and file time as before, nothing changed, "
-                  f"made, remade or placed, its stop said skipped and named {ring_file} alone, the ring still at Tooth "
-                  f"Space 72 and 54 teeth, the assembly's frames, mates and flags and the gear mates' ratios as "
-                  f"before: {wrote or 'nothing written'}")
+                  f"made, remade or placed, its stop said skipped and named {ring_file} alone, the ring still in error "
+                  f"at 54 teeth with the codes it read before the press ({(ring_before or {}).get('in_error')}), the "
+                  f"assembly's frames, mates and flags and the gear mates' ratios as before: "
+                  f"{wrote or 'nothing written'}")
             f = desk.say_footer("remake, M3: the footer after the second press")
             check(footer_says_close(f.text, stem, asm_stem),
                   f"remake, M3: the footer says {stem} is to be closed with {asm_stem} without saving, answering No "
@@ -3643,14 +3753,92 @@ def section_w9b_part(out):
     B.section_part(out)
 
 
+def section_remake_m3(out):
+    """``remake-m3`` (by name only; W9C-RUNS-REVIEW.md's 2024 addendum, §5 item 4): remake's M3 alone, ``remake_again``
+    on its own copy of setup.master, without remake's first part (its gate is measured on both versions); every press
+    reads the inventory, so head's entity reads run inside an Update there too."""
+    remake_again(out.setdefault("again", {}))
+
+
+# -- What's Wrong outliving its job, closed where the run asks (the coordinator's ruling of 2026-11-18) ------------------
+
+
+def close_outlived(record, frame, waited):
+    """``A.WW_OUTLIVED`` under WW_CLOSE_FLAG: at a ruled job's end, with a What's Wrong still up WW_ALLOWANCE s after it.
+    Said as having outlived its job; then, where :func:`outlived_close_refused` finds nothing against it, each box is
+    closed with its own Close button (W8's ``press_dont_save`` with WW_CLOSE_BUTTONS: a BM_CLICK, never FeatureXpert or
+    the box's check box) and must be gone within WW_CLOSE_WITHIN s with the frame enabled (:func:`outlived_close_failed`).
+    Sets ``record["outlived"]``; W9a's ``whats_wrong_end`` says it and stops on its ``stop``. Nothing here raises."""
+    what = record["what"]
+    out = {"outlived": True, "waited": waited, "closed_by_script": False, "close_seconds": None, "buttons": [],
+           "stop": "", "said": ""}
+    record["outlived"] = out
+    try:
+        boxes = A.whats_wrong_boxes(frame)
+        enabled = A.frame_enabled(frame)
+        others = [n for n in W.NOTES[A.SEEN["notes"]:] if n.startswith("a SolidWorks window")
+                  and not n.startswith(f"a SolidWorks window {A.WHATS_WRONG!r}")]
+        say(f"fact    {what}: What's Wrong outlived its job: {len(boxes)} still up {waited:.2f} s after it, owned by "
+            f"SolidWorks' frame {[owned for _, owned in boxes]}, the frame enabled {enabled} (the coordinator's ruling "
+            "of 2026-11-18)")
+        why = outlived_close_refused(year(), boxes, [e["hwnd"] for e in record["seen"]], enabled, record["unowned"],
+                                     record.get("blocking"), others)
+        if why:
+            out.update(stop="not closed: " + "; ".join(why), said="not closed by the script: " + "; ".join(why))
+            return
+        pressed = {h: W.press_dont_save(h, WW_CLOSE_BUTTONS) for h, _ in boxes}
+        out["buttons"] = list(pressed.values())
+        began = time.monotonic()
+        left = [h for h, _ in A.whats_wrong_boxes(frame)]
+        while left and time.monotonic() - began < WW_CLOSE_WITHIN:
+            time.sleep(0.25)
+            left = [h for h, _ in A.whats_wrong_boxes(frame)]
+        seconds = round(time.monotonic() - began, 2)
+        after = A.frame_enabled(frame)
+        failed = outlived_close_failed(pressed, left, after, seconds, within=WW_CLOSE_WITHIN)
+        out.update(closed_by_script=not left, close_seconds=seconds, frame_enabled_after=after)
+        if failed:
+            out.update(stop="its Close pressed: " + "; ".join(failed),
+                       said=f"the script pressed its Close {out['buttons']}: " + "; ".join(failed))
+        else:
+            out["said"] = (f"the script pressed its own Close {out['buttons']}, as a person would, and it was gone "
+                           f"{seconds:.2f} s later (allowed {WW_CLOSE_WITHIN:g}), SolidWorks' frame enabled {after}")
+    except Exception as exc:  # noqa: BLE001 - said, and the STOP stands
+        out.update(stop=f"the close path raised {type(exc).__name__}: {exc}",
+                   said=f"the close path raised {type(exc).__name__}: {exc}")
+
+
+def close_outlived_on():
+    """WW_CLOSE_FLAG given: the close path put in W9a's harness for this run, and said once beside the What's Wrong
+    rule's own line (W9a's ``whats_wrong_rule`` wrapped, so the log's head keeps its lines)."""
+    A.WW_OUTLIVED = close_outlived
+    rule = A.whats_wrong_rule
+
+    def whats_wrong_rule():
+        first = not A.WW["read"]
+        answer = rule()
+        if first:
+            on = answer is True and year() == WW_CLOSE_YEAR
+            say(f"rule    {WW_CLOSE_FLAG}: a What's Wrong owned by SolidWorks' frame, the frame enabled, still up "
+                f"{A.WW_ALLOWANCE:g} s after a job is said to have outlived it and closed with its own Close button, "
+                f"to be gone within {WW_CLOSE_WITHIN:g} s; anything else stays the STOP (the coordinator's ruling of "
+                f"2026-11-18, SolidWorks {WW_CLOSE_YEAR} only): "
+                + ("in force here" if on else f"not in force here (SolidWorks {year()}, the rule {answer!r})"))
+            RESULT.setdefault("whats_wrong_rule", {})["close_outlived"] = {
+                "asked": True, "in_force": on, "within_seconds": WW_CLOSE_WITHIN, "buttons": list(WW_CLOSE_BUTTONS)}
+        return answer
+    A.whats_wrong_rule = whats_wrong_rule
+
+
 # -- the run -------------------------------------------------------------------------------------------------------------
 
 ORDER = ["fixed", "modes", "remove", "remake", "bands-off", "m4", "w9b-part"]   # ring and landing: by name only
 SECTIONS = {"ring": section_ring, "landing": section_landing, "fixed": section_fixed, "modes": section_modes, "remove": section_remove, "remake": section_remake,
-            "bands-off": section_bands_off, "m4": section_m4, "w9b-part": section_w9b_part}
+            "bands-off": section_bands_off, "m4": section_m4, "w9b-part": section_w9b_part,
+            "remake-m3": section_remake_m3}       # remake-m3: by name only
 FOLDERS = {"ring": ["ring"], "landing": ["landing"], "fixed": ["fixed-updated", "fixed-updated" + W.MASTER_SUFFIX], "modes": ["modes"],
            "remove": ["remove-reducer", "remove-setup"], "remake": ["remake", "remake-again"], "bands-off": ["bands-off"],
-           "m4": ["m4"], "w9b-part": ["part"]}
+           "m4": ["m4"], "w9b-part": ["part"], "remake-m3": ["remake-again"]}
 
 
 def done_here(name):
@@ -3665,6 +3853,8 @@ def main():
         A.CHOSEN = list(ORDER)
     A.done_here = done_here
     A.RUN_TITLE, A.JSON_STEM = "W9c demonstration", "w9c-demo"
+    if WW_CLOSE_FLAG in A.ARGS:              # off unless the run asks: every other run as before
+        close_outlived_on()
     return A.main()
 
 

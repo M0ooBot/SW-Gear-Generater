@@ -193,6 +193,12 @@ WW_ALLOWANCE = 60.0          # box stayed 22 s after it came (box: 97.45 -> 120.
 WW = {"rule": None, "read": False, "job": False, "last": None, "job_last": None}
 WW_WORDS = {"app": "as the app's Update shows it", "script": "as SolidWorks shows it when a person does this"}
 WW_STALL = 120.0             # a box up this long with no SolidWorks call made since it came is taken as blocking
+# A script's close path for a What's Wrong still up WW_ALLOWANCE s after its job (None, as W9a's own runs and W9d's
+# leave it: no close, the STOP as before). W9c's demonstration sets it only when its run asks for it
+# (--close-outlived-whats-wrong; the coordinator's ruling of 2026-11-18 on SolidWorks 2024, ISSUE-1-PLAN.md). Called
+# at a ruled job's end as WW_OUTLIVED(record, frame, waited) while a box is up; it says the box outlived its job, may
+# close it, and sets record["outlived"] ({"said": words for the fact line, "stop": why it is still the STOP, or ""}).
+WW_OUTLIVED = None
 # Every SolidWorks call any job makes, counted (W8's TRACE counts only while an Update is traced): the stall test's
 # measure of the worker going on while a box is up. A one-line wrapper over swcom.call as W8 left it.
 CALLS_MADE = {"n": 0}
@@ -363,23 +369,32 @@ def whats_wrong_end(record, frame, began):
         up = ww_poll(record, frame, began)
         ww_blocked(record)
     waited_for = round(time.monotonic() - ended, 2)
+    if up and WW_OUTLIVED is not None:
+        WW_OUTLIVED(record, frame, waited_for)
+        up = [h for h, _ in whats_wrong_boxes(frame)]
     enabled = frame_enabled(frame)
     record.update(up_at_the_end=len(up), frame_enabled_at_the_end=enabled, waited_after_the_job=waited_for)
     what = record["what"]
+    outlived = record.get("outlived")
     if record["seen"]:
         record["lifetimes"] = [g["stayed"] for g in record["gone"]]
         RESULT.setdefault("whats_wrong_lifetimes", []).append(
             {"job": what, "kind": record["kind"], "came": [e["seconds"] for e in record["seen"]],
-             "stayed": record["lifetimes"], "still_up": len(up)})
+             "stayed": record["lifetimes"], "still_up": len(up), **({"outlived": outlived} if outlived else {})})
+        # "took … to go" only when nothing is up and nothing closed it (06d5141's log said it of a box still up).
+        after = (f"it was still up after {waited_for:.2f} s (allowed {WW_ALLOWANCE:g})"
+                 + (f"; {outlived['said']}" if outlived else "") if up or outlived
+                 else f"it took {waited_for:.2f} s to go (allowed {WW_ALLOWANCE:g})")
         say(f"fact    {what}: What's Wrong showed during the job, {WW_WORDS[record['kind']]}: came at "
-            f"{[e['seconds'] for e in record['seen']]} s, stayed {record['lifetimes']} s; after the job it took "
-            f"{waited_for:.2f} s to go (allowed {WW_ALLOWANCE:g}); {len(up)} up at the end, SolidWorks' frame enabled "
-            f"{enabled}")
-    if up or enabled is False or record["unowned"]:
+            f"{[e['seconds'] for e in record['seen']]} s, stayed {record['lifetimes']} s; after the job {after}; "
+            f"{len(up)} up at the end, SolidWorks' frame enabled {enabled}")
+    if up or enabled is False or record["unowned"] or (outlived or {}).get("stop"):
         W.HUNG["on"] = True
         stop(f"{what}: at the job's end What's Wrong is still up after {WW_ALLOWANCE:g} s ({len(up)}), or SolidWorks' "
              f"frame is disabled ({enabled}), or a What's Wrong was not owned by the frame ({len(record['unowned'])}): "
-             "the ruling allows only the frame's box, going by itself")
+             "the ruling allows only the frame's box, going by itself"
+             + (f" (or, where the run asks, closed by its own Close button: {outlived['stop']})"
+                if (outlived or {}).get("stop") else ""))
     notes = [n for n in W.NOTES[SEEN["notes"]:] if n.startswith("a SolidWorks window")]
     ww = [n for n in notes if n.startswith(f"a SolidWorks window {WHATS_WRONG!r}")]
     if ww and not record["seen"]:

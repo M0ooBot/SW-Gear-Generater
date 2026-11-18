@@ -1063,6 +1063,22 @@ that says the Update stops there as before.
 - **Route (c1) on a train with no carrier is measured on 2024 too** (`USER_MATE_PUT_NO_CARRIER_ON_2024` True, the
   12 : 1 without modes).
 
+**2026-11-18: a What's Wrong that outlives its job.** W9c's confirming run on SolidWorks 2024 (`06d5141`; reviewed in
+`W9C-RUNS-REVIEW.md`'s addendum "SolidWorks 2024", `78fdcb6`) showed the first box to outlive its job, so "a box that
+outlives its job (never seen)" above is no longer never seen. It came at the demonstration script's own activation of
+RangeBox with the ring held in error, before remake M3's step 2, owned by SolidWorks' frame with the frame enabled, and
+was still up when the harness had waited 60 s after the job; nothing logged says it went (`W9C-DEMONSTRATION.md`, the
+2024 section). It was not in an app Update; no box in an app Update has been seen to outlive its job. The
+coordinating session's ruling, the user's to overrule: on SolidWorks 2024, in a demonstration run only, a What's Wrong
+box owned by SolidWorks' own frame, with the frame enabled, that is still up 60 s after a job is logged as having
+outlived its job; the script then closes it with the box's own Close button and requires it gone within 10 s, and goes
+on. Anything else (another dialog, another owner, a disabled frame, a box that will not close) stays the STOP it is.
+The app itself is unchanged by this: it still leaves the box alone and changes no SolidWorks setting. The close path
+is off unless the run asks for it by a flag (`probe/w9c_demonstration.py --close-outlived-whats-wrong`), so every
+other run behaves as before. Whether the app's own press, made with a part held in error, can leave such a box
+standing after it is not measured (the review's inference from `Session.open_document`'s `ActivateDoc3`); if a run
+shows it, this section and W9a's sentences take it.
+
 
 ## Changes after W9b, W9c's probes and the review of W9c's packages
 

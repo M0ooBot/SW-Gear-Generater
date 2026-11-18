@@ -288,7 +288,9 @@ than W9c, which `ring` reads on its own; it is not what `remake` is here to show
        modified after step 1, SolidWorks marking the open assembly when a part of it is changed and rebuilt.
      - The result's `changed`, `mates_made`, `remade_in_modes` and `placed` empty, `skipped` said, and its failures
        naming the ring's file alone.
-     - The ring still reading Tooth Space at 72 and 54 teeth.
+     - The ring still in error at 54 teeth, with the same features and codes it read just before the press. Since the
+       2024 addendum of `W9C-RUNS-REVIEW.md` (§4) the ring is held to itself across the press, not to 2026's codes:
+       2026 reads Tooth Space 72 and Teeth 1 there, 2024 reads 51 and 51, and either is said as a fact.
      - The assembly read by W9a's `read_now` before and after, `written` empty (frames, mates' codes and flags per
        mode), and the four gear mates' ratios (`Session.gear_mate_ratio`) the same.
    - **The footer** says the ring is to be closed without saving: either "left in error when it stopped" or "still
@@ -463,7 +465,10 @@ refuses is judged by its section, as before. This is cheap: it costs no SolidWor
 
 As W9a's, plus the plan's W9c:
 
-- **§0.3:** any dialog during a job, by the version's What's Wrong rule.
+- **§0.3:** any dialog during a job, by the version's What's Wrong rule. With `--close-outlived-whats-wrong` (the
+  coordinator's ruling of 2026-11-18, SolidWorks 2024 only; off unless given) a What's Wrong of the frame's that
+  outlives its job is closed by its own Close button instead of stopping the run, as the 2024 section below says; any
+  other window, owner or state stays the STOP.
 - **The user's work:**
   - a user item moved, changed or marked modified by anything but the measured carry (`users_unchanged`);
   - the groove changed;
@@ -610,6 +615,47 @@ after the section, 0 failed in it (24-1:1855). On 2026, runs 10 and 11 stayed un
     session was then killed, since it would not close with the copy's changed parts open.
   - So steps 2, 2b and 3 did not run on 2024; step 2b's facts are not measured there.
   - 2026 showed no box at that read.
+
+**After the review: the rerun of `remake`'s M3 on 2024, made ready (2026-11-18; not run).** The review's §4 and §5
+asked three things of the script before M3 runs again on 2024, and the coordinator ruled on the box:
+
+- **The ruling** (the coordinating session's, 2026-11-18, the user's to overrule; recorded in `ISSUE-1-PLAN.md`
+  beside the What's Wrong ruling it extends). On SolidWorks 2024, in a demonstration run only, a What's Wrong box owned
+  by SolidWorks' own frame, with the frame enabled, that is still up 60 s after a job is logged as having outlived its
+  job; the script then closes it with the box's own Close button and requires it gone within 10 s, and goes on.
+  Anything else (another dialog, another owner, a disabled frame, a box that will not close) stays the STOP it is. The
+  app itself is unchanged by this: it still leaves the box alone and changes no SolidWorks setting.
+- **The close path** is behind the flag `--close-outlived-whats-wrong`, so every other run behaves as before. The
+  flag puts W9c's `close_outlived` into W9a's harness (`WW_OUTLIVED`, None by default, which W9a's own runs and
+  W9d's leave so); the log's `rule` lines say it is asked and whether it is in force (2024 with the rule True only).
+  At a job's end, after W9a's 60 s, the script says the box outlived its job, then judges it (`outlived_close_refused`:
+  2024; every box up one this job's watch read as the frame's; none unowned; the frame read enabled; nothing blocking;
+  no other window logged), presses the box's own Close (`&Close`, the control W8's watch listed on it at 24-4:311;
+  never FeatureXpert or its check box) and requires every box gone within 10 s with the frame still enabled
+  (`outlived_close_failed`). Anything it refuses or that fails is the STOP, naming why. The JSON's
+  `whats_wrong_lifetimes` entry carries what was done under `outlived`. W9a's fact line now says "it was still up
+  after … s" where a box is still up or was closed, and keeps "it took … s to go" for a box that went by itself.
+- **Step 2's ring** is held to its own reading just before the press (above), so 2024's code 51 is no fault.
+- **`remake-m3`**, by name only, runs remake's M3 alone (`remake_again`), without remake's first part, whose gate
+  is set on both versions. It needs only `setup.master`: from `--user-master`, or this `<out>`'s; with neither,
+  W9a's `setup` runs first and builds it (about 6 minutes on 2024, W9a's confirming run's 352 s), building RangeBox
+  too through S0's `build_master` unless `--master` gives `rangebox.master`. Its folder is `remake-again`, as in
+  `remake`. Every press there reads the inventory, so head's reads of each user mate entity's kind run inside an
+  Update on 2024 too (the review's §2).
+- **The self-check** now holds the app's own still-in-error sentence as head words it, the ring at 51 and 51 before and
+  after (passing) and changed across the press (said), and each way the close path refuses or fails; it reads 0
+  failed.
+
+*On this laptop.* The confirming run's folder, and so its 2024 masters, are on the host that ran it, not here. The
+2024 masters here are `<probe folder>\w9a-confirm-sw2024-20261117-002313\out\setup.master` (W9a's 2024 confirming
+run, built at 19651ee on 32.5.0, its setup 0 failed) and `<probe folder>\w9-s0-sw2024-20261116-064725\out\rangebox.master`
+(S0's). `remake-m3` needs the first only; given by `--user-master` it builds nothing. Its record is of W9a's schema
+and is brought forward when read, as W9c's 2026 runs read W9a's 2026 `setup.master`; nothing writes to the master,
+the section working on a copy. The command line is under "Command lines" below. *Its time is an estimate, not a
+measurement:* about 25 minutes on 2024, up to 30 if boxes are closed (each close costs the 60 s wait and up to 10 s),
+from 06d5141's M3 first press (181 s, three times 2026's 61 s) and run 11's M3 presses on 2026 (41, then 111 s) at the
+same ratio. Run it from a `git archive` of the commit that carries this, in a fresh SolidWorks 2024 session with no
+other SolidWorks running, in a new run folder.
 
 ## The tenth and eleventh runs on 2026: the final run (2026-11-17, `src` at 3a9e592, SolidWorks 2026 34.0.0)
 
@@ -926,3 +972,13 @@ python.exe RUN\snap\probe\w9c_demonstration.py RUN\snap\src RUN\out --pid PID --
 ```
 
 The second run finds `fixed-updated.master` in the same `RUN\out`, or takes `--fixed-master`.
+
+SolidWorks 2024, `remake`'s M3 alone with the ruling's close path (2026-11-18), on this laptop's masters:
+
+```
+python.exe RUN\snap\probe\w9c_demonstration.py RUN\snap\src RUN\out --pid PID ^
+    --log RUN\w9c-demo-sw2024-5-remake-m3.log --sections remake-m3 --close-outlived-whats-wrong ^
+    --user-master <probe folder>\w9a-confirm-sw2024-20261117-002313\out\setup.master
+```
+
+Without the flag the run is as before, and a What's Wrong that outlives its job is the STOP.
