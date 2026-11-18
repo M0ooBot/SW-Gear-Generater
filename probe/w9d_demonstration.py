@@ -1685,9 +1685,25 @@ def every_mode(label, asm, pairs, modes):
     return run(f"every mode {label}", bare(asm, work), 1500)
 
 
-def definitions_in(asm, names):
-    """``mates_read`` in ``asm`` (open), where it stands."""
-    return run("the mates' definitions", bare(asm, lambda s: mates_read(s, names)), 900)
+def definitions_in(asm, names, mode=None):
+    """``mates_read`` in ``asm`` (open, the NEW assembly only), with ``mode`` showing when given (shown and rebuilt as
+    ``every_mode`` does, the mode showing before put back after), else where it stands. M2 compares this read with
+    the old assembly's, which is taken in the mode the old one showed; an entity on a component suppressed in the mode
+    read reads no reference (the second 2026 run: UserAxis9's Gear Axis on Sprocket-9, suppressed in H, read None in
+    the old assembly with H showing, and in RangeBox_r2 with H showing where the old was read in L), so the new side
+    is read in that same mode."""
+    def work(s):
+        first = s.active_configuration()
+        if mode and mode != first:
+            s.show_configuration(mode)
+            s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+        try:
+            return mates_read(s, names)
+        finally:
+            if mode and mode != first:
+                s.show_configuration(first)
+                s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+    return run("the mates' definitions", bare(asm, work), 900)
 
 
 def referenced_in(asm, name, modes):
@@ -2181,7 +2197,10 @@ def judge_carry(label, desk, fx, result, closed, light, out, old_before, old_box
     mapping.update({o: (n, False) for o, n in old_of.items()})
     mapping[_stem(old_box.assembly)] = (os.path.splitext(os.path.basename(new_asm))[0], False)
     mapping[os.path.splitext(os.path.basename(old_box.assembly))[0]] = mapping[_stem(old_box.assembly)]
-    new_defs = out["definitions"] = definitions_in(new_asm, [r[1] for r in cr.remade]) if cr.remade else {}
+    # Read in the mode the old assembly showed when its definitions were read (L on the closed path), not where
+    # every_mode left RangeBox_r2 (its first mode): see definitions_in.
+    new_defs = out["definitions"] = definitions_in(new_asm, [r[1] for r in cr.remade], old_before.get("active")) \
+        if cr.remade else {}
     reached = not_reached(want, {r[0] for r in cr.remade}, cr.stopped)
     unclean = {m: [f"outcome {got.get(m, 'none')} where {sorted(w)}"] for m, w in want.items() if got.get(m) not in w}
     for old_name, kept, _ in cr.remade:
