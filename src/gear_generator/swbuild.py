@@ -1672,6 +1672,10 @@ class DocumentValues:
     # ``mark``: the record's mark on the file, ``"unsaved"`` or ``"mismatched"`` (``LinkRecord.unsaved`` /
     # ``mismatched``), ``""`` none. The worker decides from it whether the record vouches for the file (``_vouches``).
     mark: str = ""
+    # ``left_in_error``: the record marks the file left in error by an Update that stopped (``LinkRecord
+    # .unsaved_in_error``). Such a document found still holding the workbook's values with a feature of the app's in
+    # error stops the press before any write (:func:`_held_in_error`).
+    left_in_error: bool = False
 
 
 @dataclass(frozen=True)
@@ -3861,6 +3865,10 @@ class GearboxUpdate:
     rebuild_from_user_alone: List[str] = field(default_factory=list)
     values_set: List[ValueSet] = field(default_factory=list)
     features_read: Dict[str, bool] = field(default_factory=dict)
+    # ``read_clean``: each document marked left in error (``DocumentValues.left_in_error``) whose check-phase read of
+    # its features was made and found no feature of the app's in error and none unread (repaired in SolidWorks, say),
+    # by path; its mark goes (the review of the M3 fix, (ii)). A document not read, or read with one unread, is not.
+    read_clean: List[str] = field(default_factory=list)
     # W9c (W9C-INTERFACES §6), what an Update did in place, each listing only what was done. ``built``: each new
     # part's build. ``inserted`` / ``deleted``: ``(gear, Name2)``. ``mates_deleted``: the app mates gone with them,
     # each read gone by name. ``mates_made``: ``(mate name kept, the configurations it reads on in)``.
@@ -4305,6 +4313,7 @@ def update_gearbox(sw: SolidWorks, parts: Sequence[DocumentValues] = (), layout:
     holds: List[str] = []           # per document: the trig unit it already holds every global in, or ""
     edits: List[ValueEdit] = []     # W9a K11 (the static path reads the documents' values and features only)
     features: List[UserFeature] = []
+    app_in_error: Dict[str, List[str]] = {}     # each document read: the app's features in error (_held_in_error)
     for index, doc in enumerate(documents, 1):
         say(Step(STAGE_CHECK, _stem(doc.path), index, total))
         read_states: Optional[List[FeatureState]] = [] if doc.made else None
@@ -4319,6 +4328,8 @@ def update_gearbox(sw: SolidWorks, parts: Sequence[DocumentValues] = (), layout:
         edits.extend(_value_edits(doc, current, values, all(vouched)))
         if read_states is not None:
             features.extend(_user_features(doc.path, read_states, set(doc.made) | set(doc.features)))
+            app_in_error[doc.path] = _app_features_in_error(doc, read_states)
+            _read_clean(doc, read_states, result)
     if features:
         result.user_work = UserWork(read_at=now(), features=features)
     if edits:
@@ -4342,6 +4353,10 @@ def update_gearbox(sw: SolidWorks, parts: Sequence[DocumentValues] = (), layout:
         if not unit:
             _evaluates(sw, doc, "updated")
 
+    if _held_in_error(documents, holds, app_in_error, result,
+                      (["every part's values"] if not all(holds) else []) + (["the assembly"] if assembly else [])):
+        return result
+
     # -- change: values first, then the assembly. Nothing raises out from here (B1).
     stage = [_file(documents[0].path) if documents else _file(assembly)]
     try:
@@ -4354,6 +4369,45 @@ def update_gearbox(sw: SolidWorks, parts: Sequence[DocumentValues] = (), layout:
         if result.placed and assembly not in result.changed:
             result.changed.append(assembly)
     return result
+
+
+def _app_features_in_error(doc: DocumentValues, states: Sequence[FeatureState]) -> List[str]:
+    """The features the app made in ``doc`` (``made`` and ``features``) that ``states`` read in error; an unread code
+    is not counted here (it blocks nothing), nor is any feature of the user's."""
+    made = set(doc.made) | set(doc.features)
+    return [s.name for s in states if s.name in made and _in_error(s.code)]
+
+
+def _read_clean(doc: DocumentValues, states: Sequence[FeatureState], result: GearboxUpdate) -> None:
+    """Notes ``doc`` in ``result.read_clean`` when it is marked left in error and ``states`` (its check-phase read)
+    is not empty and holds no feature the app made in error or unread."""
+    made = set(doc.made) | set(doc.features)
+    if doc.left_in_error and states and not any(s.name in made and (_in_error(s.code) or s.code == UNREAD)
+                                                for s in states):
+        result.read_clean.append(doc.path)
+
+
+def _held_in_error(documents: Sequence[DocumentValues], holds: Sequence[str],
+                   in_error: Mapping[str, Sequence[str]], result: GearboxUpdate, after: Sequence[str]) -> bool:
+    """Before any write (W9c's demonstration, eighth run on 2026, remake's M3 pressed again without closing): a
+    document the record marks left in error by a stopped Update (``DocumentValues.left_in_error``) that still holds
+    every global asked (so this press would set nothing in it, as it was left open) and whose check-phase read found
+    a feature of the app's in error cannot be put right by this press, and with it in error the assembly's
+    rebuild reads false (``findings.ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_<year>``), after the assembly's
+    own writes. So the press stops before anything is written: a failure naming the document as a whole, and
+    ``skipped`` saying ``after`` was not done. The user's own features in error never stop it (K3). True when it
+    stopped."""
+    for doc, unit in zip(documents, holds):
+        names = list(in_error.get(doc.path, ()) or ())
+        if not doc.left_in_error or not unit or not names:
+            continue
+        file = _file(doc.path)
+        result.failures.append((file, f"SolidWorks reads {_and(names)}, which Gear Generator made, in error in "
+                                      f"{_stem(doc.path)}, which already holds the workbook's values, so this press "
+                                      "could set nothing there to put it right."))
+        result.skipped = f"{_and(list(after))}, because {file} is in error"
+        return True
+    return False
 
 
 def _update_values(sw: SolidWorks, result: GearboxUpdate, parts: Sequence[DocumentValues],
@@ -9112,6 +9166,7 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
     edits: List[ValueEdit] = []                      # W9a K11: app-owned values the user changed in SolidWorks
     features: List[UserFeature] = []                 # W9a K3: the user's features in the app's documents
     features_read: Dict[str, bool] = {}              # each document read: whether an app feature is in error
+    app_in_error: Dict[str, List[str]] = {}          # each document read: the app's features in error, by name
     held_before: Dict[str, Dict[str, str]] = {}      # each document's globals as read, for ``values_set``
     # W9c F1: what a press that stopped part way left, read before any write: each band part's globals already there
     # (taken as done, set, or refused as the user's) and the relief already made (refused by name).
@@ -9157,6 +9212,8 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
             if read_states:
                 features_read[doc.path] = any(s.name in made and (_in_error(s.code) or s.code == UNREAD)
                                               for s in read_states)
+            app_in_error[doc.path] = _app_features_in_error(doc, read_states)
+            _read_clean(doc, read_states, result)
     say(Step(STAGE_CHECK, _stem(assembly), total, total))
     recorded_names = {m.name for m in motion.mates}
     wanted_teeth = _wanted_teeth(motion)
@@ -9421,6 +9478,13 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
     for doc, unit in zip(documents, holds):
         if not unit:
             _evaluates(sw, doc, "updated")
+
+    to_build = [_file(g.build.path or g.part) for g in in_place.added if g.build is not None]
+    if _held_in_error(documents, holds, app_in_error, result,
+                      ([f"building {_and(to_build)}"] if to_build else [])
+                      + (["every part's values"] if not all(holds) else [])
+                      + (["the bands"] if in_place.bands else []) + ["the assembly"]):
+        return result
 
     # -- change: nothing raises out from here (B1)
     stage = [_file(documents[0].path) if documents else _file(assembly)]

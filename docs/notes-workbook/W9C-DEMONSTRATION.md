@@ -269,11 +269,40 @@ than W9c, which `ring` reads on its own; it is not what `remake` is here to show
 **Then the fixes review's M3** (B's ff98d5a), on its own copy of `setup.master`, with the gate patched as above:
 
 1. Sun 30, Planet 12, Ring 55 → 54 is pressed with `swbuild.LANDING_STEPS = ()` for that press only, so it stops in
-   the ring. The status names the ring, left in error, to close without saving; the record marks the ring
-   (`unsaved_in_error`); the patch is restored.
-2. Pressed again without closing: the status says the ring is still open in SolidWorks, in error, that this press
-   set nothing in it, and to close it without saving, and never that SolidWorks already matches. The mark stays,
-   nothing is set in a part, and the footer keeps its "left in error when it stopped … without saving" sentence.
+   the ring. The status names the ring, left in error, to close without saving; since f4eabf5 (should-fix A of
+   W9C-RUNS-REVIEW.md's addendum on the final runs) it also names RangeBox and says to answer No when SolidWorks asks
+   to save (`says_close_with_assembly`); the record marks the ring (`unsaved_in_error`); the patch is restored.
+2. Pressed again without closing. Since 89615aa the app stops this press after its check phase and before any write
+   (the eighth run found it writing a gear mate and rebuilding the assembly here). Checked, as the fixes review's
+   addendum §6 asks (3a6013d):
+   - **The status** says the ring is still open in SolidWorks, in error, that this press set nothing in it, and to
+     close it without saving. That sentence stands alone: never that SolidWorks already matches, and no offer to save
+     or keep anything. The mark stays, and nothing is set in a part.
+   - **Nothing was written** (`wrote_nothing`):
+     - No traced call that changes or shows anything (`nothing_changed_calls`), and no `AddComponent5` or `SaveAs3`.
+     - Every part's, the layout's, the carrier's and the assembly's own globals the same before and after
+       (`live_globals`; equation writes are not traced, and the assembly's flag is already set by step 1).
+     - Every document of the copy with the same save flag and file time just before and just after the press. The
+       flags and times are read last before the press and first after it. Which documents read modified beyond the
+       three parts step 1 changed is a printed fact (`beyond_step_1`), not a check: run 11 on 34.0.0 read RangeBox.SLDASM
+       modified after step 1, SolidWorks marking the open assembly when a part of it is changed and rebuilt.
+     - The result's `changed`, `mates_made`, `remade_in_modes` and `placed` empty, `skipped` said, and its failures
+       naming the ring's file alone.
+     - The ring still reading Tooth Space at 72 and 54 teeth.
+     - The assembly read by W9a's `read_now` before and after, `written` empty (frames, mates' codes and flags per
+       mode), and the four gear mates' ratios (`Session.gear_mate_ratio`) the same.
+   - **The footer** says the ring is to be closed without saving: either "left in error when it stopped" or "still
+     open in SolidWorks", with RangeBox named and "answering No when SolidWorks asks to save". The script's footer
+     carries the press's note, which is now the still-in-error sentence alone. It must offer to keep nothing. The
+     self-check holds the judgements to the app's own `ui_text.still_in_error_sentence`, to its stop and footer
+     wording, and to the eighth and eleventh runs' statuses (which they reject).
+2b. **Only the parts' windows closed** (the addendum's §6.2: should-fix A's premise, measured). Sun's, Planet's and
+   Ring's own windows are closed without saving (`QuitDoc` by title), RangeBox left open, as a user who closed only the
+   parts would. Facts: what SolidWorks still holds (`documents()`), every save flag, and the ring's codes where it is
+   still held (no read opens a part SolidWorks let go). Then one press: whether it stops again on the ring held in
+   error (`stopped_again`) is a fact; if it does, it is checked to have written nothing (`wrote_in_press`: no traced
+   call that changes or shows anything, every flag and file time as before, nothing changed, made, remade or placed)
+   and to say to close the ring and RangeBox without saving, answering No.
 3. Every document of the copy is closed without saving, as the sentences say, and it is pressed again. It goes
    through routed (the ring by way of 53), the ring at 54 with nothing in error, the mark gone, the stage's gear mates
    remade and the footer quiet.
@@ -352,9 +381,11 @@ counted by wrapping the session's `rebuild` on its instance for the one call onl
    by way of 54 and back with both rebuilds true; clean, at 55 teeth and module 1.225; the volume of a from-scratch
    build; and the count reported unchanged (in `unchanged`, not `changed`).
 10. **A user's own feature in error on a routed part** (the review's M1): on S0's ring 55, a cut through all is made
-    whose circle (Ø3 at x = 200 mm) misses the ring, so it reads in error. The ring is then set to 54 by the app. It
-    must end at 54 teeth with both legs taken, Tooth Space and Teeth clean, and the user's cut the only feature in
-    error before and after.
+    on a circle on the ring's centre, Ø69 (it takes the tooth tips), checked clean; its diameter is then linked to Ø3
+    by the user's own equation, which leaves it in the ring's hollow centre removing nothing, so it reads in error (as
+    W9a's keyway did inside its Bore 14). SolidWorks will not make a cut that removes nothing at all (the eighth run,
+    below). The ring is then set to 54 by the app. It must end at 54 teeth with both legs taken, Tooth Space and Teeth
+    clean, and the user's cut the only feature in error before and after.
 
 For every straight case, the short solved line (`Li+` or `L+`) is found in the Tooth Space sketch by its ends, as the
 sketch's maths put them before the set. That segment's ends are read before and after the set, beside where the maths
@@ -495,6 +526,133 @@ At this commit it passes, 0 failed. `--help` imports nothing of SolidWorks.
   SolidWorks.
 - **On 2024,** the What's Wrong box may come in `fixed` (a user feature rebuilt after the relief), and is handled by
   W9a's rule. Nothing here is version-specific beyond the `_ON_<year>` names.
+
+## The tenth and eleventh runs on 2026: the final run (2026-11-17, `src` at 3a9e592, SolidWorks 2026 34.0.0)
+
+**Setup.**
+- Run folder `C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-final-sw2026-20261117-143421`.
+- One session, PID 62172, started for the run and exited after.
+- The masters were this morning's, from `…\w9c-whole-sw2026-20261117-123612\out`: `rangebox.master`,
+  `setup.master` and `reducer.master`, given by `--master`, `--user-master` and `--reducer-master`. The script only
+  copies them (`copy_built`'s `copytree`, `landing`'s `copy2`). The files' sizes, times and md5 were the same before
+  and after.
+- `fixed-updated.master` was made afresh by this run's `fixed`.
+
+**The tenth run, every section, from a `git archive` of 3a9e592:**
+`probe/results/w9c-demo-sw2026-20261117-10-final-whole-remake-script-fault.log` and `w9c-demo-20261117-143454.json`.
+
+| Section | Time | Failed |
+|---|---|---|
+| landing | 824 s | 0 |
+| fixed | 700 s | 0 |
+| modes | 1115 s | 0 |
+| remove | 396 s | 0 |
+| remake | 397 s | 1 |
+| bands-off | 101 s | 0 |
+| m4 | 17 s | 0 |
+| w9b-part | 97 s | 0 |
+
+There was no STOP. Everything measured matches the eighth and ninth runs: `landing`'s straight facts, `fixed`'s
+interference volumes, the step faces and m4's answers.
+- `remake`'s first part (28/14/56) passed again and proposed its gate True.
+- Its M3 step stopped after step 1 on the script's own `AttributeError`. `gear_entry(box, "Planet")` is None: the
+  record holds the planet only as Planet copy 1 to 3. This was fixed in eabf14e (`files_of`), checks unchanged.
+
+**The eleventh run, `remake` again with `--redo`, in the same session and `out`:**
+`probe/results/w9c-demo-sw2026-20261117-11-final-remake-step2-assembly-flag.log` and `w9c-demo-20261117-153629.json`.
+697 s, one FAIL, no STOP. Its snapshot is `git archive 3a9e592` with `probe/w9c_demonstration.py` alone from eabf14e.
+Its `src` is 3a9e592's, compared file by file; 007b3aa, which changed `update.py` since, is not in it.
+
+- **Step 1** stops in the ring and marks it, as before.
+- **Step 2 wrote nothing, and the app stopped before any write.**
+  - The press made no call that changes or shows anything: by member, `OpenDoc6`, `IsSuppressed2` and
+    `GetSystemValue3` only.
+  - Every part's globals, every document's save flag and file time, the assembly's frames, mates and flags per mode,
+    and the four gear mates' ratios (29 : 13 and 13 : 55, as built) were the same before and after.
+  - The result's `changed`, `mates_made`, `remade_in_modes` and `placed` were empty. `skipped` said "the assembly,
+    because Ring_m1.25_N55.SLDPRT is in error", and the one failure named the ring's file.
+  - The ring still read Tooth Space 72 and Teeth 1 at 54 teeth.
+  - The status and the footer were the still-in-error sentence alone.
+- **The one FAIL is the script's expectation, not a write.** Only step 1's three parts were expected to read modified,
+  but `RangeBox.SLDASM` read modified before step 2 as well as after. The fact line says so:
+  `before step 2, modified ['Gear_m1.25_N13.SLDPRT', 'Gear_m1.25_N29.SLDPRT', 'RangeBox.SLDASM',
+  'Ring_m1.25_N55.SLDPRT']`, as did `read_now`'s own read before the press.
+  - No SolidWorks call came between step 1's press and that read. So it is step 1's press (its part value sets and
+    rebuilds) that leaves the assembly modified on SolidWorks.
+  - The check is left as it stands, for review.
+- **Step 3**, after every document was closed unsaved, loaded each from its file, the ring at 55. It went through
+  routed by way of 53 (rebuilt twice), and the ring ended at 54 with nothing in error. The mark was gone, the four gear
+  mates were remade, and the footer was quiet.
+  - The log does not show whether the mark went by 1cc2978's check-phase read (`read_clean`, not logged by the
+    script) or by the ring's change: both apply here.
+
+## The eighth and ninth runs on 2026 (2026-11-17, from 64bec58, on SolidWorks 2026 34.0.0)
+
+On the second Windows host (`DESKTOP-QJTI7HF`), whose SolidWorks 2026 is revision 34.0.0, where the earlier runs had
+34.1.1. One session, PID 74488, started for the run and exited after. Run folder
+`C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-whole-sw2026-20261117-123612`.
+
+None of the masters was on this host, so the run built each where it was first needed, into its own `out`:
+- S0's `rangebox.master` by S0's `build_master` at the start of `landing`;
+- W9a's `setup.master` by W9a's `setup` at the start of `fixed`;
+- W9a's `reducer.master` by W9a's `reducer` at the start of `remove`.
+
+Every check of each build passed. `fixed` keeps `fixed-updated.master` in the same `out`.
+
+**The eighth run, every section, from a `git archive` of 64bec58:**
+`probe/results/w9c-demo-sw2026-20261117-8-whole-remake-m3-again-fails.log` and `w9c-demo-20261117-123719.json`. It took
+70 minutes:
+
+| Section | Time | Failed |
+|---|---|---|
+| landing | 690 s | 1 |
+| fixed (with setup.master) | 967 s | 0 |
+| modes | 1197 s | 0 |
+| remove (with reducer.master) | 396 s | 0 |
+| remake | 713 s | 2 |
+| bands-off | 96 s | 0 |
+| m4 | 18 s | 0 |
+| w9b-part | 94 s | 0 |
+
+There was no STOP. `fixed`, `modes` and `remake` proposed their gates True on 2026 as before. `bands-off` and `m4`
+proposed theirs None as before.
+
+- **`landing`, case 10 (the script's fault).** `FeatureCut4` on the Ø3 circle at x = 200 mm handed back no feature.
+  SolidWorks will not make a cut that removes nothing, so the case never reached the app. The cut is now made valid
+  and put in error after (above). The other 25 cases and the leftover read as the seventh run's, to the same
+  volumes: 0.0379 and 0.0378 fail set straight (codes 72 and 1), and the rest are clean.
+  - The fixes review's new cases ran for the first time, all clean: just above 0.2 unrouted, 36 → 34 routed by way
+    of 33, recipe B never routed, the module-only landing by way of 54 and back with the count reported unchanged.
+  - Set straight, these rebuilt clean: 36 → 34 (0.056), recipe B's 55 → 54, and S0's ring at module 1.225 (0.041).
+- **`remake`, the fixes review's M3, pressed again without closing (the app's fault, not fixed here).** On
+  SolidWorks the second press does not end clean, as it does on the fake. Every part reads as already holding the
+  workbook's values. The job then goes on into the assembly: it makes one gear mate again (`AddMate5` once). The
+  assembly's rebuild then fails, since the ring is still in error in SolidWorks.
+  - The status names RangeBox and says "press Update SolidWorks again once that is put right, or save it in
+    SolidWorks to keep what it did". It never says that the ring is still open in error, nor to close without saving.
+    The footer says the same.
+  - The record keeps the ring's mark, and nothing is set in a part.
+  - The cause, at 64bec58: `Finished.still_in_error` is filled only when the press has no failure
+    (`workbook/update.py` 2263), and `ui_text.gearbox_update_status` says it only then (1888). Head still has both
+    conditions.
+  - The press after closing without saving goes through, routed by way of 53. The mark goes, the footer is quiet,
+    and the four gear mates are remade.
+
+**The ninth run, `landing` again with `--redo`, into the same `out` and session:**
+`probe/results/w9c-demo-sw2026-20261117-9-landing-again-clean.log` and `w9c-demo-20261117-134821.json`. 571 s,
+0 failed, the fix shown. Its snapshot is `git archive 64bec58` with `probe/w9c_demonstration.py` alone taken from
+550767c, the script's fix. The scripts it imports are 64bec58's. Its `src` is 64bec58's: on `workbook`, 550767c
+sits on others' changes to `src`, which this evidence does not cover.
+- Case 10: the user's cut was made clean at Ø69, then read code 71 once linked to Ø3.
+- The app routed 55 → 54 by way of 53, both rebuilds reading false for the user's cut.
+- The ring ended at 54 teeth with that cut the only feature in error before and after, and the volume of a 54 built
+  from scratch.
+
+**What differs from 34.1.1:**
+- Nothing measured. The interference volumes in `fixed` (1408.364, 160.785, 392.233), the step faces (`GetArea`
+  114.302999694 against the integrated 114.558341769) and m4's answers are the same to every figure printed.
+- The post-check's "Ring off its axis" and "out of step" after `remake`'s presses read as in the sixth run.
+- `modes` took 20 min, against 48 on 34.1.1.
 
 ## The seventh run on 2026 (from 71d8510): `landing`
 

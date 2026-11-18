@@ -1409,21 +1409,34 @@ Hub_m1.25_N17 and gave RangeSlv its bands. It did not get to inserting Hub and
 putting the gears back and checking the assembly, because the job stopped in
 RangeBox.SLDASM.*, then W4's unsaved sentence, except when the stop is a part
 whose rebuild reported an error: then it never offers saving (*… and
-Gear_m1.25_N29 is left in error: close it in SolidWorks without saving (the file
-on disk is as before this Update), then press Update SolidWorks again.*; with
-several changed, *close them all*, since the good ones saved beside the failed one
-closed would leave gears at new values against it as it was). The footer's line on
-documents not saved says the same (*… and Gear_m1.25_N29 was left in error when it
-stopped: close it in SolidWorks without saving (the file on disk is as before that
-Update), then press Update SolidWorks again.*), never to save them, until they are
+Gear_m1.25_N29 is left in error: close it and RangeBox in SolidWorks without saving,
+answering No when SolidWorks asks to save them (the files on disk are as before this
+Update), then press Update SolidWorks again.*; with several changed, *close them all
+and RangeBox*, since the good ones saved beside the failed one closed would leave
+gears at new values against it as it was). The assembly is named whenever it holds
+the part (a gear's part, the layout or a carrier): SolidWorks marks the open assembly
+modified when a part of it is changed, so closing it asks to save, and a part whose
+window is closed while its assembly stays open stays loaded with its changes (measured
+on 2026, run 11). A part outside the record's assembly is told *close it in
+SolidWorks without saving (the file on disk is as before this Update)* as before. The
+footer's line on documents not saved says the same (*… and Gear_m1.25_N29 was left in
+error when it stopped: close it and RangeBox in SolidWorks without saving, answering
+No when SolidWorks asks to save them (the files on disk are as before that Update),
+then press Update SolidWorks again.*), never to save them, until they are
 found closed or saved, or a later press changes the failed part again (its values,
-or a sleeve's bands) with nothing of the app's in error there; the user's own
-features in error do not keep the warning. A press made without closing them sets
+or a sleeve's bands) with nothing of the app's in error there, or reads it repaired
+(nothing of the app's in error and nothing unread); the user's own features in error
+do not keep the warning. A stop that comes while such a part is still open says to
+close it with everything the press changed, never to save them. A press made without closing them sets
 nothing in them, and says so in place of *SolidWorks already matches the workbook*,
-keeping whatever the status says after it: *Gear_m1.25_N29 is still open
+keeping whatever the status says after it; where SolidWorks still reads a feature of
+the app's in error there, the press stops before writing anything at all (the
+assembly's rebuild would fail on that part) and this sentence is the whole status:
+*Gear_m1.25_N29 is still open
 in SolidWorks as an earlier Update SolidWorks left it, in error and holding the new
-values, so this press set nothing in it: close it in SolidWorks without saving (the
-file on disk is as before that Update), then press Update SolidWorks again.* The
+values, so this press set nothing in it: close it and RangeBox in SolidWorks without
+saving, answering No when SolidWorks asks to save them (the files on disk are as
+before that Update), then press Update SolidWorks again.* The
 record holds what was done (a new part built and saved, the bands, a gear inserted, each mate made) and, as
 the app's leftovers, each global and configuration the stopped press added, until
 a press uses them. While the workbook does not use them, the footer and the result

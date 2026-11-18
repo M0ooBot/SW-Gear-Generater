@@ -49,7 +49,8 @@ Sections (each can run alone from a kept master; ``fixed`` keeps ``fixed-updated
                 with a user lock on HighDog refused naming that lock too.
 - ``remake``    Sun 29 -> 28, Planet 13 -> 14, Ring 55 -> 56 (not 30/12/54: the ring's part does not rebuild set to 54,
                 which ``ring`` reads; then the fixes review's M3 on its own copy: a press stopped in the ring, pressed
-                again without closing, then after closing without saving) on a copy of ``setup.master`` (RangeBox with the user's
+                again without closing, again with only the parts' windows closed, then after closing everything
+                without saving) on a copy of ``setup.master`` (RangeBox with the user's
                 work; it needs nothing of ``fixed``'s; the centre distance and the planets' even spacing kept): four
                 gear mates of a gearbox with modes made again (ruling 9.16 lifted), flags and senses read in every
                 mode, the user's mates unchanged.
@@ -650,6 +651,99 @@ def propose(name, value, evidence):
     return f"propose {name} = {value!r}  # {evidence}"
 
 
+# remake's M3 step 2 (the fixes review's addendum §6, 3a6013d): with the ring still open in error, the press stops after
+# its check phase and before any write. The parts step 1 changed, and so the only documents it leaves modified:
+M3_CHANGED_BY_STEP_1 = ("Sun", "Planet", "Ring")
+
+
+def files_of(components, gears):
+    """The part files (by name) of the components whose gear is one of ``gears`` or a copy of one ("Planet copy 2" is
+    Planet's): step 1's changed parts, read off the record's components (the final run at 3a9e592 found Planet on
+    record only as its copies)."""
+    return tuple(sorted({os.path.basename(str(c.part).replace("\\", "/")) for c in components
+                         if str(c.gear).split(" copy ")[0] in gears}))
+
+
+def footer_says_close(text, stem, asm_stem):
+    """§6.1: the footer after step 2 says to close the part without saving, by either sentence. The script's footer
+    carries the press's note, which is now the still-in-error sentence alone, and never offers to keep anything; and
+    (should-fix A, f4eabf5) it names the assembly and how (:func:`says_close_with_assembly`)."""
+    return (stem in text and "without saving" in text and says_close_with_assembly(text, stem, asm_stem)
+            and ("left in error when it stopped" in text or "still open in SolidWorks" in text) and "to keep" not in text)
+
+
+def says_close_with_assembly(text, stem, asm_stem):
+    """Should-fix A of W9C-RUNS-REVIEW.md's addendum on the final runs (f4eabf5): the advice to close a part left in
+    error without saving names the assembly that holds it and says to answer No when SolidWorks asks to save, matched
+    by its distinctive parts: the part, the assembly in the close (*and RangeBox in SolidWorks without saving*, or the
+    assembly among the documents named), and *answering No when SolidWorks asks to save*; never an offer to keep."""
+    return (stem in text and asm_stem in text and "in SolidWorks without saving, answering No when SolidWorks asks to "
+            "save" in text and "to keep" not in text)
+
+
+def status_alone(text):
+    """The status after step 2 is the still-in-error sentence alone: no offer to save what the press did."""
+    return "to keep" not in text and "save it in SolidWorks" not in text
+
+
+def beyond_step_1(states, step_1_files):
+    """The documents reading modified that step 1 did not change. A fact since run 11 on 34.0.0 (W9C-RUNS-REVIEW.md's
+    addendum on the final runs, §2): SolidWorks marks the open assembly modified when a part of it is changed and
+    rebuilt in its own window, so RangeBox.SLDASM reads modified after step 1 though nothing wrote to it. The strict
+    check is the before/after comparison across the press (:func:`wrote_in_press`)."""
+    return sorted(n for n, f in (states.get("flags") or {}).items() if f and n not in step_1_files)
+
+
+def wrote_in_press(changing, globals_before, globals_after, states_before, states_after, result):
+    """What a press wrote, as sentences (empty: nothing), from what any press's bracket can read: its traced calls
+    that change or show anything; the globals read before and after (the parts', the assembly's own; equation writes
+    are not traced; ``{}`` both where not read); every document's save flag and file time before and after; the
+    result's ``changed``, ``mates_made``, ``remade_in_modes`` and ``placed``."""
+    out = []
+    if changing:
+        out.append(f"calls that change or show {changing}")
+    if globals_before != globals_after:
+        out.append(f"globals {[(n, globals_before.get(n), v) for n, v in globals_after.items() if globals_before.get(n) != v]}")
+    for key in ("flags", "times"):
+        b, a = states_before.get(key) or {}, states_after.get(key) or {}
+        if a != b:
+            out.append(f"{key} {[(n, b.get(n), v) for n, v in a.items() if b.get(n) != v]}")
+    for key in ("changed", "mates_made", "remade_in_modes", "placed"):
+        if result.get(key):
+            out.append(f"{key} {result[key]}")
+    return out
+
+
+def stopped_again(result, ring_file):
+    """Whether a press stopped before any write on the ring held in error, as step 2 did: its failures name the ring's
+    file alone and it said what it skipped."""
+    return [w for w, _ in result.get("failures") or []] == [ring_file] and bool(result.get("skipped"))
+
+
+def wrote_nothing(changing, globals_before, globals_after, states_before, states_after, result, ring_file, ring,
+                  mates_written, ratios_before, ratios_after):
+    """§6.2: what step 2 wrote, as sentences (empty: nothing). ``changing``: its traced calls that change or show
+    anything (``nothing_changed_calls``, ``AddComponent5``, ``SaveAs3``); the globals before and after, every part's
+    and the assembly's own (equation writes are not traced); ``states_*``: ``{"flags": {file: GetSaveFlag}, "times":
+    {file: mtime}}`` of every document of the copy just before and after; ``result``: the GearboxUpdate's ``changed``,
+    ``mates_made``, ``remade_in_modes``, ``placed``, ``skipped`` and ``failures``; ``ring``: the ring's
+    ``landing_state`` after; ``mates_written``: W9a's ``written`` of ``read_now`` before and after; each gear mate's
+    ratio before and after. Which documents read modified before is a fact (:func:`beyond_step_1`), not a check."""
+    out = wrote_in_press(changing, globals_before, globals_after, states_before, states_after, result)
+    if not result.get("skipped"):
+        out.append("nothing said skipped")
+    if [w for w, _ in result.get("failures") or []] != [ring_file]:
+        out.append(f"failures name {[w for w, _ in result.get('failures') or []]}, not the ring's file alone")
+    codes = dict((ring or {}).get("in_error") or [])
+    if codes.get("Tooth Space") != 72 or (ring or {}).get("teeth") != 54.0:
+        out.append(f"the ring reads {ring}, not Tooth Space at 72 and 54 teeth")
+    if mates_written:
+        out.append(f"the assembly's read {mates_written}")
+    if ratios_before != ratios_after:
+        out.append(f"ratios {ratios_before} -> {ratios_after}")
+    return out
+
+
 # -- --self-check: the edits through the app's own read and classify, on the fake ------------------------------------------
 
 
@@ -849,6 +943,15 @@ def self_check():
     print(f"fact    five first Builds on the fake in {_time.monotonic() - started:.0f} s")
     year_ = 2026
     rev = (34, 1, 1)
+    # W9c's gates are set True on 2026 since 74024a1; the 2024 run meets them None, as every _ON_2024 is. The plan's
+    # gate judgements are checked as a version with them unmeasured sees them: 2026's patched to None in this process.
+    gates_2026 = ("UPDATE_INSERTS_A_GEAR", "UPDATE_MAKES_MATES_WITH_MODES", "UPDATE_BANDS_IN_PLACE",
+                  "UPDATE_ADDS_A_MODE", "UPDATE_REMOVES_A_MODE", "UPDATE_MAKES_A_NEW_COUPLING",
+                  "UPDATE_SUPPRESSES_THE_RELIEF")
+    from gear_generator import findings as _findings
+    for name in gates_2026:
+        setattr(_findings, f"{name}_ON_2026", None)
+    print("fact    W9c's gates on 2026 patched to None in this process, as the 2024 run meets its own")
 
     def gates(ip, modes=False, remakes=False):
         return sorted(f for _, f in swbuild.in_place_gates(ip, rev, modes=modes, remakes=remakes))
@@ -1119,6 +1222,99 @@ def self_check():
     ok(groove_kept(was, late) != [] and groove_kept(was, dict(now, faces=faces[2:])) != [],
        "groove: one after the relief, or its faces gone, is said")
     ok(propose("X", True, "e") == "propose X = True  # e", "propose's form")
+    still = ("Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding "
+             "the new values, so this press set nothing in it: close it and RangeBox in SolidWorks without saving, "
+             "answering No when SolidWorks asks to save them (the files on disk are as before that Update), then press "
+             "Update SolidWorks again.")
+    run11 = ("Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding "
+             "the new values, so this press set nothing in it: close it in SolidWorks without saving (the file on disk "
+             "is as before that Update), then press Update SolidWorks again.")
+    run8 = ("Update SolidWorks stopped. RangeBox.SLDASM: SolidWorks reported an error rebuilding RangeBox. It had "
+            "already changed RangeBox, not saved: press Update SolidWorks again once that is put right, or save it in "
+            "SolidWorks to keep what it did.")
+    footer = ("Gear_m1.25_N13, Gear_m1.25_N29 and Ring_m1.25_N55 have changes from Update SolidWorks that are not "
+              "saved, and Ring_m1.25_N55 was left in error when it stopped: close them all and RangeBox in SolidWorks "
+              "without saving, answering No when SolidWorks asks to save them (the files on disk are as before that "
+              "Update), then press Update SolidWorks again.")
+    first = ("Update SolidWorks stopped. Ring_m1.25_N55.SLDPRT: SolidWorks reported an error rebuilding "
+             "Ring_m1.25_N55. It had already changed Gear_m1.25_N29, Gear_m1.25_N13 and Ring_m1.25_N55, not saved, "
+             "and Ring_m1.25_N55 is left in error: close them all and RangeBox in SolidWorks without saving, answering "
+             "No when SolidWorks asks to save them (the files on disk are as before this Update), then press Update "
+             "SolidWorks again.")
+    ok(footer_says_close(still, "Ring_m1.25_N55", "RangeBox") and footer_says_close(footer, "Ring_m1.25_N55",
+                                                                                     "RangeBox"),
+       "M3 step 2's footer: either sentence, the stem, the assembly, without saving and answering No")
+    ok(not footer_says_close(run8, "Ring_m1.25_N55", "RangeBox") and not footer_says_close(
+        still + " Or save it in SolidWorks to keep what it did.", "Ring_m1.25_N55", "RangeBox")
+       and not footer_says_close(run11, "Ring_m1.25_N55", "RangeBox"),
+       "M3 step 2's footer: run 8's, one offering to keep, or run 11's (no assembly) is not")
+    ok(says_close_with_assembly(first, "Ring_m1.25_N55", "RangeBox") and not says_close_with_assembly(
+        first.replace(" and RangeBox", "").replace(", answering No when SolidWorks asks to save them", ""),
+        "Ring_m1.25_N55", "RangeBox"),
+       "M3 step 1's stop: the assembly named and answering No, as f4eabf5 words it; the old wording is not")
+    ok(status_alone(still) and not status_alone(run8), "M3 step 2's status: the sentence alone, never a save offer")
+    from gear_generator import ui_text
+    apps = ui_text.still_in_error_sentence([r"C:\copy\Ring_m1.25_N55.SLDPRT"], r"C:\copy\RangeBox.SLDASM")
+    ok(apps == still and footer_says_close(apps, "Ring_m1.25_N55", "RangeBox") and status_alone(apps)
+       and "set nothing" in apps and says_close_with_assembly(apps, "Ring_m1.25_N55", "RangeBox"),
+       f"M3 step 2: the app's own still-in-error sentence meets the checks: {apps!r}")
+    ring_file = "Ring_m1.25_N55.SLDPRT"
+    files = ("Gear_m1.25_N29.SLDPRT", "Gear_m1.25_N13.SLDPRT", ring_file)
+    flags = {"RangeBox.SLDASM": True, "Dog_m1.25_N17.SLDPRT": False, **{n: True for n in files}}
+    states = {"flags": flags, "times": {n: 1.0 for n in flags}}
+    result = {"changed": [], "mates_made": [], "remade_in_modes": [], "placed": [], "skipped": "every step after",
+              "failures": [(ring_file, "SolidWorks reads Tooth Space and Teeth in error")]}
+    ring = {"in_error": [("Tooth Space", 72), ("Teeth", 1)], "teeth": 54.0}
+    glb = {ring_file: {"No. of Teeth": 54.0}, "RangeBox.SLDASM": {"Hub Face Z": 55.5}}
+    ratios = {"Sun meshes Planet copy 1": (30, 12)}
+
+    def wrote(**kw):
+        args = dict(changing=[], globals_before=glb, globals_after=glb, states_before=states, states_after=states,
+                    result=result, ring_file=ring_file, ring=ring, mates_written=[], ratios_before=ratios,
+                    ratios_after=ratios)
+        args.update(kw)
+        return wrote_nothing(**args)
+    ok(wrote() == [], "M3 step 2: a press that stopped before any write wrote nothing, RangeBox modified since step 1 "
+                      "(run 11) and so no fault")
+    ok(beyond_step_1(states, files) == ["RangeBox.SLDASM"] and beyond_step_1(
+        dict(states, flags=dict(flags, **{"RangeBox.SLDASM": False})), files) == [],
+       "M3 step 2: the documents modified beyond step 1's parts, a fact")
+    comps = [types.SimpleNamespace(gear=g, part=f"C:\\copy\\{f}") for g, f in (
+        ("Sun", "Gear_m1.25_N29.SLDPRT"), ("Planet copy 1", "Gear_m1.25_N13.SLDPRT"),
+        ("Planet copy 2", "Gear_m1.25_N13.SLDPRT"), ("Ring", "Ring_m1.25_N55.SLDPRT"), ("HighDog", "Dog_m1.25_N17.SLDPRT"))]
+    ok(files_of(comps, M3_CHANGED_BY_STEP_1) == tuple(sorted(files)),
+       "M3 step 2: step 1's parts read off the record, Planet by its copies, the dogs left out")
+    ok(wrote(changing=[("AddMate5",), ("ForceRebuild3",)]) != [], "M3 step 2: run 8's AddMate5 and rebuild are said")
+    ok(wrote(globals_after={ring_file: {"No. of Teeth": 53.0}, "RangeBox.SLDASM": {"Hub Face Z": 55.5}}) != [],
+       "M3 step 2: a part's global set (untraced) is said")
+    ok(wrote(globals_after={ring_file: {"No. of Teeth": 54.0}, "RangeBox.SLDASM": {"Hub Face Z": 48.0}}) != [],
+       "M3 step 2: the assembly's own global set (untraced, its flag already set) is said")
+    ok(wrote(states_before=dict(states, flags=dict(flags, **{"RangeBox.SLDASM": False}))) != [],
+       "M3 step 2: the assembly newly modified across the press is said")
+    ok(wrote(states_after=dict(states, times=dict(states["times"], **{ring_file: 2.0}))) != [],
+       "M3 step 2: a file written is said")
+    ok(all(wrote(result=dict(result, **{k: ["x"]})) != [] for k in ("changed", "mates_made", "remade_in_modes",
+                                                                       "placed")),
+       "M3 step 2: anything changed, made, remade or placed is said")
+    ok(wrote(result=dict(result, skipped="")) != [] and wrote(result=dict(
+        result, failures=[("RangeBox.SLDASM", "rebuild")])) != [] and wrote(result=dict(
+            result, failures=result["failures"] + [("RangeBox.SLDASM", "rebuild")])) != [],
+       "M3 step 2: nothing skipped, or a failure not the ring's alone, is said")
+    ok(wrote(ring={"in_error": [], "teeth": 54.0}) != [] and wrote(ring=dict(ring, teeth=53.0)) != [],
+       "M3 step 2: the ring mended or moved is said")
+    ok(wrote(mates_written=["flags [...]"]) != [] and wrote(ratios_after={"Sun meshes Planet copy 1": (29, 13)}) != [],
+       "M3 step 2: a mate or a gear mate's ratio changed is said")
+    # Step 2b: the parts' windows closed, RangeBox open, pressed once more.
+    ok(stopped_again(result, ring_file) and not stopped_again(dict(result, skipped=""), ring_file)
+       and not stopped_again(dict(result, failures=[]), ring_file)
+       and not stopped_again(dict(result, failures=[("RangeBox.SLDASM", "rebuild")]), ring_file),
+       "M3 step 2b: stopped again only on the ring's file alone, with what was skipped said")
+    ok(wrote_in_press([], {}, {}, states, states, result) == []
+       and wrote_in_press([("AddMate5",)], {}, {}, states, states, result) != []
+       and wrote_in_press([], {}, {}, states, dict(states, flags=dict(flags, **{"Dog_m1.25_N17.SLDPRT": True})),
+                          result) != []
+       and wrote_in_press([], {}, {}, states, states, dict(result, placed=["Sun"])) != [],
+       "M3 step 2b: a stop that wrote nothing passes; a traced write, a flag newly set or a gear placed is said")
     print(f"done    {len(bad)} failed")
     return 0 if not bad else 1
 
@@ -2309,7 +2505,9 @@ def remake_again(out):
     """The fixes review's M3 (B's ff98d5a), on its own copy of setup.master: Sun 30, Planet 12, Ring 54 pressed with
     swbuild.LANDING_STEPS patched to () for that press only, so it stops in the ring; pressed again without closing:
     the still-open sentence, the record's in-error mark kept, nothing set in a part, the footer's sentence kept; then
-    every document of the copy closed without saving (as the sentences say), the patch restored, pressed again: routed
+    the parts' own windows closed with RangeBox left open and pressed once more (facts, and nothing written if it stops
+    again); then every document of the copy closed without saving (as the sentences say), the patch restored, pressed
+    again: routed
     by way of 53, the mark gone, the footer quiet, the ring at 54 clean, the stage's gear mates remade. Sentences matched
     by their distinctive parts."""
     stems = GATES["remake"]
@@ -2352,24 +2550,124 @@ def remake_again(out):
                   f"close without saving, the record marks it ({list(desk.record.unsaved_in_error)}); the patch "
                   "restored")
 
+            # Step 2 (the fixes review's addendum §6): the app now stops after its check phase and before any write.
+            # Read, just before and just after it: every document's save flag and file time, every part's globals
+            # (equation writes are not traced), the assembly as W9a reads it (frames, mates' codes and flags per mode),
+            # the stage's gear mates' ratios, and the ring's features. None of these reads may mark anything (read_now
+            # STOPs on one that does; the flags bracket all of them).
+            box = desk.record.gearbox
+            asm_stem = os.path.splitext(os.path.basename(box.assembly))[0]
+            check(says_close_with_assembly(out["first"]["status"], stem, asm_stem),
+                  f"remake, M3: the first press's stop names {asm_stem} beside the parts and says to answer No when "
+                  "SolidWorks asks to save (should-fix A)")
+            pairs = A.pairs_of(box, A.rb_users())
+            # The parts' globals and the assembly's own (the addendum on the final runs, §6.1: an untraced write to the
+            # assembly's globals would not show on its flag, which step 1 already leaves set).
+            parts = sorted({c.part for c in box.components} | {box.layout} | {c.path for c in box.carriers}) + \
+                [box.assembly]
+            ring_file = os.path.basename(ring_part)
+            step_1_files = files_of(box.components, M3_CHANGED_BY_STEP_1)
+
+            def gear_ratios(s):
+                got = {}
+                for i, name in enumerate(ratios):
+                    s.find_mate(f"m3r{i}", name)
+                    got[name] = tuple(s.gear_mate_ratio(f"m3r{i}"))
+                return got
+
+            def read_all(when):
+                """The reads; the save flags and file times taken last before the press and first after it, so their
+                bracket holds the press alone (a read that marked would show there too, as a FAIL)."""
+                states = B.documents_state(f"remake, M3: {when} step 2", desk, folder) if when == "after" else None
+                now = A.read_now(f"remake, M3: {when} step 2", box.assembly, folder, pairs, list(box.modes))
+                globals_ = {os.path.basename(p): run(f"remake, M3: {os.path.basename(p)}'s globals {when} step 2",
+                                                     lambda s, p=p: W.live_globals(s, p)) for p in parts}
+                ratios_ = run(f"remake, M3: the gear mates' ratios {when} step 2", job(box.assembly, gear_ratios))
+                ring = run(f"remake, M3: the ring's features {when} step 2", job(ring_part, landing_state))
+                if states is None:
+                    states = B.documents_state(f"remake, M3: {when} step 2", desk, folder)
+                return states, now, globals_, ratios_, ring
+            s_before, now_before, globals_before, ratios_before, ring_before = read_all("before")
+            say(f"fact    remake, M3: before step 2, modified {sorted(n for n, f in s_before['flags'].items() if f)} "
+                f"(step 1 changed {list(step_1_files)}); the ring {ring_before}; ratios {ratios_before}")
+            say(f"fact    remake, M3: before step 2, modified beyond step 1's parts "
+                f"{beyond_step_1(s_before, step_1_files)} (run 11 on 34.0.0: RangeBox.SLDASM, marked by SolidWorks "
+                "when a part of it was changed and rebuilt; not a check)")
+
             desk.plan_solidworks()
-            second, _ = press(desk, "remake, M3: pressed again without closing")
+            second, calls = press(desk, "remake, M3: pressed again without closing")
             done_said(second, "remake, M3, second")
             text = note()
             set_in = [(p.document, list(p.changed)) for p in (second.parts if second else []) if p.changed]
+            changing = W.nothing_changed_calls(calls) + [c for c in calls if c[0] in ("AddComponent5", "SaveAs3")]
+            s_after, now_after, globals_after, ratios_after, ring_after = read_all("after")
+            summary = {k: list(getattr(second, k, []) or []) for k in ("changed", "mates_made", "remade_in_modes",
+                                                                        "placed", "failures")}
+            summary["skipped"] = getattr(second, "skipped", "") if second else ""
+            wrote = wrote_nothing(changing, globals_before, globals_after, s_before, s_after, summary, ring_file,
+                                  ring_after, A.written(now_before, now_after), ratios_before,
+                                  ratios_after) if second is not None else ["no result"]
             out["second"] = {"status": text, "set_in_parts": set_in, "marked": list(desk.record.unsaved_in_error),
-                             "remade_in_modes": list(second.remade_in_modes) if second else None}
-            say(f"fact    remake, M3: pressed again without closing: status {text!r}; parts set {set_in}; gear mates "
-                f"remade {out['second']['remade_in_modes']}")
+                             "remade_in_modes": summary["remade_in_modes"], "result": summary,
+                             "changing_calls": [list(c) for c in changing], "ring_before": ring_before,
+                             "ring_after": ring_after, "ratios": [ratios_before, ratios_after],
+                             "flags": [s_before["flags"], s_after["flags"]], "wrote": wrote}
+            say(f"fact    remake, M3: pressed again without closing: status {text!r}; parts set {set_in}; result "
+                f"{summary}; calls that change or show {changing or 'none'}; the ring after {ring_after}")
             check(second is not None and "still open in SolidWorks" in text and stem in text and "set nothing" in text
-                  and "without saving" in text and "already matches" not in text and marked() and not set_in,
+                  and "without saving" in text and "already matches" not in text and status_alone(text) and marked()
+                  and not set_in and says_close_with_assembly(text, stem, asm_stem),
                   f"remake, M3: pressed again without closing, the status says {stem} is still open in error and to "
-                  "close it without saving (never that SolidWorks already matches), the record keeps its mark, nothing "
-                  "set in a part")
+                  f"close it and {asm_stem} without saving, answering No when SolidWorks asks to save, alone (never "
+                  "that SolidWorks already matches, no offer to save), the record keeps its mark, nothing set in a "
+                  "part")
+            check(not wrote,
+                  f"remake, M3: step 2 stopped before any write: no call that changes or shows anything, every part's "
+                  f"and the assembly's globals, every document's save flag and file time as before, nothing changed, "
+                  f"made, remade or placed, its stop said skipped and named {ring_file} alone, the ring still at Tooth "
+                  f"Space 72 and 54 teeth, the assembly's frames, mates and flags and the gear mates' ratios as "
+                  f"before: {wrote or 'nothing written'}")
             f = desk.say_footer("remake, M3: the footer after the second press")
-            check(stem in f.text and "left in error when it stopped" in f.text and "without saving" in f.text,
-                  f"remake, M3: the footer keeps its sentence: {stem} was left in error when it stopped, close without "
-                  "saving")
+            check(footer_says_close(f.text, stem, asm_stem),
+                  f"remake, M3: the footer says {stem} is to be closed with {asm_stem} without saving, answering No "
+                  "(left in error when it stopped, or still open in SolidWorks), and offers to keep nothing")
+
+            # Step 2b (the addendum on the final runs, §6.2; should-fix A's premise, measured): a user who closes only
+            # the parts' own windows, without saving, and leaves RangeBox open. Facts: what SolidWorks still holds,
+            # the ring's codes where it is still held, every save flag; then one press, which either stops again on the
+            # ring (and then must write nothing) or goes through. No read here opens a part SolidWorks let go.
+            closed = run("remake, M3: Sun's, Planet's and Ring's own windows closed without saving, RangeBox open",
+                         quit_named_in(folder, step_1_files))
+            held = run("remake, M3: the documents SolidWorks holds, the parts' windows closed", loaded_in(folder))
+            s_closed = B.documents_state("remake, M3: the parts' windows closed", desk, folder)
+            ring_held = run("remake, M3: the ring's features, still held", job(ring_part, landing_state)) \
+                if ring_file in held else None
+            say(f"fact    remake, M3: closed {closed} with {os.path.basename(box.assembly)} left open; SolidWorks "
+                f"holds {held}; modified {sorted(n for n, f in s_closed['flags'].items() if f)}; the ring "
+                f"{ring_held if ring_held is not None else 'no longer held'}")
+            desk.plan_solidworks()
+            again, calls_again = press(desk, "remake, M3: pressed again with only the parts' windows closed")
+            done_said(again, "remake, M3, the parts' windows closed")
+            text_again = note()
+            s_again = B.documents_state("remake, M3: after the press with the parts' windows closed", desk, folder)
+            changing_again = W.nothing_changed_calls(calls_again) + [c for c in calls_again
+                                                                     if c[0] in ("AddComponent5", "SaveAs3")]
+            summary_again = {k: list(getattr(again, k, []) or []) for k in ("changed", "mates_made",
+                                                                             "remade_in_modes", "placed", "failures")}
+            summary_again["skipped"] = getattr(again, "skipped", "") if again else ""
+            stopped = again is not None and stopped_again(summary_again, ring_file)
+            wrote_again = wrote_in_press(changing_again, {}, {}, s_closed, s_again, summary_again) if stopped else []
+            out["parts_closed"] = {"closed": closed, "held": held, "flags": s_closed["flags"], "ring": ring_held,
+                                   "stopped_again": stopped, "status": text_again, "result": summary_again,
+                                   "changing_calls": [list(c) for c in changing_again], "wrote": wrote_again}
+            say(f"fact    remake, M3: with only the parts' windows closed, the press "
+                f"{'stopped again on ' + ring_file if stopped else 'did not stop on the ring'}: status {text_again!r}; "
+                f"result {summary_again}; calls that change or show {changing_again or 'none'}")
+            if stopped:
+                check(not wrote_again and says_close_with_assembly(text_again, stem, asm_stem),
+                      f"remake, M3: stopped again on {ring_file} with only the parts' windows closed, it wrote nothing "
+                      f"and said to close {stem} and {asm_stem} without saving, answering No: "
+                      f"{wrote_again or 'nothing written'}")
 
             left = run("remake, M3: every document of the copy closed without saving", W.quit_in(folder))
             say(f"person  remake, M3: closed every document of the copy without saving, as the sentences say; left "
@@ -2833,6 +3131,31 @@ def line_ends(dump0, dump1, before, after):
         out["end_off_mm"] = round(math.dist(now[1], after[1]), 6)
         out["far_side"] = far_side(now[0], now[1])
     return out
+
+
+def quit_named_in(folder, names):
+    """A worker job: each open document under ``folder`` whose file name is one of ``names`` closed WITHOUT saving
+    (``ISldWorks::QuitDoc``, as ``W.quit_in`` closes, by title), every other left open, as a person closing those
+    windows and answering "Don't save" would. Returns the file names it closed."""
+    def work(session):
+        app, done = session._app, []  # noqa: SLF001
+        for doc in W.documents(app):
+            path = str(call(doc, "GetPathName") or "")
+            if W.under(path, folder) and os.path.basename(path) in names:
+                call(app, "QuitDoc", str(call(doc, "GetTitle")))
+                done.append(os.path.basename(path))
+        return sorted(done)
+    return work
+
+
+def loaded_in(folder):
+    """A worker job: the file names of every document SolidWorks holds under ``folder`` (``documents()``, which lists
+    every document in memory, shown or not), opening nothing."""
+    def work(session):
+        app = session._app  # noqa: SLF001
+        return sorted(os.path.basename(str(call(d, "GetPathName") or "")) for d in W.documents(app)
+                      if W.under(str(call(d, "GetPathName") or ""), folder))
+    return work
 
 
 def landing_state(s):

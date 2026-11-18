@@ -751,7 +751,35 @@ record's problems by kind, so the second `unsettled` overwrites the first's subj
   SolidWorks without saving (the file on disk is as before that Update), then press Update SolidWorks again.* That
   sentence takes the place of the claim *SolidWorks already matches the workbook: nothing was changed.* alone; what the
   status said after the claim stays (N4, `ef4b8f2`), except that after an earlier Update lost with its assembly it no
-  longer says SolidWorks already holds the workbook as it now is (`09a1183`). Nothing new is needed from the worker.
+  longer says SolidWorks already holds the workbook as it now is (`09a1183`).
+- **The eighth run on 2026 (remake's M3, pressed again without closing).** On SolidWorks the part left in error makes
+  the assembly's rebuild read false, so a press that set nothing in it went on into the assembly, remade a gear mate
+  and stopped there, offering to save RangeBox. Now the record's mark goes to the worker
+  (`DocumentValues.left_in_error`, from `LinkRecord.unsaved_in_error`), and a document so marked that still holds the
+  workbook's values with a feature of the app's in error, read in the check phase, stops the press before any write
+  (`swbuild._held_in_error`): a failure naming the file as a whole, `skipped` naming what was not done. The user's own
+  features in error never stop it. `Finished.still_in_error` is now given whether or not the press failed, and a
+  stop on such a part alone is said by the still-in-error sentence and nothing else.
+- **The review of the M3 fix, (ii) and (iii).** A marked document whose check-phase read was made and found nothing
+  of the app's in error and nothing unread (repaired in SolidWorks, say) is returned in `GearboxUpdate.read_clean`, and
+  `finish_update` drops its mark, so it is never called still in error; an empty or unread read keeps the mark. A stop
+  beside a document still in error counts it as left in error where it words what was not saved, so it says to close
+  them all without saving, never to save.
+- **Should-fix A of W9C-RUNS-REVIEW.md's addendum on the final runs: the assembly in the advice.** SolidWorks marks
+  the open assembly modified when a part of it is changed and rebuilt in its own window (run 11 on 34.0.0, before
+  step 2), and a part closed while its assembly stays open stays loaded with its changes. So wherever a part left in
+  error (or still in error) is a component of the record's assembly (`update.assembly_holding`: a gear's part, the
+  layout or a carrier), the stop's unsaved sentence, the footer's and the still-in-error sentence say *close it (them
+  all) and RangeBox in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on disk are
+  as before this/that Update)*, the assembly not named twice when it is among the documents changed. Tk-side only.
+- **Known caveat, for after W9c: an unmarked part with an app feature in error, which the press leaves alone.** It
+  is older behaviour, pinned by W9a's tests, and in no demonstrated path: the press writes into the assembly and fails
+  there, on the assembly's rebuild, with a save offer. The later fix: where
+  `ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_<year>` is False (the assembly's rebuild then reads false, as on
+  2026 and 2024), stop before any write on any document whose
+  check-phase read has an app feature in error, with a sentence that names the part and the feature and says to put
+  it right, or to close it without saving if an Update did it; never "close without saving" alone, since no record
+  vouches that the file is good.
 - **S6. `UserWorkEntry.modes` lists only the modes a read covered:** the plan's configurations less those it adds
   (`update.modes_read`), plus each added mode on record whose flags the worker read (`took_active_state`). A mode a
   stopped press failed to delete is not named there, so the footer judges it as a copy.

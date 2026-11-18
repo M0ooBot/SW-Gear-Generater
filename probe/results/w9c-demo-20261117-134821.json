@@ -1,0 +1,2033 @@
+{
+ "sections": {
+  "landing": {
+   "cases": {
+    "ring-55-54": {
+     "by_way_of": [
+      "No. of Teeth",
+      "53"
+     ],
+     "landing": [
+      [
+       "Li+",
+       0.02368567619243794,
+       0.6250000000000041
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true,
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 54.0,
+     "module": 1.25,
+     "volume": 11805.159175005743,
+     "foreseen": 0.037897081907900455,
+     "planned_via": 53,
+     "target_volume": 11805.159175004832,
+     "volume_rel": 7.719622223358129e-14,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-56-55": {
+     "by_way_of": [
+      "No. of Teeth",
+      "54"
+     ],
+     "landing": [
+      [
+       "Li+",
+       0.0236053128222586,
+       0.624999999999998
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true,
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 55.0,
+     "module": 1.25,
+     "volume": 12005.017395147957,
+     "foreseen": 0.03776850051561388,
+     "planned_via": 54,
+     "target_volume": 12005.017395150748,
+     "volume_rel": 2.3243029586666463e-13,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-m1-30-28": {
+     "by_way_of": [
+      "No. of Teeth",
+      "27"
+     ],
+     "landing": [
+      [
+       "Li+",
+       0.1662367920466264,
+       1.1556966910027187
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true,
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 28.0,
+     "module": 1.0,
+     "volume": 4230.59869887325,
+     "foreseen": 0.1438411940959995,
+     "planned_via": 27,
+     "target_volume": 4230.59869887312,
+     "volume_rel": 3.0742160060743046e-14,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-55-54-straight": {
+     "by_way_of": [],
+     "landing": [
+      [
+       "Li+",
+       0.02368567619243794,
+       0.6250000000000041
+      ]
+     ],
+     "rebuilt": false,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      false
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [
+      [
+       "Tooth Space",
+       72
+      ],
+      [
+       "Teeth",
+       1
+      ]
+     ],
+     "teeth": 54.0,
+     "module": 1.25,
+     "volume": 15215.125920417064,
+     "line": {
+      "found": true,
+      "index": 4,
+      "before": [
+       [
+        32.461835,
+        1.574575
+       ],
+       [
+        31.837569,
+        1.544294
+       ]
+      ],
+      "after": [
+       [
+        31.836412,
+        1.567952
+       ],
+       [
+        -31.212169,
+        -1.537208
+       ]
+      ],
+      "expected": [
+       [
+        31.836412,
+        1.567952
+       ],
+       [
+        31.212169,
+        1.537208
+       ]
+      ],
+      "end_off_mm": 62.5,
+      "far_side": true
+     },
+     "foreseen": 0.037897081907900455,
+     "planned_via": 53,
+     "target_volume": 11805.159175004832,
+     "volume_rel": 0.28885394045615115,
+     "left": [],
+     "saved": false,
+     "clean": false
+    },
+    "ring-56-55-straight": {
+     "by_way_of": [],
+     "landing": [
+      [
+       "Li+",
+       0.0236053128222586,
+       0.624999999999998
+      ]
+     ],
+     "rebuilt": false,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      false
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [
+      [
+       "Tooth Space",
+       72
+      ],
+      [
+       "Teeth",
+       1
+      ]
+     ],
+     "teeth": 55.0,
+     "module": 1.25,
+     "volume": 15480.197800563692,
+     "line": {
+      "found": true,
+      "index": 4,
+      "before": [
+       [
+        33.087258,
+        1.580823
+       ],
+       [
+        32.46297,
+        1.550997
+       ]
+      ],
+      "after": [
+       [
+        32.461835,
+        1.574575
+       ],
+       [
+        -31.837569,
+        -1.544294
+       ]
+      ],
+      "expected": [
+       [
+        32.461835,
+        1.574575
+       ],
+       [
+        31.837569,
+        1.544294
+       ]
+      ],
+      "end_off_mm": 63.75,
+      "far_side": true
+     },
+     "foreseen": 0.03776850051561388,
+     "planned_via": 54,
+     "target_volume": 12005.017395150748,
+     "volume_rel": 0.2894773319376191,
+     "left": [],
+     "saved": false,
+     "clean": false
+    },
+    "ring-m1-30-28-straight": {
+     "by_way_of": [],
+     "landing": [
+      [
+       "Li+",
+       0.1662367920466264,
+       1.1556966910027187
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 28.0,
+     "module": 1.0,
+     "volume": 4230.598698873247,
+     "line": {
+      "found": true,
+      "index": 4,
+      "before": [
+       [
+        14.053337,
+        1.087987
+       ],
+       [
+        12.961216,
+        1.003436
+       ]
+      ],
+      "after": [
+       [
+        13.111795,
+        1.073868
+       ],
+       [
+        11.959955,
+        0.979531
+       ]
+      ],
+      "expected": [
+       [
+        13.111795,
+        1.073868
+       ],
+       [
+        11.959955,
+        0.979531
+       ]
+      ],
+      "end_off_mm": 0.0,
+      "far_side": false
+     },
+     "foreseen": 0.1438411940959995,
+     "planned_via": 27,
+     "target_volume": 4230.59869887312,
+     "volume_rel": 2.9882239499603385e-14,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "spur-m1-18-17-straight": {
+     "by_way_of": [],
+     "landing": [
+      [
+       "L+",
+       0.05147797205754254,
+       0.5170459190179093
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Bore Diameter",
+      "Pressure Angle",
+      "Outer Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Bore@Bore Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "OD@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 17.0,
+     "module": 1.0,
+     "volume": 1278.1956535579923,
+     "line": {
+      "found": true,
+      "index": 3,
+      "before": [
+       [
+        8.423739,
+        0.751943
+       ],
+       [
+        7.939379,
+        0.708706
+       ]
+      ],
+      "after": [
+       [
+        7.951263,
+        0.758794
+       ],
+       [
+        7.436556,
+        0.709675
+       ]
+      ],
+      "expected": [
+       [
+        7.951263,
+        0.758794
+       ],
+       [
+        7.436556,
+        0.709675
+       ]
+      ],
+      "end_off_mm": 0.0,
+      "far_side": false
+     },
+     "foreseen": 0.09956170267298727,
+     "planned_via": 16,
+     "target_volume": 1278.195653557989,
+     "volume_rel": 2.4904101710441566e-15,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "spur-m1-17-16-straight": {
+     "by_way_of": [],
+     "landing": [
+      [
+       "L+",
+       0.06988866109722572,
+       0.5478924816074271
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Bore Diameter",
+      "Pressure Angle",
+      "Outer Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Bore@Bore Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "OD@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 16.0,
+     "module": 1.0,
+     "volume": 1030.5002308129797,
+     "line": {
+      "found": true,
+      "index": 3,
+      "before": [
+       [
+        7.951263,
+        0.758794
+       ],
+       [
+        7.436556,
+        0.709675
+       ]
+      ],
+      "after": [
+       [
+        7.478453,
+        0.765613
+       ],
+       [
+        6.933409,
+        0.709813
+       ]
+      ],
+      "expected": [
+       [
+        7.478453,
+        0.765613
+       ],
+       [
+        6.933409,
+        0.709813
+       ]
+      ],
+      "end_off_mm": 1e-06,
+      "far_side": false
+     },
+     "foreseen": 0.12755908037318525,
+     "planned_via": 15,
+     "target_volume": 1030.5002308129808,
+     "volume_rel": 1.1032199151661166e-15,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "spur-m1-18-17": {
+     "by_way_of": [
+      "No. of Teeth",
+      "16"
+     ],
+     "landing": [
+      [
+       "L+",
+       0.05147797205754254,
+       0.5170459190179093
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true,
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Bore Diameter",
+      "Pressure Angle",
+      "Outer Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Bore@Bore Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "OD@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 17.0,
+     "module": 1.0,
+     "volume": 1278.1956535579914,
+     "foreseen": 0.09956170267298727,
+     "planned_via": 16,
+     "target_volume": 1278.195653557989,
+     "volume_rel": 1.778864407888683e-15,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "spur-m1-17-16": {
+     "by_way_of": [
+      "No. of Teeth",
+      "15"
+     ],
+     "landing": [
+      [
+       "L+",
+       0.06988866109722572,
+       0.5478924816074271
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true,
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Bore Diameter",
+      "Pressure Angle",
+      "Outer Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Bore@Bore Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "OD@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 16.0,
+     "module": 1.0,
+     "volume": 1030.5002308129801,
+     "foreseen": 0.12755908037318525,
+     "planned_via": 15,
+     "target_volume": 1030.5002308129808,
+     "volume_rel": 6.619319490996699e-16,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-55-53": {
+     "by_way_of": [],
+     "landing": [],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 53.0,
+     "module": 1.25,
+     "volume": 11605.270875531445,
+     "foreseen": 1.0028728020892888,
+     "planned_via": null,
+     "target_volume": 11605.270875532478,
+     "volume_rel": 8.90273042564068e-14,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-55-56": {
+     "by_way_of": [],
+     "landing": [],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 56.0,
+     "module": 1.25,
+     "volume": 12202.870295026281,
+     "foreseen": 2.0003564512592256,
+     "planned_via": null,
+     "target_volume": 12202.870295028193,
+     "volume_rel": 1.566646056957273e-13,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "sun-29-30": {
+     "by_way_of": [],
+     "landing": [],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Bore Diameter",
+      "Pressure Angle",
+      "Outer Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "OD@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 30.0,
+     "module": 1.25,
+     "volume": 10517.660975777353,
+     "foreseen": 3.5656219195317327,
+     "planned_via": null,
+     "target_volume": 10517.660975777366,
+     "volume_rel": 1.2106233367043757e-15,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-m1.25-40-m1.5-32": {
+     "by_way_of": [
+      "No. of Teeth",
+      "31"
+     ],
+     "landing": [
+      [
+       "Li+",
+       0.2685921125517466,
+       1.5526228988618016
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth",
+      "Module"
+     ],
+     "rebuilds": [
+      true,
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 32.0,
+     "module": 1.5,
+     "volume": 10317.68096003463,
+     "foreseen": 0.17299249724362972,
+     "planned_via": 31,
+     "target_volume": 10317.680960034622,
+     "volume_rel": 7.051931187218073e-16,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-m1.25-40-m1.5-32-straight": {
+     "by_way_of": [],
+     "landing": [
+      [
+       "Li+",
+       0.2685921125517466,
+       1.5526228988618016
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth",
+      "Module"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 32.0,
+     "module": 1.5,
+     "volume": 10317.680960034626,
+     "line": {
+      "found": true,
+      "index": 4,
+      "before": [
+       [
+        23.447651,
+        1.447954
+       ],
+       [
+        22.457222,
+        1.386792
+       ]
+      ],
+      "after": [
+       [
+        22.491953,
+        1.653129
+       ],
+       [
+        20.943507,
+        1.53932
+       ]
+      ],
+      "expected": [
+       [
+        22.491953,
+        1.653129
+       ],
+       [
+        20.943507,
+        1.53932
+       ]
+      ],
+      "end_off_mm": 0.0,
+      "far_side": false
+     },
+     "foreseen": 0.17299249724362972,
+     "planned_via": 31,
+     "target_volume": 10317.680960034622,
+     "volume_rel": 3.5259655936090363e-16,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-m1-27-25": {
+     "by_way_of": [],
+     "landing": [],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 25.0,
+     "module": 1.0,
+     "volume": 3846.4468141931834,
+     "foreseen": 0.20418655381606884,
+     "planned_via": null,
+     "target_volume": null,
+     "volume_rel": null,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "spur-m1-15-14": {
+     "by_way_of": [],
+     "landing": [],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Bore Diameter",
+      "Pressure Angle",
+      "Outer Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Bore@Bore Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "OD@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 14.0,
+     "module": 1.0,
+     "volume": 583.0243971323646,
+     "foreseen": 0.20251847340285822,
+     "planned_via": null,
+     "target_volume": 583.0243971323646,
+     "volume_rel": 0.0,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "spur-m1-14-13": {
+     "by_way_of": [],
+     "landing": [],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Bore Diameter",
+      "Pressure Angle",
+      "Outer Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Bore@Bore Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "OD@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 13.0,
+     "module": 1.0,
+     "volume": 383.2635711096777,
+     "foreseen": 0.23895932831278846,
+     "planned_via": null,
+     "target_volume": null,
+     "volume_rel": null,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-m1-36-34-straight": {
+     "by_way_of": [],
+     "landing": [
+      [
+       "Li+",
+       0.05499735783148919,
+       0.9747745533604434
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 34.0,
+     "module": 1.0,
+     "volume": 4996.814322651122,
+     "line": {
+      "found": true,
+      "index": 4,
+      "before": [
+       [
+        16.876663,
+        1.130244
+       ],
+       [
+        15.96424,
+        1.069138
+       ]
+      ],
+      "after": [
+       [
+        15.935733,
+        1.116171
+       ],
+       [
+        14.963341,
+        1.048062
+       ]
+      ],
+      "expected": [
+       [
+        15.935733,
+        1.116171
+       ],
+       [
+        14.963341,
+        1.048062
+       ]
+      ],
+      "end_off_mm": 1e-06,
+      "far_side": false
+     },
+     "foreseen": 0.05642059247637413,
+     "planned_via": 33,
+     "target_volume": 4996.814322651124,
+     "volume_rel": 3.6402981701764903e-16,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-m1-36-34": {
+     "by_way_of": [
+      "No. of Teeth",
+      "33"
+     ],
+     "landing": [
+      [
+       "Li+",
+       0.05499735783148919,
+       0.9747745533604434
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true,
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 34.0,
+     "module": 1.0,
+     "volume": 4996.814322651127,
+     "foreseen": 0.05642059247637413,
+     "planned_via": 33,
+     "target_volume": 4996.814322651124,
+     "volume_rel": 7.280596340352981e-16,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-m1-44-42": {
+     "by_way_of": [],
+     "landing": [],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 42.0,
+     "module": 1.0,
+     "volume": 6020.844440416233,
+     "foreseen": 0.3673581967529257,
+     "planned_via": null,
+     "target_volume": null,
+     "volume_rel": null,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ringB-55-54-straight": {
+     "by_way_of": [],
+     "landing": [],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Base@Tooth Space Sketch",
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Flank@Tooth Space Sketch",
+      "HalfSpace@Tooth Space Sketch",
+      "Pitch@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 54.0,
+     "module": 1.25,
+     "volume": 11833.767417609599,
+     "line": {
+      "found": false
+     },
+     "foreseen": 0.037897081907900455,
+     "planned_via": null,
+     "target_volume": null,
+     "volume_rel": null,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ringB-55-54": {
+     "by_way_of": [],
+     "landing": [],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Base@Tooth Space Sketch",
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Flank@Tooth Space Sketch",
+      "HalfSpace@Tooth Space Sketch",
+      "Pitch@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 54.0,
+     "module": 1.25,
+     "volume": 11833.7674176096,
+     "foreseen": 0.037897081907900455,
+     "planned_via": null,
+     "target_volume": null,
+     "volume_rel": null,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-55-m1.225-straight": {
+     "by_way_of": [],
+     "landing": [
+      [
+       "Li+",
+       0.024999999999997965,
+       0.612499999999999
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "Module"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "No. of Teeth",
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 55.0,
+     "module": 1.2249999999999999,
+     "volume": 11529.618698971695,
+     "line": {
+      "found": true,
+      "index": 4,
+      "before": [
+       [
+        32.461835,
+        1.574575
+       ],
+       [
+        31.837569,
+        1.544294
+       ]
+      ],
+      "after": [
+       [
+        31.812598,
+        1.543083
+       ],
+       [
+        31.200817,
+        1.513408
+       ]
+      ],
+      "expected": [
+       [
+        31.812598,
+        1.543083
+       ],
+       [
+        31.200817,
+        1.513408
+       ]
+      ],
+      "end_off_mm": 0.0,
+      "far_side": false
+     },
+     "foreseen": 0.04081632653060899,
+     "planned_via": 54,
+     "target_volume": 11529.618698973192,
+     "volume_rel": 1.2984195906249378e-13,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-55-m1.225": {
+     "by_way_of": [
+      "No. of Teeth",
+      "54"
+     ],
+     "landing": [
+      [
+       "Li+",
+       0.024999999999997965,
+       0.612499999999999
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "Module"
+     ],
+     "rebuilds": [
+      true,
+      true
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "No. of Teeth",
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [],
+     "teeth": 55.0,
+     "module": 1.2249999999999999,
+     "volume": 11529.618698971675,
+     "foreseen": 0.04081632653060899,
+     "planned_via": 54,
+     "target_volume": 11529.618698973192,
+     "volume_rel": 1.3157739229419175e-13,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-55-54-user-error": {
+     "by_way_of": [
+      "No. of Teeth",
+      "53"
+     ],
+     "landing": [
+      [
+       "Li+",
+       0.02368567619243794,
+       0.6250000000000041
+      ]
+     ],
+     "rebuilt": false,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      false,
+      false
+     ],
+     "steps_restored": true,
+     "unchanged": [
+      "Module",
+      "Pressure Angle",
+      "Inner Diameter",
+      "Pitch Diameter",
+      "Backlash",
+      "Arc Length",
+      "Fillet Radius",
+      "Tooth Depth",
+      "Face Width",
+      "Root Diameter",
+      "Rim Diameter",
+      "Base Diameter",
+      "Base Radius",
+      "Tooth Thickness",
+      "Half Space Angle",
+      "Involute Fn",
+      "Flank Offset",
+      "Tip Cap Diameter",
+      "Flank Start Diameter",
+      "Flank End Diameter",
+      "Involute t1",
+      "Involute t2",
+      "Flank Arc Radius",
+      "Flank Centre Angle"
+     ],
+     "links": [
+      "Cap@Tooth Space Sketch",
+      "Count@Teeth",
+      "Fillet@Tooth Space Sketch",
+      "Rim@Blank Sketch",
+      "Root@Tooth Space Sketch",
+      "Tip@Blank Sketch",
+      "UserCutD@User Cut In Bore Sketch",
+      "Width@Blank"
+     ],
+     "in_error": [
+      [
+       "User Cut In Bore",
+       71
+      ]
+     ],
+     "teeth": 54.0,
+     "module": 1.25,
+     "volume": 11805.159175005747,
+     "made_rebuilt": true,
+     "made_in_error": [],
+     "linked_rebuilt": false,
+     "in_error_before": [
+      [
+       "User Cut In Bore",
+       71
+      ]
+     ],
+     "user_cut_dims": [
+      [
+       "UserCutD",
+       0.003
+      ]
+     ],
+     "foreseen": 0.037897081907900455,
+     "planned_via": 53,
+     "target_volume": 11805.159175004832,
+     "volume_rel": 7.750439078541194e-14,
+     "left": [],
+     "saved": false,
+     "clean": false
+    }
+   },
+   "leftover": {
+    "in_error": [],
+    "teeth": 55.0,
+    "module": 1.25,
+    "volume": 12005.017395150748,
+    "left": [],
+    "saved": false,
+    "volume_rel_55": 0.0,
+    "clean": true
+   },
+   "shown": true,
+   "seconds": 571,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {},
+ "revision": [
+  34,
+  0,
+  0
+ ],
+ "snapshot": "64bec58 with probe/w9c_demonstration.py from 550767c",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": false,
+  "allowance_seconds": 60.0
+ },
+ "fails": [],
+ "notes": [
+  "SolidWorks' notification box came up while InsertSketch was in progress (exempt by the coordinator's ruling; nothing answers it)"
+ ]
+}

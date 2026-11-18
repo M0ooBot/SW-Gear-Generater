@@ -614,3 +614,302 @@ Against `probe/w9c_demonstration.py`:
 The 2026 whole run on `64bec58`'s `src/` stands for head `7f16a52` in every section, with the one condition the
 re-check gave (case 8's printed links at `…@Tooth Space Sketch`). The should-fix above does not change that: its
 fix is Tk-side, and no section fails a band step.
+
+## Review of the M3 fix after the 2026 whole run, and of the band-step fix (2026-11-17)
+
+This reviews `89615aa` + `85f5944` (the M3 fix) and `b3d4f42` + `ec50a53` (the band step), read at head `85f5944`.
+
+The evidence for what SolidWorks did is from `1221807`:
+- the eighth run's log, `…-8-whole-remake-m3-again-fails.log`, lines 2762–3026;
+- its JSON, `sections.remake.again`.
+
+**Suite:** 3698 passed, 10 skipped, 2 failed, the `tkinter`-only pair. It was run on a full `git archive` of head.
+
+**New tests against the pre-fix code:**
+- `test_pressed_again_with_the_ring_still_open_in_error_the_press_writes_nothing_and_says_close_without_saving` fails
+  on `89615aa^`'s `swbuild.py`, `ui_text.py` and `update.py`, with the fake's writes `['set_gear_ratio', 'rebuild']`.
+- Both band tests fail on `b3d4f42^`'s `update.py`.
+
+### 1. The M3 fix against what SolidWorks did in run 8
+
+**Step 2, at `64bec58`, as logged:**
+- Every document read "already holds the workbook's values", and the check phase found nothing to refuse.
+- The change phase made one gear mate (`AddMate5` ×1) and rebuilt the assembly (`ForceRebuild3` ×1). That rebuild read
+  False with the ring in error.
+- The failure named only `RangeBox.SLDASM`.
+- `still_in_error` was withheld because the press had failed (`update.py:2263` then).
+
+**Step 2 through head's code:**
+1. **The mark reaches the worker.** `classify` sets `left_in_error` on the ring's `PartUpdate` from
+   `record.unsaved_in_error` (`update.py:645-649`). The JSON's `first.marked` shows the ring's path there.
+2. **The ring's feature states are read.** The check phase reads them for every document with `made`, whether or not
+   it will be changed (`_read_live(..., states=read_states)`, `swbuild.py:2955-3040`). This is done on both paths:
+   static `:4248`, motion `:7150-7187`.
+   - SolidWorks makes this read on this path: in run 8 the Sun part held its values in step 2, and its features were
+     still read ("CHECK your features in Gear_m1.25_N29.SLDPRT, kept").
+   - The ring's `made` is never empty: `PartUpdate.made` is the sidecar's features, or else the plan's
+     (`update.py:299`, `:553`).
+   - The read is `GetErrorCode2` per feature (`swcom.feature_states`). The same read gave `('Tooth Space', 72),
+     ('Teeth', 1)` on a ring left this way in run 7.
+3. **It holds the values asked.** `holds` for the ring is the unit, which the log's "already holds" shows.
+4. **The press stops before any write.** `_held_in_error` (`swbuild.py:7454`, after the check phase, before the change
+   block) appends `("Ring_m1.25_N55.SLDPRT", "SolidWorks reads Tooth Space and Teeth … in error …")`, sets `skipped`
+   and returns. No `AddMate5`, no rebuild, no put.
+5. **What the user is told.**
+   - `finish_update` keeps the mark, since the ring was neither changed nor rebuilt clean.
+   - `still_in_error == [ring]` (`update.py:2274`).
+   - `gearbox_update_status` sees every failure naming that stem and nothing changed, so it returns the sentence alone
+     (`ui_text.py:1894`).
+   - The script's step 2 check (`w9c_demonstration.py:2364-2367`) is then met: "still open in SolidWorks", the stem,
+     "set nothing", "without saving", no "already matches", the mark, and no part set.
+
+**Step 1 is unchanged.** There is no mark, so `left_in_error` is False and nothing stops. The ring is in
+`result.changed`, so it is never in `still_in_error`, and the status is the logged one.
+
+**Step 3 is unchanged.**
+- The mark is still on record. Step 2 did not change the ring, and the ring stayed in `unsaved`.
+- Its file loads at 55 against 54 asked, so `holds` is `""` and `_held_in_error` passes it by. The route via 53
+  rebuilds clean and the mark goes, as logged.
+
+The fake's `close_all` now drops a landing's errors (`tests/test_swbuild.py:534-542`), as run 7 measured the file
+reopening clean. It touches tests only.
+
+**One small exception to "before any write"** (note, not new): in the check phase, `_evaluates` may call
+`detect_trig_units` on a document whose new values evaluate in only one trig unit. That marks the document modified.
+It runs before `_held_in_error` (`swbuild.py:7450-7452`). It is rare, and it was there before.
+
+### 2. Stopping before any write
+
+The stop is sound. Every press it blocks would have ended the same way on SolidWorks: the assembly's rebuild reads
+False while a part has the app's feature in error, which is what run 8 measured. Blocking it only moves the same
+failure before the writes. The cases:
+- **Another part also needs values.** Shown: the stage plus a Sun backlash change. The press stops with only the
+  still-in-error sentence, and Sun is not set. Writing Sun first would have changed a part, and then still failed at
+  the assembly. After the user closes the ring as told, the next press does both. One extra press, nothing lost.
+- **The workbook set back to the ring's old count.** The ring no longer holds the asked values, so it is not stopped.
+  The set goes ahead, and per run 6 setting it back does not mend the part. That is a failure naming the ring, and
+  the mark stays, as before.
+- **A part shared by two gearboxes.** The mark is per record, so the other workbook is not stopped. It runs into
+  gap (i) below.
+- **A marked layout or carrier.** It is handled the same way (`update.py:647-649`).
+
+Ruling: the move from the ruling's "after the values" to "before any write" is an improvement.
+
+### 3. The gaps the builder names
+
+**(i) An unmarked part with an app feature in error, which the press leaves alone. Should-fix, after W9c; not before
+the run.** It is older behaviour, deliberately pinned, and not in any demonstrated path. The press writes into the
+assembly and fails there with a save offer.
+*Smallest fix:* where `ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_<year>` is True, stop before any write on any
+document whose check-phase read has an app feature in error. Use a sentence that names the part and the feature and
+says to put it right, or to close it without saving if an Update did it. Do not say "close without saving" alone: no
+record vouches that the file is good.
+
+**(ii) A marked part whose app features now read clean is not stopped, but is still called "still open … in error".
+Should-fix. Shown on the fake.**
+- The setup: the stopped stage, then the ring's codes cleared, standing for a hand repair. The press is not stopped.
+  `still_in_error` keeps the ring, so the status ends "Ring_m1.25_N55 is still open in SolidWorks … in error … close
+  it in SolidWorks without saving", and the mark stays.
+- The ring in fact holds 54 clean. Following the advice reverts its file against an assembly that may now be saved
+  at 54. The next press puts that right, but the sentence is false.
+- *Smallest fix:* the worker returns the marked documents whose check-phase read was non-empty with no app feature in
+  error and none unread. For example, `GearboxUpdate.read_clean = [doc.path …]` from the same `app_in_error` and an
+  unread test. `finish_update` drops their marks and leaves them out of `still_in_error`.
+
+**(iii) A still-in-error part beside another failure: the stop can offer to save what this press changed, next to
+"close it without saving". Should-fix (low). Shown, in (ii)'s repro.**
+- The fake's planet put failed. The status said "It had already changed RangeBox, not saved: … or save it in
+  SolidWorks to keep what it did. Ring_m1.25_N55 is still open … close it in SolidWorks without saving".
+- Saving the others beside a part that will be closed unsaved is the mismatch `d432846` forbids for a part left in
+  error ("close them all").
+- After the fix for (ii), this needs a marked part still in error that this press reached without stopping, which is
+  rare.
+- *Smallest fix:* count `still_in_error` documents as left in error where the stop words its unsaved sentence
+  (`ui_text._parts_left_in_error`'s callers), so the stop says "close them all".
+
+### 4. `b3d4f42` + `ec50a53` (the band step): right
+
+`changed_documents` (`update.py:2303`) is shared, as asked. The whole-document clause (`:2311-2322`) needs four things:
+- a failure whose `what` is the document's stem alone;
+- the document changed;
+- the document listed in `GearboxUpdate.changed`;
+- (or) its values not rebuilt.
+
+**Can it mark a document wrongly?** A whole-document failure arises in only these places:
+- `_update_document`'s rebuild error: the values were not rebuilt, so the document is in error anyway.
+- Its raise path: a fresh `UpdateResult`, not changed and not listed, so it is not marked. This misses, as noted in
+  the first review; it never mis-marks.
+- `_held_in_error`: the document was not changed, so it is not marked.
+- The band step: intended.
+- The change phase's catch-all, naming `stage[0]`: in `_update_values` the stage moves to the next document before
+  anything is done to it (`swbuild.py:4342`). After the loop, the bands set their own stage, or `stage[0]` becomes the
+  assembly at once (`:7473`). No exception can escape naming a document that changed clean.
+
+So it cannot mark a document wrongly. `ec50a53`'s listing condition keeps W4's save offer for a hand-made result
+that names a layout as a whole, as the old test needs.
+
+Note: a relief op that fails inside `_run` raises (`swbuild.py:6294`) before the sleeve is appended to `changed`
+(`:6301`). Such a sleeve, with no value change, is neither listed nor marked, so the stop says nothing of it, though
+its partial relief and globals were added. The leftovers record what was added (`globals_added` is extended first),
+and the next press's check phase refuses on the partial relief. It is older than this round, and safe; moving the
+append before `_run` would make the stop say "close it without saving".
+
+### 5. What the worker does on SolidWorks elsewhere
+
+Nothing else changes.
+- `_held_in_error` acts only where a document carries `left_in_error`, that is, a record with `unsaved_in_error`.
+  In the demonstration that is only `remake_again` after its first press. Every other section works on copies of
+  masters with no mark.
+- `b3d4f42`/`ec50a53` and the `ui_text`/`update` parts of `89615aa` are on the Tk side.
+- `DocumentValues.left_in_error` is a defaulted last field, so positional construction elsewhere is unaffected.
+
+Within `remake_again`: step 2's writes go (`AddMate5` and the assembly's rebuild no longer happen), and steps 1 and 3
+make the same calls.
+
+### 6. The script's step 2 does not check that nothing was written, and one of its checks will now fail falsely
+
+**Must-fix in `probe/w9c_demonstration.py` before the run. This is the script, not the app.**
+
+1. **The footer check at `:2370-2372` will FAIL on SolidWorks with the fixed app.** It asks for "left in error when it
+   stopped" in the footer after step 2. The script's footer passes the press's note (`workbook_assembly_check.Desk.
+   footer`, `note=self.note`). With a job's note, `workbook_footer` shows the note and not the record's unsaved line:
+   run 8's footer after step 2 was the press's status word for word.
+   - At head the note is the still-in-error sentence alone.
+   - *Shown:* `workbook_footer(..., note=(again.after, again.ok))` after the fake's step 2 is exactly the still
+     sentence, with no "left in error when it stopped".
+   - The fake's own test passes only because its `Desk.footer` passes no note.
+   - *Fix:* accept either sentence: `stem in f.text and "without saving" in f.text and ("left in error when it
+     stopped" in f.text or "still open in SolidWorks" in f.text) and "to keep" not in f.text`.
+2. **Add a "wrote nothing" check to step 2** (`:2357-2367`). `press` already returns the traced calls; keep them
+   (`second, calls = press(...)`). Check each of these:
+   - `W.nothing_changed_calls(calls) == []`. That helper covers `ShowConfiguration2`, `SetSuppression2`,
+     `SetSystemValue3`, `ForceRebuild3`, `EditRebuild3`, `put`, `AddMate5`, `AddConfiguration2` and
+     `DeleteConfiguration2`. Also require no `AddComponent5` (traced since `:1147`) and no `SaveAs3`.
+   - Equation writes are not traced (`Equation` is an indexed put). So read the ring's globals before and after
+     (`W.live_globals`, as W9a's refused-press check does), and compare the other parts' too, or use `set_in == []`
+     with `values_set` empty.
+   - Read the save flag (`GetSaveFlag`, the copy's "marked modified" read) of every document of the copy just before
+     and just after step 2. `RangeBox.SLDASM`, the layout, the carrier, Dog and Sleeve must stay unmodified; after
+     step 1 only Sun, Planet and Ring are. No flag may change.
+   - `second.changed == []`, `second.mates_made == []`, `second.remade_in_modes == []`, `second.placed == []`,
+     `second.skipped` non-empty, and `[w for w, _ in second.failures] == [ring's file]`.
+   - The ring's `landing_state` after step 2 still reads Tooth Space at 72 and 54 teeth. It was neither mended nor
+     moved.
+   - Optionally, the assembly's mates before and after with W9a's `read_now`/`written`, so the gear mates' names,
+     ratios and flags are unchanged.
+
+### 7. Suite
+
+3698 passed, 10 skipped, 2 failed (`tkinter` only), as expected.
+
+### Verdict
+
+No must-fix in the app. (ii) and (iii) are should-fix: they are not in a demonstrated path, and their fixes are
+Tk-side or a returned list. (i) is for later.
+
+The whole run may go on SolidWorks 2026 from this head once the script's footer check (§6.1) is corrected and the
+step 2 write check (§6.2) is added. Without §6.1, the run reports a false FAIL at `remake` M3's footer. Without §6.2,
+the run cannot show the fix's own claim that nothing was written.
+
+## Re-check of (ii)/(iii) and of the script's step 2 check (2026-11-17)
+
+This reviews `1cc2978` + `3a9e592` (the answer to (ii) and (iii)) and `f857c34` (the script's step 2), read at head
+`3a9e592`. The verdict comes first: **nothing here invalidates the run now going on 2026, and there is no must-fix.**
+
+**Suite:** 3701 passed, 10 skipped, 2 failed, the `tkinter`-only pair.
+
+**New tests against the pre-fix code:** the three new tests in `1cc2978` fail on `1cc2978^`'s `swbuild.py`,
+`ui_text.py` and `update.py`.
+
+### `1cc2978` + `3a9e592`: right, with one should-fix
+
+- **The rule.** `_read_clean` (`swbuild.py:4316`) is filled in the check phase of both paths (`:4267`, `:7202`). It
+  lists a document only when all three hold: it is marked, its read is not empty, and no feature the app made reads in
+  error or unread.
+- **What the finish does with it.** `finish_update` drops those marks first (`update.py:2266`). Only then does it add
+  this press's `_documents_left_in_error`.
+- **The stop's wording.** It counts each `still_in_error` part as left in error (`ui_text.py:1967`), so it says "close
+  them all … without saving", never a save offer.
+- **The finding in caveat (i).** `W9C-INTERFACES.md` §11 has "where the finding is False", and that is right. The
+  finding names what the assembly's rebuild *returns* with a part feature in error: False on both versions
+  (`findings.py:1687`, `:1757-1758`). My "True" in the last review was the slip.
+
+**Marked part read clean, then broken by the same press.** In every path where the press changes the part and leaves
+it in error, the mark comes back in the same finish:
+- **Set straight onto the landing** (shown on the fake: M3's stopped stage, `close_all`, then `LANDING_STEPS = ()`).
+  `read_clean` lists the ring, the set fails, `_documents_left_in_error` writes the mark again, and the stop says
+  "close them all … without saving".
+- **A failed second set, or a failed first set beside another global.** The part is changed and not rebuilt, and a
+  failure names it, so it is re-marked (`left_on_the_way` / `stopped_before_the_way`).
+- **A route that lands in error.** The same rebuild failure names the part.
+
+**One window remains. Should-fix, shown; outside every demonstrated path.** The setup: the stopped stage, `close_all`,
+then a fake whose `rebuild` raises in the ring.
+- `_update_document`'s raise path returns a fresh `UpdateResult` with nothing changed. That gap is older: the first
+  review's last note.
+- So the ring, set to 54 and never rebuilt, is neither listed as changed nor re-marked. `read_clean` has already
+  dropped its mark, and the record ends with no mark.
+- The stop offers "or save them … to keep what it did" for Sun and Planet beside a ring it does not mention.
+- Before `1cc2978` the old mark would have survived that press.
+
+*Smallest fix:* drop a `read_clean` mark only when no failure of this press names that document (`names_document`).
+It is Tk-side and changes no call the worker makes. The better fix of the older gap stays as noted: the raise path
+should keep what was set.
+
+**What the amended test still pins.** The amended `test_pressing_again_without_closing_…` now puts a real feature
+code in error, and its old N4 tail ("It worked in H …") could not survive: the press now stops. Nothing is left
+unpinned:
+- the wrapper's keep-what-follows is pinned by
+  `test_ui_text.py::test_a_quiet_press_on_a_part_still_in_error_replaces_only_the_claim_and_keeps_what_follows`;
+- the lost-assembly clause by `09a1183`'s test.
+
+The only way left to reach the "already matches" branch with a still-in-error part is a marked document read empty or
+unread, which the new unread test covers in its failing form.
+
+### `f857c34` (the script's step 2): it checks what was asked
+
+**The check catches every write this press could make:**
+- traced calls that change or show anything, plus `AddComponent5` and `SaveAs3`;
+- every part's globals, layout and carrier included;
+- every document's save flag *and* file time before and after;
+- the result's lists, `skipped`, and the failures naming the ring's file alone;
+- the ring at Tooth Space 72 with 54 teeth;
+- W9a's `read_now`/`written` of the assembly, and the gear mates' ratios.
+
+The flags are read last before the press and first after it, so the bracket holds the press alone. `read_now` shows
+no configuration, so it marks nothing; W9a ran it that way on SolidWorks.
+
+**Could it pass with a write having happened?**
+- **A write to the assembly that no trace sees** (its own globals, say, which `live_globals` does not read for the
+  assembly). This is caught only by the assembly's save flag going False → True, which is exactly what
+  `M3_CHANGED_BY_STEP_1` together with the "modified beyond step 1's parts" test (`w9c_demonstration.py:688`) makes
+  sure of.
+- **A non-global write to Sun, Planet or Ring.** Those three are already modified, so their flags cannot show it. It
+  would have to be untraced, which rules out a rebuild. The app makes no such write on this plan.
+
+So it cannot pass on any write this press could make.
+
+**The one unmeasured assumption.** After step 1, only Sun's, Planet's and Ring's files should read modified.
+- Step 1 does not touch the assembly. Run 8's step 1 trace is `OpenDoc6`, `IsSuppressed2`, `GetSystemValue3` and three
+  `ForceRebuild3`: the three parts' own top-only rebuilds. The parts step stopped in the ring before the layout,
+  carrier and assembly steps, and the motion check phase only reads.
+- What no log in this repo measures is whether rebuilding a part in its own window, with its assembly open, sets the
+  assembly's `GetSaveFlag`. I found no reading either way.
+- If it does, the check fails falsely on "modified beyond step 1's parts ['RangeBox.SLDASM']". It is a FAIL, not a
+  STOP, and the log's `fact` line before step 2 prints the flags. The before/after comparison would still hold, and
+  that is the evidence.
+
+So the assumption is reasonable, and the worst case is a readable false FAIL, not bad evidence.
+
+*Should-fix in the script, for later runs:* also compare the assembly's own globals (`W.live_globals` on the
+assembly). Then turn "modified beyond step 1's parts" into a fact, so the check no longer leans on that one
+assumption.
+
+### The run in progress
+
+It stands as started:
+- `1cc2978` changes no call the worker makes. `read_clean` is a list filled from reads the check phase already made.
+- In `remake` M3, step 2's ring reads Tooth Space at 72, so it is never in `read_clean`.
+- Step 3's ring reads clean at 55, so its mark is dropped one step earlier than before, and the routed press then
+  ends clean as in run 8.
+- The script's checks at step 3 (`not marked()`) are met either way.

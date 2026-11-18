@@ -2492,14 +2492,112 @@ def test_w9c_probes_on_2024_read_as_on_2026_and_set_every_twin():
     assert findings.ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2024 is True
 
 
-def test_w9c_gates_are_not_measured_until_the_full_build_reads_them():
-    """W9C-INTERFACES.md §8 (ruling C7): every new kind of write Update makes in place is gated by its own finding,
-    None on both versions until W9c's full build reads it clean."""
-    for name in ("EXTERNAL_REFERENCES_READ", "UPDATE_INSERTS_A_GEAR", "UPDATE_MAKES_MATES_WITH_MODES",
-                 "UPDATE_BANDS_IN_PLACE", "UPDATE_ADDS_A_MODE", "UPDATE_REMOVES_A_MODE",
-                 "UPDATE_MAKES_A_NEW_COUPLING", "UPDATE_SUPPRESSES_THE_RELIEF"):
-        for year in (2026, 2024):
-            assert hasattr(findings, f"{name}_ON_{year}") and getattr(findings, f"{name}_ON_{year}") is None, name
+W9C_RUN5 = LATEST.parent / "w9c-demo-20261117-094223.json"
+W9C_RUN5_LOG = LATEST.parent / "w9c-demo-sw2026-20261117-5-fixed-modes-bands-off-clean.log"
+W9C_RUN6 = LATEST.parent / "w9c-demo-20261117-111036.json"
+W9C_RUN6_LOG = LATEST.parent / "w9c-demo-sw2026-20261117-6-remake-clean-ring-cause.log"
+W9C_RUN10 = LATEST.parent / "w9c-demo-20261117-143454.json"
+W9C_RUN10_LOG = LATEST.parent / "w9c-demo-sw2026-20261117-10-final-whole-remake-script-fault.log"
+W9C_RUN11 = LATEST.parent / "w9c-demo-20261117-153629.json"
+W9C_RUN11_LOG = LATEST.parent / "w9c-demo-sw2026-20261117-11-final-remake-step2-assembly-flag.log"
+W9C_MEASURED = ("UPDATE_INSERTS_A_GEAR", "UPDATE_BANDS_IN_PLACE", "UPDATE_ADDS_A_MODE", "UPDATE_REMOVES_A_MODE",
+                "UPDATE_MAKES_MATES_WITH_MODES")
+W9C_UNMEASURED = ("UPDATE_MAKES_A_NEW_COUPLING", "UPDATE_SUPPRESSES_THE_RELIEF", "EXTERNAL_REFERENCES_READ")
+
+
+def test_w9c_gates_are_set_on_2026_as_the_final_runs_measured_them_and_none_on_2024():
+    """findings.py, W9c's gates (W9C-RUNS-REVIEW.md, the addendum on the final runs, §4): the five measured True on
+    2026, the other three None; every _ON_2024 None until the 2024 run."""
+    for name in W9C_MEASURED:
+        assert getattr(findings, f"{name}_ON_2026") is True, name
+    for name in W9C_UNMEASURED:
+        assert getattr(findings, f"{name}_ON_2026") is None, name
+    for name in W9C_MEASURED + W9C_UNMEASURED:
+        assert hasattr(findings, f"{name}_ON_2024") and getattr(findings, f"{name}_ON_2024") is None, name
+    assert not hasattr(findings, "EXTERNAL_REFERENCES_READ_ROUTE_CANDIDATES_2026")      # facts in the comment only
+
+
+def test_w9c_gates_on_2026_rest_on_the_final_runs_on_34_0_0():
+    """Run 10 (every section, 3a9e592, 34.0.0) proposes each value as set; its fixed, modes, remove and landing lines
+    hold; run 11 proposes the remake's again and shows remake's M3 step 2 writing nothing."""
+    data, run10 = _w9a_run(W9C_RUN10, W9C_RUN10_LOG, "3a9e592", (34, 0, 0))
+    proposal = data["proposal"]
+    for name in W9C_MEASURED:
+        assert proposal[f"{name}_ON_2026"] is getattr(findings, f"{name}_ON_2026") is True, name
+    for name in W9C_UNMEASURED:          # UPDATE_MAKES_A_NEW_COUPLING: no legal edit reaches it, so none proposed
+        assert proposal.get(f"{name}_ON_2026") is None and getattr(findings, f"{name}_ON_2026") is None, name
+    assert "UPDATE_MAKES_A_NEW_COUPLING_ON_2026" not in proposal
+    for at, name, value in ((453, "UPDATE_INSERTS_A_GEAR", True), (454, "UPDATE_BANDS_IN_PLACE", True),
+                            (661, "UPDATE_ADDS_A_MODE", True), (983, "UPDATE_REMOVES_A_MODE", True),
+                            (1373, "UPDATE_MAKES_MATES_WITH_MODES", True),
+                            (1572, "UPDATE_SUPPRESSES_THE_RELIEF", None), (1633, "EXTERNAL_REFERENCES_READ", None)):
+        assert run10[at].startswith(f"propose {name}_ON_2026 = {value}  # "), (at, run10[at])
+        assert getattr(findings, f"{name}_ON_2026") is value, name
+    assert run10[1632].startswith("propose EXTERNAL_REFERENCES_READ_ROUTE_CANDIDATES_2026 = ['IComponent2.ListExternal"
+                                  "FileReferencesCount', 'IComponent2.ListExternalFileReferences2', 'IModelDocExtension"
+                                  ".ListExternalFileReferencesCount', 'IModelDocExtension.ListExternalFileReferences', "
+                                  "'ISldWorks.GetDocumentDependencies2']")
+    assert run10[170] == ("fact    landing: the fix is shown: every foreseen change routed clean as foreseen True; every "
+                          "unforeseen one set straight clean True; the straight failure's file clean at 55 when reopened "
+                          "True")
+    assert run10[382] == "ok      fixed: the Update ended ok: failures [], skipped ''"
+    assert run10[384].startswith("ok      fixed: Hub's part built (Hub_m1.25_N17.SLDPRT, in the copy), Hub inserted as "
+                                 "'Hub_m1.25_N17-1', its mates ['Hub on Output Axis', 'Hub along Output', 'RangeSlv "
+                                 "splined to Hub'] made and read on in every mode ['H', 'N', 'L'] (M6)")
+    assert run10[385] == "ok      fixed: RangeSlv's bands given in place: ['RangeSlv']"
+    assert run10[401] == ("ok      fixed: Hub (Hub_m1.25_N17-1) reads resolved in every mode (M5): {'H': {'Hub_m1.25_N17-1'"
+                          ": 2}, 'N': {'Hub_m1.25_N17-1': 2}, 'L': {'Hub_m1.25_N17-1': 2}}")
+    assert run10[446] == ("ok      fixed: the second press: every document reads GetSaveFlag False before and after an "
+                          "Update that changed nothing (GEAR_MATE_DEFINITION_READ_MARKS 'nothing'): marked before [], "
+                          "after []")
+    assert run10[639] == ("ok      modes: the record's inventory names H2 in its modes and in every user mate's on-list "
+                          "where SolidWorks reads it on there, and nowhere it reads suppressed (8 mates): yes")
+    assert run10[687].startswith("ok      modes, N removed, the gate patched, before its refusal (must-fix 1): the "
+                                 "footer says the user-work line as the window would: 'As read at ")
+    assert run10[1067].startswith("ok      remove: G4 (OutputGear-1) taken out with its mates ['G3 meshes G4', 'G4 along "
+                                  "S3', 'G4 on S3 Axis'] (each read gone by name), every other mate there")
+    assert data["stops"] == [] and data["fails"] == ["remake: AttributeError: 'NoneType' object has no attribute "
+                                                     "'part'"]                # the script's, fixed in eabf14e; run 11
+
+    data11, run11 = _w9a_run(W9C_RUN11, W9C_RUN11_LOG, "3a9e592 with probe/w9c_demonstration.py from eabf14e",
+                             (34, 0, 0))
+    assert data11["proposal"]["UPDATE_MAKES_MATES_WITH_MODES_ON_2026"] is True
+    assert run11[200].startswith("propose UPDATE_MAKES_MATES_WITH_MODES_ON_2026 = True  # remake: gear mates of a "
+                                 "gearbox with modes remade")
+    assert run11[309].startswith("fact    remake, M3: before step 2, modified ['Gear_m1.25_N13.SLDPRT', "
+                                 "'Gear_m1.25_N29.SLDPRT', 'RangeBox.SLDASM', 'Ring_m1.25_N55.SLDPRT'] (step 1 changed "
+                                 "['Gear_m1.25_N13.SLDPRT', 'Gear_m1.25_N29.SLDPRT', 'Ring_m1.25_N55.SLDPRT'])")
+    assert run11[316] == ("fact    remake, M3: pressed again without closing: the press took 41.1 s; SolidWorks calls "
+                          "by member {'OpenDoc6': 8, 'IsSuppressed2': 112, 'GetSystemValue3': 1}")
+    assert run11[359].startswith(
+        "fact    remake, M3: pressed again without closing: status 'Ring_m1.25_N55 is still open in SolidWorks as an "
+        "earlier Update SolidWorks left it, in error and holding the new values, so this press set nothing in it: "
+        "close it in SolidWorks without saving (the file on disk is as before that Update), then press Update "
+        "SolidWorks again.'; parts set []; result {'changed': [], 'mates_made': [], 'remade_in_modes': [], "
+        "'placed': [], 'failures': [('Ring_m1.25_N55.SLDPRT', ")
+    assert "'skipped': 'the assembly, because Ring_m1.25_N55.SLDPRT is in error'}; calls that change or show none" \
+        in run11[359]
+    assert run11[361].startswith("FAIL    remake, M3: step 2 stopped before any write") and run11[361].endswith(
+        "[\"modified beyond step 1's parts ['RangeBox.SLDASM']\"]")
+    assert data11["sections"]["remake"]["again"]["second"]["wrote"] == ["modified beyond step 1's parts "
+                                                                        "['RangeBox.SLDASM']"]
+    assert run11[452].startswith("ok      remake, M3: after closing without saving, the press goes through routed by "
+                                 "way of 53 (('No. of Teeth', '53')), the ring at 54 with nothing in error ([]), the mark "
+                                 "gone ([])")
+
+
+def test_w9c_gates_on_2026_rest_on_the_morning_runs_on_34_1_1():
+    """Runs 5 (fixed, modes, bands-off at 9efcb2c) and 6 (remake at 30bf0e9) on 34.1.1 propose the same values."""
+    data5, run5 = _w9a_run(W9C_RUN5, W9C_RUN5_LOG, "9efcb2c", (34, 1, 1))
+    for at, name, value in ((344, "UPDATE_INSERTS_A_GEAR", True), (345, "UPDATE_BANDS_IN_PLACE", True),
+                            (546, "UPDATE_ADDS_A_MODE", True), (852, "UPDATE_REMOVES_A_MODE", True),
+                            (1081, "UPDATE_SUPPRESSES_THE_RELIEF", None)):
+        assert run5[at].startswith(f"propose {name}_ON_2026 = {value}  # "), (at, run5[at])
+        assert data5["proposal"][f"{name}_ON_2026"] is value is getattr(findings, f"{name}_ON_2026"), name
+    data6, run6 = _w9a_run(W9C_RUN6, W9C_RUN6_LOG, "30bf0e9", (34, 1, 1))
+    assert run6[280].startswith("propose UPDATE_MAKES_MATES_WITH_MODES_ON_2026 = True  # ")
+    assert data6["proposal"]["UPDATE_MAKES_MATES_WITH_MODES_ON_2026"] is True is \
+        findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026
 
 
 W9D_FINDINGS = ("OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN", "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS", "FILE_VERSION_READ",

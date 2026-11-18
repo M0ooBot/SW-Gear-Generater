@@ -289,7 +289,8 @@ def test_the_record_differs_from_a_fresh_builds_only_where_the_plan_says(desk, m
 
 # -- each gate None refuses before any write, said before the press and recorded after ------------------------------
 
-def test_with_its_gates_unmeasured_the_done_when_edit_is_foreseen_refused_before_any_write_and_recorded(desk):
+def test_with_its_gates_unmeasured_the_done_when_edit_is_foreseen_refused_before_any_write_and_recorded(
+        desk, w9c_unmeasured):
     press = desk.press(fixed())
     text, ok = press.before
     assert not ok and text.startswith("Update SolidWorks would add Hub on Output (a new part, Hub_m1.25_N17)")
@@ -990,8 +991,9 @@ def test_a_stop_in_a_part_left_in_error_says_close_it_without_saving_never_save_
     press = d.press(_sun_backlash(range_box()))
     assert press.after == (
         "Update SolidWorks stopped. Gear_m1.25_N29.SLDPRT: SolidWorks reported an error rebuilding Gear_m1.25_N29. It "
-        "had already changed Gear_m1.25_N29, not saved, and Gear_m1.25_N29 is left in error: close it in SolidWorks "
-        "without saving (the file on disk is as before this Update), then press Update SolidWorks again.")
+        "had already changed Gear_m1.25_N29, not saved, and Gear_m1.25_N29 is left in error: close it and RangeBox "
+        "in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on disk are as "
+        "before this Update), then press Update SolidWorks again.")
     assert "save it in SolidWorks to keep" not in press.after and "put right" not in press.after
 
 
@@ -1034,8 +1036,8 @@ def test_the_footer_after_a_stop_in_a_part_left_in_error_says_close_without_savi
     text, _ = d.footer(_sun_backlash(range_box()))
     assert text.endswith(
         "Gear_m1.25_N29 has changes from Update SolidWorks that are not saved, and Gear_m1.25_N29 was left in error "
-        "when it stopped: close it in SolidWorks without saving (the file on disk is as before that Update), then "
-        "press Update SolidWorks again."), text
+        "when it stopped: close it and RangeBox in SolidWorks without saving, answering No when SolidWorks asks to "
+        "save them (the files on disk are as before that Update), then press Update SolidWorks again."), text
     assert "save them in SolidWorks to keep" not in text and "save it in SolidWorks to keep" not in text
     back = store.link_record_from_json(store.link_record_to_json(d.record))
     assert back.unsaved_in_error == d.record.unsaved_in_error                  # written and read back
@@ -1059,24 +1061,28 @@ def test_a_record_without_the_mark_reads_its_unsaved_line_as_before():
 # -- the fixes review: M3 (a press that sets nothing proves nothing), S6 (modes read), S7 (one name rule) ------------
 
 def test_pressing_again_without_closing_keeps_the_mark_and_says_close_without_saving_not_already_matches():
+    """The part is put in error as SolidWorks shows one (P0: a feature of the app's with an error code; the fake's
+    rebuild_ok alone, which this test used before the review of the M3 fix, is an error no feature read can see, and
+    a part read clean now sheds its mark). Pressed again without closing, the press stops on it before any write."""
     d = Desk()
     d.build(range_box())
-    d.sw.rebuild_ok = False
-    d.press(_sun_backlash(range_box()))
     part = next(p.path for p in d.record.parts if "Sun" in p.gears)
+    d.sw.breaks_on_set[_key(part)] = [("Teeth", 1)]
+    d.press(_sun_backlash(range_box()))
+    mark = len(d.sw.calls)
     again = d.press(_sun_backlash(range_box()))              # not closed: the part holds the new value, in error
-    assert again.result.ok and not again.result.failures
+    assert d.writes(mark) == [] and [w for w, _ in again.result.failures] == ["Gear_m1.25_N29.SLDPRT"]
     assert [store.same_path(p, part) for p in d.record.unsaved_in_error] == [True]
     assert not again.ok and again.after == (
         "Gear_m1.25_N29 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the "
-        "new values, so this press set nothing in it: close it in SolidWorks without saving (the file on disk is as "
-        "before that Update), then press Update SolidWorks again. It worked in H, the configuration that was active; "
-        "it did not show the other modes, since nothing in H needed changing.")      # the rest is kept (N4)
+        "new values, so this press set nothing in it: close it and RangeBox in SolidWorks without saving, answering "
+        "No when SolidWorks asks to save them (the files on disk are as before that Update), then press Update "
+        "SolidWorks again.")
     text, _ = d.footer(_sun_backlash(range_box()))
-    assert "was left in error when it stopped: close it in SolidWorks without saving" in text
+    assert "was left in error when it stopped: close it and RangeBox in SolidWorks without saving, answering No" in text
     assert "in SolidWorks to keep" not in text
     d.sw.close_all()
-    d.sw.rebuild_ok = True
+    d.sw.feature_codes.pop((_key(part), "Teeth"))            # reopened from its file, as it was before: clean
     clean = d.press(_sun_backlash(range_box()))              # rebuilt that very document clean: the mark goes
     assert clean.result.ok and clean.ok and d.record.unsaved_in_error == []
 
@@ -1170,10 +1176,11 @@ def _relief_comes_out_in_error(desk, sleeve):
 
 
 def _says_close_without_saving(press, footer):
-    assert "Sleeve_m1.25_N17 is left in error: close it in SolidWorks without saving" in press.after, press.after
+    assert "Sleeve_m1.25_N17 is left in error: close it and RangeBox in SolidWorks without saving, answering No when " \
+        "SolidWorks asks to save them" in press.after, press.after
     assert "save it in SolidWorks to keep" not in press.after, press.after
-    assert "Sleeve_m1.25_N17 was left in error when it stopped: close it in SolidWorks without saving" in footer, \
-        footer
+    assert "Sleeve_m1.25_N17 was left in error when it stopped: close it and RangeBox in SolidWorks without saving, " \
+        "answering No when SolidWorks asks to save them" in footer, footer
     assert "save it in SolidWorks to keep" not in footer, footer
 
 
@@ -1207,3 +1214,195 @@ def test_a_sleeve_marked_earlier_whose_bands_alone_fail_on_the_relief_keeps_its_
     assert [what for what, _ in press.result.failures] == ["Sleeve_m1.25_N17.SLDPRT"]
     assert [store.same_path(p, sleeve) for p in d.record.unsaved_in_error] == [True]
     _says_close_without_saving(press, d.footer(fixed())[0])
+
+
+# -- the eighth run on SolidWorks 2026, remake's M3: pressed again without closing, the ring still open in error ------
+
+def _m3_stage():
+    """remake's M3 stage on RangeBox: Sun 30, Planet 12, Ring 55 -> 54 (a landing), its gear mates remade."""
+    return _with(_with(_with(range_box(), "Sun", teeth="30"), "Planet", teeth="12"), "Ring", teeth="54")
+
+
+def test_pressed_again_with_the_ring_still_open_in_error_the_press_writes_nothing_and_says_close_without_saving(
+        measured):
+    """The fake as SolidWorks: the ring set straight lands on the far branch (Tooth Space 72), and an assembly's
+    rebuild reads false while a part of it has a feature in error (ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR). The
+    second press, without closing, used to go on into the assembly, remake a gear mate and stop on the assembly's
+    rebuild, offering to save RangeBox. Now it stops before any write, on the ring, and says what step 2 says."""
+    d = Desk()
+    d.build(range_box())
+    ring = _part(d.record, "Ring")
+    steps, swbuild.LANDING_STEPS = swbuild.LANDING_STEPS, ()
+    try:
+        first = d.press(_m3_stage())                         # set straight: stops in the ring
+    finally:
+        swbuild.LANDING_STEPS = steps
+    assert [w for w, _ in first.result.failures] == ["Ring_m1.25_N55.SLDPRT"]
+    assert "Ring_m1.25_N55 is left in error" in first.after
+    mark = len(d.sw.calls)
+    again = d.press(_m3_stage())                             # not closed: the ring holds 54, in error
+    assert d.writes(mark) == [], d.writes(mark)
+    assert [w for w, _ in again.result.failures] == ["Ring_m1.25_N55.SLDPRT"]
+    assert not again.result.changed and not again.result.remade_in_modes
+    assert [store.same_path(p, ring) for p in d.record.unsaved_in_error] == [True]
+    assert not again.ok and again.after == (
+        "Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the "
+        "new values, so this press set nothing in it: close it and RangeBox in SolidWorks without saving, answering "
+        "No when SolidWorks asks to save them (the files on disk are as before that Update), then press Update "
+        "SolidWorks again."), again.after
+    text, _ = d.footer(_m3_stage())
+    assert text.endswith(
+        "Gear_m1.25_N13, Gear_m1.25_N29 and Ring_m1.25_N55 have changes from Update SolidWorks that are not saved, and "
+        "Ring_m1.25_N55 was left in error when it stopped: close them all and RangeBox in SolidWorks without saving, "
+        "answering No when SolidWorks asks to save them (the files on disk are as before that Update), then press "
+        "Update SolidWorks again."), text
+    assert "to keep" not in text and "already matches" not in text, text
+    d.sw.close_all()                                         # closed without saving, as told: the third press goes
+    third = d.press(_m3_stage())
+    # The ring is loaded from its file at 55, so it does not hold the workbook's values and is never stopped on: it
+    # goes by way of 53 and rebuilds clean, and its mark goes. (The fake then fails this stage's put of a planet,
+    # "did not take its frame", which SolidWorks did not: a limit of the fake's planetary put, not of this rule.)
+    ring_done = next(p for p in third.result.parts if p.document == "Ring_m1.25_N55.SLDPRT")
+    assert ring_done.by_way_of == ("No. of Teeth", "53") and ring_done.rebuilt
+    assert not [w for w, _ in third.result.failures if update.names_document(w, ring)], third.result.failures
+    assert d.record.unsaved_in_error == []
+
+
+def test_only_a_part_marked_left_in_error_holding_its_values_with_the_apps_own_feature_in_error_stops_a_press():
+    """swbuild._held_in_error, the rule alone: the mark, the values held (this press would set nothing there) and a
+    feature the app made read in error, all three. The user's own features in error, and a code SolidWorks would not
+    give, never count (K3: theirs alone never stop an Update)."""
+    from gear_generator import swcom
+    doc = swbuild.DocumentValues("C:\\Out\\Ring_m1.25_N55.SLDPRT", made=("Tooth Space", "Teeth"), left_in_error=True)
+    states = [swcom.FeatureState("Tooth Space", "Cut", 72, False), swcom.FeatureState("Teeth", "?", swcom.UNREAD, False),
+              swcom.FeatureState("Keyway", "ICE", 41, False)]
+    assert swbuild._app_features_in_error(doc, states) == ["Tooth Space"]                   # noqa: SLF001
+    for document, held, names, stops in ((doc, "degrees", ["Tooth Space"], True),
+                                         (replace(doc, left_in_error=False), "degrees", ["Tooth Space"], False),
+                                         (doc, "", ["Tooth Space"], False),
+                                         (doc, "degrees", [], False)):
+        result = swbuild.GearboxUpdate()
+        assert swbuild._held_in_error([document], [held], {document.path: names}, result,       # noqa: SLF001
+                                      ["the assembly"]) is stops
+        assert [w for w, _ in result.failures] == (["Ring_m1.25_N55.SLDPRT"] if stops else [])
+        assert result.skipped == ("the assembly, because Ring_m1.25_N55.SLDPRT is in error" if stops else "")
+
+
+# -- the review of the M3 fix: (ii) a marked part read clean, (iii) a part still in error beside another failure -----
+
+def _m3_stopped():
+    """remake's M3 step 1 on the fake: the stage set straight stops in the ring, which the record marks. The desk and
+    the ring's path."""
+    d = Desk()
+    d.build(range_box())
+    steps, swbuild.LANDING_STEPS = swbuild.LANDING_STEPS, ()
+    try:
+        first = d.press(_m3_stage())
+    finally:
+        swbuild.LANDING_STEPS = steps
+    ring = _part(d.record, "Ring")
+    assert [store.same_path(p, ring) for p in d.record.unsaved_in_error] == [True], first.after
+    return d, ring
+
+
+def _ring_codes(d, ring, tooth_space):
+    """The ring's landing in the fake set aside, its Tooth Space then reading ``tooth_space`` (0: clean, as a repair
+    in SolidWorks leaves it)."""
+    d.sw.wrong_branch.discard(_key(ring))
+    d.sw.feature_codes.pop((_key(ring), "Teeth"), None)
+    d.sw.feature_codes[(_key(ring), "Tooth Space")] = tooth_space
+    if not tooth_space:
+        del d.sw.feature_codes[(_key(ring), "Tooth Space")]
+
+
+def test_a_marked_part_repaired_in_solidworks_sheds_its_mark_and_is_never_called_still_in_error(measured):
+    """(ii): the ring, left in error, is repaired by hand and reads clean at 54. The press is not stopped on it, and
+    neither the status nor the footer may call it still in error or tell the user to throw it away."""
+    d, ring = _m3_stopped()
+    _ring_codes(d, ring, 0)
+    again = d.press(_m3_stage())
+    assert "still open in SolidWorks" not in again.after, again.after
+    assert d.record.unsaved_in_error == [] and again.finished.still_in_error == []
+    text, _ = d.footer(_m3_stage())
+    assert "left in error" not in text, text
+    assert [store.same_path(p, ring) for p in again.result.read_clean] == [True]
+
+
+def test_a_marked_part_whose_read_has_a_code_unread_keeps_its_mark_and_the_stop_never_offers_to_save(measured):
+    """(ii)'s other side, and (iii): a code SolidWorks would not give is no repair, so the mark stays and the part is
+    still said in error; the press is not stopped on it and fails further on, and its stop then tells the user to
+    close everything without saving, never to save what it changed beside a part to be closed unsaved."""
+    d, ring = _m3_stopped()
+    _ring_codes(d, ring, swbuild.UNREAD)
+    again = d.press(_m3_stage())
+    assert "It had already changed RangeBox, not saved, and Ring_m1.25_N55 is left in error: close them all in " \
+        "SolidWorks without saving, answering No when SolidWorks asks to save them" in again.after, again.after
+    assert "to keep" not in again.after and "Ring_m1.25_N55 is still open in SolidWorks" in again.after, again.after
+    assert again.result.failures and again.result.changed
+    assert [store.same_path(p, ring) for p in d.record.unsaved_in_error] == [True]
+    assert again.result.read_clean == []
+
+
+def test_a_mark_goes_on_a_read_only_when_it_was_made_whole():
+    """swbuild._read_clean: marked, read, nothing of the app's in error or unread. Not read (no ``made``: an empty
+    read), unread, in error, or not marked: the mark stays."""
+    from gear_generator import swcom
+    doc = swbuild.DocumentValues("C:\\\\Out\\\\Ring_m1.25_N55.SLDPRT", made=("Tooth Space", "Teeth"), left_in_error=True)
+    clean = [swcom.FeatureState("Tooth Space", "Cut", 0, True), swcom.FeatureState("Keyway", "ICE", 41, False)]
+    for document, states, noted in ((doc, clean, True),
+                                    (doc, [], False),
+                                    (doc, [swcom.FeatureState("Tooth Space", "Cut", swcom.UNREAD, False)], False),
+                                    (doc, [swcom.FeatureState("Tooth Space", "Cut", 72, False)], False),
+                                    (replace(doc, left_in_error=False), clean, False)):
+        result = swbuild.GearboxUpdate()
+        swbuild._read_clean(document, states, result)                                           # noqa: SLF001
+        assert result.read_clean == ([document.path] if noted else []), (states, document.left_in_error)
+
+
+def test_a_marked_part_read_clean_whose_rebuild_then_raises_keeps_its_mark_and_no_save_offer(measured):
+    """The re-check of (ii): the ring left in error is repaired in SolidWorks but not closed, so it reads clean ((ii)
+    would drop its mark), and the workbook then asks another count (Sun 28, Planet 14, Ring 56). The ring is set to
+    56 and its rebuild raises; the raise path returns a fresh result with nothing changed, so nothing marks it again.
+    Its mark must stay, and the stop must not offer to save the parts beside it. (Closed instead, the ring is found
+    closed and its mark goes with its unsaved mark, as before (ii): the file holds what it did before that Update.)"""
+    d, ring = _m3_stopped()
+    _ring_codes(d, ring, 0)
+    real = d.sw.rebuild
+
+    def rebuild(kind=None):
+        if d.sw.current and _key(d.sw.current) == _key(ring):
+            raise RuntimeError("SolidWorks stopped responding.")
+        return real(kind)
+
+    d.sw.rebuild = rebuild
+    stage = _with(_with(_with(range_box(), "Sun", teeth="28"), "Planet", teeth="14"), "Ring", teeth="56")
+    again = d.press(stage)
+    assert [store.same_path(p, ring) for p in again.result.read_clean] == [True]
+    assert [w for w, _ in again.result.failures] == ["Ring_m1.25_N55.SLDPRT"], again.result.failures
+    assert [store.same_path(p, ring) for p in d.record.unsaved_in_error] == [True]
+    assert "to keep" not in again.after, again.after
+    assert "Ring_m1.25_N55 is left in error: close them all and RangeBox in SolidWorks without saving, answering No " \
+        "when SolidWorks asks to save them" in again.after, again.after
+
+
+def test_the_close_without_saving_advice_names_the_assembly_that_holds_the_part_and_says_to_answer_no():
+    """W9C-RUNS-REVIEW.md's addendum on the final runs, should-fix A: SolidWorks marks the open assembly modified when
+    a part of it is changed and rebuilt (run 11 on 34.0.0), and a part closed while its assembly stays open stays
+    loaded with its changes. Only a document the record's assembly holds brings the assembly into the advice."""
+    d = Desk()
+    d.build(range_box())
+    ring, asm = _part(d.record, "Ring"), d.record.gearbox.assembly
+    assert update.assembly_holding(d.record, [ring]) == asm
+    assert update.assembly_holding(d.record, ["Ring_m1.25_N55"]) == asm                 # by stem, as the stop names it
+    assert update.assembly_holding(d.record, [d.record.gearbox.layout]) == asm
+    assert update.assembly_holding(d.record, ["C:\\\\Elsewhere\\\\Other.SLDPRT"]) == ""
+    assert update.assembly_holding(update.UpdatePlan(), [ring]) == ""                    # no assembly on the plan
+    assert ui_text.still_in_error_sentence([ring], asm) == (
+        "Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the "
+        "new values, so this press set nothing in it: close it and RangeBox in SolidWorks without saving, answering No "
+        "when SolidWorks asks to save them (the files on disk are as before that Update), then press Update SolidWorks "
+        "again.")
+    assert ui_text.still_in_error_sentence([ring]) == (
+        "Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the "
+        "new values, so this press set nothing in it: close it in SolidWorks without saving (the file on disk is as "
+        "before that Update), then press Update SolidWorks again.")
