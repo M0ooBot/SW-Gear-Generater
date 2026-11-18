@@ -1734,7 +1734,7 @@ What a reading tells is one line under the rows, worded from
 |---|---|
 | above the span | *Your printer adds 0.041 mm a flank: a backlash of 0.173 mm a gear keeps 0.04 mm of play a flank.* |
 | at it, or below it with the backlash held at the floor | *Your printer adds nothing to a flank: a backlash of 0.1 mm a gear, the least proposed (0.04 mm of play a flank alone would ask less).* (*takes 0.019 mm off a flank* below) |
-| a backlash past 0.3 × module | the line, then *That is more than 0.3 × module (0.45 mm), the most a gear of this module is given today: whether it should take more is yours to decide (README: Calibrating your printer, step 6).* |
+| a backlash above the gear's printed default (0.3 mm from module 1 up, 0.3 × module below; A's `Measured.default_mm`, the coordinator's ruling on M2) | the line, then *That is more than the 0.3 mm a printed gear of this module is given today: whether it should take more is yours to decide (README: Calibrating your printer, step 6).* (*0.24 mm* at module 0.8) |
 | not a number above 0 | *Measured: type the calipers' reading in mm, a number such as 11.25.* |
 
 The caret in Measured brings up the span's card in that gear's panel
@@ -1756,10 +1756,12 @@ px. It prints **the part active in SolidWorks** with its `.gear.json` beside it
 the strip's Output folder. The SolidWorks bar says which file under the primary
 button's line: *Print files will write Gear_m1.5_N20_P.step from the active
 part.*, only while B's plan for it would write (`print_bar_line`). A press
-plans (`printout.form_print`) and says a refusal at once; else, with the Output
-folder on disk, one job on the worker (*Print files is writing STEP files from
-SolidWorks…*), then its sentence and `print list.txt` written into the press's
-folder (`printout.write_list`).
+plans (`printout.form_print`) and says a refusal at once (an Output folder not on
+disk among them, B's NO_FOLDER); else one job on the worker (*Print files is
+writing STEP files from SolidWorks…*), then `print list.txt` written into the
+press's folder (`printout.with_list`) and the status composed from what that
+answered. The active part's `.gear.json` is read for planning by
+`store.read_sidecar`, which never moves a record that does not read.
 
 **Print files in the Workbook window.** The footer's fifth button, after
 **Export** and **Export as…** (which write the workbook) and before the build
@@ -1772,10 +1774,9 @@ yet to recalculate (*Print files wrote nothing: Export wrote cells that formulas
 in the workbook may depend on; open and save it in Excel first, so what is built
 can be compared with what it says.*), B's refusal (`printout.workbook_print`,
 from the record, the assessment and Update's plan, and the strip's last
-snapshot's revision), a record that is another workbook's (FOREIGN_RECORD, given
-by the window since B is not handed the workbook's path; the gate still first),
-and an Output folder not on disk (*Print files wrote nothing: the output folder
-… does not exist; make it, or change it on the Box sheet.*). While the job runs
+snapshot's revision, with the window's own verdict on a record that is another
+workbook's passed as `foreign_record=`, so FOREIGN_RECORD and NO_FOLDER are B's in
+B's order). While the job runs
 the footer says *Print files is writing STEP files from SolidWorks…* and holds
 every button; its finish is a standing note, as an Export's, and writes no
 record. Closed while it runs, the window says *This window closes once Print
@@ -1793,31 +1794,40 @@ for it.
 | UNSAVED_MARK | *Print files wrote nothing: Gear_m1.5_N20_P has changes from Update SolidWorks that are not saved; save it in SolidWorks, then print.* |
 | MISMATCHED_MARK | *Print files wrote nothing: Gear_m1.5_N20_P no longer holds what the record says; press Update SolidWorks, then print.* |
 | CHANGES_ON_UPDATE | *Print files wrote nothing: Update SolidWorks would change the values in Gear_m1.25_N29_P (and make Gear_m1.25_N13_P new); press Update SolidWorks and save, then print.* (new alone: *… would make … new; press Update SolidWorks, then print.*) |
+| NEW_REVISION (M1: the Update plan needs a new revision, so Update is never run) | *Print files wrote nothing: the workbook's changes to Gear_m1.5_N20_P and Gear_m1.5_N40_P need a new revision, which Update SolidWorks cannot make; press Build again…, then print the new revision.* |
 | NO_PART | *Print files wrote nothing: G3 has no part yet, and Gear_x is not on disk; build them first, then print.* |
+| NO_FOLDER (planning, or the job when the folder has gone) | *Print files wrote nothing: the output folder C:\Gears\Out does not exist; make it, or choose another, then print.*; none given: *Print files wrote nothing: choose an output folder; it writes into a print folder there.* |
 | WORKBOOK_ERROR | *Print files wrote nothing: the workbook as it stands cannot be compared with what is built; the footer says why.* (B gives it for an error, a provisional read, fixes chosen and not exported, and an Update that cannot say what it would change) |
 | LIGHTWEIGHT | *Print files wrote nothing: with RangeBox open, Gear_m1.25_N29_P may be a lightweight component of it; resolve it there, or open the part itself, then print again.* (B's job cannot tell a lightweight component from a part not loaded, so "may be"; no assembly named: *with an assembly open, …*) |
 | FOREIGN_RECORD | *Print files wrote nothing: the record beside this workbook is another workbook's, so nothing built is this workbook's to print yet; Build makes its own.* |
-| NO_RECORD | *Print files prints a part Gear Generator built: Part1.SLDPRT has no .gear.json beside it, so nothing was written.* |
+| NO_RECORD | *Print files prints a part Gear Generator built: Part1.SLDPRT has no .gear.json beside it, so nothing was written.*; one there that does not read: *… built: the .gear.json beside Part1.SLDPRT does not read, so nothing was written.* |
 | NOT_A_PART | *Print files prints the part active in SolidWorks, and Assem1.SLDASM is not a part: make a gear part active there; nothing was written.* (no file named: without the clause) |
 | MODIFIED | *Print files wrote nothing: Gear_m1.5_N20_P is changed in SolidWorks and not saved; save it, or close it without saving, then print.* |
 | GLOBALS_DIFFER | *Print files wrote nothing: in Gear_m1.5_N20_P, "Face Width" is 9 where its record says 8; press Update values (Update SolidWorks in the Workbook window), or put it back, then print.* |
 | FEATURE_IN_ERROR | *Print files wrote nothing: in Gear_m1.5_N20_P, User Keyway is in error in SolidWorks; fix it there, then print.* |
-| COMPONENT_ONLY | *Print files wrote nothing: Gear_m1.25_N29_P is open only inside RangeBox; close the assembly or open the part, then print.*; no assembly named: *… is open in SolidWorks but not as the active document; make it active, or close it, then print.* |
+| COMPONENT_ONLY | *Print files wrote nothing: Gear_m1.25_N29_P is open only inside RangeBox; close the assembly or open the part, then print.*; no assembly named: *… is open in SolidWorks but not as the active document; make it active, or close it, then print.*; several such: *… are open in SolidWorks but not as the active document; close them, then print.* |
 | SOLIDWORKS_REFUSED | *Print files stopped: SolidWorks would not write Gear_m1.5_N20_P.step (errors 1, warnings 0).* |
 | FILE_CHECK | *Print files stopped: Gear_m1.5_N20_P.step is not fit to print: it does not hold exactly one solid.* (each reason in its words) |
 
-**The result** (`ui_text.print_result`): *Print files wrote Coupon_A.step and its
-print list in C:\Out\print\2026-11-19 10.05.12.*, or *… wrote 4 STEP files and
-their print list in …*; after a stop, the refusal then *What was written is in
-…, and its print list says not to print this set.*; then, each when it holds,
+**The result** (`ui_text.print_result`), composed after the list is written and
+from what `printout.with_list` answered (F2-REVIEW S2), so it never claims a list
+that is not there: *Print files wrote Coupon_A.step and its print list in
+C:\Out\print\2026-11-19 10.05.12.*, or *… wrote 4 STEP files and their print list
+in …*; the list not written, *Print files wrote Coupon_A.step in …, but the print
+list could not be written (the disk is full), so nothing in that folder says what
+each file is: press Print files again for a set with its list.*; after a stop,
+the refusal then *What was written is in …, and its print list says not to print
+this set.* (the list not written: *What was written is in …, but its print list
+could not be written (…), so nothing there says not to print it: do not print
+this set.*); then, each when it holds,
 *SolidWorks warns about Fillet3 in Gear_h; it was written as SolidWorks built
 it.*, *SolidWorks now marks A.SLDPRT as changed since Print files ran, and
 nothing was saved: close it without saving to leave its file as before.*, *The
-document you had active could not be made active again.*, and a list that could
-not be written: *Its print list could not be written (…), so nothing in that
-folder says what each file is or whether to print it: press Print files again
-for a set with its list.* Green only for a set written whole, every document put
-back as it was.
+document you had active could not be made active again.*, *Print files opened X
+and could not close it: close it in SolidWorks without saving.*, *Whether Print
+files left any document marked as changed in SolidWorks could not be read;
+nothing was saved.* Green only for a set written whole with its list, every
+document put back as it was.
 
 **The print list** (`ui_text.print_list_text`): *DO NOT PRINT THIS SET:* and the
 file and reason first when the job stopped; *Print list: <the Box's name, or the
@@ -1830,13 +1840,15 @@ tilted with them …)*; *Machined: its backlash is a cutter's, not a printer's; 
 span.*; the arcs, narrow-face, no-contact, internal and bevel lines), *Your
 features left in it: …*, a feature SolidWorks warns about, and *Checked: one
 closed solid, AP214 (AUTOMOTIVE_DESIGN), millimetres; outer diameter and face
-width match the gear.* (or *size not checked (user features)*), *NOT FIT TO
+width match the gear.* (or *size not checked (your features in it)*, *(a
+herringbone, not yet measured)*, *(a ring)* and the other kinds), *NOT FIT TO
 PRINT: …* or *Not written.*; then the slicer settings, said once, and how to
 measure a span.
 
 Boards: `PrintedSpan` (the coupon on the form, printed, a reading typed, the
-span's card) and `WorkbookPrintRefused` (the built reducer, Print files pressed
-while the findings are unset: GATE_COPY said, the five buttons at 1080 px).
+span's card) and `WorkbookPrintRefused` (the built reducer, Print files pressed on
+a SolidWorks writing a STEP file has not been measured on, 2025: GATE said, the
+five buttons at 1080 px; the findings are set for 2024 and 2026).
 Every other board's footer gains Print files. Their renders wait for
 `render.py` on a machine with its Chrome, as every board's since F1.
 

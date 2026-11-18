@@ -1451,11 +1451,13 @@ coupon_plan = printout.PrintPlan(None, (printout.PrintPart(path="C:\\Gears\\Coup
                                  folder="C:\\Gears\\print\\2026-11-19 10.05.12")
 boards["PrintedSpan"] = ("Single gear · printed coupon: its span, a reading typed in Measured", single_board(
     coupon_spec, "span", measured="11.291", printing=ui_text.print_bar_line(coupon_plan)))
-# The built reducer with Print files pressed while every F2 finding is unset: refused by name, nothing written, the
-# footer's five buttons at 1080 px.
-boards["WorkbookPrintRefused"] = ("Workbook · Print files pressed before STEP export is measured",
+# The built reducer with Print files pressed on a SolidWorks version writing a STEP file has not been measured on
+# (2025 here; the findings are set for 2024 and 2026): refused by name, nothing written, the footer's five buttons at
+# 1080 px.
+boards["WorkbookPrintRefused"] = ("Workbook · Print files pressed on a SolidWorks it is not measured on",
                                   workbook_board(reducer, desk=built_desk, note=ui_text.Note(
-                                      ui_text.print_refusal(printout.Refusal(printout.GATE_COPY)), False,
+                                      ui_text.print_refusal(printout.Refusal(
+                                          printout.GATE, (), {"year": "2025", "revision": "33.1.0"})), False,
                                       ui_text.NOTE_STANDING)), WINDOW_WIDTH)
 
 layout = []
