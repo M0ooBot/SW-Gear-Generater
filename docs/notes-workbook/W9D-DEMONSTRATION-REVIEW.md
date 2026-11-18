@@ -828,3 +828,80 @@ assembly are the only ones (3) still bears on.
 **The face mates' expectations rest on the walk's first real run.**
 - An r3 failure on SolidWorks makes them `unread` and FAILs `outcome` and `definitions`: a reading, not a STOP.
 - `CARRY_INSERTS` would then not be proposed (item 3's note).
+
+## Re-check of `927487e` and `97628ef`, before the second 2026 run
+
+The script at `97628ef` was run against package A at `c740f92` and package B at `11a63ab`. No SolidWorks was run.
+- `--self-check` ends with 0 failed.
+- The suite at `c740f92`: 3968 passed, with only the two tkinter failures.
+
+### Verdict
+
+**The script is fit for the run.**
+- No new check can FAIL on a harmless measured fact in this fixture.
+- No `propose` line comes out stronger than its evidence.
+- One check could FAIL wrongly in another fixture (D4).
+- Two small lines are worth adding (D5, D6).
+
+**The whole head is fit for the two-hour run:** package A at `c740f92`, package B at `11a63ab`, and the script at
+`97628ef`. B's round in flight, the limit-mate *may*, is not met by the run. What the run meets for the first time
+is listed in `W9D-REVIEW-A.md`, at the end of its last section.
+
+### The new checks, one by one
+
+**`fixed_every_mode`, a condition of CARRY_INSERTS.**
+- **What it reads:** `IsFixed` in every mode, for each fallen component and each component fixed in the old assembly.
+- **Fetched fresh in each mode:** `comp_of` goes through `_component_by`, so a held handle cannot read False where
+  W8 §9.4 warns it would.
+- **The member answers on 2026:** run 1's and run 2's `old_before` read Housing-1 True and every other component
+  False.
+- **Which components:** in this fixture, Sprocket-8 and Housing-1. Neither is suppressed in any mode, so the check
+  cannot FAIL on suppression here.
+- **Where it could FAIL wrongly (D4):** a component suppressed in some mode reads IsFixed False there. Sprocket-9 read
+  False in H, its suppressed mode. `fixed_problems` would then call that mode "not fixed". Judge only the modes where
+  the component is resolved, as `flags_judged` already does.
+
+**The kept-name check.**
+- `renames_problems` passes a differing name only where a fact begins `"<old> is carried as <kept>"`.
+- That is exactly the worker's own sentence (`7e3ad9a`, `_carry_cluster`), so differently worded facts cannot meet it.
+- It is a plain `check`, not a `clean` key, so even a FAIL would hold back no finding.
+
+**The fact tags.** The tags only label the log; nothing judges by them.
+- `c740f92`'s new sentence, *"after … fell back in H: … read fixed in N but … mm from its frame there, so it was put
+  back at it"*, contains "fell back in". So it falls under "fixed after a fallback", not "worker".
+- A sentence under no tag would still be logged, as "worker".
+
+**Proposals.**
+- **CARRY_REMAKE_KINDS** now uses `swbuild.carry_kind` on what R read, the gate's own words.
+  - `kinds_clean` counts a kind only if a mate of it was made again and read back clean, and no mate of it is unclean.
+  - The mates expected to be made again but not reached sit in `unclean`, so they hold the kind back.
+  - A kind R read as `unknown` is not a gate word and drops out.
+  - No limit angle is in the fixture, so none can be proposed. "limit distance" rests on UserLimit10 alone, and its
+    mates are now printed.
+- **CARRY_INSERTS** gains a condition, so it can only get stricter.
+
+**Gear alignment and Flipped.**
+- A gear's alignment is printed and no longer judged, as the worker no longer compares it.
+- A distance's or angle's `flipped` is no longer compared. Its FlipDimension and Flipped before and after are printed
+  beside the worker's sentence.
+
+**Self-check coverage.** Each new judgement has its failing way checked:
+- a kept name the worker did not say;
+- a mode read not fixed, or not read at all;
+- a gear's alignment not judged, and another kind's still judged;
+- no limit kind proposed that the run did not show;
+- the worker's `carry_kind` on a plain distance and on a limit one.
+
+The one gap is `fixed_every_mode`'s *"not reached: none"* (no component to judge), which is not self-checked. It
+cannot happen in this fixture, because Housing-1 is always fixed in the old assembly.
+
+### Should-do, none blocking
+
+**D4.** `fixed_problems`: skip a mode where the component is suppressed (above).
+
+**D5.** For the components that `c740f92` may put back, print the script's own frame read beside IsFixed per mode.
+- The worker's *"read fixed … but … mm from its frame"* fact is the first measure of positions per configuration for a
+  fixed component.
+
+**D6.** Log `swConstrainedStatus_e`'s names once, from `swconst.tlb`, with the W9c script's reader.
+- Run 2 and run 3 read 5 on carried user components. Its name is in no committed note (`W9D-REVIEW-A.md`, A7).
