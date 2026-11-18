@@ -176,3 +176,23 @@ the eleven new names None and `SAVE_AS_SILENT` and `SAVE_AS_CALL` as they were.
 
 **A, B and C may start now.** **The probe may run once M1 is in**, with its self-check run again (it should gain a check
 that a non-active part window is in the own-window list).
+
+## Re-check of `9f97e01` (the probe to this review), 2026-11-18
+
+**M1 is fixed at its cause.** `window_proposal` now takes a third list, *background*: parts open in their own window
+but not active. It proposes a read only when that read is True on every one of them as well as on the active documents,
+and False on every component-only one, and it proposes None when the list is empty. The new readings are real: in step
+6 the spur's window is read with the helical active, and in 7d the gear's window is read after the pinion is opened
+(`open_document` raises if the pinion is not then active, `swcom.py:3606`). The active document is logged beside each.
+The self-check holds the failing ways: no background reading gives None; a background `Visible` False rules `Visible`
+out; a background part read as a component by both reads gives None. **S1:** `STEP_EXPORT` needs the spur's
+`extent_holds` True, with the helical's left a fact; the cases "wrong size" and "not read" are each None and
+self-checked. **S2:** 7c now runs last, on the assembly opened again. 7a's and 7b's files are judged, and
+`PART_WINDOW_READ` proposed, before it. The two component proposals still come after 7c, as they must, since each is
+True only if the lightweight case is covered. **Nothing else moved**: the diff is these changes, the docstring and
+`F2-PROBES.md`. The self-check gives 109 ok, 0 failed. **One small should-fix, not blocking:** step 6's background
+entry does not check that the helical really became active (`Session.activate` does not verify). If it had not, that
+entry would be a reading of an active window. 7d's entry is guarded, though, and the proposal needs every entry True,
+so the proposal still rests on a real background reading whenever 7d runs. The reviewer of the run should read the
+`active` label logged with each entry. **Fit to run unattended**: on SolidWorks 2026 as written, then on SolidWorks 2024
+in a fresh session with `--close-outlived-whats-wrong`.
