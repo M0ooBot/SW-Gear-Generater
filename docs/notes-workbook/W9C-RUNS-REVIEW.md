@@ -1172,3 +1172,202 @@ as before. The edge states:
   Neither difference is a code path the runs missed.
 
 **No must-fix before the 2024 run.** Run `remake` last there.
+
+
+---
+
+## `remake-m3` on SolidWorks 2024 (1dc9350), reviewed
+
+*Independent, 2026-11-18, at `4623701`. I started no SolidWorks, changed no code and ran no tests; I read the log
+`probe/results/sw2024/w9c-demo-sw2024-20261118-5-remake-m3-second-pass-assembly-flag.log` (cited `24-5:`) line by
+line, its JSON `w9c-demo-20261118-045156.json`, and the note's new section.*
+
+- *Snapshot and version:* the log's line 2 names snapshot `c2d95cc`, line 4 attaches SolidWorks 2024 32.5.0, PID 52980,
+  10.73 GB free. `open before: []`. The rule lines say the close path was asked for and in force (24-5:7-8).
+- *The note's figures* check against their lines: the times, the 6.86 GB peak (24-5:440), free memory never under 9.48
+  GB (24-5:374, 432), the calls by member, the inventory lines and each box's lines. "About 23 minutes from
+  SolidWorks' start to its exit" is the operator's: the log's section time is 1287 s (24-5:493).
+
+**Verdict.** Steps 2, 2b and 3 stand as measured on 2024. The one FAIL is a fact of SolidWorks 2024, not a fault of
+the app, and nothing needs to run again. Both boxes outlived their jobs. The sentences must change: exact words and
+a finding are below. W9c's confirmation on 2024 is met for the five gates and for M3.
+
+### 1. Steps 2, 2b and 3 of the first pass
+
+- **Step 2 stands, under the strict check** (24-5:178).
+  - No traced call changed or showed anything. The calls by member (24-5:133) are run 11's (log 11:316).
+  - Every part's and the assembly's globals, every save flag and every file time read as before; the JSON's
+    `second.flags` are the same before and after, RangeBox already marked before.
+  - The ring read in error at 54 teeth with `[('Tooth Space', 51), ('Teeth', 51)]` before and after (24-5:125, 178).
+  - The status and the footer were the still-in-error sentence alone (24-5:176-177, 181).
+  - No box came in it. Its press was the second activation of RangeBox since step 1.
+- **Step 2b stands, and it bears out the premise of `f4eabf5`'s advice.**
+  - After `QuitDoc` of the three parts' windows, SolidWorks still held all three, and the ring still read in error
+    at 54 with 51 and 51. The three parts' flags read False and only RangeBox read modified (24-5:182; JSON
+    `parts_closed`).
+  - The press then stopped again on the ring alone, wrote nothing and gave the same advice (24-5:190-191, 233-234).
+  - So a part closed alone stays loaded, in error, holding the new value, and its save flag no longer says so. The
+    advice must name the assembly, and its wording stands.
+  - *Not measured:* SolidWorks' own save prompt. Step 3's close was the script's `QuitDoc`, without saving (24-5:235),
+    so "answering No when SolidWorks asks to save them" was never put to a prompt. It is conditional as worded. Since the
+    parts' flags read False there, SolidWorks may ask only for RangeBox.
+  - *Low:* `_close_unsaved`'s docstring (`ui_text.py:1921`) gives the premise as "SolidWorks marks the open assembly
+    modified when a part of it is changed". On 2024 that is not when it is marked (§2 below); the advice is unaffected.
+- **Step 3 stands** (24-5:322).
+  - The press was routed by way of 53, and the ring read at 54 with nothing in error.
+  - The mark is gone, the four gear mates are remade with modes, and the footer is quiet.
+  - The user's sprockets were carried with their gears in every mode (24-5:240), with no box (24-5:236-322).
+- **Head's entity-kind reads ran inside every press on 2024** (`inventory read yes`, 24-5:62, 130, 188, 240, 375,
+  441). Across step 2 they marked nothing of the user's: Sprocket and Housing read False before and after (JSON).
+  This lifts §2's caveat on the five 2024 gates.
+
+### 2. The FAIL: a fact of SolidWorks 2024, not a fault of the app
+
+- *Fact (second pass):* RangeBox.SLDASM read False after step 1 and True after the app's press, read each time in a
+  job that opens nothing (JSON `first_press.flags`). Across that press nothing else changed:
+  - no traced call changed or showed anything, and no file time changed;
+  - the result changed, made, remade and placed nothing (24-5:486, 488).
+- *Fact (first pass, and this separates it).* `read_now` runs `begin_build`, then `open_document` (`OpenDoc6`
+  and `ActivateDoc3` of RangeBox), then `active_document`, then reads every flag (`flags_before`). It stops on any
+  flag newly set by the read (`dirtied`). Its `flags_after` held RangeBox marked (24-5:124), and no STOP came.
+  So RangeBox was already marked when `flags_before` was read: straight after the open-and-activate, before any
+  inventory or other read.
+  - Both copies' step 1 made the same calls by member (24-5:65, 378). Together the two passes place the mark at
+    RangeBox's first open-and-activate since step 1, whoever makes it. They place it neither at step 1 nor at
+    anything later in the press.
+- *What the log cannot separate:*
+  - `OpenDoc6` (on a document already open) from `ActivateDoc3`, or from the box that came at that activation.
+    Neither call is in the trace.
+  - Whether 2026 behaves the same: every 2026 read of the flag before step 2 came after an activation (run 11).
+  - Run 11's "it is step 1's press that leaves the assembly modified" is not shown on either version. On 2024 it is
+    contradicted.
+- *Fault or fact?* SolidWorks' mark: the app makes the activation (`open_document` always activates), but writes
+  nothing and saves nothing.
+  - For the user: after any stop that left a part changed, RangeBox reads modified once anything brings it
+    forward.
+  - The stop's sentence already says to close RangeBox without saving, answering No, which is the right answer to
+    that mark.
+  - The app reads no save flag of an assembly open before the press (`_close_costs`), so no sentence goes wrong
+    on it.
+- **Nothing must run again.** Every other leg of the failed check held (24-5:488 lists only the flag), and the first
+  pass's step 2 measured the strict wrote-nothing check.
+- **How the script's check should read from now on** (`probe/w9c_demonstration.py`, `remake_first_press`).
+  - The record's assembly turning False to True is said as a fact: "SolidWorks marked RangeBox.SLDASM at the
+    press's first activation since step 1". It passes only when it is the only flag that changed, no traced call
+    changed anything and no file time changed.
+  - Any other document newly marked, or the assembly's flag beside a changing call, stays the FAIL.
+  - `read_now` should log `flags_before` for the read before step 2, so the separation above is a line in the log
+    and not a deduction from the absence of a STOP.
+  - The 2024 run's FAIL is then recorded as this fact by ruling, not rerun.
+
+### 3. The boxes and the sentences
+
+**What was measured on 2024 (facts).** Both boxes came at an `ActivateDoc3`, at the first activation since step 1
+left an app part in error. Neither went by itself:
+- the script's read: up at 0.41 s, still up 60.18 s after its job (24-5:119, 122);
+- the app's press again in the second pass: up at 5.56 s, still up 60.24 s after the press (24-5:433, 438).
+
+Each was owned by the frame, with the frame enabled before and after, and each was closed by the script's `BM_CLICK`
+on its own Close, gone 0.25 s later (24-5:123, 439; JSON `whats_wrong_lifetimes`, the second of kind `app`). The
+app's press returned its result while the box was up (24-5:440-443), so the box blocked nothing. No box came at a
+second activation (step 2, 24-5:127-178), in 2b's press, or in step 3, which rebuilt. In `06d5141` the same box at
+the same read also outlived it (24-4:310-314). Every box seen in an app Update with the user's work in error went
+while the job rebuilt (`findings.py`, `WHATS_WRONG_IN_UPDATE_BLOCKS`). *Inference:* the box comes at the first
+activation with a feature in error and goes only when SolidWorks rebuilds after it. A person bringing RangeBox
+forward is not measured.
+
+**So by §5 of my re-check:** `WHATS_WRONG_AHEAD`'s "it closes by itself" is untrue for a press that stops before
+rebuilding, and the held-in-error stop now has a measured box with no sentence. The app still never closes the box,
+changes no setting and refuses for none; the sentences tell the user to close it. Exact words for
+`src/gear_generator/ui_text.py`:
+
+1. **`WHATS_WRONG_AHEAD`** (`ui_text.py:4512`), said as now: in the footer's user-work line when the inventory
+   last read holds the user's work in error, on a version where `whats_wrong_shows` is True:
+
+   > SolidWorks may show its What's Wrong box during the Update: leave it alone while the Update runs. It closes by
+   > itself once SolidWorks rebuilds; if the Update stops before that, it stays until you close it with its Close
+   > button.
+
+2. **New `WHATS_WRONG_STAYS`**, said once after `still_in_error_sentence` wherever `gearbox_update_status` says
+   that sentence (`ui_text.py:1891-1906`: the held-in-error stop alone, beside another failure, or in place of
+   "already matches"). It is said only where the new finding below is True for the job's `revision` (passed in, as
+   `_gearbox_update_status` already takes it):
+
+   > SolidWorks may show its What's Wrong box for that part when this press brings the assembly forward; it does not
+   > close by itself: close it with its Close button, then close the documents as above.
+
+3. **New `WHATS_WRONG_NEXT`**, said once in a stop that leaves a part in error (`ui_text.py:2027-2038`, when
+   `in_error` is not empty), on the same finding. Where it is said, `WHATS_WRONG_AFTER` (`ui_text.py:2053-2054`) is
+   not:
+
+   > SolidWorks may show its What's Wrong box for the part left in error when the assembly is next brought forward;
+   > it does not close by itself: close it with its Close button.
+
+   This rests on the two programmatic activations. A person's own is an inference, hence "may".
+
+`WHATS_WRONG_AFTER` is unchanged elsewhere: after an Update that rebuilt, every box measured went.
+
+**Findings for `src/gear_generator/findings.py`**, beside the What's Wrong trio:
+- `WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2024 = True`:
+  - *Meaning:* the What's Wrong box SolidWorks raises at the first activation after an Update left a part in error
+    stays when nothing rebuilds after it.
+  - *Lines:* 24-5:433, 438-440 and 443, the app's press; 24-5:119, 122-123, the script's read; 24-4:310-314, and
+    the JSON's two `whats_wrong_lifetimes` entries.
+  - *Not raised:* at a second activation (24-5:127-178) or in a press that rebuilt (24-5:236-322).
+  - *Caveats:* which document's `ActivateDoc3` raised it in the press is not logged; a person's activation was not
+    run; how long it stays past 60 s, and closing the documents with it up, were not run; a press that stops before
+    rebuilding with the user's own work in error was not run; "Display What's Wrong during rebuild" was on.
+- `WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2026 = False`: no box at all on 2026. In run 11's M3 the script's
+  first activation after step 1 and step 2's press were both under the any-dialog STOP, and no window came (log
+  11:309-361). Caveat: run 11's press was the second activation.
+- A helper `swbuild.whats_wrong_stays(revision)`, True only where the finding is True, read by the two new sentences.
+- `WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2024` stays False. Its comment's "a box that outlives its job (none did)" becomes
+  the measured case: the box outlived the press, the frame stayed enabled and the press returned its result
+  (24-5:433-443).
+- Comments only, nothing reads them:
+  - 2024 marks an open assembly at its first open-and-activate after its parts were changed by a press that did not
+    reach it, not at the change (§2);
+  - on each 2024 gate, the entity-kind reads have now run inside Updates (24-5:62 … 441), and the caveat goes;
+  - `UPDATE_MAKES_MATES_WITH_MODES_ON_2024`: M3 is now shown to step 3 (24-5:178, 182, 234, 322).
+
+**Tests owed:**
+- In `tests/test_workbook_user_record.py`:
+  - the new `WHATS_WRONG_AHEAD` pinned word for word;
+  - `WHATS_WRONG_STAYS` once after the still-in-error sentence at (32, 5, 0), in each of the three forms of
+    `gearbox_update_status`; absent at (34, 1, 1), at `()`, and with the finding patched None;
+  - `WHATS_WRONG_NEXT` once in a stop leaving a part in error at (32, 5, 0), with `WHATS_WRONG_AFTER` absent there;
+  - `WHATS_WRONG_AFTER` still said, once, where the user's work is in error and no part is left in error;
+  - one footer test that the two never stand together.
+- `tests/test_findings.py`: the new pair pinned to 24-5's lines and JSON (both entries, `closed_by` `BM_CLICK`, the
+  second of kind `app`) and to run 11's lines for 2026; the 24-5 lines for M3's steps 2 to 3.
+- The scripts:
+  - W9c's `status_alone` and the still-in-error checks, and any W9d check that matches that status whole, must
+    accept the 2024 tail;
+  - W9c's `whats_wrong_showed`-style assertions stay as they are.
+
+### 4. W9c on 2024, and what remains
+
+- **The evidence stands at head.**
+  - `git diff 4315774 4623701 -- src` adds, beyond what my addendum's §2 traced, only `d0e32bb`'s findings, W9d's
+    2026 findings (`225e3d7`) and Build again's standing-list sentences (`891a707`). Nothing is on an Update's path.
+  - So the five gates set True on 2024 rest on 4315774's runs, whose writes are head's, with M3 now measured at
+    `c2d95cc` to step 3.
+  - `UPDATE_MAKES_A_NEW_COUPLING`, `UPDATE_SUPPRESSES_THE_RELIEF` and `EXTERNAL_REFERENCES_READ` stay None on both
+    versions, as ruled.
+  - **W9c's "confirmed on 2024" is met**, once the FAIL is ruled the fact §2 shows.
+
+**What remains before W9c closes, in order:**
+1. Rule the second pass's FAIL the SolidWorks 2024 fact of §2 and record it so; amend `remake_first_press`'s flags leg
+   and log `read_now`'s `flags_before` (§2). No rerun.
+2. The sentences of §3 in `ui_text.py`, the finding pair and helper, the `BLOCKS` comment, and their tests and
+   script predicates, reviewed.
+3. `findings.py`'s 2024 comments: the entity-kind caveat lifted, M3 to step 3, the assembly-marking fact; pinned.
+4. `ISSUE-1-PLAN.md`'s What's Wrong section: a box outliving an app press is now measured. The app leaves it alone
+   and says so; the not-measured list keeps a person's own activation and a press stopping before rebuild with the
+   user's work in error.
+5. Step 2b on 2026, or the coordinator's ruling that 2024's measurement carries the version-free advice (it now
+   holds there).
+6. *Low:* `_close_unsaved`'s docstring premise (§1); `gears/landing.py`'s docstring on code 51 (still not taken).
+7. The handoff: the 2024 memory advice and the interference-volume caveat (addendum §4); the stale "W9c at the
+   session's close" bullet with runs 10, 11, the 2024 run and this one as the evidence; item 10 and the phase table.
+8. The whole suite at the commit that closes W9c, with the known font-width failure only.
