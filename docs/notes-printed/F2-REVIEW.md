@@ -328,7 +328,7 @@ read.
 **Verdict: fit for the SolidWorks demonstration. No must-fix.**
 
 - **M1, fixed at its cause.** `workbook_print` gives NEW_REVISION in place of CHANGES_ON_UPDATE whenever
-  `update_plan.needs_new_revision` (`printout.py:441-442`). That is the property the window offers Build again… by, so
+  `update_plan.needs_new_revision` (`printout.py:443`). That is the property the window offers Build again… by, so
   values, a structural part and a gear added in place under such a plan all get it. C's sentence (*need a new revision,
   which Update SolidWorks cannot make; press Build again…, then print the new revision*) is true there, and
   CHANGES_ON_UPDATE's *press Update SolidWorks* is now said only where Update runs. Nit: under NEW_REVISION a gear Update
