@@ -1402,3 +1402,158 @@ ran in a `git archive` scratch copy, deleted after.
   `copy_of` returns each unchanged, and `why_new_of` returns the same dictionary as before for them. The planets are
   reused and give no reason. Every body those runs met, on 2026 tonight and in the 2024 demonstration running from
   `5aca9c1`, therefore takes the same path and gets the same words.
+
+## The confirming run on SolidWorks 2024 (32.5.0), reviewed
+
+*Independent, 2026-11-18, at `69b6354`. I started no SolidWorks, ran no tests and changed nothing but this file.*
+
+*Reviewed:* the two logs and their JSON:
+- `probe/results/sw2024/w9d-demo-sw2024-20261118-1-fixture-gates-carry-clean.log` ("24-1"), with
+  `w9d-demo-20261118-060738.json`;
+- `…-2-carry-closed-clean.log` ("24-2"), with `…-073438.json`;
+- the note's section "The confirming run on SolidWorks 2024";
+- `git diff 5aca9c1..HEAD -- src`.
+
+I compared every `ok` line with the second 2026 run's, with numbers and instance names masked.
+
+**Verdict: the evidence stands, and the 2024 findings may be set, each to its 2026 twin's value.** Nothing must be fixed
+first.
+
+**What the note does not name.** The face prefilter barely narrowed Sun's candidates on 2024 (below). It costs time and
+caps sooner. It is not a wrong answer.
+
+### 1. Section by section, and the Done-when
+
+**The counts.** Recounted from the logs, the note's table is exact:
+- `fixture` 20 ok, `carry-gates` 27 ok, `carry` 45 ok (24-1:94, 729, 1576);
+- `carry-closed` 46 ok (24-2:863);
+- no FAIL and no STOP anywhere (24-1:1586, 24-2:870).
+
+**The checks are 2026's checks.** With numbers and instance names masked:
+- every `ok` line of `fixture`, `carry-gates` and `carry` is the same as on 2026, line for line;
+- `carry-closed` differs only in two lines: the suppressed pair's new names, and the other version's file
+  (RangeBox_r2 here).
+
+So each check read a real population, as I traced it on 2026. The same three pass on an empty set that is the
+fixture's truth: no old error, no interference, nothing moved.
+
+**The plan's Done-when, on 2024 (24-1):**
+
+| Done-when | Lines | Stands? |
+|---|---|---|
+| After Sun's Flank change and a shaft added, Build again… makes RangeBox_r2 | classify 789; built in 1389 s, saved 1399, 1410 | Yes |
+| Both clusters carried | 17 components 1478; anchors 1481; 49 pose reads, none off, 1508 | Yes |
+| Their mates remade and on in the modes they were | definitions read back equal 1487; on in their modes 1489; flags 1515; names kept 1502 | Yes |
+| The bore mate on Sun named | UserSunFace and UserGearFillet named *part new* (1472, 1475); UserGearRoot made again (1477, 1568) | Yes, as §15 words it |
+| The keyway named in the question and the result | 797, 1471 | Yes |
+| Every app gear free to turn in every mode | 1506; W9b's read in H, N and L 1509-1515 | Yes |
+| The carried items unsaved | 1521; the record 1537; the line gone after the user's save 1544, 1555 | Yes |
+| The old assembly and every user file unchanged on disk | 1405; the set-apart as ruled 1403-1404; traced calls 1406-1407 | Yes |
+| The closed path (24-2) | read read-only, closed by the job 773-774; on disk 709-711; 17 carried 779; contradiction 6 at 820; R.2's refusals 843, 847; the lost line 861 | Yes |
+| Confirmed on 2024; reviewed | this run; this review | Yes |
+
+**The result's words on SolidWorks.** The result now uses the must-fix wording:
+- *"Housing-1 and Sprocket-9 (was Sprocket-8) are fixed where they stood"* (24-1:1398);
+- *"Housing-2 (was Housing-1) and Sprocket-8 are fixed"* (24-2:706);
+- the standing list without the rigid clause in both.
+
+**The boxes.**
+- No What's Wrong came, and the close path never fired.
+- SolidWorks' notification box came five times (24-1:856-857, 959-960, 1400-1401, 1482-1483; 24-2:265-266). Two of
+  these were inside `carry`'s Build again…, which went on; it is exempt as ruled.
+- The open-progress window came inside the job's read-only open (24-2:105) and closed by itself, as on 2026.
+- CAM's box never came: RangeBox_r2 held nothing lightweight at the save (24-1:1544).
+
+### 2. The findings for 2024
+
+| Finding | Set `_ON_2024` | Rests on |
+|---|---|---|
+| `CARRY_INSERTS` | **True** | proposal 24-1:1556, every condition True; 1405, 1407, 1478-1485, 1492, 1506, 1508, 1515, 1517, 1521, 1537; closed path 24-2:773, 779-784, 791, 808, 810, 820, 836 |
+| `CARRY_INSERTS_IN_A_CONFIGURATION` | **True** | 24-1:1518, proposal 1557 |
+| `REFERENCED_CONFIGURATION_READ` | **True** | 24-1:820, 1519, proposal 1558 |
+| `CARRY_REMAKE_KINDS` | **`('coincident', 'concentric', 'parallel', 'distance', 'angle', 'limit distance', 'lock', 'gear')`** | 24-1:1487, 1489, 1502, the kinds 1559-1566 (the same mates as 2026's), proposal 1567; 24-2:786, 788, 802 |
+| `CARRY_GEAR_MATE_ON_AN_APP_GEAR` | **True** | 24-1:1487, proposal 1568; 24-2:786 |
+| `CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY` | **True, as a fact** | 24-1:1403, 1409; the result's sentence 1398 |
+| `CARRY_INSERTS_A_SUBASSEMBLY`, `CARRY_REMAKES_ON_A_LEAF`, `VIRTUAL_READ`, `PATTERN_INSTANCE_READ`, `ORIGIN_ENTITY_READ`, `PERSIST_REFERENCE_ROUTE_FOR_VERTICES` | **stay None** | 24-1:1569-1574: none is in the fixture |
+
+**Caveats.** Every 2026 caveat in `findings.py`'s M9 block holds on 2024 word for word. Each 2024 comment should add:
+- 32.5.0 from `5aca9c1`;
+- the run's time and memory (§3);
+- the face prefilter's narrowing on 2024 (§3).
+
+`tests/test_findings.py` should pin these lines and the JSON's proposals as it does 2026's.
+
+### 3. What differs from 2026
+
+- **Time.**
+  - The sections took 1.5 to 1.7 times as long.
+  - The carrying Build again… took 1389 s in `carry` and 1161 s in `carry-closed`, against 723 and 625 s.
+  - A build with nothing carried took 429 s, so carrying 17 components and 31 mates adds about 16 to 20 minutes on 2024.
+  - R's 53 entity reads alone took 235 s (3.7-6.5 s each, against 2.1-3.0 s).
+  - This is time, not a fault. It is a caveat for the comment and the handoff.
+- **Memory.** These are facts with my inference.
+  - The 11.03 GB private (24-1:1397) and 9.12 GB (24-2:706) are the press bracket's readings at the end of the app's
+    job, before any of the script's own reads. So the app's job costs this, not the script.
+  - A build alone took SolidWorks 2024 to about 6.4 GB (the fixture's quiet press 1.81 to 6.41, 24-1:79-80;
+    `carry-gates`' build to 6.34, 592).
+  - So the carry's own work (R's reads, the inserts, the mates, the per-mode checks with 17 more components) adds about
+    4 to 5 GB on 2024. Which part of it costs most is not separated: an inference, not traced.
+  - It was given back when the copy closed (5.57 and 3.59 GB after the sections). Free memory never went under
+    8.4 GB.
+  - *What the user should be told:* the app reads no memory in any press, as W9c's 2024 first-press cost is likewise
+    only a caveat. So I would not add a sentence now. Carry it as a known limit in the handoff and `UI-DESIGN.md`:
+    on SolidWorks 2024 a carrying Build again… of a gearbox this size takes about 25 minutes and can take
+    SolidWorks to about 11 GB; save other work first.
+  - Whether the question should say so on 2024 is the coordinator's ruling. It is not a must-fix.
+- **The face prefilter, which the note does not name.**
+  - On Sun, the area prefilter kept 29 of 235 faces for UserGearRoot and 58 for UserGearFillet: 87 carried
+    (24-1:829, 24-2:132). On 2026 it kept 1 and 2, so 3 were carried (2026 log 1:832).
+  - The likely reason: the 2024-built Sun's equal tooth faces read equal areas to within 1e-6, where 2026's did not.
+    `IsSame` still found exactly one each, and nothing was capped.
+  - *The consequence:* on 2024 a face mate on a gear's root cylinder or fillet carries about one candidate per tooth
+    (two for a fillet). The 200-candidate cap (`CARRY_WALK_CANDIDATES`) is then reached at about 100 teeth for a
+    fillet and 200 for a root, and the cap names the mate with a true sentence.
+  - For the `PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2024` comment, as a caveat. Not a must-fix.
+- **The walks** took 2.2-4.4 s per walked component on the sprockets and chains, about 1.5-2.5 times 2026's. Most of
+  that is the prefilter's `GetArea` over 163 faces.
+- **Constrained status 5** did not come on 2024. The old Sprocket-9, suppressed in H and unmated (carried as
+  Sprocket-3), read 2 there (24-1:1505). So my *"suppressed and unmated"* pattern is 2026's only. Nothing in the app
+  reads 5 (§6 of the second run's review).
+- **Instance numbers** differ again (Sprocket-9 as Sprocket-3). This is what must-fix 1's *(was …)* is for, and it
+  reads right.
+
+### 4. Head
+
+`git diff 5aca9c1..HEAD -- src` has two parts:
+- `d496cfd`, the planet-copy lookup and `why_new_of`, which I re-checked (12cf15d);
+- a comment-only change to `WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2026`'s caveat.
+
+The fixture makes only Sun and Aux new, and neither has the copy word. Every body this run met takes the same path and
+gets the same words at head. The evidence stands for head.
+
+### 5. W9d's Done-when, and what remains
+
+**The Done-when is met on both versions:** M9 on 2026 (the second run, `f7c2f0d` and `41afa37`), confirmed on 2024
+(this run), and reviewed.
+
+**Before W9d and W9 close:**
+1. **Set the six 2024 values** of §2 in `findings.py`, with the comments and caveats of §2 and §3. Pin them in
+   `tests/test_findings.py` to 24-1's proposal lines and JSON, and to 24-2's closed-path lines. Bring the tests that
+   hold the 2024 writes at None to the committed state, or to `w9d_unmeasured`. Run the whole suite.
+2. **`W9D-INTERFACES.md` §8 and §8.2:** the 2024 writes set, with this run's lines; the 2024 time, memory and
+   prefilter facts.
+3. **`W9D-DEMONSTRATION.md`:** the face prefilter's 87 candidates on 2024 against 3 on 2026, and *"its review is to
+   come"* replaced by this review.
+4. **`HANDOFF-WORKBOOK.md`:**
+   - fill the placeholder (`:397`) with this run and this review;
+   - update `:405-406` (the 2024 writes);
+   - the known limits: 2024's time and memory for a carrying Build again…, the edge prefilter's should-fix, and the
+     unmeasured paths as listed in the M9 block's comment.
+5. **The ruling on telling the user** about 2024's time and memory (§3). My recommendation is a known limit only.
+6. **Carried as caveats, not run:**
+   - the edge prefilter's cost and its place outside the cap (`swcom.py:3964`);
+   - the planet-copy path on SolidWorks (fake only, the same mechanism as Sun's);
+   - an `UNSAVED` planet's sentence (tested on the fake);
+   - everything the M9 comment lists as unmeasured.
+7. **Merge `w9d` into `workbook`,** after the whole suite at the merge head. Then W9's closing entry in the handoff and
+   `ISSUE-1-PLAN.md`.
