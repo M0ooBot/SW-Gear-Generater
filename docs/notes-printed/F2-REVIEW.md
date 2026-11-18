@@ -316,3 +316,78 @@ lightweight; the size check on every part of the 12 : 1 reducer on 2026; a part 
 
 - M1's case, if the demonstration edits a Gears cell that is structural.
 - One press after the Output folder is removed, once S4 is in.
+
+
+## 10. Re-check of the should-fix round
+
+Read at `ac83420`: package A `d2400ab`; package B `ae42722` (the findings), `dcefc9d` (M1), `4b34f59` (S2, S4, S5, S8); package C
+`2cc34d9`, `843d794`, `2d6d288`. No code changed. Suite with `PYTHONPATH=src`, the known Tk font test deselected: **5118 passed, 1
+skipped, 1 deselected**. An untracked `probe/f2_demonstration.py` is in the worktree; it is another agent's and was not
+read.
+
+**Verdict: fit for the SolidWorks demonstration. No must-fix.**
+
+- **M1, fixed at its cause.** `workbook_print` gives NEW_REVISION in place of CHANGES_ON_UPDATE whenever
+  `update_plan.needs_new_revision` (`printout.py:441-442`). That is the property the window offers Build again… by, so
+  values, a structural part and a gear added in place under such a plan all get it. C's sentence (*need a new revision,
+  which Update SolidWorks cannot make; press Build again…, then print the new revision*) is true there, and
+  CHANGES_ON_UPDATE's *press Update SolidWorks* is now said only where Update runs. Nit: under NEW_REVISION a gear Update
+  would have added in place is named by a part stem that does not exist yet.
+- **M2, fixed at its cause.** `span.measured` flags `j > spur.printed_backlash(module)`, the smaller of 0.3 mm and
+  `0.3 × module`, and hands that figure over as `default_mm`. On the m 1.5 coupon a printer adding 0.12 mm a flank (j 0.34)
+  is now flagged. The line (*more than the 0.3 mm a printed gear of this module is given today*) and README step 6 (*more
+  than the printed default (0.3 mm a gear from module 1 up, 0.3 × module below it)*) say the same trigger as §3.2 and U4.
+  The two test pins A changed are named in its commit, for that reason.
+- **The findings** (`findings.py`, the F2 block) are exactly what F2-PROBES-REVIEW allows, alike on both versions:
+  - `SAVE_AS_COPY` 2;
+  - `STEP_EXPORT` True;
+  - `STEP_EXPORT_NEEDS_ACTIVE` False;
+  - `PART_WINDOW_READ` the word `"Visible"`;
+  - `STEP_EXPORT_FROM_COMPONENT` True;
+  - `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN` True;
+  - `EXTENT_MEASURED` True, moved into `findings.py`, with the herringbone skipped.
+
+  Each comment carries its q26 and q24 lines and the review's caveats. **Pinned so a flip fails**, tried in a scratch
+  copy, each alone: `STEP_EXPORT_FROM_COMPONENT_ON_2024` False, `OPEN_BESIDE_…_ON_2026` None, `PART_WINDOW_READ_ON_2024`
+  "ActiveView", `STEP_EXPORT_ON_2026` 1 and `EXTENT_MEASURED` 1 each fail two F2 pins in `tests/test_findings.py`.
+- **With the gate open, what reaches SolidWorks unmeasured.** With these values `reach_way` gives:
+  - a found part, in its own window or loaded only as a component, or whose Visible read fails: by its object, nothing
+    activated;
+  - a part not found with no assembly open: `open_document`, then `CloseDoc`, both long verified;
+  - a part not found while an assembly is open: refused LIGHTWEIGHT, touching nothing.
+
+  The job's other calls (the walk, `GetSaveFlag` on every document, `ActivateDoc3` of the start's title, `SaveAs` 1|2) are the
+  probe's or verified. Nothing reaches SolidWorks unmeasured beyond the demonstration's three items:
+  - the equation and feature reads off a part that is not active or is only a component;
+  - the export by the walk's handle;
+  - LIGHTWEIGHT inferred, not read.
+
+  The form now plans on every derive (`form_print` with the disk's `exists` and `isdir`). That asks nothing of SolidWorks.
+- **The new sentences**, each true in its state:
+  - NO_FOLDER on the form and in the window, with or without a folder named;
+  - NO_RECORD *missing* and *does not read*, the latter also for a record newer than the app;
+  - the result composed after `printout.with_list`, so it claims a list only with `list_path` and says its failure with
+    `list_error`, a failed list also turning the status red;
+  - a stopped set's *do not print this set* in each of the three cases;
+  - the herringbone's *not yet measured* in the list;
+  - the README: STEP export measured on 2024 and 2026, the table to keep, and nothing addressed to a session.
+
+  FOREIGN_RECORD is now B's, from the window's `foreign_record` verdict, in B's order. The job no longer makes a missing
+  Output folder: it uses `os.mkdir` for `print` and the press's folder only, and refuses NO_FOLDER if the Output folder has
+  gone.
+- **`store.load`.**
+  - **Before F2 it was never on a path a user reaches by refreshing.** At `02b3ff1` the form calls it only in `_load_record`
+    (*Open .gear.json*) and in `_write_sidecar` after a build (`gui.py:1703`, `:1996` now). In both the user has acted,
+    and the move aside is intended and said (*… was moved to … .bad-… and a fresh one will be written*).
+    `_update_target` works from the record already loaded and reads no file. No workbook path calls `load`.
+  - **F2 brought the bug** in `7d92748`. `_active_sidecar` read with `load` on every derive while a part was active, and the
+    read came before B's gate, so it ran even with the findings unset. An unreadable `.gear.json` beside the active part
+    was moved aside silently, once per bad file rather than on every refresh: after the move `getmtime` fails and nothing
+    is read.
+  - **The fix is complete.** `_active_sidecar` now uses `store.read_sidecar`, which never moves or writes a file. The
+    only `load` calls left in `src` are the two user actions above.
+- **Nothing machined or pinned moved.** Every test changed in this round is an F2 test, named in its commit for the
+  reason given there: A's two over_default pins; B's tests that wanted the findings None now take `f2_unmeasured`; the
+  F2 unset pin became the value pins. The fake's STEP text is now sized to the document's own globals. Neither
+  `test_printed_rule.py` nor any W9 or F1 test is touched. No change in `src` reaches a build, Update or Build again…
+  path, the machined Derived panel, or a record.
