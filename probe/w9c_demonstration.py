@@ -729,6 +729,18 @@ def wrote_in_press(changing, globals_before, globals_after, states_before, state
     return out
 
 
+def marked_at_first_activation(changing, states_before, states_after, assembly_file):
+    """The coordinator's ruling of 2026-11-18 on remake-m3's second pass (W9C-RUNS-REVIEW.md, the review of 1dc9350, §2):
+    SolidWorks 2024 marks the open assembly at its first open-and-activate after a press changed its parts and stopped
+    before reaching it, and the app's press again is that activation. True (a fact, not a write) only when the record's
+    assembly (``assembly_file``) read False before and True after, it is the only save flag that changed, no traced
+    call changed or showed anything (``changing``) and no file time changed; any other difference is not this."""
+    fb, fa = states_before.get("flags") or {}, states_after.get("flags") or {}
+    newly = sorted(n for n in set(fb) | set(fa) if fb.get(n) != fa.get(n))
+    return (not changing and newly == [assembly_file] and fb.get(assembly_file) is False
+            and fa.get(assembly_file) is True and (states_before.get("times") or {}) == (states_after.get("times") or {}))
+
+
 def stopped_again(result, ring_file):
     """Whether a press stopped before any write on the ring held in error, as step 2 did: its failures name the ring's
     file alone and it said what it skipped."""
@@ -1600,6 +1612,39 @@ def self_check():
                   f"watch never read and an unowned one: {wrong or 'each'}")
     ok(wrote(mates_written=["flags [...]"]) != [] and wrote(ratios_after={"Sun meshes Planet copy 1": (29, 13)}) != [],
        "M3 step 2: a mate or a gear mate's ratio changed is said")
+    # The second pass, as ruled on 2026-11-18: the assembly's flag going False to True alone is SolidWorks 2024's mark at
+    # the press's first activation (24-5's JSON first_press.flags), a fact; any other difference is still said.
+    asm_file = "RangeBox.SLDASM"
+    s24_before = {"flags": dict(flags, **{asm_file: False}), "times": dict(states["times"])}
+    s24_after = {"flags": dict(flags, **{asm_file: True}), "times": dict(states["times"])}
+    ok(marked_at_first_activation([], s24_before, s24_after, asm_file),
+       "the second pass: RangeBox False before and True after, alone, no changing call, no file written: the mark, a fact")
+    not_mark = {"another flag too": ([], s24_before, dict(s24_after, flags=dict(s24_after["flags"],
+                                                                                **{"Dog_m1.25_N17.SLDPRT": True}))),
+                "a changing call": ([("ForceRebuild3",)], s24_before, s24_after),
+                "a file written": ([], s24_before, dict(s24_after, times=dict(s24_after["times"], **{asm_file: 9.0}))),
+                "True to False": ([], s24_after, s24_before),
+                "another document alone": ([], dict(s24_before, flags=dict(flags, **{asm_file: False,
+                                                                                    "Dog_m1.25_N17.SLDPRT": False})),
+                                           dict(s24_before, flags=dict(flags, **{asm_file: False,
+                                                                                "Dog_m1.25_N17.SLDPRT": True}))),
+                "no flag changed": ([], s24_after, s24_after)}
+    ok(all(not marked_at_first_activation(c, b, a, asm_file) for c, b, a in not_mark.values()),
+       f"the second pass: not the mark, so still judged a write, where {list(not_mark)}: "
+       f"{[k for k, (c, b, a) in not_mark.items() if marked_at_first_activation(c, b, a, asm_file)] or 'each'}")
+    import json as _json
+    run24 = os.path.join(REPO, "probe", "results", "sw2024", "w9c-demo-20261118-045156.json")
+    with open(run24, encoding="utf-8") as handle:
+        first_press = _json.load(handle)["sections"]["remake-m3"]["first_press"]
+    ok(marked_at_first_activation([tuple(c) for c in first_press["changing_calls"]],
+                                  {"flags": first_press["flags"][0]}, {"flags": first_press["flags"][1]}, asm_file),
+       "the second pass: the 2024 run's own flags (24-5's JSON, first_press) read as the mark under the ruling")
+    neutral = dict(s24_after, flags=dict(s24_after["flags"], **{asm_file: False}))
+    ok(wrote_in_press([], {}, {}, s24_before, neutral, result) == []
+       and wrote_in_press([], {}, {}, s24_before, neutral, dict(result, placed=["Sun"])) != []
+       and wrote_in_press([], {}, {}, s24_before, s24_after, result) != [],
+       "the second pass: with the mark set aside nothing else is a write, a gear placed still is, and unset aside the "
+       "flag is said, as 24-5:488 said it")
     # Step 2b: the parts' windows closed, RangeBox open, pressed once more.
     ok(stopped_again(result, ring_file) and not stopped_again(dict(result, skipped=""), ring_file)
        and not stopped_again(dict(result, failures=[]), ring_file)
@@ -2886,6 +2931,10 @@ def remake_again(out):
                     states = B.documents_state(f"remake, M3: {when} step 2", desk, folder)
                 return states, now, globals_, ratios_, ring
             s_before, now_before, globals_before, ratios_before, ring_before = read_all("before")
+            say(f"fact    remake, M3: before step 2, read_now's first save flags, read straight after its open and "
+                f"activation of {os.path.basename(box.assembly)} and before any other read: "
+                f"{sorted(n for n, f in (now_before or {}).get('flags_before', {}).items() if f)} modified "
+                "(W9C-RUNS-REVIEW.md, the review of 1dc9350, §2)")
             say(f"fact    remake, M3: before step 2, modified {sorted(n for n, f in s_before['flags'].items() if f)} "
                 f"(step 1 changed {list(step_1_files)}); the ring {ring_before}; ratios {ratios_before}")
             say(f"fact    remake, M3: before step 2, modified beyond step 1's parts "
@@ -3960,7 +4009,8 @@ def remake_first_press(out):
     press as the first activation, when, at which call, and whether it goes by itself, outlives the press, or is
     closed by the run's close path (W9a's What's Wrong record of that job, of kind app); that the press stops again on
     the ring and says to close it and RangeBox without saving; and that by its traced calls, flags, file times and
-    result it wrote nothing. What it cannot: the parts' and the assembly's globals, the assembly's frames, mates and
+    result it wrote nothing, the record's assembly going False to True alone being SolidWorks 2024's mark at that
+    activation, a fact (:func:`marked_at_first_activation`, the coordinator's ruling of 2026-11-18). What it cannot: the parts' and the assembly's globals, the assembly's frames, mates and
     flags, the gear mates' ratios and the ring's codes are not read in it (each read opens the assembly or a part,
     and activates it), so the strict wrote-nothing check of step 2 is not made here; the first pass makes it. Steps
     2b and 3 are not repeated. Every document of the copy is then closed without saving."""
@@ -4020,11 +4070,22 @@ def remake_first_press(out):
                                                                         "placed", "failures")}
             summary["skipped"] = getattr(second, "skipped", "") if second else ""
             stopped = second is not None and stopped_again(summary, ring_file)
-            wrote = wrote_in_press(changing, {}, {}, s_before, s_after, summary) if stopped else ["did not stop again"]
+            asm_file = os.path.basename(box.assembly)
+            marked_first = marked_at_first_activation(changing, s_before, s_after, asm_file)
+            judged_after = (dict(s_after, flags=dict(s_after["flags"], **{asm_file: s_before["flags"][asm_file]}))
+                            if marked_first else s_after)
+            wrote = (wrote_in_press(changing, {}, {}, s_before, judged_after, summary) if stopped
+                     else ["did not stop again"])
+            if marked_first:
+                say(f"fact    remake-m3, the second pass: SolidWorks marked {asm_file} at the press's first activation "
+                    f"since step 1 (False before, True after, the only save flag that changed, no changing call "
+                    f"traced, no file written; the coordinator's ruling of 2026-11-18: a fact of SolidWorks 2024, "
+                    "not a write)")
             came = [(e.get("seconds"), e.get("call_in_progress")) for e in ww.get("seen", [])]
             gone = [g.get("stayed") for g in ww.get("gone", [])]
             out.update(status=text, result=summary, stopped_again=stopped, wrote=wrote,
                        changing_calls=[list(c) for c in changing], flags=[s_before["flags"], s_after["flags"]],
+                       assembly_marked_at_first_activation=marked_first,
                        whats_wrong={"job": ww.get("what"), "kind": ww.get("kind"), "came": came, "stayed": gone,
                                     "up_at_the_end": ww.get("up_at_the_end"), "outlived": ww.get("outlived")})
             say(f"fact    remake-m3, the second pass: in the app's press again, the first activation since step 1, "
