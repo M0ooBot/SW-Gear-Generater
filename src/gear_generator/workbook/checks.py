@@ -27,10 +27,6 @@ CENTRE_TOLERANCE = 0.005      # mm: half the last digit of a distance typed to t
 NEAR_MESH_BAND = 0.1          # × module: two unlisted gears this near their mesh distance would mesh (a warning);
                               # nearer than that they jam, and that is a clash
 CLASH_GAP = 0.5               # × module: the least room between gears that do not mesh
-# F1 (PLAN-PRINTED §2.2): the tip clearance two printed surfaces take, mm, less a rounding tolerance (at module 0.75
-# an unshifted pair's computes as 0.2999999999999998). Said at a printed pair's Meshes row only.
-PRINTED_CLEARANCE = 0.3
-PRINTED_CLEARANCE_TOLERANCE = 1e-9
 
 
 @dataclass
@@ -518,13 +514,13 @@ def _printed(a: Placed, b: Placed) -> bool:
 def _printed_clearance_warning(report: Report, where: str, a: Placed, b: Placed, clearance: float,
                                shifted: bool) -> None:
     """F1 (PLAN-PRINTED §2.2; F1-INTERFACES §8): a printed pair's tip clearance under the 0.3 mm two printed surfaces
-    take, at its Meshes row. The depth is left alone; the advice names less profile shift only when the pair has a
+    take (less a rounding tolerance: module 0.75's computes as 0.2999999999999998), at its Meshes row, in the words
+    the form says it in (package A's ``pair.printed_clearance_sentence``), prefixed with the pair as this file
+    prefixes its sentences. The depth is left alone; the advice names less profile shift only when the pair has a
     shift to take off."""
-    if clearance >= PRINTED_CLEARANCE - PRINTED_CLEARANCE_TOLERANCE:
-        return
-    cure = "use a larger module or less profile shift" if shifted else "use a larger module"
-    _warning(report, where, f"{a.gear} and {b.gear}: Printed, the tip clearance is {_n(clearance)} mm, under the "
-                            f"{_n(PRINTED_CLEARANCE)} mm two printed surfaces take; {cure}.")
+    sentence = pairs.printed_clearance_sentence(clearance, shifted)
+    if sentence:
+        _warning(report, where, f"{a.gear} and {b.gear}: {sentence}")
 
 
 def _check_printed_clearance(report: Report, where: str, a: Placed, b: Placed, pinion: Placed, other: Placed,
