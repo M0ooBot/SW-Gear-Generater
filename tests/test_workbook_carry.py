@@ -1648,3 +1648,122 @@ def test_a_question_whose_only_mate_is_may_keeps_its_time_in_that_sentence(desk,
     assert said.startswith(f"As read at {_at(desk)}, your UserLimit10 is made again if the press reads it as a plain "
                            "distance mate; a limit distance mate is not made again."), said
     assert "would be carried" not in said and "holds what it carries unsaved" in said
+
+
+# -- the merge's ruling (7ce641e): close without saving beside an unsaved carry -------------------------------------
+
+from test_workbook_in_place_round_trip import measured, _sun_backlash  # noqa: E402,F401 - W9c's gates; a backlash edit
+
+CARRY_SAVE = "RangeBox_r2 holds what Build again… carried of yours, not saved: save it in SolidWorks to keep it."
+COSTS = ("that also loses anything else not saved in RangeBox_r2 and what Build again… carried into it, which "
+         "RangeBox.SLDASM still holds")
+
+
+def _carried_desk(desk):
+    _, _, finished, _ = _carried_build(desk, _all_carried)
+    desk.record = store.link_record_from_json(store.link_record_to_json(finished.record))
+    desk.disk.write(finished)
+    assert store.carry_unsaved(desk.record) is not None
+    return desk
+
+
+def test_a_stop_in_error_after_a_carry_says_closing_loses_it_and_never_asks_its_save_end_to_end(desk, carrying,
+                                                                                               measured):
+    """The pairing the merge found: a Build again… left its carry unsaved in RangeBox_r2, and an Update of r2 stops on
+    Sun's part left in error. The stop, the footer after it, and the footer with no note say one thought."""
+    _carried_desk(desk)
+    spec = _sun_backlash(gears(range_box(), **SUN_FLANK))
+    desk.sw.rebuild_ok = False
+    press = desk.press(spec)
+    assert press.after == (
+        "Update SolidWorks stopped. Gear_m1.25_N29_r2.SLDPRT: SolidWorks reported an error rebuilding "
+        "Gear_m1.25_N29_r2. It had already changed Gear_m1.25_N29_r2, not saved, and Gear_m1.25_N29_r2 is left in "
+        "error: close it and RangeBox_r2 in SolidWorks without saving, answering No when SolidWorks asks to save them "
+        f"(the files on disk are as before this Update; {COSTS}), then press Update SolidWorks again."), press.after
+    assert store.carry_unsaved(desk.record) is not None                 # the assembly stays loaded: the mark stands
+    a = desk.a(spec)
+    after = ui_text.workbook_footer(a, record=desk.record, note=ui_text.Note(press.after, press.ok),
+                                    folder="C:\\Out\\").text
+    assert after == press.after and CARRY_SAVE not in after, after
+    text, _ = desk.footer(spec)
+    assert text.endswith(
+        "Gear_m1.25_N29_r2 has changes from Update SolidWorks that are not saved, and Gear_m1.25_N29_r2 was left in "
+        "error when it stopped: close it and RangeBox_r2 in SolidWorks without saving, answering No when SolidWorks "
+        f"asks to save them (the files on disk are as before that Update; {COSTS}), then press Update SolidWorks "
+        "again."), text
+    assert CARRY_SAVE not in text and "keep it" not in text
+
+
+def _footer_with(desk, unsaved, in_error):
+    record = copy.deepcopy(desk.record)
+    record.unsaved = {p: 1763400000.5 for p in unsaved}
+    record.unsaved_in_error = list(in_error)
+    return ui_text.workbook_footer(desk.a(gears(range_box(), **SUN_FLANK)), record=record, folder="C:\\Out\\").text
+
+
+def test_every_state_of_close_without_saving_beside_an_unsaved_carry_says_one_thought(desk, carrying):
+    """The assembly itself among the documents left unsaved (in error, or beside a part in error), several parts: the
+    advice says what closing RangeBox_r2 costs, and the carry's save is never asked beside it."""
+    _carried_desk(desk)
+    asm = desk.record.gearbox.assembly
+    sun, ring = (next(p.path for p in desk.record.parts if g in p.gears) for g in ("Sun", "Ring"))
+    states = {
+        "the assembly alone": ([asm], [asm],
+                               "RangeBox_r2 has changes from Update SolidWorks that are not saved, and RangeBox_r2 was "
+                               "left in error when it stopped: close it in SolidWorks without saving (the file on disk "
+                               f"is as before that Update; {COSTS}), then press Update SolidWorks again."),
+        "the assembly beside a part in error": (
+            [sun, asm], [sun],
+            "Gear_m1.25_N29_r2 and RangeBox_r2 have changes from Update SolidWorks that are not saved, and "
+            "Gear_m1.25_N29_r2 was left in error when it stopped: close them all in SolidWorks without saving, "
+            "answering No when SolidWorks asks to save them (the files on disk are as before that Update; "
+            f"{COSTS}), then press Update SolidWorks again."),
+        "several parts": (
+            [sun, ring], [ring],
+            "Gear_m1.25_N29_r2 and Ring_m1.25_N55 have changes from Update SolidWorks that are not saved, and "
+            "Ring_m1.25_N55 was left in error when it stopped: close them all and RangeBox_r2 in SolidWorks without "
+            "saving, answering No when SolidWorks asks to save them (the files on disk are as before that Update; "
+            f"{COSTS}), then press Update SolidWorks again."),
+    }
+    for label, (unsaved, in_error, line) in states.items():
+        text = _footer_with(desk, unsaved, in_error)
+        assert text.endswith(line), (label, text)
+        assert CARRY_SAVE not in text and text.count("Build again…") == 1, (label, text)
+
+
+def test_a_stopped_updates_own_sentence_closing_the_assembly_says_the_cost_and_the_footer_adds_no_save(desk,
+                                                                                                        carrying):
+    _carried_desk(desk)
+    asm = desk.record.gearbox.assembly
+    up = update.UpdatePlan(assembly=asm)
+    result = swbuild.GearboxUpdate(failures=[("RangeBox_r2.SLDASM", "SolidWorks reported an error rebuilding "
+                                                                    "RangeBox_r2.")], changed=[asm])
+    result.parts = []
+    text, ok = ui_text.gearbox_update_status(up, result, [], record=desk.record)
+    assert not ok and text.endswith(
+        "It had already changed RangeBox_r2, not saved: press Update SolidWorks again once that is put right, or save "
+        "it in SolidWorks to keep what it did."), text                 # no part in error: no close advice, as today
+    footer = ui_text.workbook_footer(desk.a(gears(range_box(), **SUN_FLANK)), record=desk.record,
+                                     note=ui_text.Note(text, ok), folder="C:\\Out\\").text
+    assert footer.endswith(CARRY_SAVE), footer                           # and the carry's save beside it, as today
+    sun = next(p.path for p in desk.record.parts if "Sun" in p.gears)
+    result = swbuild.GearboxUpdate(
+        parts=[swbuild.UpdateResult("Gear_m1.25_N29_r2.SLDPRT", ["Backlash"], rebuilt=False)],
+        failures=[("Gear_m1.25_N29_r2.SLDPRT", "SolidWorks reported an error rebuilding Gear_m1.25_N29_r2.")],
+        changed=[sun, asm])
+    text, ok = ui_text.gearbox_update_status(up, result, [], record=desk.record)
+    assert not ok and text.endswith(
+        "It had already changed Gear_m1.25_N29_r2 and RangeBox_r2, not saved, and Gear_m1.25_N29_r2 is left in error: "
+        "close them all in SolidWorks without saving (the files on disk are as before this Update; "
+        f"{COSTS}), then press Update SolidWorks again."), text
+    footer = ui_text.workbook_footer(desk.a(gears(range_box(), **SUN_FLANK)), record=desk.record,
+                                     note=ui_text.Note(text, ok), folder="C:\\Out\\").text
+    assert footer == text and CARRY_SAVE not in footer, footer
+
+
+def test_with_no_close_advice_the_carry_line_stands_as_today(desk, carrying):
+    _carried_desk(desk)
+    sun = next(p.path for p in desk.record.parts if "Sun" in p.gears)
+    text = _footer_with(desk, [sun], [])
+    assert text.endswith(CARRY_SAVE) and "without saving, answering No" not in text, text
+    assert COSTS not in text and "loses anything else" not in text

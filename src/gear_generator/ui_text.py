@@ -1888,7 +1888,9 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), **kwargs)
     if not still:
         return text, ok
     from .workbook.update import assembly_holding
-    said = still_in_error_sentence(still, assembly_holding(update, still))
+    said = still_in_error_sentence(still, assembly_holding(update, still),
+                                   record=_record_of(finished, kwargs.get("record")),
+                                   own=getattr(update, "assembly", "") or "")
     if result.failures:
         from .workbook.update import document_stem
         stems = {document_stem(p) for p in still}
@@ -1904,24 +1906,58 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), **kwargs)
     return f"{text} {said}", False
 
 
-def _close_unsaved(named: Sequence[str], whom: str, assembly: str, which: str) -> str:
+def _record_of(finished, record=None):
+    """The record a job's sentence judges the carry by: the finish's (``Finished.record``, what it wrote), else the
+    one the window passes (the job's, as planned)."""
+    return getattr(finished, "record", None) or record
+
+
+def _close_unsaved(named: Sequence[str], whom: str, assembly: str, which: str, *, own: str = "",
+                   record=None) -> str:
     """*close it in SolidWorks without saving (the file on disk is as before that Update), then press Update
     SolidWorks again.* ``whom`` is *it*, *them* or *them all* for the documents ``named`` (stems). With ``assembly``
     (a path, :func:`workbook.update.assembly_holding`): *close it and RangeBox in SolidWorks without saving,
     answering No when SolidWorks asks to save them (the files on disk are as before that Update), then press Update
     SolidWorks again.*, the assembly not named twice when it is among them (should-fix A: SolidWorks marks the open assembly modified when a part of it is changed,
-    and keeps a part loaded with its changes while the assembly stays open). ``which``: *this* or *that* Update."""
+    and keeps a part loaded with its changes while the assembly stays open). ``which``: *this* or *that* Update.
+
+    W9d, the merge's ruling: where the assembly closed is the record's (``assembly``, or ``own`` among ``named``), the
+    advice says what closing it unsaved costs (:func:`_close_costs`): anything else not saved in it, and, while it
+    holds what Build again… carried unsaved (``record``'s ``CarryEntry``), that too, with where it still is."""
     asm = _stem(assembly) if assembly else ""
+    costs = _close_costs(named, asm, own, record)
     if asm:
         also = f" and {asm}" if asm.casefold() not in {n.casefold() for n in named} else ""
         return (f"close {whom}{also} in SolidWorks without saving, answering No when SolidWorks asks to save "
-                f"them (the files on disk are as before {which} Update), then press Update SolidWorks again.")
+                f"them (the files on disk are as before {which} Update{costs}), then press Update SolidWorks again.")
     one = whom == "it"
     return (f"close {whom} in SolidWorks without saving (the {'file' if one else 'files'} on disk "
-            f"{'is' if one else 'are'} as before {which} Update), then press Update SolidWorks again.")
+            f"{'is' if one else 'are'} as before {which} Update{costs}), then press Update SolidWorks again.")
 
 
-def still_in_error_sentence(paths: Sequence[str], assembly: str = "") -> str:
+CLOSE_LOSES_CARRY = "and what Build again… carried into it"      # the cost clause's mark (the footer's rule)
+
+
+def _close_costs(named: Sequence[str], asm: str, own: str, record) -> str:
+    """What closing the record's assembly without saving costs besides the Update's own changes, said inside the
+    advice (the merge's ruling, and W9C-RUNS-REVIEW's low should-fix): *; that also loses anything else not saved in
+    RangeBox_r2*, and while it holds a carry unsaved (``store.carry_unsaved``) *… and what Build again… carried into
+    it, which RangeBox.SLDASM still holds*. The app reads no save flag of an assembly open before the press, so the
+    first is said whenever the assembly is closed, never as a fact about it. ``""`` when the assembly is not among
+    what is closed."""
+    closes = asm or next((n for n in named if own and n.casefold() == _stem(own).casefold()), "")
+    if not closes:
+        return ""
+    out = f"; that also loses anything else not saved in {closes}"
+    from . import store
+    carry = store.carry_unsaved(record)
+    box = getattr(record, "gearbox", None)
+    if carry is not None and box is not None and _stem(box.assembly).casefold() == closes.casefold():
+        out += f" {CLOSE_LOSES_CARRY}, which {_file(carry.assembly) or 'the old assembly'} still holds"
+    return out
+
+
+def still_in_error_sentence(paths: Sequence[str], assembly: str = "", *, record=None, own: str = "") -> str:
     """*Gear_m1.25_N29 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the
     new values, so this press set nothing in it: close it in SolidWorks without saving (the file on disk is as before
     that Update), then press Update SolidWorks again.* With ``assembly`` (the record's, holding the part): *… close it
@@ -1931,11 +1967,12 @@ def still_in_error_sentence(paths: Sequence[str], assembly: str = "") -> str:
     stems = [_stem(p) for p in paths]
     return (f"{_and(stems)} {'is' if one else 'are'} still open in SolidWorks as an earlier Update "
             f"SolidWorks left {'it' if one else 'them'}, in error and holding the new values, so this press set "
-            f"nothing in {'it' if one else 'them'}: " + _close_unsaved(stems, 'it' if one else 'them', assembly, "that"))
+            f"nothing in {'it' if one else 'them'}: " + _close_unsaved(stems, 'it' if one else 'them', assembly, "that",
+                                                                        own=own, record=record))
 
 
 def _gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes=None,
-                          finished=None, revision: Sequence[int] = ()) -> Tuple[str, bool]:
+                          finished=None, revision: Sequence[int] = (), record=None) -> Tuple[str, bool]:
     """A finished update's sentence (``UpdatePlan``, ``swbuild.GearboxUpdate``, ``Finished.dragged``), ending
     with :func:`save_to_keep` naming the documents whenever ``result.changed`` is not empty; *SolidWorks already
     matches the workbook: nothing was changed.* when nothing was. ``meshes``: the record's listed meshes (pairs of
@@ -1996,7 +2033,8 @@ def _gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshe
             text += (f" It had already changed {_and(changed_docs)}, not saved, and {_and(in_error)} "
                      f"{'is' if len(in_error) == 1 else 'are'} left in error: "
                      + _close_unsaved(changed_docs + in_error, 'it' if one else 'them all',
-                                      assembly_holding(update, in_error), "this"))
+                                      assembly_holding(update, in_error), "this",
+                                      own=getattr(update, "assembly", "") or "", record=_record_of(finished, record)))
         elif changed_docs:
             one = len(changed_docs) == 1
             text += (f" It had already changed {_and(changed_docs)}, not saved: press Update SolidWorks again once "
@@ -2428,7 +2466,7 @@ def _ready_parts(assessment, plan, folder: str, superseded: Sequence[str] = (), 
 
 
 def _unsaved_line(paths: Sequence[str], update_puts_back: bool = False, in_error: Sequence[str] = (),
-                  assembly: str = "") -> str:
+                  assembly: str = "", record=None) -> str:
     """The save asked for once, naming every document of the current revision Update changed and that is not
     saved: parts first, the assembly last, as Update changed them. Nothing here can know whether SolidWorks has
     them open still, so the sentence is true either way (second review N2): if SolidWorks closed them without
@@ -2445,7 +2483,9 @@ def _unsaved_line(paths: Sequence[str], update_puts_back: bool = False, in_error
         return (f"{_and(_stem(p) for p in paths)} {'has' if one else 'have'} changes from Update SolidWorks that are "
                 f"not saved, and {_and(_stem(p) for p in failed)} {'was' if len(failed) == 1 else 'were'} left in "
                 "error when it stopped: " + _close_unsaved([_stem(p) for p in paths], 'it' if one else 'them all',
-                                                          assembly, "that"))
+                                                          assembly, "that", record=record,
+                                                          own=getattr(getattr(record, "gearbox", None), "assembly",
+                                                                      "") or ""))
     then = (" press Update SolidWorks to make them again." if update_puts_back else " those changes are gone.")
     return (f"{_and(_stem(p) for p in paths)} {'has' if one else 'have'} changes from Update SolidWorks that are not "
             f"saved: save {them} in SolidWorks to keep {them}. If SolidWorks closed {them} without saving,{then}")
@@ -2665,10 +2705,15 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
         if unsaved:
             in_error = getattr(record, "unsaved_in_error", ()) or ()
             from .workbook.update import assembly_holding
-            text += " " + _unsaved_line(unsaved, puts_back, in_error, assembly_holding(record, in_error) if in_error
-                                        else "")
+            said = _unsaved_line(unsaved, puts_back, in_error, assembly_holding(record, in_error) if in_error
+                                 else "", record=record)
+            text += " " + said
+        else:
+            said = ""
         carried = carry_footer_line(record)       # W9d (§9.4): the carry a Build again… left unsaved, until saved
-        if carried:
+        if carried and CLOSE_LOSES_CARRY not in said:
+            # The merge's ruling: beside advice to close the assembly without saving, that advice says what it costs,
+            # and the save is never asked.
             text += " " + carried
         if subject and plan is not None and not plan.refusal:
             back = _held_back(plan, subject, after_unsaved_line=bool(unsaved))
@@ -2676,8 +2721,10 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
                 text += " " + back
     if note is not None:
         carried = carry_footer_line(record)
-        if carried and note.kind == NOTE_JOB and _asks_carry_save(note.text, record):
-            carried = ""                       # the build's own sentence asks the save already (W9a's rule 3)
+        if carried and note.kind == NOTE_JOB and (_asks_carry_save(note.text, record)
+                                                  or CLOSE_LOSES_CARRY in note.text):
+            carried = ""                       # the build's own sentence asks the save already (W9a's rule 3), or
+            #                                    says to close the assembly without saving and what that costs
         if refused_shown and note.kind == NOTE_JOB:
             text, ok = note.text, note.ok      # the refusing build's own sentence already says all of it
         elif note.kind == NOTE_ANSWER:

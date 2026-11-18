@@ -1417,7 +1417,11 @@ gears at new values against it as it was). The assembly is named whenever it hol
 the part (a gear's part, the layout or a carrier): SolidWorks marks the open assembly
 modified when a part of it is changed, so closing it asks to save, and a part whose
 window is closed while its assembly stays open stays loaded with its changes (measured
-on 2026, run 11). A part outside the record's assembly is told *close it in
+on 2026, run 11). Wherever the assembly is closed so, the parenthesis adds *; that
+also loses anything else not saved in RangeBox*: no press reads the save flag of an
+assembly open before it, so this is what closing can lose, not a fact about it
+(W9C-RUNS-REVIEW's low should-fix; W9d adds the carry to it, below). A part outside
+the record's assembly is told *close it in
 SolidWorks without saving (the file on disk is as before this Update)* as before. The
 footer's line on documents not saved says the same (*… and Gear_m1.25_N29 was left in
 error when it stopped: close it and RangeBox in SolidWorks without saving, answering
@@ -1562,7 +1566,11 @@ carried of yours, not saved: save it in SolidWorks to keep it.* until the file
 on disk is newer; a later Update that finds the assembly loaded from its file
 says *RangeBox_r2 was closed without saving after Build again… carried your work
 into it, so it does not hold it; RangeBox.SLDASM still does.* Nothing offers to
-carry again.
+carry again. Where the app says to close the assembly without saving (a part
+left in error, above), that advice wins and says the cost in its parenthesis,
+*… that also loses anything else not saved in RangeBox_r2 and what Build again…
+carried into it, which RangeBox.SLDASM still holds*, and the carry's save line
+is not said beside it.
 
 ### Planetary stages (W7)
 

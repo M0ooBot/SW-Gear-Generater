@@ -340,6 +340,39 @@ printed states are unchanged.
   them, each …*).
 - No fragment the demonstration matches changed.
 
+## The merge's ruling (`7ce641e`): close without saving beside an unsaved carry
+
+Wherever the app says to close the record's assembly without saving (a stop in a part left in error, the footer's line
+on documents left in error, the still-in-error sentence; the assembly named with the part or among the documents),
+that advice stands and says its cost inside its parenthesis, and the carry's save line is not said beside it, in the
+footer (state lines) or after a job's sentence (`CLOSE_LOSES_CARRY` marks it). On A's worker and W9c's press on the
+fake, a carry left unsaved in RangeBox_r2 and an Update of r2 stopped on Sun's part in error:
+
+> Update SolidWorks stopped. Gear_m1.25_N29_r2.SLDPRT: SolidWorks reported an error rebuilding Gear_m1.25_N29_r2. It
+> had already changed Gear_m1.25_N29_r2, not saved, and Gear_m1.25_N29_r2 is left in error: close it and RangeBox_r2
+> in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on disk are as before this
+> Update; that also loses anything else not saved in RangeBox_r2 and what Build again… carried into it, which
+> RangeBox.SLDASM still holds), then press Update SolidWorks again.
+
+The footer after it is that sentence alone; the footer with no note ends with the same advice in its *have changes
+… that are not saved* form, and no *save it in SolidWorks to keep it*. Pinned too: the assembly alone left in error,
+the assembly beside a part in error, several parts, a stopped Update's own sentence closing the assembly; and, with no
+close advice (a stop with nothing in error, documents unsaved but none in error), the carry line as before.
+
+- **Which clauses, and why.** The old assembly's name is the carry's own (`CarryEntry.assembly`), as the lost-carry
+  line has it. *Build again… carries it again* is not said: a later Build again… reads the record's current revision,
+  RangeBox_r2, not RangeBox.SLDASM.
+- **The user's own unsaved work (W9C-RUNS-REVIEW's low should-fix).** No press reads the save flag of an assembly that
+  was open before it (`_note_opened` reads only a document the press loads, `_vouches` only one marked unsaved), so the
+  app cannot know it was modified before the press; the short form is said whenever the assembly is closed so, carry
+  or not: *; that also loses anything else not saved in RangeBox*. That changes W9c's pinned sentences in
+  `tests/test_workbook_in_place_round_trip.py` (five strings, the parenthesis only); a part-only close is unchanged.
+- **Fragments.** `probe/w9c_demonstration.py`'s matchers (*the assembly named*, *in SolidWorks without saving,
+  answering No when SolidWorks asks to save*, no *to keep*) still match; its hand-written examples in its self-check
+  keep the old parenthesis, which no matcher reads. `probe/w9d_demonstration.py`'s carry footer line and save phrase
+  are unchanged wherever no close advice is given.
+- The window passes the job's record to `gearbox_update_status` (`record=`), used when the finish wrote none.
+
 ## The strings, in full
 
 Made by A's worker on the fake (`Desk`'s RangeBox, W9a's user work: Sprocket-1 locked to Sun, Housing-1 fixed, a

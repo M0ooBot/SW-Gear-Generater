@@ -1621,7 +1621,7 @@ class WorkbookWindow(tk.Toplevel):
             # lays to the user what that Update left (Finished.earlier_update; None when the finish raised).
             text, ok = ui_text.gearbox_update_status(job.update, result, dragged, revision=job.revision,
                                                      meshes=gearbox.meshes if gearbox is not None else None,
-                                                     finished=finished)
+                                                     finished=finished, record=job.record)
         except Exception as exc:  # noqa: BLE001
             text, ok = ui_text.collect_failed(exc, updating=True), False
         return ui_text.Note(" ".join([text] + notes + faults), ok and not faults)
