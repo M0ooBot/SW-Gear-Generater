@@ -1169,3 +1169,39 @@ Ruled by the coordinating session on 2026-11-17, each the user's to overrule. Th
   it. The mate kinds remade from their definitions are coincident, lock, distance and angle on axes, planes and
   whole components; concentric, limit, width, gear, faces and edges, flipped mates and a sub-assembly's leaf are
   not.
+
+## W9 closed (2026-11-18)
+
+W9 is closed on SolidWorks 2026 and 2024: each of its four stages has met §5's *Done when* on 2026, been confirmed on
+2024 and been reviewed. The coordinating session merges branch `w9d`, where W9b's end, W9c and W9d were done, into
+`workbook` after this entry; the whole suite at the merge head is in the merge commit's message. The account of how
+each stage went is `docs/HANDOFF-WORKBOOK.md`, *Where W9 stands*, items 1 to 11.
+
+- **W9a** (the user's work is theirs) closed on 2026-11-17. *Done when* met on 2026 by the closing run (`19651ee`,
+  reviewed in `W9A-CLOSE-2026-REVIEW.md`) and the final full run, every section 0 failed with the window check's W8
+  stage and K12 (`f0c5ff7`, `probe/results/w9a-final-sw2026-20261117.log`; reviewed in `W9A-CLOSE-2024-REVIEW.md`'s
+  addendum, `bf2960d`). Confirmed on 2024 by the confirming set, 0 failed, under the ruling that the app leaves
+  SolidWorks' What's Wrong box alone (reviewed `8e984e2`).
+- **W9b** (sleeve checks, bands with a relief, the hub) closed on 2026-11-17. *Done when* met on 2026 by
+  `probe/w9b_demonstration.py`'s run from `b15450f`, 0 failed, `RangeBox_Fixed` built from scratch with every mode as
+  §3 (`de0a470`). Confirmed on 2024 from `529f939` (`9e77303`): build, update and old 0
+  failed, the coarse volume guard's failure laid to SolidWorks 2024's mass properties and its allowance ruled from a
+  control in the same session (`W9B-REVIEW.md`'s 2024 addendum, `9b85411`; replayed clean, `6bdf802`).
+- **W9c** (Update adds, removes and re-mates, and adds and removes modes) closed on 2026-11-18. *Done when* met on
+  2026 by runs 10 and 11 on 34.0.0 (`d878105`; reviewed in `W9C-RUNS-REVIEW.md`, `dbf9870`): RangeBox with the user's
+  work edited to `RangeBox_Fixed`, one Update adding Hub and giving RangeSlv its bands in place with every user item
+  kept, then a mode added and one removed. Confirmed on 2024 by the confirming run (`06d5141`, reviewed `78fdcb6`) and
+  remake's M3 rerun there (`1dc9350`, reviewed `6665b4e`), with M3 also run on 2026 34.1.1 (`5aca9c1`). Its five gates
+  are True on both versions (`74024a1`, `d0e32bb`); the What's Wrong sentences and rulings are in the sections above.
+- **W9d** (Build again… carries the user's work) closed on 2026-11-18. *Done when* met on 2026 by M9's second run on
+  34.1.1 (`c2d95cc`, reviewed in `W9D-DEMONSTRATION-REVIEW.md`, `7996089`), every row as §5 words it. Confirmed on
+  2024 by M9 from `5aca9c1`, 0 FAIL, no STOP, no What's Wrong box (`69b6354`, reviewed `e51de95`); its findings are
+  set alike on both versions (`225e3d7`, `e7a3577`) and re-checked (`235f658`).
+
+**What W9 leaves open** is listed in `docs/HANDOFF-WORKBOOK.md`'s read-this-first paragraph of 2026-11-18 (morning)
+and its items 8, 10 and 11, and not repeated here: the gates still None and what the app says for each, what only the
+fake has shown, the known limits measured on SolidWorks 2024 (memory in a carrying build and in W9c's modes, the
+What's Wrong box that stays without a rebuild, the face cap coming sooner), and the coordinating session's rulings,
+each the user's to overrule, under its *Questions waiting for the user*.
+
+**GitHub issue #1 is left open for the user to close.**
