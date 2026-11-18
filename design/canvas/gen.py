@@ -292,10 +292,13 @@ def warning(text, error=False):
 
 # ------------------------------------------------------- the field explainer
 
-def explainer(key, d, side_stem, pair=None):
+def explainer(key, d, side_stem, pair=None, spec=None):
     if key == "span":                     # F2: the Measured entry's card, the span's, with the Teeth diagram (gui)
         title, symbol, what, comes_to = ui_text.span_explainer(spans.span(d, "A"))
         key = "teeth"
+    elif key in ui_text.BORE_EXPLAINERS:  # F3: Bore allowance's, Drive's and Flat's cards, with Bore's diagram (gui)
+        title, symbol, what, comes_to = ui_text.bore_explainer(key, spec, d)
+        key = ui_text.BORE_DIAGRAM
     else:
         title, symbol, what, comes_to = ui_text.explainer(key, d, side_stem, pair, FOLDER_TEXT)
     sym = f'<span style="font-family: {MONO}; font-weight: 400; color: {MUTED};"> · {symbol}</span>' if symbol else ""
@@ -405,6 +408,17 @@ def side_panel(title, spec, d, stem, focused="", card=None, pair=None, side="a")
     ]
     if not ring:
         rows.append(row(label("Bore"), f("bore", spec.bore or "none", unit="mm", placeholder=not spec.bore)))
+        # F3 (PLAN-PRINTED §4.1, §4.2): Bore allowance, its placeholder what a blank means for this gear; Drive and,
+        # while it is Flat, Flat. A bevel gear takes no flat (G5), so no Drive; a ring none of the three.
+        typed = spec.bore_allowance.strip()
+        rows.append(row(label("Bore allowance"), f("bore_allowance", typed or ui_text.bore_allowance_placeholder(spec, d),
+                                                   unit="mm", w="150px", placeholder=not typed),
+                        hint(ui_text.BORE_ALLOWANCE_HINT)))
+        if not bevel:
+            flat = spec.has_flat()
+            rows.append(row(label("Drive"), seg(["Round", "Flat"], "Flat" if flat else "Round", w="140px")))
+            if flat:
+                rows.append(row(label("Flat"), f("flat", spec.flat, unit="mm"), hint(ui_text.FLAT_HINT)))
     rows += [
         row(label("Backlash"), f("backlash", spec.backlash or ui_text.BACKLASH_PLACEHOLDERS[process], unit="mm",
                                  w="150px", placeholder=not spec.backlash), hint(ui_text.BACKLASH_HINTS[process])),
@@ -435,7 +449,7 @@ def side_panel(title, spec, d, stem, focused="", card=None, pair=None, side="a")
         rows.append(row(label("Mate teeth"), f("mate_teeth", spec.mate_teeth), hint("the gear it meshes with")))
     rows.append(row(label("Name"), f("name", stem, grow=True, placeholder=True)))
     if card:
-        rows.append(explainer(card, d, stem, pair))
+        rows.append(explainer(card, d, stem, pair, spec=spec))
     return panel(title, ui_text.gear_readout(spec), rows)
 
 
@@ -1459,6 +1473,15 @@ boards["WorkbookPrintRefused"] = ("Workbook · Print files pressed on a SolidWor
                                       ui_text.print_refusal(printout.Refusal(
                                           printout.GATE, (), {"year": "2025", "revision": "33.1.0"})), False,
                                       ui_text.NOTE_STANDING)), WINDOW_WIDTH)
+
+# F3 (PLAN-PRINTED §4.1, §4.2): a printed gear on an 8 mm D-shaft whose flat is 7 across, a Bore allowance of 0.2 typed
+# (a figure from the coupons), Drive Flat and the card on Drive: where the flat is cut, and that the assembly does not
+# model a shaft's flat. The Derived panel's Bore as cut and Flat as cut give the hole. Typed, so the board reads the same
+# whichever way package A's switch is set (F3-INTERFACES §13); a blank's placeholder is on every other printed board.
+d_shaft = GearSpec(module="1.5", teeth="20", face_width="8", bore="8", process="printed", bore_allowance="0.2",
+                   drive="flat", flat="7", name="Pinion_D8")
+boards["PrintedBore"] = ("Single gear · printed, on a D-shaft: Bore allowance, Drive and Flat", single_board(
+    d_shaft, "drive"))
 
 layout = []
 x = 0

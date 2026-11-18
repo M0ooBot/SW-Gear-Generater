@@ -72,6 +72,8 @@ placeholder and hint for the row (below). A printed part's name ends `_P`
 | Profile shift (unit *× m*, placeholder *0*, hint *+ cures undercut*) | Gear A/B | spur, helical, double with external teeth; in a pair only on parallel shafts with an external mesh. Hidden, it goes to the spec as 0 |
 | Teeth side (`External` · `Internal`) | Gear | spur, helical, double in single mode; in a pair the Pair panel's Mesh decides |
 | Rim (placeholder *root + 6 × module*) | Gear A/B | a ring — and Bore is hidden for it |
+| Bore allowance (F3) | Gear A/B | every gear with a Bore row; hidden for a ring, and goes across blank |
+| Drive (`Round` · `Flat`), and Flat while it is Flat (F3) | Gear A/B | every gear with a Bore row but a bevel gear (G5); hidden, they go across round and blank |
 | Shaft angle, Mate teeth | Gear | bevel in single mode; in a pair they come from the Pair panel's shaft angle and the other gear's teeth |
 | Cone distance (in Centre distance's place, hint *apex to heel*) | Pair | bevel |
 | Mesh (`External` · `Internal`) | Pair | every kind but bevel; Internal makes gear B the ring |
@@ -109,7 +111,8 @@ gear closes the flyout, since the button that would hide it goes with the panel.
 
 Module (every ISO 54 module in a dropdown beside it, hint *ISO 54*), Teeth,
 Pressure angle (14.5, 20 and 25 in a dropdown), Face width, Bore (placeholder
-*none*), Backlash (placeholder *0.3 × module*, hint *ISO: 0.02–0.05 × m*; while
+*none*), under it Bore allowance, Drive and, while Drive is Flat, Flat (F3; *The
+bore as cut*, §9), Backlash (placeholder *0.3 × module*, hint *ISO: 0.02–0.05 × m*; while
 Process is Printed, placeholder *0.3 · printed*, hint *0.3 × m below m1*, since a
 printed gear's blank is the smaller of 0.3 mm and 0.3 × module), Fillet
 (placeholder *0.38 × module*), for a helical kind Helix angle (10–30 in a
@@ -147,7 +150,9 @@ symbol, what, worked)`, tested for every field in `tests/test_ui_text.py`.
 sentence: *Printed, blank uses 0.3 mm, or 0.3 × module below module 1: room for
 walls printed a little fat, and a starting value until your own prints are
 measured. A slicer's X-Y compensation does the same job, so use one or the
-other, not both.* Its worked line reads *blank → 0.3 mm · printed default · tooth
+other, not both.* Bore allowance, Drive and Flat (F3) have
+cards of their own, kept out of `EXPLAINER_FIELDS` and drawn with Bore's
+diagram (*The bore as cut*, §9). Its worked line reads *blank → 0.3 mm · printed default · tooth
 2.056 · space 2.656 · play in the mesh 0.6*, and a printed bevel gear's adds the
 toe's figure, which governs (*0.3 mm · printed default, 0.211 at the toe*). The
 strip passes the form's Process as `printed`, so the copy is right while the
@@ -192,6 +197,8 @@ then a 1 px rule, then the table: captions `A · mm` and `B · mm`, the label
 column 104 px, value columns 96 px. Values carry no unit; one `mm` caption heads
 each column. Where a value came from a default it says so (`0.45 · 0.3m`; a
 printed gear's blank Backlash `0.3 · printed default`, the third state). A
+printed gear with a bore ends with *Bore as cut* `8.2 · 8 + 0.2`, and a D with
+*Flat as cut* (F3; a machined gear only with an allowance or a D). A
 helical gear's column starts with six more: Helix `15° · right`, Transverse m,
 Transverse α, Lead, Twist on face (face to apex for a herringbone), and
 Overlap εβ. A shifted gear's starts with Profile shift `+0.3 · 0.6`, the
@@ -218,7 +225,9 @@ naming the record that is open.
 The dot and the headline (no document open is a good state here: this app makes
 its own documents). Below, what the primary button is about to do (*Build will
 make Gear_m1.5_N25.SLDPRT.*, or *Update values will change 2 variables in
-Gear_m1.5_N25.SLDPRT.*), under it which file **Print files** would write from
+Gear_m1.5_N25.SLDPRT.*; with a record open and Bore allowance blank, *Build will
+make Coupon_F3.SLDPRT with no bore allowance, as Coupon_C was built, since Bore
+allowance is blank.*, F3), under it which file **Print files** would write from
 the active part (*Print files will write Gear_m1.5_N25_P.step from the active
 part.*, F2), and a line counting what is left to do by hand.
 
@@ -1854,6 +1863,143 @@ a SolidWorks writing a STEP file has not been measured on, 2025: GATE said, the
 five buttons at 1080 px; the findings are set for 2024 and 2026).
 Every other board's footer gains Print files. Their renders wait for
 `render.py` on a machine with its Chrome, as every board's since F1.
+
+### The bore as cut (F3)
+
+PLAN-PRINTED §4.1, §4.1.1, §4.2 and §4.6, package C of stage F3; the interface is
+`docs/notes-printed/F3-INTERFACES.md`. The figures are package A's (the derived
+gear's `bore_allowance` and `bore_flat`, on the section of a helical or bevel
+gear), the record's comparisons package B's; every sentence below is `ui_text`'s
+unless it says whose. Board: `PrintedBore` (a printed module 1.5, 20 tooth gear
+on an 8 mm D-shaft, Flat 7, a Bore allowance of 0.2 typed, the card on Drive).
+
+**The rows** (Gear A/B, under Bore, before Backlash; G3):
+
+| Row | What | Shown |
+|---|---|---|
+| Bore allowance | a 150 px field, mm, hint *added to Bore*; its placeholder what a blank means for this gear (`bore_allowance_placeholder`): *0.2 · printed* for a printed gear not on record, *0 · as built* (or the figure the part holds) while a record is open, *0* machined. The figure is the derived gear's, so it says what the plan cuts | every gear with a Bore row; not a ring |
+| Drive | `Round` · `Flat` (140 px; blank is round); choosing brings up its card | not a ring, not a bevel gear (G5) |
+| Flat | an 84 px field, mm, hint *your shaft across its flat* | while Drive is Flat |
+
+A row hidden goes across blank, as a hidden Profile shift goes as 0: a ring's
+three go as blank and round, a bevel gear's Drive and Flat as round and blank,
+and Flat as blank while Drive is round (still typed in the field for when Drive
+is Flat again). So no ring is refused for a field it does not show
+(*A ring has no bore to give an allowance or a flat.* is the workbook's, at its
+cell). Open .gear.json sets Drive from the record, in lower case.
+
+**A record open** (F3-INTERFACES §5). While the strip holds an opened
+`.gear.json` in single mode, gear A's spec passes `spec.as_built` with the
+record's globals (`gui.held_spec`) before every derive, so a blank Bore
+allowance is the figure the opened part holds: none for every part built before
+F3. *Bore as cut* says the Bore of such a part, and nothing is offered to Update
+values for a bore that did not change. `_update_target` takes the form's spec as
+it is and applies `as_built` itself, deriving again from it for the globals it
+counts, and gives `swbuild.structural_change` the record's globals
+(`built_variables`); Update values plans and writes the record from the same
+spec, whose `to_dict` holds no `built_allowance`. **Build** with a record open
+keeps the opened part's as-built allowance too (the coordinator's ruling on
+F3-0's decision 11), and the SolidWorks bar's line says so while Bore allowance
+is blank (`ui_text.build_keeps`):
+
+- *Build will make Coupon_F3.SLDPRT with no bore allowance, as Coupon_C was
+  built, since Bore allowance is blank.* (a printed part built with none);
+- *Build will make Coupon_F3.SLDPRT with the bore allowance Coupon_C was built
+  with, 0.2 mm, since Bore allowance is blank.*;
+- nothing more for a typed allowance, no bore, a ring, a pair, or a machined
+  part built with none (a blank is 0 there either way). *Update values will
+  change …* is said in its place whenever it has something to change, as before.
+
+A pair's two gears are never read as built (the record is one gear's, and
+Update values is single mode's), so a pair built from the form takes the
+default.
+
+**Derived** (`ui_text.bore_rows`, after Fillet, the last of the rows):
+*Bore as cut* `8.2 · 8 + 0.2` (`8` with no allowance, `7.9 · 8 − 0.1` for a
+press fit), and for a D *Flat as cut* `7.2 · 7 + 0.2`, the hole across its flat.
+A printed gear with a bore always shows its hole; a machined gear only with an
+allowance or a D, so a plain machined gear's rows are F2's (the card pin,
+`tests/test_printed_rule.py`). No row with no bore, nor for a ring.
+
+**The cards** (`ui_text.bore_explainer(field, spec, derived)`; kept out of
+`EXPLAINER_FIELDS`, as the span's card is, and drawn with Bore's diagram,
+`BORE_DIAGRAM`):
+
+- **Bore allowance · a.** *Added to Bore when the hole is cut, on the diameter,
+  so Bore stays your shaft's size and the wall moves by half of it. Blank: 0.2 mm
+  for a printed gear not yet built (a starting value until your coupons give your
+  printer's figure), 0 machined, and for a gear already built the allowance it
+  was built with, whatever its Process is now. Clearing a typed allowance keeps
+  the figure as built; to take the default, type it. Bore as cut, under Derived,
+  shows which. Negative for a press fit. A slicer's X-Y hole compensation does
+  the same job, so keep it at 0.* Worked: *blank → 0.2 mm, the printed default →
+  a hole of 8.2 mm*; *blank → 0 mm, as built → a hole of 8 mm*; *blank → 0 mm,
+  machined → …*; *0.3 mm → a hole of 8.3 mm* (typed); *no Bore → no hole, so the
+  allowance is not used*; with a D *… → a D 8.2 mm across its round and 7.2 across
+  its flat*.
+- **Drive.** *Round cuts a round hole. Flat cuts a D, for a shaft with a flat:
+  type its size across the flat in Flat. The flat is cut on the gear's +X side,
+  square to its X axis and facing the middle of a tooth space, the same in every
+  gear. The assembly does not model a shaft's flat: it turns each gear to mesh on
+  its own, so gears that share a D-shaft are phased by their flats in your
+  machine and by their meshes in the assembly.* Worked: *round → a hole of 8.2
+  mm*; *flat → a D 8.2 mm across its round and 7.2 across its flat, its flat 3.1
+  mm from the axis on +X*; *flat → type your shaft's size across its flat in
+  Flat*; *no Bore → no hole to drive by*.
+- **Flat · F.** *Your shaft's size across its flat, from the flat to the
+  opposite round side, as your calipers read it. The hole's flat takes the same
+  half allowance as its round. The flat must be at least 0.3 mm deep on the shaft
+  (Bore less Flat) and stay well clear of the axis.* Worked: *7 mm → the hole 7.2
+  mm across its flat, 3.1 from the axis · 1 mm deep on the shaft*; *Drive is
+  round, so Flat is not used*; *no Bore → no hole to give a flat*.
+- **Bore**'s worked line gives the rim to the hole as cut once it has an
+  allowance: *10 mm, cut at 10.2 → rim 11.775 mm to the root circle* (with none,
+  *10 mm → rim 11.875 mm to the root circle*, as before).
+
+**What the Derived panel says of the bore's fields** (package A's sentences, at
+the field named; pinned through the strip in `tests/test_bore_form.py`): *There
+is no Bore, so the Bore allowance is not used.* (a warning: Build stays enabled,
+the ruling on F3-0's decision 15); *Drive flat needs a Bore: type your shaft's
+diameter in Bore, or choose round.*; *Drive flat needs a Flat: type your shaft's
+size across its flat.*; *Your shaft's flat is 0.2 mm deep (Bore 8 less Flat 7.8),
+under the 0.3 mm a printed D needs to hold; type a Flat of at most 7.7 mm, which
+leaves the flat a little play, or use a round bore.*; *The flat is 1 mm from the
+axis, under a quarter of the hole's radius (1.025 mm); type a Flat of at least
+4.925 mm, or use a round bore.*; and the bore checks on the hole as cut, *Bore of
+8 mm with its 0.2 mm allowance (8.2 mm as cut) reaches the root diameter of …*.
+
+**The print list** (`ui_text._print_bore`, from package B's
+`printout.bore_figures`, the hole as built): *bore 10 mm* for a part with no
+allowance and a round bore, word for word as before F3 (every list F2 wrote reads
+the same); *bore 8 mm + 0.2 mm allowance (8.2 mm as cut)*; *bore 8 mm − 0.1 mm
+allowance (7.9 mm as cut)*; with a D *bore 8 mm, D-flat 7 mm*, or *…, D-flat 7 mm
+(7.2 mm as cut)* with an allowance.
+
+**K3 in the Workbook window.** A user's feature (a keyway) in error after an
+Update set a part's Bore Allowance is said with the way back as typing the
+figure, never clearing the cell and never *again*: *Your User Keyway in
+Gear_m1.5_N20_P is in error in SolidWorks now, after this Update set Bore
+Allowance 0.2 to 0.3 (Gears!V2) in that part: change your User Keyway to fit, or
+type 0.2 in Gears!V2.* A blank allowance is the figure the part holds, and after
+this Update it holds the new one, so clearing the cell would keep that; and the
+sentence cannot see whether the cell was blank or typed before. Every other
+global's way back is as before (*… or type 10 in Gears!I2 again.*).
+
+**The window's checks read a part on record as built** (F3-0-REVIEW's S3, its
+wiring given to package C by the coordinator's ruling): `WorkbookWindow._assess`
+hands `workbook.assess.assess` the record `_blank_process` reads
+(`assessed_record`: this workbook's own, None for another's, a broken one or a
+newer one), so a row whose part is on record is checked and planned as built
+(package B's `build.built_globals`). A gearbox built before F3 is told exactly
+what it was told before, the printed rim and the bore against the root measured
+on the hole its parts hold, not on one a new part would be cut with.
+
+**The Gears columns** (`workbook/schema.py`, F3-0's): Bore allowance (V, mm,
+blank *0.2 printed for a new part, as built for a part on record, 0 machined*),
+Drive (W, `round` · `flat`, blank round) and Flat (X, mm), after End band and
+before Part name, which moves to Y and Notes to Z. A workbook written before F3
+is read and written by its own headers, so nothing lands in the wrong column. A
+ring's or sleeve's typed bore field is an error at its cell (package A's).
 
 ### Planetary stages (W7)
 
