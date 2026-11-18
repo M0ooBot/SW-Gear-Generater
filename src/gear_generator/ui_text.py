@@ -1956,7 +1956,37 @@ def _kept_name(path: str, spec) -> str:
     return " (its file keeps its name, which no longer says what it holds)"
 
 
-def _process_names_kept(update, result) -> str:
+def _recorded_printed(planned) -> Optional[bool]:
+    """Whether the record says the part held a printed gear's blank Backlash (True), a machined gear's (False), or
+    cannot say: no recorded globals (a record from before W9a), or a typed Backlash, which either Process keeps."""
+    from .gears import spur
+    recorded = dict(getattr(planned, "recorded", None) or ())
+    if "Backlash" not in recorded:
+        return None
+    held = "".join(str(recorded["Backlash"]).split())
+    if held == "".join(spur.printed_backlash_expression().split()):
+        return True
+    if held == "".join(spur.backlash_expression(_MachinedBlank()).split()):
+        return False
+    return None
+
+
+class _MachinedBlank:
+    """A section with a machined gear's blank Backlash, for :func:`spur.backlash_expression`'s text of it."""
+    backlash_typed = False
+    nozzle = None
+
+
+def _entry_printed(record, path: str) -> Optional[bool]:
+    """Whether the record taken at the press built the part at ``path`` printed; None with no such entry."""
+    from . import store
+    for entry in (record.current_parts() if record is not None else ()):
+        if store.same_path(entry.path, path):
+            return GearSpec.from_dict(dict(entry.spec or {})).is_printed()
+    return None
+
+
+def _process_names_kept(update, result, record=None) -> str:
     """F1 (PLAN-PRINTED D10): once for the gearbox, when this Update changed the Process of default-named parts, so
     that their file names no longer carry, or still carry, the _P a part built printed is named with. An Update never
     renames a file, and Build again… makes parts named for their Process. ``""`` when there are none."""
@@ -1968,7 +1998,13 @@ def _process_names_kept(update, result) -> str:
         if not part.changed or planned is None or spec is None or str(getattr(spec, "name", "")).strip():
             continue
         named = re.sub(r"_r\d+$", "", _stem(planned.path)).endswith(PRINTED_STEM_MARK)
-        if spec.is_printed() != named:
+        # Only on the Update that changes the Process (the F1 review's S2): what the part was on record before this
+        # press, from its entry's spec, else its recorded Backlash global; with neither, its file's name stands in.
+        was = _entry_printed(record, planned.path)
+        if was is None:
+            was = _recorded_printed(planned)
+        before = named if was is None else was
+        if spec.is_printed() != named and spec.is_printed() != before:
             now[spec.is_printed()].append(_stem(planned.path))
     out = []
     for printed, names in now.items():
@@ -2249,8 +2285,9 @@ def _gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshe
     # W9a: what it did with and found of the user's work, after the assembly's rebuild laid to that work alone.
     after = after + _rebuild_from_user(update, result) + _user_after(update, result)
     after = after + in_place_after(update, result)                   # W9c: the modes' consequences for the user
-    if _process_names_kept(update, result):
-        after = after + [_process_names_kept(update, result)]       # F1 (D10): once for the gearbox
+    names_kept = _process_names_kept(update, result, record)
+    if names_kept:
+        after = after + [names_kept]                                 # F1 (D10): once for the gearbox
     if leftovers_sentence(update):
         after = after + [leftovers_sentence(update)]                 # W9c: the app's leftovers, said as its own
 

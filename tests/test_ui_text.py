@@ -4005,3 +4005,29 @@ def test_a_printed_part_made_machined_keeps_its_p_and_a_printed_parts_teeth_are_
     named = _update(parts=(_backlash_part("Pinion", teeth="17", process="printed", name="Pinion"),), moved_shafts=(),
                     replaced=())
     assert "keeps its file name" not in ui_text.gearbox_update_status(named, _backlash_result("Pinion"))[0]
+
+
+def test_the_name_sentence_is_said_only_on_the_update_that_changes_the_process():
+    """The F1 review's S2: a part an earlier Update made printed is not told again on a later Update that changes
+    something else; one the record at the press holds as machined is. The record's entry says (the window passes the
+    job's record, taken at the press); without one, the recorded Backlash global says; without either, the name."""
+    from gear_generator.gears import spur
+    part = _backlash_part("Gear_m1.5_N17", teeth="18", process="printed", backlash="0.2")    # typed: no global says
+
+    def said(spec_on_record=None, recorded=None):
+        planned = dataclasses.replace(part, recorded=recorded)
+        record = None
+        if spec_on_record is not None:
+            record = store.LinkRecord(workbook=f"{P}\\Reducer_12to1.xlsx", parts=[
+                store.PartEntry(path=_path("Gear_m1.5_N17"), gears=["G1"], revision=0, spec=spec_on_record.to_dict())])
+        return ui_text.gearbox_update_status(_update(parts=(planned,), moved_shafts=(), replaced=()),
+                                             _backlash_result("Gear_m1.5_N17"), record=record)[0]
+
+    quiet = ("Updated SolidWorks: changed 1 variable in Gear_m1.5_N17 (it now has 18 teeth; its file keeps its name); "
+             "no interference between the gears. Save Gear_m1.5_N17 in SolidWorks to keep it.")
+    told = "Gear_m1.5_N17, now printed, keeps its file name, without the _P"
+    assert said(GearSpec(teeth="17", process="printed", backlash="0.2")) == quiet       # made printed earlier
+    assert said(GearSpec(teeth="17", backlash="0.2")).count(told) == 1                   # made printed now
+    assert said(recorded=(("Backlash", spur.printed_backlash_expression()),)) == quiet  # no entry: the global says
+    assert said(recorded=(("Backlash", '0.3 * "Module"'),)).count(told) == 1
+    assert said().count(told) == 1                                                       # neither: the name says

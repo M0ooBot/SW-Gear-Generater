@@ -339,6 +339,28 @@ def test_end_to_end_the_process_line_of_a_typed_box(desk, typed, nozzle, line):
     assert process_line(window) == line
 
 
+def test_printed_typed_on_a_built_gearbox_says_the_names_kept_once_and_not_on_the_next_update(desk, monkeypatch):
+    """D10 and the F1 review's S2, through the window: the Update that makes the parts printed says once that their
+    files keep their names (OutputGear's own Part name is never said); the next Update, which changes only G1's bore,
+    does not say it again."""
+    from test_workbook_window import save_in_excel
+    window = built(desk)
+    box_read_as(monkeypatch, "printed")
+    printed = desk.open(path=window.link.path)
+    printed.press_update()
+    desk.finish(printed)
+    told = ("The 3 parts now printed keep their file names, without the _P a part built printed is named with: "
+            "Update SolidWorks never renames a file, and Build again… makes new parts named with _P if you want the "
+            "mark.")
+    assert printed.status.get().count(told) == 1, printed.status.get()
+    save_in_excel(printed, {"Gears": {"J2": "7"}})
+    assert gear_states(printed)["G1"] == "changes on Update", printed.status.get()
+    printed.press_update()
+    desk.finish(printed)
+    assert printed.status.get().startswith("Updated SolidWorks: changed"), printed.status.get()
+    assert "now printed" not in printed.status.get(), printed.status.get()
+
+
 def test_a_copy_beside_its_originals_record_reads_a_blank_as_a_new_gearbox(desk, monkeypatch):
     """§1.3, the third check's should-fix: the record beside a copied workbook is the original's, so a blank Process
     is resolved with no record, Printed, and not Machined from the original's parts; by both of the window's reads."""
