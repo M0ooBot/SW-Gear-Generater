@@ -1356,3 +1356,131 @@ record only.
 
 **D3. `definition_problems` compares a gear's alignment, which fix 6 no longer does.** Both sides read 2 (ledger
 :526), so this changes nothing in the run. It does not yet follow fix 6.
+
+## Final re-check before the second run: `c740f92` (the notes A5 to A9)
+
+Head reviewed: `c740f92`. No SolidWorks was run.
+- Suite: 3968 passed, with only the two tkinter failures.
+- `--self-check` (the script at `97628ef`): 0 failed.
+
+### Verdict
+
+**Package A at `c740f92` is fit for the two-hour run.** Each note is done as asked, and each new change is pinned:
+undoing it in a scratch copy fails its test.
+
+### A8: the fallback's puts
+
+`_put_and_fix` decides, for each component of the fallen cluster, whether to put it back:
+- **Settled:** it reads fixed and stands within `POSE_TOLERANCE` of its frame. It is left as it stands.
+- **Put:** anything else. It is put at its frame and fixed at once.
+
+The next one put is chosen in this order:
+- one whose kept partners are all settled;
+- else one with any settled partner;
+- else the next in plan order.
+
+Undoing the order (always taking the first pending) fails
+`test_a_fallback_puts_first_what_is_joined_to_a_fixed_component_so_a_kept_mate_cannot_pull_it`.
+
+**It is right, and safe for the tie.**
+- The frames keep the old assembly's relative poses, and every kept user–user mate was satisfied there. So a put next
+  to a settled partner cannot be pulled.
+- In the tie's own mode, Housing-1 is fixed in the old assembly, was fixed at its insert, and stands at its frame:
+  settled. Sprocket-8 is then put next to it.
+- In N and L, C.5 has already fixed Housing-1 there, so again only Sprocket-8 is put.
+- UserAngle8b is satisfied at both frames.
+
+**"Fixed but off its frame" never unfixes.**
+- `_put_and_fix` calls `place_component` on the still-fixed component and does not call `fix_component` again.
+- So a refused put cannot leave a component unfixed. `place_component` raises *"did not take its frame"*, and the carry
+  stops with the component still fixed.
+- Whether `Transform2` moves a fixed component is not measured. The fixture is unlikely to meet the case, since Sun
+  and Housing-1 stand at one frame in every mode.
+
+**C.5 still uses `_fix_here`.** For a component fixed in the old assembly, `_fix_here` returns at once when the
+component reads fixed, wherever it stands. That is sound there: no mate of the user's exists yet, so nothing can have
+moved it since its insert. The comment now says so.
+
+**The ruling not to build the cure is the right call for a user.**
+- The unsafe case needs two components that are joined by a kept mate, both free and both off their frames in one
+  mode.
+- If SolidWorks refuses that put, the carry stops with SolidWorks' sentence. The new assembly is left unsaved and
+  nothing is written to the user's files.
+- The other choices are worse. Holding the puts with the job's own mates suppressed is unmeasured machinery. Going on
+  without the put would leave the record saying "fixed" where the component is not.
+- Logging it as open is enough until a run meets it.
+
+### A5, A6, A9
+
+**A5: done.** `"lock"` is now in `_ORDERLESS_KINDS`.
+- The swapped-retry test now uses a distance, and its new second half shows a swapped lock kept at once.
+- Removing `"lock"` again fails the test.
+
+**A6: done.**
+- `test_a_whole_component_for_a_remade_lock_is_selected_by_the_count` fails in all three cases when `_select_target`
+  trusts `Select4` again.
+
+**A9: done.**
+- §4 now lists:
+  - status 5;
+  - a limit's and a lock's MateEntity order;
+  - that C.6 and C.5's per-mode fix have never run on SolidWorks.
+- The note, the fake's docstring and the code's comment now claim tree order only for the face–face coincident.
+
+### A7: what status 5 is, and the app gears
+
+**No committed note names 5.**
+- The repo names 2, 3 and 4 (`scaffold.py`, `findings.py`). The macro database's sketch entry has 4 only from the type
+  library.
+- `w9c_demonstration.py` reads `swConstrainedStatus_e` from `swconst.tlb` at run time but never logs the names.
+- From the API's enumeration as I recall it, 5 is `swNoSolution` (1 unknown, 6 invalid solution, 7 autosolve off).
+  That is unverified here.
+- The run can settle it for nothing: the W9c script's `swconst.tlb` reader already exists. Note D6 in
+  `W9D-DEMONSTRATION-REVIEW.md` asks for one log line.
+
+**The app gears never read anything but 2.** Every per-mode read of the app's bodies in the new assembly was checked:
+run 2's carry (:647) and carry-closed (:1137), and run 3's carry-closed (:658).
+- Sun, the three planets, HighDog, LowDog, RangeSlv, Aux and the carrier read 2 in H, N and L.
+- Ring and the layout read 3 (fixed).
+- Every build step before the carry logged *"every gear free to turn"* in each mode.
+
+**5 appeared only on carried user components with no mate of their own in the new assembly** (both runs stopped in
+C.5, before C.6):
+- run 2: Sprocket-10 in H and Sprocket-8 in L;
+- run 3: Sprocket-11 in L.
+
+Each time it was one mode only.
+
+**No sign that an app gear can read 5 and be called tied.** An app gear is mated by the app in every mode. If one did
+read 5, the post-check would stop the carry: it treats any status but 2 as "unable to turn". That gives a visible
+stop, not a wrong record.
+
+### What the run meets for the first time
+
+- **C.5 run to its end.** The states are set per mode (both earlier runs stopped here, on `gear7`), and Housing-1 is
+  fixed per mode.
+- **The first measure of FixComponent's per-configuration scope.** It shows in the worker's *"fixed in every mode by
+  one FixComponent"* or *"had to be fixed"* fact, beside the script's IsFixed per mode.
+- **The whole of C.6.** It is the first time any of these has run on SolidWorks:
+  - AddMate5 on carried components, by plane, axis, whole component and r3 face references;
+  - the selections judged by the count;
+  - the rename, and a refused rename kept under SolidWorks' name;
+  - the read-back: orderless for the symmetric kinds, the swapped retry, and UserGear6's sense retry;
+  - the flags set and read per mode.
+- **MateEntity order of a remade mate between two carried components** (UserFaceCoin, Lock3, UserChainDist). This is
+  where `listing_order`, not tree order, first matters.
+- **UserAngle8b's own reads.** It is a new mate: its FlipDimension and Flipped before and after, and its code once the
+  fallback has fixed both its components.
+- **The tie.** FELL_TIE is judged on the lock plus the angle. UserLock8a is deleted, UserAngle8b kept, and
+  `_put_and_fix` runs in H then in N and L.
+- **The C.7 post-check per mode.** It covers:
+  - codes;
+  - N1's re-judged ties;
+  - app gears free to turn with the user's mates on;
+  - poses against anchors (`moved`; Sprocket-5's anchor in N and L was the last run's open question);
+  - interference naming carried components.
+- **GetConstrainedStatus of carried components with their mates on** (5 seen before).
+- **The root read at C.1** on the new assembly.
+- **The r3 walk inside the job on the open path, and tier 1 resolved after the reload on the closed path.**
+- **C.8 and B's finished-carry sentences:** the result, the question with its *may* sentences, and the footer after a
+  carry that ends rather than stops.
