@@ -50,7 +50,7 @@ from .. import findings
 from ..spec import BORE_ALLOWANCE_DEFAULT as SPEC_BORE_ALLOWANCE_DEFAULT
 from ..spec import BORE_ALLOWANCE_GLOBAL as SPEC_BORE_ALLOWANCE_GLOBAL
 from ..spec import BORE_FLAT_GLOBAL as SPEC_BORE_FLAT_GLOBAL
-from ..spec import KIND_BEVEL, RECIPE_ARCS, RECIPE_INVOLUTE, GearSpec, InputError
+from ..spec import DRIVE_ROUND, KIND_BEVEL, RECIPE_ARCS, RECIPE_INVOLUTE, GearSpec, InputError
 from . import equations
 from .properties import property_ops
 from .base import (
@@ -111,6 +111,12 @@ BORE_FLAT = SPEC_BORE_FLAT_GLOBAL                    # "Bore Flat"
 BORE_ALLOWANCE_DEFAULT = SPEC_BORE_ALLOWANCE_DEFAULT  # mm on the diameter, printed and blank, a part not yet built
 FLAT_LEAST_H = 0.25           # × R
 FLAT_LEAST_DEPTH = 0.3        # mm
+# F3 (F3-INTERFACES §13, the coordinator's landing order of 2026-11-18): whether a printed gear's blank Bore allowance
+# on a part not on record plans BORE_ALLOWANCE_DEFAULT. Off as committed: such a gear then plans 0, as every printed
+# part F1 and F2 built holds, until packages B and C read every part on record through spec.as_built; one commit then
+# turns it on. A typed figure and an as-built figure (built_allowance) plan what they say whatever it is. Every kind
+# reads it here at call time, through bore_allowance_of, never by `from ... import`, so one assignment turns it on.
+PRINTED_DEFAULT_IN_PLANS = False
 
 # The global variables, by name. The first ten are the user's own, byte for byte.
 TEETH = "No. of Teeth"
@@ -271,6 +277,7 @@ class SpurDerived:
             TEETH: float(self.teeth),
             MODULE: self.module,
             BORE: self.bore,
+            **{v.name: float(v.expression) for v in bore_globals(self)},    # F3: only the globals the part holds
             PRESSURE_ANGLE: self.pressure_angle_deg,
             **shift,
             OUTER: self.da,
@@ -492,7 +499,8 @@ def profile(teeth: int, module: float, pressure_angle_deg: float, face_width: fl
             backlash: float, fillet: float, backlash_typed: bool = False, fillet_typed: bool = False,
             transverse_module: Optional[float] = None, transverse_backlash: Optional[float] = None,
             addendum: Optional[float] = None, whole_depth: Optional[float] = None,
-            space_change: float = 0.0, shift: float = 0.0, nozzle: Optional[float] = None) -> SpurDerived:
+            space_change: float = 0.0, shift: float = 0.0, nozzle: Optional[float] = None,
+            bore_allowance: float = 0.0, bore_flat: Optional[float] = None) -> SpurDerived:
     """Every size of one tooth space's section, the one sketch every kind of gear cuts.
 
     A spur gear's section is its only section. A helical gear's is the
@@ -511,6 +519,10 @@ def profile(teeth: int, module: float, pressure_angle_deg: float, face_width: fl
     gear's transverse ``α`` and normal ``m`` that is its normal shift ``xn``.
 
     ``nozzle`` (F1) is the printed gear's line width, None when it is not printed; it changes no size.
+
+    ``bore_allowance`` and ``bore_flat`` (F3) are the hole as cut: the allowance on the diameter the bore is cut
+    with, and the shaft's Flat with a D (None: round), as :func:`bore_allowance_of` and :func:`bore_flat_of` give
+    them. They change no size of the teeth.
     """
     m = module
     mt = module if transverse_module is None else transverse_module
@@ -553,7 +565,7 @@ def profile(teeth: int, module: float, pressure_angle_deg: float, face_width: fl
         t2=math.sqrt((tip_cap_d / db) ** 2 - 1.0),
         form_d=form_d, flank_arc_radius=rp * math.sin(alpha),
         tip_thickness=2.0 * (da / 2.0) * (math.pi / n - tip_angle),
-        shift=shift, nozzle=nozzle,
+        shift=shift, nozzle=nozzle, bore_allowance=bore_allowance, bore_flat=bore_flat,
     )
 
 
@@ -816,6 +828,7 @@ class SpurGear:
             FILLET_FACTOR * m if typed_fillet is None else typed_fillet,
             backlash_typed=typed_backlash is not None, fillet_typed=typed_fillet is not None,
             shift=spec.profile_shift_value(), nozzle=spec_nozzle(spec),
+            bore_allowance=bore_allowance_of(spec), bore_flat=bore_flat_of(spec),
         )
 
     # -- checking --------------------------------------------------------
@@ -830,7 +843,7 @@ class SpurGear:
         except InputError as exc:
             return [Diagnostic(ERROR, str(exc), "recipe")]
         g = derived if derived is not None else self.derive(spec)
-        return section_diagnostics(g, recipe)
+        return section_diagnostics(g, recipe) + bore_checks(spec)
 
     # -- the equations ---------------------------------------------------
 
@@ -866,6 +879,7 @@ class SpurGear:
             GlobalVariable(TEETH, equations.literal(g.teeth)),
             GlobalVariable(MODULE, equations.literal(g.module)),
             GlobalVariable(BORE, equations.literal(g.bore)),
+            *bore_globals(g),
             GlobalVariable(PRESSURE_ANGLE, equations.literal(g.pressure_angle_deg)),
             *head,
             GlobalVariable(FILLET, fillet),
@@ -937,9 +951,10 @@ def section_diagnostics(g: SpurDerived, recipe: str, undercut_limit: Optional[fl
             f"Backlash of {_num(g.backlash)} mm leaves no tooth: it must be less than half "
             f"the circular pitch, {_num(g.p / 2.0)} mm."), "backlash"))
         return out
-    if g.bore >= g.df:
+    bore = g.bore_as_cut     # F3 (§4.1): every check of the bore is on the hole as cut, g.bore with no allowance
+    if g.bore > 0.0 and bore >= g.df:
         out.append(Diagnostic(ERROR, (
-            f"Bore of {_num(g.bore)} mm reaches the root diameter of {_num(g.df)} mm; "
+            f"{bore_words(g.bore, g.bore_allowance)} reaches the root diameter of {_num(g.df)} mm; "
             "it must be smaller."), "bore"))
     if g.tip_thickness <= 0.0:
         out.append(Diagnostic(ERROR, (
@@ -987,8 +1002,8 @@ def section_diagnostics(g: SpurDerived, recipe: str, undercut_limit: Optional[fl
                 f"{g.teeth} teeth at {_num(g.pressure_angle_deg)}° is below the undercut limit of "
                 f"{_num(limit, 2)}: a generated gear would lose the bottom of its flanks, which "
                 f"this profile does not show.{cure}"), "teeth"))
-    if g.bore > 0.0 and g.bore < g.df:
-        rim = (g.df - g.bore) / 2.0
+    if g.bore > 0.0 and 0.0 < bore < g.df:
+        rim = (g.df - bore) / 2.0
         if g.printed and PRINTED_RIM_NOZZLES * g.nozzle > g.module:
             # §2.2: printed, the stricter floor is said; above 3 nozzle widths of module that is today's one module.
             if rim < PRINTED_RIM_NOZZLES * g.nozzle - PRINTED_TOLERANCE:
@@ -1242,6 +1257,14 @@ def field_errors(spec: GearSpec, kind: str = KIND, internal: bool = False) -> Li
     read("process", spec.process_value)
     if spec.is_printed():
         read("nozzle", spec.nozzle_mm)
+    # F3 (§4.1, §4.2): the bore's three fields. A ring has no bore, so a typed one is an error at its cell (G9);
+    # else each is read here, and its bounds are bore_checks' (they do not stop a gear being worked out).
+    if internal:
+        out.extend(no_bore_errors(spec, "ring"))
+    else:
+        read("bore_allowance", spec.bore_allowance_mm)
+        read("drive", spec.drive_value)
+        read("flat", spec.flat_mm)
     shift = read("profile_shift", spec.profile_shift_value)
     if shift is not None and shift != 0:
         if internal:
@@ -1471,14 +1494,248 @@ def _space_ops_arcs(g: SpurDerived, pitch: str = PITCH) -> List[Op]:
     ]
 
 
+# -- the bore as cut (F3) ------------------------------------------------------
+
+
+def bore_allowance_of(spec: GearSpec) -> float:
+    """The allowance a plan cuts this gear's bore with, mm on the diameter (F3, PLAN-PRINTED §4.1, §4.1.1).
+
+    0 with no bore. Else :meth:`GearSpec.bore_allowance_mm`: a typed figure (any sign, 0 included), else the part's
+    as built (``built_allowance``, set by ``spec.as_built``), else the printed default, else 0; but while
+    :data:`PRINTED_DEFAULT_IN_PLANS` is off, a blank allowance on a gear not on record plans 0 (F3-INTERFACES §13).
+    Every kind takes the allowance its plan and its checks use from here. Raises InputError naming Bore allowance on
+    text that does not read (field_errors says it first)."""
+    if not spec.has_bore():
+        return 0.0
+    blank = not str(spec.bore_allowance).strip() and not str(spec.built_allowance).strip()
+    if blank and not PRINTED_DEFAULT_IN_PLANS:
+        return 0.0
+    return spec.bore_allowance_mm()
+
+
+def bore_flat_of(spec: GearSpec) -> Optional[float]:
+    """The shaft's Flat a plan cuts a D with, mm, or None for a round bore: a gear with a bore, Drive flat and a Flat
+    typed (§4.2). Without a bore or a Flat the bore is round, and bore_checks says why it cannot be a D."""
+    if not spec.has_bore() or not spec.has_flat():
+        return None
+    return spec.flat_mm()
+
+
+def bore_size_words(bore: float, allowance: float) -> str:
+    """A bore's size in a sentence: ``8 mm`` with no allowance, as before F3, else
+    ``8 mm with its 0.2 mm allowance (8.2 mm as cut)`` (F3-INTERFACES §9)."""
+    if not allowance:
+        return f"{_num(bore)} mm"
+    return f"{_num(bore)} mm with its {_num(allowance)} mm allowance ({_num(bore + allowance)} mm as cut)"
+
+
+def bore_words(bore: float, allowance: float) -> str:
+    """``Bore of 8 mm``, or ``Bore of 8 mm with its 0.2 mm allowance (8.2 mm as cut)``: a bore check's subject."""
+    return f"Bore of {bore_size_words(bore, allowance)}"
+
+
+@dataclass(frozen=True)
+class DFlat:
+    """A D-shaped hole (§4.2), in the bore sketch on the Front plane, mm: a round of radius ``radius`` about the axis
+    and a flat square to X at ``h`` along +X, the shaft's Flat taking the allowance's half as the round does.
+
+    ``R = (D + a) / 2`` and ``h = F − D / 2 + a / 2``, so the hole is ``F + a`` across its flat. The chord runs from
+    ``(h, −c/2)`` to ``(h, +c/2)``, ``c = 2 √(R² − h²)``; the major arc runs counter-clockwise (direction +1) from the
+    chord's +Y end, through +Y, −X and −Y, to its −Y end, sweeping ``360° − 2 acos(h / R)``."""
+
+    bore: float          # D, the shaft
+    allowance: float     # a, on the diameter
+    flat: float          # F, the shaft across its flat
+    radius: float        # R
+    h: float             # the flat's distance from the axis
+
+    @property
+    def chord(self) -> float:
+        return 2.0 * math.sqrt(max(0.0, self.radius * self.radius - self.h * self.h))
+
+    @property
+    def depth(self) -> float:
+        """How deep the flat is, R − h: the shaft's own D − F, whatever the allowance."""
+        return self.radius - self.h
+
+    @property
+    def start(self) -> Point2:
+        """The arc's start: the chord's +Y end, the one its counter-clockwise sweep leaves first."""
+        return (self.h, self.chord / 2.0)
+
+    @property
+    def end(self) -> Point2:
+        """The arc's end, the chord's −Y end, where the flat's line starts."""
+        return (self.h, -self.chord / 2.0)
+
+    @property
+    def sweep_deg(self) -> float:
+        """The arc's counter-clockwise sweep from start to end, degrees: over 180° for any h above 0."""
+        turn = math.atan2(self.end[1], self.end[0]) - math.atan2(self.start[1], self.start[0])
+        return math.degrees(turn % (2.0 * math.pi))
+
+    @property
+    def least_flat(self) -> float:
+        """The least Flat that keeps h at FLAT_LEAST_H × R: ``F ≥ D/2 − a/2 + 0.25 (D + a)/2 = (5D − 3a)/8`` at 0.25."""
+        return self.bore / 2.0 - self.allowance / 2.0 + FLAT_LEAST_H * (self.bore + self.allowance) / 2.0
+
+    @property
+    def most_flat(self) -> float:
+        """The most Flat that leaves a flat FLAT_LEAST_DEPTH deep: ``F ≤ D − 0.3``."""
+        return self.bore - FLAT_LEAST_DEPTH
+
+
+def d_flat(bore: float, allowance: float, flat: float) -> DFlat:
+    """The D of a shaft ``bore`` across, with its Flat ``flat``, cut at ``allowance`` on the diameter (§4.2)."""
+    return DFlat(bore=bore, allowance=allowance, flat=flat, radius=(bore + allowance) / 2.0,
+                 h=flat - bore / 2.0 + allowance / 2.0)
+
+
+def no_bore_errors(spec: GearSpec, what: str) -> List[Diagnostic]:
+    """A ring's or a sleeve's bore fields (G9): each typed one an error at its cell, since it has no shaft bore. A blank
+    or round Drive is no field typed."""
+    said = f"A {what} has no bore to give an allowance or a flat."
+    out: List[Diagnostic] = []
+    if str(spec.bore_allowance).strip():
+        out.append(Diagnostic(ERROR, said, "bore_allowance"))
+    if str(spec.drive).strip().lower() not in ("", DRIVE_ROUND):
+        out.append(Diagnostic(ERROR, said, "drive"))
+    if str(spec.flat).strip():
+        out.append(Diagnostic(ERROR, said, "flat"))
+    return out
+
+
+def bore_checks(spec: GearSpec, kind: str = KIND, cut: bool = True) -> List[Diagnostic]:
+    """What the bore's three fields say (F3, PLAN-PRINTED §4.1, §4.2), on the hole as cut. Empty for a gear with no
+    allowance typed and a round bore, so nothing a gear said before F3 changes. Call it once field_errors is clean.
+
+    ``kind`` the bevel's takes no D (G5); ``cut`` False is a gear whose Bore is not cut (an internal bevel gear).
+
+    - an allowance typed with no Bore, or on a bore not cut: a warning, the allowance not used (the coordinator's
+      ruling on F3-0's decision 15);
+    - an allowance that closes the hole, Bore + allowance at or under 0: an error at Bore allowance;
+    - Drive flat: on a bevel gear an error (G5); with no Bore an error at Drive; with no Flat an error at Flat; else
+      the D's two bounds, each an error at Flat: h ≥ FLAT_LEAST_H × R, and a flat FLAT_LEAST_DEPTH deep, R − h, which
+      is the shaft's own D − F;
+    - a Flat typed with Drive round: a warning that it is not used."""
+    out: List[Diagnostic] = []
+    bored = spec.has_bore() and cut
+    if str(spec.bore_allowance).strip() and not bored:
+        said = ("There is no Bore, so the Bore allowance is not used." if cut else
+                "An internal bevel gear is a ring and has no bore, so the Bore allowance is not used.")
+        out.append(Diagnostic(WARNING, said, "bore_allowance"))
+    if bored:
+        bore, allowance = spec.bore_mm(), bore_allowance_of(spec)
+        if bore + allowance <= 0.0:
+            out.append(Diagnostic(ERROR, (
+                f"A Bore allowance of {_num(allowance)} mm closes the {_num(bore)} mm bore "
+                f"({_num(bore + allowance)} mm as cut); it must leave a hole."), "bore_allowance"))
+            return out
+    if not spec.has_flat():
+        if str(spec.flat).strip():
+            out.append(_flat_unused())
+        return out
+    if kind == KIND_BEVEL:
+        out.append(Diagnostic(ERROR, _BEVEL_FLAT, "drive"))
+        return out
+    if not bored:
+        out.append(Diagnostic(ERROR, "Drive flat needs a Bore: type your shaft's diameter in Bore, or choose round.",
+                              "drive"))
+        return out
+    flat = spec.flat_mm()
+    if flat is None:
+        out.append(Diagnostic(ERROR, "Drive flat needs a Flat: type your shaft's size across its flat.", "flat"))
+        return out
+    d = d_flat(bore, allowance, flat)
+    if d.h < FLAT_LEAST_H * d.radius - 1e-9:
+        out.append(Diagnostic(ERROR, (
+            f"The flat is {_num(d.h)} mm from the axis, under a quarter of the hole's radius "
+            f"({_num(FLAT_LEAST_H * d.radius)} mm); type a Flat of at least {_num(d.least_flat)} mm, or use a round "
+            "bore."), "flat"))
+    if bore - flat < FLAT_LEAST_DEPTH - 1e-9:
+        out.append(Diagnostic(ERROR, (
+            f"Your shaft's flat is {_num(bore - flat)} mm deep (Bore {_num(bore)} less Flat {_num(flat)}), under the "
+            f"{_num(FLAT_LEAST_DEPTH)} mm a printed D needs to hold; type a Flat of at most {_num(d.most_flat)} mm, "
+            "which leaves the flat a little play, or use a round bore."), "flat"))
+    return out
+
+
+_BEVEL_FLAT = ("A bevel gear's bore is the edge of its revolved blank and takes no flat: use a round bore, or a hub "
+               "row.")
+
+
+def _flat_unused() -> Diagnostic:
+    return Diagnostic(WARNING, "Flat is read only with Drive flat, so with a round bore it is not used.", "flat")
+
+
+def bore_globals(g: Any) -> List[GlobalVariable]:
+    """The bore's globals after ``"Bore Diameter"`` (F3): ``"Bore Allowance"`` only when the hole is cut with an
+    allowance that is not 0, as ``"Profile Shift"`` is only in a shifted part, and ``"Bore Flat"`` only with a D. A
+    gear with neither writes the globals it wrote before F3."""
+    out: List[GlobalVariable] = []
+    if getattr(g, "bore_allowance", 0.0):
+        out.append(GlobalVariable(BORE_ALLOWANCE, equations.literal(g.bore_allowance)))
+    if getattr(g, "bore_flat", None) is not None:
+        out.append(GlobalVariable(BORE_FLAT, equations.literal(g.bore_flat)))
+    return out
+
+
+def bore_expressions(g: Any) -> Tuple[str, str, str]:
+    """The bore's three equation texts, of its globals: the hole's diameter as cut
+    (``"Bore Diameter" + "Bore Allowance"``, or ``"Bore Diameter"`` with no allowance), and with a D its round's radius
+    R and its flat's distance h (§4.2), each bracketed so it can stand in a product."""
+    bore, allowance, flat = _q(BORE), _q(BORE_ALLOWANCE), _q(BORE_FLAT)
+    if getattr(g, "bore_allowance", 0.0):
+        return (f"{bore} + {allowance}", f"( {bore} + {allowance} ) / 2", f"{flat} - {bore} / 2 + {allowance} / 2")
+    return bore, f"{bore} / 2", f"{flat} - {bore} / 2"
+
+
+def chord_expression(radius: str, h: str) -> str:
+    """The D's chord, ``2 * ( abs ( R * R - h * h ) ) ^ 0.5`` with R and h written out: the app's square root, never
+    ``sqr``, which SolidWorks 2026 refuses at 0 (GOTCHAS §27; :func:`profile_variables`' comment)."""
+    return f"2 * ( abs ( ( {radius} ) * ( {radius} ) - ( {h} ) * ( {h} ) ) ) ^ 0.5"
+
+
 def _bore_ops(g: SpurDerived) -> List[Op]:
-    r = g.bore / 2.0
+    """The bore, one sketch on the Front plane cut through all: a circle of the hole as cut, its diameter linked to
+    ``"Bore Diameter"`` (plus ``"Bore Allowance"`` when the hole has one), or with a D its round and its flat
+    (:func:`_d_bore_ops`). A bore with no allowance and a round is the ops it was before F3, op for op."""
+    if g.bore_flat is not None:
+        return _d_bore_ops(g)
+    d = g.bore_as_cut
+    r = d / 2.0
     return [
         OpenSketch("bore", 1),
         Circle("bore_circle", (0.0, 0.0), r),
         Relation("coincident", ("bore_circle.centre", ORIGIN)),
-        Dimension("Bore", ("bore_circle",), _at(r * 1.3, math.radians(-45.0)), g.bore),
+        Dimension("Bore", ("bore_circle",), _at(r * 1.3, math.radians(-45.0)), d),
         CloseSketch("bore", BORE_SKETCH),
         Cut("bore_cut", "bore", BORE_CUT),
-        LinkDimension(f"Bore@{BORE_SKETCH}", _q(BORE)),
+        LinkDimension(f"Bore@{BORE_SKETCH}", bore_expressions(g)[0]),
+    ]
+
+
+def _d_bore_ops(g: Any) -> List[Op]:
+    """The D (§4.2, exactly): on the Front plane, the major arc about the origin from the chord's +Y end to its −Y end
+    counter-clockwise, the flat's line from the arc's end back to its start, held vertical at x = h on +X, facing the
+    middle of the tooth space centred on +X (ruling 2; a helical gear's is so at its section plane, a herringbone's at
+    its mid-plane). The arc's dimension is its radius (``findings.ARC_DIMENSION``), linked to R; the line's its length,
+    linked to the chord. Nine degrees of freedom, nine taken; the start and direction fix the branch."""
+    d = d_flat(g.bore, g.bore_allowance, g.bore_flat)
+    _cut, radius, h = bore_expressions(g)
+    r = d.radius
+    return [
+        OpenSketch("bore", 1),
+        Arc("bore_arc", (0.0, 0.0), d.start, d.end, 1),
+        Line("bore_flat", d.end, d.start),
+        Relation("coincident", ("bore_arc.centre", ORIGIN)),
+        Relation("coincident", ("bore_flat.start", "bore_arc.end")),
+        Relation("coincident", ("bore_flat.end", "bore_arc.start")),
+        Relation("vertical", ("bore_flat",)),
+        Dimension("Bore", ("bore_arc",), _at(r * 1.3, math.radians(135.0)), r),
+        Dimension("Flat", ("bore_flat",), (d.h - 0.4 * r, 0.0), d.chord),
+        CloseSketch("bore", BORE_SKETCH),
+        Cut("bore_cut", "bore", BORE_CUT),
+        LinkDimension(f"Bore@{BORE_SKETCH}", radius),
+        LinkDimension(f"Flat@{BORE_SKETCH}", chord_expression(radius, h)),
     ]

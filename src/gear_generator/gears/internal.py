@@ -207,6 +207,12 @@ class InternalDerived:
         """A printed ring whose Backlash was left blank: its backlash is the printed default (§2.1)."""
         return self.printed and not self.backlash_typed
 
+    # F3 (§4.1, G9): a ring has no shaft bore, so no allowance and no flat; read as every derived gear's are
+    # (spur.SpurDerived), and not fields, so a ring's record is what it was.
+    bore_allowance = 0.0
+    bore_flat = None
+    bore_as_cut = 0.0
+
     @property
     def rp(self) -> float:
         return self.d / 2.0

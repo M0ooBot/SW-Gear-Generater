@@ -347,11 +347,14 @@ class HelicalGear:
         # The normal shift: in the transverse section it moves the tip out x·mn and
         # thickens the tooth by 2·x·mn·tan αt, which is what spur.profile does with these.
         shift = {} if self.internal else {"shift": spec.profile_shift_value()}
+        # F3 (§4.1, §4.2): the hole as cut, on the section as a spur gear's; a ring has no bore.
+        bore = {} if self.internal else {"bore_allowance": spur.bore_allowance_of(spec),
+                                         "bore_flat": spur.bore_flat_of(spec)}
         section = self._section(
             spec, spec.teeth_count(), mn, transverse_pressure_angle(normal, beta), width, j,
             self.fillet_factor * mn if typed_fillet is None else typed_fillet,
             backlash_typed=typed_backlash is not None, fillet_typed=typed_fillet is not None,
-            transverse_module=mt, transverse_backlash=j / cos_beta, nozzle=spur.spec_nozzle(spec), **shift,
+            transverse_module=mt, transverse_backlash=j / cos_beta, nozzle=spur.spec_nozzle(spec), **shift, **bore,
         )
         lead = math.pi * section.d / math.tan(math.radians(beta))
         path = width / 2.0 + mn if self.kind == KIND_HERRINGBONE else width + 2.0 * mn
@@ -438,6 +441,8 @@ class HelicalGear:
             return [Diagnostic(ERROR, str(exc), "recipe")]
         g = derived if derived is not None else self.derive(spec)
         out = self._section_diagnostics(g.section, recipe, g.undercut_limit)
+        if not self.internal:
+            out += spur.bore_checks(spec, self.kind)   # F3: a ring's bore fields are field_errors' (G9)
         if any(d.is_error for d in out):
             return out
         low, high = USUAL_RANGE[self.kind]
@@ -459,9 +464,10 @@ class HelicalGear:
                     f"A groove of {_num(g.groove)} mm leaves no teeth on a {_num(g.face_width)} mm face; "
                     "it must be narrower than the face."), "groove"))
                 return out
-            if g.bore >= g.groove_d:
+            if g.bore_as_cut >= g.groove_d:     # F3 (§4.1): on the hole as cut, g.bore with no allowance
                 out.append(Diagnostic(ERROR, (
-                    f"The groove's floor, at {_num(g.groove_d)} mm, reaches the bore of {_num(g.bore)} mm; "
+                    f"The groove's floor, at {_num(g.groove_d)} mm, reaches the bore of "
+                    f"{spur.bore_size_words(g.bore, g.bore_allowance)}; "
                     "make the bore smaller."), "groove"))
             if g.toothed_width < GROOVE_WARNING_MODULES * g.module:
                 out.append(Diagnostic(WARNING, (
@@ -490,6 +496,7 @@ class HelicalGear:
             GlobalVariable(TEETH, equations.literal(s.teeth)),
             GlobalVariable(MODULE, equations.literal(s.module)),
             *([GlobalVariable(BORE, equations.literal(s.bore))] if self.has_bore_global else []),
+            *([] if self.internal else spur.bore_globals(s)),    # F3: "Bore Allowance", "Bore Flat" when cut
             GlobalVariable(PRESSURE_ANGLE, equations.literal(g.normal_pressure_angle_deg)),
             *([GlobalVariable(spur.PROFILE_SHIFT, equations.literal(s.shift))] if getattr(s, "shift", 0.0) else []),
             GlobalVariable(HELIX_ANGLE, equations.literal(g.helix_angle_deg)),

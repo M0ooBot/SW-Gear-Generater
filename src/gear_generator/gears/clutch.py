@@ -31,7 +31,7 @@ from .base import (ERROR, ORIGIN, AddGlobal, Circle, CloseSketch, CustomProperty
 from .helical import _flip_for
 from .internal import InternalSpurGear
 from .properties import property_ops
-from .spur import FACE_WIDTH, MODULE, TEETH, TEETH_PATTERN, SpurGear
+from .spur import FACE_WIDTH, MODULE, TEETH, TEETH_PATTERN, SpurGear, no_bore_errors
 
 SLEEVE, DOG, HUB = "sleeve", "dog", "hub"
 
@@ -139,10 +139,16 @@ class _Clutch:
             out.append(Diagnostic(ERROR, f"A {self.kind} is built unshifted, to fit the {other} it {does}: clear its "
                                          "Profile shift.", "profile_shift"))
         out += self._band_errors(spec)
+        out += self._bore_errors(spec)
         return out + list(self._base.validate(self._as_spur(spec), derived))
 
     def _band_errors(self, spec) -> List[Diagnostic]:
         """A sleeve's bands (W9b); another kind's are said at the workbook row (``workbook.modes.row_errors``)."""
+        return []
+
+    def _bore_errors(self, spec) -> List[Diagnostic]:
+        """A sleeve's typed bore fields (F3, G9). A dog's and a hub's are its delegate's, the spur gear's, which takes
+        the allowance and the D as any gear does (PLAN-PRINTED §4.4)."""
         return []
 
     def variables(self, spec, derived, trig: str = "degrees"):
@@ -170,6 +176,15 @@ class SleeveKind(_Clutch):
     kind = SLEEVE
     _delegate = InternalSpurGear
     _side = "internal"
+
+    def _as_spur(self, spec):
+        """The ring's spec, with the bore's three fields cleared: a sleeve has no shaft bore, and a typed one is said in
+        the sleeve's own words (:meth:`_bore_errors`), not the ring's."""
+        return replace(super()._as_spur(spec), bore_allowance="", drive="round", flat="")
+
+    def _bore_errors(self, spec) -> List[Diagnostic]:
+        """F3 (G9): each typed bore field an error at its cell, *A sleeve has no bore to give an allowance or a flat.*"""
+        return no_bore_errors(spec, SLEEVE)
 
     def _band_errors(self, spec) -> List[Diagnostic]:
         """The bands' errors at their cells (ISSUE-1-PLAN §2.4; W9B-INTERFACES §1): a band not more than 0, one band
