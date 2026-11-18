@@ -46,7 +46,7 @@ def test_print_files_is_the_footers_fifth_button_and_the_window_keeps_its_width(
     assert int(str(window.status_label.cget("wraplength"))) >= px(workbook_gui.STATUS_MIN_WRAP)
 
 
-def test_while_the_findings_are_unset_a_press_is_refused_by_name_and_nothing_is_submitted(desk):
+def test_while_the_findings_are_unset_a_press_is_refused_by_name_and_nothing_is_submitted(desk, f2_unmeasured):
     window = built(desk)
     calls = len(desk.worker.calls)
     window.press_print()
@@ -77,6 +77,7 @@ class Planned:
 
         def workbook_print(record, assessment, update_plan, output_folder, version, **kw):
             test.calls.append((record, assessment, update_plan, output_folder, version))
+            test.keywords = kw
             return test.plan
 
         def print_parts(sw, plan):
@@ -172,11 +173,17 @@ def test_a_read_excel_has_yet_to_recalculate_waits(desk, monkeypatch):
 
 
 def test_a_missing_output_folder_is_said(desk, monkeypatch):
+    """B's own planner, the findings as committed: the window's Output folder not on disk (the parts still are) is
+    NO_FOLDER, said, nothing submitted."""
     window = built(desk)
-    Planned(monkeypatch, desk)
-    shutil.rmtree(desk.folder)
+    desk.app._snapshot = {"revision": tuple(desk.sw.revision)}        # the strip's SolidWorks, for B's gate
+    gone = str(desk.tmp / "gone")
+    monkeypatch.setattr(window, "_folder", lambda spec: gone)
+    calls = len(desk.worker.calls)
     window.press_print()
-    assert ui_text.print_folder_missing(str(desk.folder)) in window.status.get()
+    assert window.status.get().startswith(f"Print files wrote nothing: the output folder {ui_text.short_path(gone, 48)} "
+                                          "does not exist; make it, or choose another, then print.")
+    assert len(desk.worker.calls) == calls
 
 
 def test_a_copy_of_a_workbook_is_refused_as_another_workbooks_record(desk, monkeypatch):
@@ -187,15 +194,16 @@ def test_a_copy_of_a_workbook_is_refused_as_another_workbooks_record(desk, monke
     shutil.copy2(window.link.path, copy_path)
     shutil.copy2(store.link_record_path(window.link.path), store.link_record_path(str(copy_path)))
     copy = desk.open(path=copy_path)
-    planned = Planned(monkeypatch, desk)
+    desk.app._snapshot = {"revision": tuple(desk.sw.revision)}        # the strip's SolidWorks, for B's gate
     calls = len(desk.worker.calls)
-    copy.press_print()
+    copy.press_print()                                       # B's own planner, handed the window's verdict (S8)
     assert copy.status.get().startswith(ui_text.print_refusal(po.Refusal(po.FOREIGN_RECORD)))
-    assert len(desk.worker.calls) == calls and planned.calls[-1][0] is None
-    # The gate still comes first: while it refuses, the copy hears the gate.
-    planned.plan = po.PrintPlan(po.Refusal(po.GATE_COPY))
+    assert len(desk.worker.calls) == calls
+    planned = Planned(monkeypatch, desk)
     copy.press_print()
-    assert copy.status.get().startswith(ui_text.print_refusal(po.Refusal(po.GATE_COPY)))
+    assert planned.calls[-1][0] is None and store.same_path(planned.keywords["foreign_record"], window.link.path)
+    window.press_print()
+    assert planned.keywords["foreign_record"] == ""
 
 
 def test_closing_mid_print_says_it_closes_once_the_list_is_written_then_closes(desk, monkeypatch):
@@ -254,16 +262,10 @@ def test_quitting_the_app_mid_print_asks_without_a_builds_journal(desk, monkeypa
 
 # -- end to end on package B's planner, job and list writer, against the fake, the findings patched ------------------
 
-MEASURED_ON_2026 = (("SAVE_AS_COPY", 2), ("STEP_EXPORT_ON_2026", True), ("PART_WINDOW_READ_ON_2026", True),
-                    ("STEP_EXPORT_NEEDS_ACTIVE_ON_2026", False), ("STEP_EXPORT_FROM_COMPONENT_ON_2026", True))
-
-
-def test_end_to_end_the_built_reducer_is_printed_whole_with_its_list(desk, monkeypatch):
-    """B's workbook_print, print_parts and write_list on the fake SolidWorks, the findings a reviewed probe run would set
-    patched in: every part once, its list beside them; nothing on record changes."""
-    from gear_generator import findings
-    for name, value in MEASURED_ON_2026:
-        monkeypatch.setattr(findings, name, value, raising=False)
+def test_end_to_end_the_built_reducer_is_printed_whole_with_its_list(desk):
+    """B's workbook_print, print_parts and write_list on the fake SolidWorks, the findings as committed (set on both
+    versions by the probes' review) and nothing patched: every part once, its list beside them; nothing on record
+    changes."""
     window = built(desk)
     before = record_of(window)
     desk.app._snapshot = {"revision": tuple(desk.sw.revision)}
@@ -283,12 +285,13 @@ def test_end_to_end_the_built_reducer_is_printed_whole_with_its_list(desk, monke
     assert record_of(window) == before
 
 
-def test_end_to_end_while_a_part_window_cannot_be_read_the_job_refuses_by_name(desk, monkeypatch):
-    """The same with PART_WINDOW_READ still None: the parts the build left open but not active are refused, named,
-    and nothing is written."""
+def test_end_to_end_while_a_part_window_cannot_be_read_the_job_refuses_by_name(desk, monkeypatch, f2_unmeasured):
+    """The same with only the gate measured (f2_unmeasured, then SAVE_AS_COPY and STEP_EXPORT_ON_2026) and
+    PART_WINDOW_READ still None: the parts the build left open but not active are refused, named, and nothing is
+    written."""
     from gear_generator import findings
-    for name, value in MEASURED_ON_2026[:2]:
-        monkeypatch.setattr(findings, name, value, raising=False)
+    monkeypatch.setattr(findings, "SAVE_AS_COPY", 2)
+    monkeypatch.setattr(findings, "STEP_EXPORT_ON_2026", True)
     window = built(desk)
     desk.app._snapshot = {"revision": tuple(desk.sw.revision)}
     try:
@@ -300,3 +303,18 @@ def test_end_to_end_while_a_part_window_cannot_be_read_the_job_refuses_by_name(d
         "Print files wrote nothing: Gear_m1.5_N17, Gear_m1.5_N68, Gear_m2_N17 and OutputGear are open in SolidWorks but "
         "not as the active document; close them, then print.")
     assert not (desk.folder / "print").exists() or not list((desk.folder / "print").iterdir())
+
+
+def test_end_to_end_a_change_that_needs_a_new_revision_says_build_again(desk):
+    """F2-REVIEW M1, on B's own planner with the findings as committed: a structural edit (G1's flank to arcs) needs a
+    new revision, so Update SolidWorks is not run, and the press says Build again…, never Update SolidWorks."""
+    from test_workbook_window import save_in_excel
+    window = built(desk)
+    save_in_excel(window, {"Gears": {"K2": "arcs"}})
+    desk.app._snapshot = {"revision": tuple(desk.sw.revision)}        # the strip's SolidWorks, for B's gate
+    calls = len(desk.worker.calls)
+    window.press_print()
+    said = window.status.get()
+    assert said.startswith("Print files wrote nothing: the workbook's changes to Gear_m1.5_N17 need a new revision, "
+                           "which Update SolidWorks cannot make; press Build again…, then print the new revision.")
+    assert len(desk.worker.calls) == calls

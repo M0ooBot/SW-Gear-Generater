@@ -182,8 +182,9 @@ def test_without_solidworks_print_files_says_so_and_submits_nothing(app):
     assert app._pending_build is None
 
 
-def test_while_the_findings_are_unset_a_press_is_refused_by_name_and_nothing_is_submitted(app, desk):
-    """Every F2 finding is None: B's planner refuses with GATE_COPY, said, and no job reaches the worker."""
+def test_while_the_findings_are_unset_a_press_is_refused_by_name_and_nothing_is_submitted(app, desk, f2_unmeasured):
+    """Every F2 finding is None (the f2_unmeasured fixture, as committed before the probe's reruns were reviewed): B's
+    planner refuses with GATE_COPY, said, and no job reaches the worker."""
     app._worker = desk.worker
     app._snapshot = {"key": (1, "", ""), "path": "", "is_part": False, "title": "", "revision": (34, 1, 1)}
     coupon(app)
@@ -289,13 +290,31 @@ def test_a_press_writes_the_file_and_its_list_and_says_where(app, desk, monkeypa
     assert app.print_button._enabled
 
 
-def test_a_press_with_no_output_folder_says_so(app, desk, monkeypatch, tmp_path):
-    Planned(monkeypatch, tmp_path)
+def test_a_press_with_no_output_folder_says_so(app, desk, tmp_path):
+    """B's own planner, the findings as committed: an Output folder not on disk is NO_FOLDER, said, nothing submitted;
+    a blank one the same, asking for one."""
     active_part(app, tmp_path)
     app._worker = desk.worker
     app.out_folder.set(str(tmp_path / "gone"))
     app._print_files()
-    assert app.status.get() == ui_text.PRINT_FORM_NEEDS_FOLDER and desk.worker.calls == []
+    assert app.status.get() == (f"Print files wrote nothing: the output folder {ui_text.short_path(str(tmp_path / 'gone'), 48)}"
+                                " does not exist; make it, or choose another, then print.")
+    app.out_folder.set("")
+    app._print_files()
+    assert app.status.get() == "Print files wrote nothing: choose an output folder; it writes into a print folder there."
+    assert desk.worker.calls == []
+
+
+def test_a_gear_json_that_does_not_read_is_said_as_such(app, desk, tmp_path):
+    """B's NO_RECORD with its detail "unreadable": the record is there and does not read (F2-REVIEW S5)."""
+    part = active_part(app, tmp_path)
+    pathlib.Path(store.sidecar_path(str(part))).write_text("{ not json", encoding="utf-8")
+    app._worker = desk.worker
+    app._print_files()
+    assert app.status.get() == ("Print files prints a part Gear Generator built: the .gear.json beside Coupon_A.SLDPRT "
+                                "does not read, so nothing was written.")
+    assert desk.worker.calls == []
+    assert pathlib.Path(store.sidecar_path(str(part))).read_text(encoding="utf-8") == "{ not json"   # left where it is
 
 
 def test_a_refusal_in_the_job_is_said_and_no_list_is_written_without_a_folder(app, desk, monkeypatch, tmp_path):
@@ -319,10 +338,11 @@ def test_a_list_that_cannot_be_written_is_said(app, desk, monkeypatch, tmp_path)
     app._print_files()
     desk.worker.run()
     app._collect_build()
+    # F2-REVIEW S2: composed after the write (printout.with_list), so it never says a list was written.
     assert app.status.get() == (
-        f"Print files wrote Coupon_A.step and its print list in {ui_text.short_path(planned.folder, 64)}. Its print "
-        "list could not be written (OSError: the disk is full), so nothing in that folder says what each file is or "
-        "whether to print it: press Print files again for a set with its list.")
+        f"Print files wrote Coupon_A.step in {ui_text.short_path(planned.folder, 64)}, but the print list could not be "
+        "written (the disk is full), so nothing in that folder says what each file is: press Print files again for a "
+        "set with its list.")
     assert str(app.status_label.cget("foreground")) == theme.ERROR
 
 
@@ -343,17 +363,11 @@ def test_a_job_that_raises_is_said_as_print_files_stopping(app, desk, monkeypatc
 
 # -- end to end on package B's planner, job and list writer, against the fake, the findings patched ------------------
 
-MEASURED_ON_2026 = (("SAVE_AS_COPY", 2), ("STEP_EXPORT_ON_2026", True), ("PART_WINDOW_READ_ON_2026", True),
-                    ("STEP_EXPORT_NEEDS_ACTIVE_ON_2026", False))
-
-
-def test_end_to_end_a_built_coupon_is_printed_from_the_form(desk, monkeypatch):
-    """B's form_print, print_parts and write_list on the fake SolidWorks, with the findings a reviewed probe run would
-    set patched in (every F2 finding is None in findings.py): the bar names the file, the press writes it and its list
-    into a folder of the Output folder's print folder, and the status says where."""
-    from gear_generator import __version__, findings, gui
-    for name, value in MEASURED_ON_2026:
-        monkeypatch.setattr(findings, name, value, raising=False)
+def test_end_to_end_a_built_coupon_is_printed_from_the_form(desk):
+    """B's form_print, print_parts and write_list on the fake SolidWorks, the findings as committed (set on both
+    versions by the probes' review) and nothing patched: the bar names the file, the press writes it and its list into
+    a folder of the Output folder's print folder, and the status says where."""
+    from gear_generator import __version__, gui
     app = gui.GearApp(desk.root)
     app._worker = desk.worker
     app.out_folder.set(str(desk.folder))

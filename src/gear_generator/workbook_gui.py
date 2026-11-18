@@ -1398,13 +1398,13 @@ class WorkbookWindow(tk.Toplevel):
         package B's printout.workbook_print from this window's planning read (the record, the assessment and what
         Update would do) and the version the strip's SolidWorks bar last read, which refuses (the gate first) before
         any job; then one job on the shared worker, swbuild.print_parts. Every sentence is ui_text's; what this
-        window says itself is only what B cannot see: a read that failed, a read Excel has yet to recalculate, a
-        record that is another workbook's (B's FOREIGN_RECORD, given here since B is not handed the workbook's path),
-        and an Output folder not on disk."""
+        window says itself is only what B cannot see: a read that failed, and a read Excel has yet to recalculate.
+        Whether the record beside the workbook is another's is this window's verdict, passed to B's planner
+        (``foreign_record=``, F2-REVIEW S8), which says FOREIGN_RECORD in its own order; an Output folder not on disk is
+        B's NO_FOLDER."""
         if self._pending is not None or self.reading is None:
             return
         self._plan()
-        refusal: Optional[printout.Refusal] = None
         if self.error or self.plan_trouble:
             said = ui_text.PRINT_WAITS_FOR_READ
         elif self.recalc:
@@ -1419,21 +1419,14 @@ class WorkbookWindow(tk.Toplevel):
         snapshot = getattr(self.app, "_snapshot", None) or {}
         revision = tuple(snapshot.get("revision", ()) or ())
         try:
-            plan = printout.workbook_print(self.record, self.state, self.update_plan, folder, revision)
+            plan = printout.workbook_print(self.record, self.state, self.update_plan, folder, revision,
+                                           foreign_record=self._foreign_record())
         except Exception as exc:  # noqa: BLE001 - planning is pure and should never raise; if it does, say so
             self.note = ui_text.Note(ui_text.print_collect_failed(exc), False, ui_text.NOTE_STANDING)
             self._refresh_state()
             return
-        refusal = plan.refusal
-        gated = refusal is not None and refusal.code in (printout.GATE, printout.GATE_COPY)
-        if not gated and self.record is None and self._foreign_record():
-            refusal = printout.Refusal(printout.FOREIGN_RECORD)
-        if refusal is not None:
-            said = ui_text.print_refusal(refusal)
-        elif not folder or not os.path.isdir(folder):
-            said = ui_text.print_folder_missing(folder)
-        if said:
-            self.note = ui_text.Note(said, False, ui_text.NOTE_STANDING)
+        if plan.refusal is not None:
+            self.note = ui_text.Note(ui_text.print_refusal(plan.refusal), False, ui_text.NOTE_STANDING)
             self._refresh_state()
             return
         if not self._worker_free(printing=True):
@@ -1445,29 +1438,28 @@ class WorkbookWindow(tk.Toplevel):
             return swbuild.print_parts(session, plan)
         self._submit(job, work)
 
-    def _foreign_record(self) -> bool:
-        """Whether the record beside this workbook is another workbook's (a copy's, or not yet said): the planning read
-        drops it (self.record None), and B's planner is not handed the workbook's path to tell."""
+    def _foreign_record(self) -> str:
+        """The other workbook the record beside this one was written for, when it is not to be taken as this one's (a
+        copy's, or not yet said: store.foreign_workbook of the settled record), else "": the planning read drops such
+        a record (self.record None), so this window's verdict is what B's planner is handed."""
         try:
             record = store.read_link_record(self.link.path)
         except store.StoreError:
-            return False
-        return record is not None and bool(store.foreign_workbook(self._settled(record), self.link.path))
+            return ""
+        if record is None:
+            return ""
+        return store.foreign_workbook(self._settled(record), self.link.path) or ""
 
     def _finish_print(self, job: Job, result: Any) -> ui_text.Note:
-        """What a press of Print files did (ui_text.print_result), with its print list written into the press's folder
-        whenever one was made (printout.write_list; a failed set's headed DO NOT PRINT THIS SET). A standing note:
-        it writes no record and changes nothing the footer reads."""
+        """What a press of Print files did: its print list first written into the press's folder whenever one was made
+        (printout.with_list; a failed set's headed DO NOT PRINT THIS SET), then the status composed from what that
+        answered (ui_text.print_result), never claiming a list that could not be written (F2-REVIEW S2). A standing
+        note: it writes no record and changes nothing the footer reads."""
         try:
+            result = printout.with_list(result, ui_text.print_list_text(job.print_plan, result, __version__))
             text = ui_text.print_result(result)
             ok = (result.refusal is None and not result.failed and not result.flags_turned_on
-                  and result.active_restored)
-            if result.folder:
-                try:
-                    if not printout.write_list(result, ui_text.print_list_text(job.print_plan, result, __version__)):
-                        raise OSError("no file was written")
-                except Exception as exc:  # noqa: BLE001 - said: the folder stands without its list
-                    text, ok = f"{text} {ui_text.print_list_unwritten(exc)}", False
+                  and result.active_restored and not result.list_error)
         except Exception as exc:  # noqa: BLE001
             text, ok = ui_text.print_collect_failed(exc), False
         return ui_text.Note(text, ok, ui_text.NOTE_STANDING)

@@ -6473,9 +6473,6 @@ def carry_unsaid(again, result, exc: BaseException) -> str:
 
 SPAN_LABEL_ANY = "Span over k teeth"
 MEASURED_LABEL = "Measured"
-# The Measured line says when the backlash package A proposes (gears.span.measured, which does the arithmetic) passes
-# PRINTED_CAP × module, and names that figure.
-PRINTED_CAP = 0.3
 SPAN_WITHHELD = {
     "arcs": "not one figure on arcs; choose Involute to measure",
     "no_contact": "no span: no k has both jaws on the involute",
@@ -6520,9 +6517,10 @@ def measured_line(reading: "SpanReading", measured: float, alpha_n: float, modul
     else:
         said = f"{lead}: a backlash of {_n(told.backlash_mm)} mm a gear keeps {play} mm of play a flank."
     if told.over_default:
-        said += (f" That is more than 0.3 × module ({_n(PRINTED_CAP * float(module))} mm), the most a gear of this "
-                 "module is given today: whether it should take more is yours to decide (README: Calibrating your "
-                 "printer, step 6).")
+        # The coordinator's ruling on F2-REVIEW M2: A flags a backlash above this gear's printed default (the smaller of
+        # 0.3 mm and 0.3 × module, Measured.default_mm), the figure named here.
+        said += (f" That is more than the {_n(told.default_mm)} mm a printed gear of this module is given today: "
+                 "whether it should take more is yours to decide (README: Calibrating your printer, step 6).")
     return said
 
 
@@ -6590,8 +6588,6 @@ PRINT_WAITS_FOR_UNOWNED = ("A job from a Workbook window that was closed while S
 PRINT_WAITS_FOR_RECALC = ("Print files wrote nothing: Export wrote cells that formulas in the workbook may depend on; "
                           "open and save it in Excel first, so what is built can be compared with what it says.")
 PRINT_WAITS_FOR_READ = "Print files wrote nothing: the workbook does not read as it is now; the footer says why."
-PRINT_FORM_NEEDS_FOLDER = ("Print files wrote nothing: choose an output folder that exists; it writes into a print "
-                           "folder there.")
 PRINT_CLOSES_WHEN_DONE = ("This window closes once Print files has finished and its print list is written; it stays "
                           "open if something needs saying.")
 PRINT_CLOSE_ANYWAY = ("SolidWorks has not answered yet: Print files is still running there, perhaps held up by a "
@@ -6646,6 +6642,16 @@ def print_refusal(refusal: "Refusal") -> str:
     if code == po.UNSAVED_MARK:
         return (f"Print files wrote nothing: {named} {_pr_verb(parts, 'has', 'have')} changes from Update SolidWorks "
                 f"that are not saved; save {_pr_them(parts)} in SolidWorks, then print.")
+    if code == getattr(po, "NEW_REVISION", "NEW_REVISION"):
+        # F2-REVIEW M1: the Update plan needs a new revision, so Update SolidWorks is never run; Build again… is the way.
+        return (f"Print files wrote nothing: the workbook's changes to {named} need a new revision, which Update "
+                "SolidWorks cannot make; press Build again…, then print the new revision.")
+    if code == getattr(po, "NO_FOLDER", "NO_FOLDER"):
+        folder = str(detail.get("folder", "") or "")
+        if not folder:
+            return "Print files wrote nothing: choose an output folder; it writes into a print folder there."
+        return (f"Print files wrote nothing: the output folder {short_path(folder, 48)} does not exist; make it, or "
+                "choose another, then print.")
     if code == po.MISMATCHED_MARK:
         return (f"Print files wrote nothing: {named} no longer {_pr_verb(parts, 'holds', 'hold')} what the record says; "
                 "press Update SolidWorks, then print.")
@@ -6678,8 +6684,11 @@ def print_refusal(refusal: "Refusal") -> str:
         return ("Print files wrote nothing: the record beside this workbook is another workbook's, so nothing built "
                 "is this workbook's to print yet; Build makes its own.")
     if code == po.NO_RECORD:
-        what = f"{_file(parts[0])} has" if parts else "the active part has"
-        return f"Print files prints a part Gear Generator built: {what} no .gear.json beside it, so nothing was written."
+        who = _file(parts[0]) if parts else "the active part"
+        if detail.get("record") == "unreadable":
+            return (f"Print files prints a part Gear Generator built: the .gear.json beside {who} does not read, so "
+                    "nothing was written.")
+        return f"Print files prints a part Gear Generator built: {who} has no .gear.json beside it, so nothing was written."
     if code == po.NOT_A_PART:
         what = f", and {_file(parts[0])} is not a part" if parts else ""
         return (f"Print files prints the part active in SolidWorks{what}: make a gear part active there; nothing was "
@@ -6745,9 +6754,10 @@ def print_refusal(refusal: "Refusal") -> str:
 def print_result(result: "PrintResult") -> str:
     """The status after a press's job: the files written and the folder, or the refusal; then a feature SolidWorks
     warns about (written as built), a document the job left marked changed in SolidWorks, and the active document
-    not put back, each said. After a stop that left files (``result.folder`` not "") it says where they are and that
-    their list says not to print them; the list itself is the caller's to write (``printout.write_list``), and
-    :func:`print_list_unwritten` says when it could not be."""
+    not put back, each said. After a stop that left files (``result.folder`` not "") it says where they are and not
+    to print them. Whether the print list is claimed follows what ``printout.with_list`` answered (F2-REVIEW S2): *and
+    its print list* only with ``list_path``, the failure said with ``list_error``, so the status is composed after the
+    write and never claims a list that is not there."""
     said: List[str] = []
     if result.refusal is not None or result.failed:
         refusal = result.refusal
@@ -6757,15 +6767,26 @@ def print_result(result: "PrintResult") -> str:
             refusal = Refusal(FILE_CHECK, (_stem_of_print(file_),), {"file": file_, "reason": reason})
         said.append(print_refusal(refusal))
         if result.folder:
-            said.append(f"What was written is in {short_path(result.folder, 64)}, and its print list says not to "
-                        "print this set.")
+            where = short_path(result.folder, 64)
+            if getattr(result, "list_path", ""):
+                said.append(f"What was written is in {where}, and its print list says not to print this set.")
+            elif getattr(result, "list_error", ""):
+                said.append(f"What was written is in {where}, but its print list could not be written "
+                            f"({result.list_error}), so nothing there says not to print it: do not print this set.")
+            else:
+                said.append(f"What was written is in {where}; do not print this set.")
     else:
         files = [f for _, f in result.written]
         where = short_path(result.folder, 64) if result.folder else "the print folder"
-        if len(files) == 1:
-            said.append(f"Print files wrote {_file(files[0])} and its print list in {where}.")
+        what = _file(files[0]) if len(files) == 1 else f"{len(files)} STEP files"
+        if getattr(result, "list_path", ""):
+            said.append(f"Print files wrote {what} and {'its' if len(files) == 1 else 'their'} print list in {where}.")
+        elif getattr(result, "list_error", ""):
+            said.append(f"Print files wrote {what} in {where}, but the print list could not be written "
+                        f"({result.list_error}), so nothing in that folder says what each file is: press Print files "
+                        "again for a set with its list.")
         else:
-            said.append(f"Print files wrote {len(files)} STEP files and their print list in {where}.")
+            said.append(f"Print files wrote {what} in {where}.")
     for path, features in result.warnings:
         names = list(features)
         said.append(f"SolidWorks warns about {_and(names)} in {_stem(path)}; "
@@ -6797,12 +6818,6 @@ def _stem_of_print(name: str) -> str:
     return base[:-len(STEP_SUFFIX)] if base.lower().endswith(STEP_SUFFIX) else base
 
 
-def print_list_unwritten(error: BaseException) -> str:
-    """``write_list`` raised: the folder stands without its list, which is said, with what to do."""
-    return (f"Its print list could not be written ({type(error).__name__}: {error}), so nothing in that folder says "
-            "what each file is or whether to print it: press Print files again for a set with its list.")
-
-
 def print_job_failed(error: BaseException) -> str:
     """The job raised (``print_parts`` turns what it can into a result, so this is the connection failing, or worse)."""
     from .swcom import SolidWorksError
@@ -6819,12 +6834,6 @@ def print_collect_failed(error: BaseException) -> str:
 def print_unreachable(reason: str) -> str:
     """No SolidWorks worker: nothing was asked of SolidWorks."""
     return f"SolidWorks cannot be reached from here, so Print files wrote nothing. {reason}".strip()
-
-
-def print_folder_missing(folder: str) -> str:
-    """The Workbook window: the Box's (or the strip's) Output folder is not on disk."""
-    return (f"Print files wrote nothing: the output folder {short_path(folder, 48)} does not exist; make it, or "
-            "change it on the Box sheet.")
 
 
 def print_bar_line(plan: "Optional[PrintPlan]") -> str:
@@ -6922,7 +6931,8 @@ PRINT_UNITS = {"MILLI.METRE": "millimetres", "METRE": "metres", "CENTI.METRE": "
 
 # Why B's size check was skipped (printout.EXTENT_SKIPPED), in the list's words.
 PRINT_SIZE_SKIPPED = {"bevel": "a bevel gear", "ring": "a ring", "sleeve": "a sleeve", "dog": "a dog", "hub": "a hub",
-                      "user features": "your features in it", "not measured": "not yet shown on SolidWorks"}
+                      "herringbone": "a herringbone, not yet measured", "user features": "your features in it",
+                      "not measured": "not yet shown on SolidWorks"}
 
 
 def _print_schema(name: str) -> str:

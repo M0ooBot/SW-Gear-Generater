@@ -4115,13 +4115,20 @@ MEASURED = [
     (11.17, 20, 1.5, "Your printer takes 0.019 mm off a flank: a backlash of 0.1 mm a gear, the least proposed (0.04 mm "
                      "of play a flank alone would ask less)."),
     (11.409, 20, 1.5, "Your printer adds 0.1 mm a flank: a backlash of 0.298 mm a gear keeps 0.04 mm of play a flank."),
-    (11.409, 25, 1.5, "Your printer adds 0.1 mm a flank: a backlash of 0.309 mm a gear keeps 0.04 mm of play a flank."),
+    # The coordinator's ruling on F2-REVIEW M2: flagged above the printed default (0.3 mm from module 1 up, 0.3 x
+    # module under it), so 0.309 at 25 degrees on a module 1.5 gear is flagged, where 0.3 x module (0.45) was not.
+    (11.409, 25, 1.5, "Your printer adds 0.1 mm a flank: a backlash of 0.309 mm a gear keeps 0.04 mm of play a flank. "
+                      "That is more than the 0.3 mm a printed gear of this module is given today: whether it should "
+                      "take more is yours to decide (README: Calibrating your printer, step 6)."),
     (11.6, 20, 1.5, "Your printer adds 0.196 mm a flank: a backlash of 0.501 mm a gear keeps 0.04 mm of play a flank. "
-                    "That is more than 0.3 × module (0.45 mm), the most a gear of this module is given today: whether "
-                    "it should take more is yours to decide (README: Calibrating your printer, step 6)."),
+                    "That is more than the 0.3 mm a printed gear of this module is given today: whether it should take "
+                    "more is yours to decide (README: Calibrating your printer, step 6)."),
     (11.4488, 20, 1.0, "Your printer adds 0.12 mm a flank: a backlash of 0.341 mm a gear keeps 0.04 mm of play a flank. "
-                       "That is more than 0.3 × module (0.3 mm), the most a gear of this module is given today: whether "
-                       "it should take more is yours to decide (README: Calibrating your printer, step 6)."),
+                       "That is more than the 0.3 mm a printed gear of this module is given today: whether it should "
+                       "take more is yours to decide (README: Calibrating your printer, step 6)."),
+    (11.409, 20, 0.8, "Your printer adds 0.1 mm a flank: a backlash of 0.298 mm a gear keeps 0.04 mm of play a flank. "
+                      "That is more than the 0.24 mm a printed gear of this module is given today: whether it should "
+                      "take more is yours to decide (README: Calibrating your printer, step 6)."),
 ]
 
 
@@ -4151,7 +4158,9 @@ def test_the_measured_line_says_what_span_measured_works_out(spec, delta):
         assert f" {ui_text._n(abs(e))} mm " in line
     assert f"a backlash of {ui_text._n(told.backlash_mm)} mm a gear" in line
     assert ("the least proposed" in line) == told.floored
-    assert ("more than 0.3 × module" in line) == told.over_default
+    assert ("a printed gear of this module is given today" in line) == told.over_default
+    if told.over_default:
+        assert f"more than the {ui_text._n(told.default_mm)} mm " in line
 
 
 def test_the_span_card():
@@ -4203,6 +4212,15 @@ REFUSALS = [
     (po.Refusal(po.CHANGES_ON_UPDATE, ("Gear_m1.25_N13_P",), {"Gear_m1.25_N13_P": "new part"}),
      "Print files wrote nothing: Update SolidWorks would make Gear_m1.25_N13_P new; press Update SolidWorks, then "
      "print."),
+    (po.Refusal(po.NEW_REVISION, ("Gear_m1.5_N20_P", "Gear_m1.5_N40_P"),
+                {"Gear_m1.5_N20_P": "values", "Gear_m1.5_N40_P": "new part"}),
+     "Print files wrote nothing: the workbook's changes to Gear_m1.5_N20_P and Gear_m1.5_N40_P need a new revision, "
+     "which Update SolidWorks cannot make; press Build again…, then print the new revision."),
+    (po.Refusal(po.NO_FOLDER, (), {"folder": ""}),
+     "Print files wrote nothing: choose an output folder; it writes into a print folder there."),
+    (po.Refusal(po.NO_FOLDER, (), {"folder": "C:\\Gears\\Out"}),
+     "Print files wrote nothing: the output folder C:\\Gears\\Out does not exist; make it, or choose another, then "
+     "print."),
     (po.Refusal(po.NO_PART, ("G3",), {"G3": "no part"}),
      "Print files wrote nothing: G3 has no part yet; build it first, then print."),
     (po.Refusal(po.NO_PART, ("G3", "Gear_x"), {"G3": "no part", "Gear_x": "not on disk"}),
@@ -4214,6 +4232,9 @@ REFUSALS = [
      "workbook's to print yet; Build makes its own."),
     (po.Refusal(po.NO_RECORD, ("Part1.SLDPRT",)),
      "Print files prints a part Gear Generator built: Part1.SLDPRT has no .gear.json beside it, so nothing was "
+     "written."),
+    (po.Refusal(po.NO_RECORD, ("Part1.SLDPRT",), {"record": "unreadable"}),
+     "Print files prints a part Gear Generator built: the .gear.json beside Part1.SLDPRT does not read, so nothing was "
      "written."),
     (po.Refusal(po.NO_RECORD),
      "Print files prints a part Gear Generator built: the active part has no .gear.json beside it, so nothing was "
@@ -4303,18 +4324,20 @@ def test_the_bar_line_names_the_file_only_for_a_plan_that_would_write():
 
 def test_print_result_after_a_clean_press():
     one = po.PrintResult(written=(("C:\\Out\\Coupon_A.SLDPRT", "C:\\Out\\print\\2026-11-19 10.05.12\\Coupon_A.step"),),
-                         folder="C:\\Out\\print\\2026-11-19 10.05.12", active_restored=True)
+                         folder="C:\\Out\\print\\2026-11-19 10.05.12", active_restored=True,
+                         list_path="C:\\Out\\print\\2026-11-19 10.05.12\\print list.txt")
     assert ui_text.print_result(one) == ("Print files wrote Coupon_A.step and its print list in "
                                          "C:\\Out\\print\\2026-11-19 10.05.12.")
     many = po.PrintResult(written=(("a", "F\\A.step"), ("b", "F\\B.step"), ("c", "F\\C.step")), folder="F",
-                          warnings=(("C:\\Out\\B.SLDPRT", ("Fillet3",)),), active_restored=True)
+                          warnings=(("C:\\Out\\B.SLDPRT", ("Fillet3",)),), active_restored=True,
+                          list_path="F\\print list.txt")
     assert ui_text.print_result(many) == ("Print files wrote 3 STEP files and their print list in F. SolidWorks warns "
                                           "about Fillet3 in B; it was written as SolidWorks built it.")
 
 
 def test_print_result_says_a_flag_turned_on_and_the_active_document_not_put_back():
     result = po.PrintResult(written=(("a", "F\\A.step"),), folder="F", flags_turned_on=("C:\\Out\\A.SLDPRT",),
-                            active_restored=False)
+                            active_restored=False, list_path="F\\print list.txt")
     assert ui_text.print_result(result) == (
         "Print files wrote A.step and its print list in F. SolidWorks now marks A.SLDPRT as changed since Print files "
         "ran, and nothing was saved: close it without saving to leave its file as before. The document you had active "
@@ -4326,10 +4349,27 @@ def test_print_result_of_a_refusal_and_of_a_stop_that_left_files():
     assert ui_text.print_result(refused) == ui_text.print_refusal(refused.refusal)
     stopped = po.PrintResult(written=(("a", "F\\A.step"),), folder="F", failed=(("F\\A.step", po.SOLIDS),),
                              refusal=po.Refusal(po.FILE_CHECK, ("A",), {"file": "F\\A.step", "reason": po.SOLIDS}),
-                             active_restored=True)
+                             active_restored=True, list_path="F\\print list.txt")
     assert ui_text.print_result(stopped) == (
         "Print files stopped: A.step is not fit to print: it does not hold exactly one solid. What was written is in F, "
         "and its print list says not to print this set.")
+    from dataclasses import replace
+    assert ui_text.print_result(replace(stopped, list_path="", list_error="the disk is full")) == (
+        "Print files stopped: A.step is not fit to print: it does not hold exactly one solid. What was written is in F, "
+        "but its print list could not be written (the disk is full), so nothing there says not to print it: do not "
+        "print this set.")
+
+
+def test_print_result_never_claims_a_list_that_was_not_written():
+    """F2-REVIEW S2: the status is composed after printout.with_list, from list_path and list_error."""
+    from dataclasses import replace
+    done = po.PrintResult(written=(("a", "F\\A.step"), ("b", "F\\B.step")), folder="F", active_restored=True)
+    assert ui_text.print_result(replace(done, list_path="F\\print list.txt")) == (
+        "Print files wrote 2 STEP files and their print list in F.")
+    assert ui_text.print_result(replace(done, list_error="[Errno 28] No space left on device")) == (
+        "Print files wrote 2 STEP files in F, but the print list could not be written ([Errno 28] No space left on "
+        "device), so nothing in that folder says what each file is: press Print files again for a set with its list.")
+    assert ui_text.print_result(done) == "Print files wrote 2 STEP files in F."
 
 
 def test_the_print_list_of_one_coupon():
@@ -4367,7 +4407,8 @@ def test_the_print_list_says_each_kind_of_part_and_heads_a_failed_set():
         written=tuple((p.path, f"F\\{p.stem}.step") for p in parts[:3]), folder="F",
         failed=(("F\\Gear_a.step", po.SOLIDS),),
         refusal=po.Refusal(po.FILE_CHECK, ("Gear_a",), {"file": "F\\Gear_a.step", "reason": po.SOLIDS}),
-        warnings=((parts[0].path, ("Fillet3",)),), facts={"Gear_h.step|extent": "skipped: user features"},
+        warnings=((parts[0].path, ("Fillet3",)),), facts={"Gear_h.step|extent": "skipped: user features",
+                                                           "Gear_m1.5_N68.step|extent": "skipped: herringbone"},
         active_restored=True)
     text = ui_text.print_list_text(plan, result, "0.9")
     assert text.startswith("DO NOT PRINT THIS SET: Gear_a.step is not fit to print: it does not hold exactly one "
@@ -4383,7 +4424,8 @@ def test_the_print_list_says_each_kind_of_part_and_heads_a_failed_set():
             "  NOT FIT TO PRINT: it does not hold exactly one solid.\n") in text
     assert ("Gear_m1.5_N68.step\n  For G4 · print 1\n  Module 1.5 · 68 teeth · face 10 mm · bore 10 mm · backlash "
             "0.45 mm (0.3 × module)\n  Machined: its backlash is a cutter's, not a printer's; no span.\n  Your "
-            "features left in it: User Keyway.\n  Checked: one closed solid.\n") in text
+            "features left in it: User Keyway.\n  Checked: one closed solid; size not checked (a herringbone, not yet "
+            "measured).\n") in text
     assert "Ring.step\n  For R · print 1\n" in text and "No span: internal teeth are measured over pins, not jaws.\n" \
         "  Not written.\n" in text
     assert "Bev.step\n  For B · print 3\n" in text and "No span: a bevel tooth is not one size along its face.\n" in text

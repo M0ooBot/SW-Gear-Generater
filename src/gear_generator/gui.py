@@ -1371,10 +1371,9 @@ class GearApp(ttk.Frame):
             return None
         if self._print_sidecar[:2] == (record, stamp):
             return self._print_sidecar[2]
-        try:
-            sidecar = store.load(record)
-        except store.StoreError:
-            sidecar = None
+        # store.read_sidecar, never store.load: a record that does not read is left where it is (load moves it aside),
+        # so planning on every derive changes nothing on disk, and B's NO_RECORD can say it is there and unreadable.
+        sidecar = store.read_sidecar(part_path)
         self._print_sidecar = (record, stamp, sidecar)
         return sidecar
 
@@ -1967,12 +1966,8 @@ class GearApp(ttk.Frame):
         except Exception as exc:  # noqa: BLE001 - planning is pure and should never raise; if it does, say so
             self._set_status(ui_text.print_collect_failed(exc), ok=False)
             return
-        if plan.refusal is not None:
+        if plan.refusal is not None:                # the Output folder among them (B's NO_FOLDER)
             self._set_status(ui_text.print_refusal(plan.refusal), ok=False)
-            return
-        folder = self.out_folder.get().strip()
-        if not folder or not os.path.isdir(folder):
-            self._set_status(ui_text.PRINT_FORM_NEEDS_FOLDER, ok=False)
             return
         self._build_context = {"job_kind": "print", "plan": plan}
         self._pending_build = self._worker.submit(lambda session: swbuild.print_parts(session, plan))
@@ -1980,18 +1975,14 @@ class GearApp(ttk.Frame):
         self._derive_now()
 
     def _finish_print(self, context: Dict[str, Any], result: Any) -> None:
-        """What a press of Print files did (ui_text.print_result), and its print list written into the press's
-        folder whenever one was made (printout.write_list), a failed set's headed DO NOT PRINT THIS SET."""
+        """What a press of Print files did, its print list first written into the press's folder whenever one was made
+        (printout.with_list; a failed set's headed DO NOT PRINT THIS SET), then the status composed from what that
+        answered (ui_text.print_result), so it never claims a list that could not be written (F2-REVIEW S2)."""
         try:
+            result = printout.with_list(result, ui_text.print_list_text(context["plan"], result, __version__))
             text = ui_text.print_result(result)
             ok = (result.refusal is None and not result.failed and not result.flags_turned_on
-                  and result.active_restored)
-            if result.folder:
-                try:
-                    if not printout.write_list(result, ui_text.print_list_text(context["plan"], result, __version__)):
-                        raise OSError("no file was written")
-                except Exception as exc:  # noqa: BLE001 - said: the folder stands without its list
-                    text, ok = f"{text} {ui_text.print_list_unwritten(exc)}", False
+                  and result.active_restored and not result.list_error)
         except Exception as exc:  # noqa: BLE001 - what the job did could not be said: say that
             text, ok = ui_text.print_collect_failed(exc), False
         self._set_status(text, ok)
