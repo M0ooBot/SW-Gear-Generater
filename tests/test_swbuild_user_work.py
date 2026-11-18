@@ -11,6 +11,7 @@ from dataclasses import replace
 import pytest
 
 from gear_generator import findings, swbuild, swcom
+from gear_generator.gears import kind_for, spur as spur_gears
 from gear_generator.gears.base import GlobalVariable
 from gear_generator.gears.equations import DEGREES, split_equation
 from gear_generator.spec import GearSpec
@@ -562,6 +563,67 @@ def test_a_blank_backlash_or_fillet_is_said_as_the_equation_it_stands_for():
         "SolidWorks again."]
     assert swbuild._blank_meaning(GlobalVariable("Backlash", "0.2")) == ""          # typed: said as it is
     assert swbuild._blank_meaning(GlobalVariable("Bore Diameter", "10")) == ""
+
+
+PRINTED_SET_BACK = 'the equation IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )'
+
+
+def test_a_printed_gears_blank_backlash_is_said_as_the_printed_default_and_set_back_as_its_exact_iif():
+    """F1 (PLAN-PRINTED §6, F1-INTERFACES §8): a printed gear's blank Backlash is the IIF, which in K11's usual words
+    would read *IIF ( Module <= 1 , 0.3 × Module , 0.3 )*, an equation SolidWorks cannot take back as typed. The
+    workbook's value is said in words, and the set-back is the exact text SolidWorks must hold for K11 to read it as
+    the app's again. The machined words are test_printed_rule's pins."""
+    fake = _built_train()
+    _edit(fake, P17, "Backlash", "0.2")
+    printed = replace(S17, process="printed")
+    doc = swbuild.DocumentValues(P17, _values(printed), recorded=_recorded(S17), cells=(("Backlash", "Gears!P2"),))
+    with pytest.raises(UserWorkRefused) as raised:
+        _update_train(fake, parts=[doc])
+    (problem,) = raised.value.problems
+    assert problem.values[0].blank == "IIF ( Module <= 1 , 0.3 × Module , 0.3 )"     # ValueEdit.blank keeps its meaning
+    assert problem.sentence == (
+        "Backlash in Gear_m1.5_N17 is 0.2 in SolidWorks and 0.3 (from its blank cell, the printed default: 0.3 mm, or "
+        f"0.3 × Module below module 1) in the workbook: type 0.2 in Gears!P2, or set it back to {PRINTED_SET_BACK} in "
+        "SolidWorks, and press Update SolidWorks again.")
+    assert PRINTED_SET_BACK == "the equation " + spur_gears.printed_backlash_expression()
+
+
+@pytest.mark.parametrize("cell, unsaved, said", [
+    ("", False, "Backlash in Gear_m0.5_N30_P is 0.2 in SolidWorks and 0.15 (from its blank cell, the printed default: "
+                "0.3 mm, or 0.3 × Module below module 1) in the workbook, and no cell of the workbook sets it alone: "
+                f"set it back to {PRINTED_SET_BACK} in SolidWorks and press Update SolidWorks again."),
+    ("Gears!P2", True, "Backlash in Gear_m0.5_N30_P is 0.2 in SolidWorks and 0.15 (from its blank cell, the printed "
+                       "default: 0.3 mm, or 0.3 × Module below module 1) in the workbook, where Update SolidWorks last "
+                       "set 0.15 and left Gear_m0.5_N30_P unsaved: either it was changed in SolidWorks since, or "
+                       "SolidWorks closed without saving that Update and Gear_m0.5_N30_P was changed after it was "
+                       "opened again. If it was changed, type 0.2 in Gears!P2, or set it back to "
+                       f"{PRINTED_SET_BACK} in SolidWorks; if that Update was lost, set it to {PRINTED_SET_BACK} in "
+                       "SolidWorks. Then press Update SolidWorks again."),
+])
+def test_the_printed_defaults_words_with_no_cell_and_on_a_document_left_unsaved(cell, unsaved, said):
+    """Below module 1 the printed default is 0.3 × module, the same value as machined; the words are the printed
+    default's still, since the equation SolidWorks must hold is the IIF."""
+    spec = GearSpec(process="printed", module="0.5", teeth="30")
+    kind = kind_for(spec)
+    variable = next(v for v in kind.variables(spec, kind.derive(spec)) if v.name == "Backlash")
+    edit = swbuild.ValueEdit(spec.stem() + ".SLDPRT", "Backlash", "0.2", "0.15", "0.15", cell=cell, unsaved=unsaved,
+                             blank=swbuild._blank_meaning(variable))
+    assert swbuild._value_sentence(edit) == said
+
+
+def test_a_printed_gears_typed_backlash_and_its_blank_fillet_are_said_as_before():
+    """Only the printed default takes new words: a typed Backlash is said as typed, and a blank Fillet is still its
+    0.38 × Module equation."""
+    spec = GearSpec(process="printed", backlash="0.25")
+    kind = kind_for(spec)
+    variables = {v.name: v for v in kind.variables(spec, kind.derive(spec))}
+    assert swbuild._blank_meaning(variables["Backlash"]) == ""
+    fillet = swbuild.ValueEdit("G.SLDPRT", "Fillet Radius", "0.5", "0.57", "0.57", cell="Gears!Q2",
+                               blank=swbuild._blank_meaning(variables["Fillet Radius"]))
+    assert swbuild._value_sentence(fillet) == (
+        "Fillet Radius in G is 0.5 in SolidWorks and 0.57 (from its blank cell, 0.38 × Module) in the workbook: type "
+        "0.5 in Gears!Q2, or set it back to the equation 0.38 × Module in SolidWorks, and press Update SolidWorks "
+        "again.")
 
 
 def test_every_value_and_every_mate_in_the_way_is_named_at_once():

@@ -36,6 +36,7 @@ from .gears.landing import line_landings
 from .gears.spur import TEETH as TEETH_GLOBAL
 from .gears.spur import AXIS_NAME, BORE as BORE_GLOBAL
 from .gears.spur import SPACE_SKETCH
+from .gears.spur import BACKLASH_FACTOR, PRINTED_BACKLASH, PRINTED_BACKLASH_UP_TO_MODULE, printed_backlash_expression
 from .gears.bevel import HEEL_SKETCH, TOE_SKETCH
 from .store import CARRIER_ID_SUFFIX, GEARBOX_MOTION, GEARBOX_STATIC, now, same_path
 from .swcom import (ASSEMBLY_PAIR, ASSEMBLY_STATIC, ASSEMBLY_TRAIN, COMPONENT_FIND_ROUTES, CONFIGURATION_FINDINGS,
@@ -5467,15 +5468,38 @@ def _blank_meaning(variable: GlobalVariable) -> str:
     if variable.name == BORE_GLOBAL and literal == 0.0:
         return "no bore"
     if literal is None:
-        return expression.replace('"', "").replace(" * ", " × ")
+        return _expression_words(expression)
     return ""
+
+
+def _expression_words(expression: str) -> str:
+    """An equation as K11 says it in words: its globals unquoted and ` * ` as ` × ` (``0.3 × Module``)."""
+    return expression.replace('"', "").replace(" * ", " × ")
+
+
+def _printed_default(edit: ValueEdit) -> bool:
+    """Whether the workbook's value is a printed gear's blank Backlash (F1, PLAN-PRINTED §2.1, §6): its
+    ``blank`` is the printed default's IIF as :func:`_blank_meaning` says it. ``ValueEdit.blank`` keeps its
+    meaning; the printed default is recognised by it, and its words are taken from their own source below."""
+    return bool(edit.blank) and edit.blank == _expression_words(printed_backlash_expression())
+
+
+def _printed_default_words() -> str:
+    """The printed default in words (F1-INTERFACES §8): *the printed default: 0.3 mm, or 0.3 × Module below module 1*,
+    from spur's constants."""
+    return (f"the printed default: {literal(PRINTED_BACKLASH)} mm, or {BACKLASH_FACTOR} × Module below module "
+            f"{literal(PRINTED_BACKLASH_UP_TO_MODULE)}")
 
 
 def _wanted_words(edit: ValueEdit) -> str:
     """The workbook's value as a K11 sentence says it: *no bore (its Bore blank or 0)*, *0.45 (from its blank cell,
-    0.3 × Module)*, or the value as typed."""
+    0.3 × Module)*, or the value as typed. F1: a printed gear's blank Backlash is *0.3 (from its blank cell, the
+    printed default: 0.3 mm, or 0.3 × Module below module 1)*, since its IIF in words is no equation SolidWorks
+    takes back as typed."""
     if edit.blank == "no bore":
         return "no bore (its Bore blank or 0)"
+    if _printed_default(edit):
+        return f"{edit.wanted} (from its blank cell, {_printed_default_words()})"
     if edit.blank:
         return f"{edit.wanted} (from its blank cell, {edit.blank})"
     return edit.wanted
@@ -5483,7 +5507,11 @@ def _wanted_words(edit: ValueEdit) -> str:
 
 def _back_words(edit: ValueEdit) -> str:
     """What to set the global back to in SolidWorks: the default equation a blank cell means (a number typed in its
-    place would differ from the workbook again), else the workbook's value."""
+    place would differ from the workbook again), else the workbook's value. F1: for a printed gear's blank Backlash,
+    the exact text SolidWorks must hold for K11 to read it as the app's again, quotes and all
+    (``spur.printed_backlash_expression``): *the equation IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )*."""
+    if _printed_default(edit):
+        return f"the equation {printed_backlash_expression()}"
     if edit.blank and edit.blank != "no bore":
         return f"the equation {edit.blank}"
     return edit.wanted
