@@ -1,0 +1,59 @@
+{
+ "sections": {
+  "userwork": {
+   "printed": {
+    "Gear_m1.25_N29": {
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "unit": "MILLI.METRE",
+     "extent": "skipped: user features"
+    },
+    "Gear_m1.25_N13": {
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "unit": "MILLI.METRE",
+     "extent": "checked"
+    },
+    "Ring_m1.25_N55": {
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "unit": "MILLI.METRE",
+     "extent": "skipped: ring"
+    },
+    "Dog_m1.25_N17": {
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "unit": "MILLI.METRE",
+     "extent": "skipped: dog"
+    },
+    "Sleeve_m1.25_N17": {
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "unit": "MILLI.METRE",
+     "extent": "skipped: sleeve"
+    }
+   },
+   "seconds": 465,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {},
+ "revision": [
+  32,
+  5,
+  0
+ ],
+ "snapshot": "b3fe4a1",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": true,
+  "allowance_seconds": 60.0,
+  "close_outlived": {
+   "asked": true,
+   "in_force": true,
+   "within_seconds": 10.0,
+   "buttons": [
+    "&Close",
+    "Close"
+   ]
+  }
+ },
+ "fails": [],
+ "notes": []
+}

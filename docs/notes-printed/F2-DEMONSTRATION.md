@@ -2,7 +2,8 @@
 
 The script is `probe/f2_demonstration.py`. It is the SolidWorks part of PLAN-PRINTED §3.3's *Done when* ("the
 demonstration has run on 2026 and on 2024, every section clean, and been reviewed"), and it takes in the six things
-F2-PROBES-REVIEW §4 says the probe did not show. **It has not run yet.** It was written on Linux against branch
+F2-PROBES-REVIEW §4 says the probe did not show. **It ran on 2026-11-18 from `b3fe4a1`, on SolidWorks 2026 and then on
+2024, every section clean with no fix to the script** (the run sections at the end). It was written on Linux against branch
 `printed` at `ac83420` (the findings set in `ae42722`; B's review fixes `dcefc9d`, `4b34f59`; C's `2cc34d9`) and brought
 to its review (`F2-DEMONSTRATION-REVIEW.md`, `0d1dfee`) and to the app's answers to it (B's `888035a`, C's `567773c` and
 `5e45718`), every sentence held to the app's own code at `5e45718`; its self-check passes there (35 checks, 0 failed). Expect script faults on
@@ -361,3 +362,246 @@ look at hardest: DeskP's restatements (none but the worker), `refused` and `writ
 the calls expected per way, the suppressed component left a fact, NEW_REVISION's G4 Flank edit (expected to name
 OutputGear alone, as W9d's Sun was), and the user's features in a written part's list read by the script as the
 features named User… (every feature of the user's here is W9a's keyway).
+
+## The first run on SolidWorks 2026 (2026-11-18, from b3fe4a1, SolidWorks 2026 34.1.1)
+
+**Setup.**
+- Run folder `<probe folder>\f2-demo-sw2026-20261118-114738`, `snap` a `git archive` of `b3fe4a1` with `SNAPSHOT_COMMIT`
+  beside `src` (the log's head names it, 2). `--self-check` on the snapshot, under the run's `python.exe`: 35 ok,
+  0 failed.
+- One session, PID 33080, started in the background for the run with nothing open, and exited after it (`taskkill`
+  without `/F`: SolidWorks' own close; nothing was open by then). Before it, `tasklist` showed no SLDWORKS.exe, no
+  Excel and no python.exe (only SolidWorks' two `sldworks_fs.exe` services, running before and after). The run started
+  and quit its own Excel (PID 40868).
+- Master, only copied: W9a's `setup.master` (`<probe folder>\w9a-final-sw2026-20261117-023433\out`). **The masters'
+  hashes are the runner's statement, taken outside the script, and are not in the logs**: from WSL, in `<probe folder>`,
+  `find w9a-final-sw2026-20261117-023433/out/setup.master w9a-confirm-sw2024-20261117-002313/out/setup.master -type f
+  -exec sha256sum {} + | sort -k2` (34 files), taken before the 2026 run, between the versions and after the 2024 run;
+  the three outputs matched exactly.
+- **Nothing written outside the run folder**, also the runner's statement: a listing of `<probe folder>` outside the run
+  folders (48,537 entries, each path, size and modification time) taken before each version's run and after it was
+  the same both times, and nothing in the user's Documents or Desktop (two levels down, the probe folder aside) was
+  newer than the 2026 run's start once both versions were through. The app's settings went to `out\appdata` (3).
+- One invocation, `--sections gates,form,workbook,refusals,userwork --user-master …`, no close flag. Log
+  `probe/results/f2-demo-sw2026-20261118-1-gates-form-workbook-refusals-userwork-clean.log`, JSON
+  `f2-demo-20261118-114919.json`. Line numbers below are that log's.
+- SolidWorks time about 13 min (11:48 to 12:01), of which the run 11.6 min (11:49:19 to 12:00:56), against the 31
+  estimated.
+
+| Section | Time | ok | FAIL | STOP | SolidWorks private, peak logged | Free, least logged |
+|---|---|---|---|---|---|---|
+| gates (with the user parts) | 59 s | 36 | 0 | 0 | 0.93 GB | 8.24 GB |
+| form | 68 s | 44 | 0 | 0 | 0.95 GB | 8.13 GB |
+| workbook (the printed 12 : 1 built here, 79 s) | 162 s | 91 | 0 | 0 | 1.47 GB (after the build) | 7.91 GB |
+| refusals | 132 s | 110 | 0 | 0 | 1.61 GB (the bore Update) | 7.96 GB |
+| userwork | 273 s | 54 | 0 | 0 | 1.56 GB (after the Update) | 8.07 GB |
+
+Plus the run's own check that APPDATA is in the run folder (3): 336 ok, 0 failed, 1 noted (the herringbone's verdict),
+0 STOPs (1674). **The script needed no fix**: nothing in `probe/f2_demonstration.py` changed for this run or the 2024
+one.
+
+**gates.** The six findings read the review's values and EXTENT_MEASURED True, the route `walk` (11-17); the gate
+open as they stand (18). As they stand, the form's press wrote Coupon_G.step (134) and the window's, with the
+12 : 1 written and not built, said *Print files wrote nothing: G1, G2, G3 and G4 have no part yet; build them first,
+then print.*, nothing submitted (136-139). `SAVE_AS_COPY` None in this process only: on the form and in the window
+*Print files waits until writing a STEP file is measured on this SolidWorks; nothing was written.*, the bar naming no
+file, nothing submitted, no press folder, the documents as they were (141-154). `STEP_EXPORT_ON_2026` None: *Print files
+waits until writing a STEP file is measured on SolidWorks 2026 (34.1.1); nothing was written.* on both (156-169). Each
+patch put back and said (154, 169). The job's own gate, the form's plan read as for 32.5.0: *SolidWorks changed since
+Print files was pressed (2024 (32.5.0) then, 2026 (34.1.1) now): press it again. Nothing was written.*, the job's calls
+by member `{}` (172-173).
+
+**form.** Coupon_A (module 1.5, 20 teeth, face 8, bore 8, Printed) built by the form with the user's Housing behind.
+The Derived panel shows *Span over 3 teeth* `11.209`; the script's W 11.2088 and package A's 11.2088 (273). Each of
+the two presses judged whole (276-286, 289-299): the bar named the file; written and checked by the app, the active
+document restored, no flag turned on; one new folder each (`2026-11-18 11.50.36`, then `… 11.50.37`) holding the
+STEP file and the list alone, the earlier one byte for byte; the status *Print files wrote Coupon_A.step and its print
+list in C:\…\out\form\print\2026-11-18 11.50.36.*; the file AP203 (`CONFIG_CONTROL_DESIGN`), `MILLI.METRE`, one
+closed solid, 344 vertices reaching radius 16.501185 over 8.000031 (the gear's 16.5 and 8), the app's fact
+`checked` (282-283); the list (*Process: Printed, 0.4 mm nozzle*, *print 1*, *Span over 3 teeth: 11.209 mm (the
+calipers square to the axis, at mid-face).*, *Checked: one closed solid, AP203 (CONFIG_CONTROL_DESIGN), millimetres;
+outer diameter and face width match the gear.*, the settings once); no document opened, closed, renamed or marked and
+no `.SLDPRT` changed; the job's calls `{'SaveAs': 1}`. The second press's file is the first's part, the same 344
+vertices one to one within 1e-4 mm (300). The printed helical (m_n 2, z 20, β 15°, face 10): span 3 teeth `15.097`
+against W_n 15.0972 (409); written and held the same way, radius 22.705524 over 10.000000 against d_a / 2 22.705524
+(418-419). The printed herringbone (face 20): span `15.097`; written, judged structurally, the app's fact *skipped:
+herringbone* and the list *size not checked (a herringbone, not yet measured).* (543-544).
+
+**The herringbone's reading and its verdict** (547-548, JSON `form.herringbone`): the script's own reading, radius
+22.70552360820168 over 20.0 along Z against d_a / 2 22.70552360820166 and the face 20.0: **holds** to 0.01 mm (to
+about 1e-13 mm in fact), logged as a NOTE for the ruling on `"herringbone"` in `printout.EXTENT_SKIPPED`. 480
+vertices, one closed solid.
+
+**workbook.** The printed 12 : 1 built by the app's own Build (1065, 79.3 s, turning, no interference) and kept as
+`f2-reducer.master`; a copy opened as the app opens one, nothing marked by the open (1086-1091). The six points
+F2-PROBES-REVIEW §4 asked, which the probe did not show:
+1. *Component-only press.* Every part read `Visible` False, the assembly in its own window, the user's Housing active
+   (1100). The press wrote all four (1105), the job calling `{'SaveAs': 4}` and nothing that opens or activates (1118),
+   so each by the job's own handle (the walk); the documents, flags, windows and the active document as before (1117);
+   the list's rows, counts and spans *For G1 · print 1* … (1116); every component of the assembly read by name, each
+   resolved after (1120).
+2. *GLOBALS_DIFFER off a part not active.* G2, a component only, Face Width 16 saved and its window closed (read back
+   Visible False, 1124): *Print files wrote nothing: in Gear_m1.5_N68_P, "Face Width" is 16 where its record says 15;
+   press Update values (Update SolidWorks in the Workbook window), or put it back, then print.* (1127), refused in the
+   job with no call that opens, activates, saves or writes (1130). G1 open in its own window behind the user's part,
+   changed and not saved (Visible True, flag on, not active, 1136): MODIFIED, *Print files wrote nothing: Gear_m1.5_N17_P
+   is changed in SolidWorks and not saved; save it, or close it without saving, then print.* (1139); saved: GLOBALS_DIFFER
+   with *16 where its record says 15* (1146).
+3. *A part open in its own window, not active.* G1 put back and saved, its window left open: the press wrote the set by
+   G1's object, `{'SaveAs': 4}` and nothing activated, the user's part active after (1156-1169).
+4. *A lightweight component* is in `refusals` below.
+5. *The size check on every part of the 12 : 1*: each file `checked` by the app and held by the script, radius 14.251195,
+   52.500051, 19.001573, 53.000076 against 14.25, 52.5, 19, 53; faces 15, 15, 20, 20 to 3e-5 mm (1108-1115); the
+   herringbone as above.
+6. *A part the job opens itself.* The copy closed, the user's part alone open: four written, the calls `{'ActivateDoc3': 4,
+   'OpenDoc6': 4, 'CloseDoc': 4, 'SaveAs': 4}`, nothing of the copy left open and the user's part active after
+   (1176-1189).
+
+The open-beside fallback, `STEP_EXPORT_FROM_COMPONENT_ON_2026` False in this process only (1191, put back 1209): four
+written with the same calls as point 6 (1208), every component read and resolved after the closes (1211).
+
+**refusals.** Each refusal in C's words exactly, no press folder, no SolidWorks file changed, the documents as they were,
+and for a refusal in the job no call that opens, activates, saves or writes; for one at planning, nothing submitted.
+- *The form, on Coupon_R.* Face Width 9 not saved: *Print files wrote nothing: Coupon_R is changed in SolidWorks and not
+  saved; save it, or close it without saving, then print.* (1317). Saved: *Print files wrote nothing: in Coupon_R, "Face
+  Width" is 9 where its record says 8; press Update values (Update SolidWorks in the Workbook window), or put it back,
+  then print.* (1325). The form's own **Update values** set it back to 8 and rebuilt (1332); saved; the press wrote a
+  folder of its own, held whole (1337-1344). The user's keyway cut and saved (1346-1347); the script reads *User Keyway
+  Sketch* and *User Keyway* top-level (1348); the press wrote, the app's fact *skipped: user features*, and the list
+  *Your features left in it: User Keyway Sketch and User Keyway.* with *size not checked (your features in it).*
+  (1352-1357). An Output folder that does not exist: *Print files wrote nothing: the output folder
+  C:\…\out\refusals\no such folder does not exist; make it, or choose another, then print.*, the folder not made
+  (1363-1367). The user's Sprocket active: *Print files prints a part Gear Generator built: Sprocket.SLDPRT has no .gear.json
+  beside it, so nothing was written.* (1371).
+- *The window, on a copy of the printed 12 : 1* (copied from `f2-reducer.master`, 1377). G4's component set lightweight
+  (reads 1, 1396): *Print files wrote nothing: OutputGear is not open where Print files can reach it while Reducer_12to1 is
+  open: it may be a lightweight or suppressed component of it, or simply closed; resolve it there, or open the part
+  itself, then print again.* (1399); after the press still 1, the others 2 (1404). **Suppressed (state 0), the fact:**
+  the job did not find the part, and the app met it with the same LIGHTWEIGHT sentence, held exact (1407-1414); no
+  window came. The user's keyway in G1's part and a quiet Update (10.0 s, `{'OpenDoc6': 7, 'IsSuppressed2': 9}`) recorded
+  it, the inventory listing *User Keyway Sketch* and *User Keyway* (1431); the press wrote the set, G1's fact *skipped:
+  user features* and its block naming both, the other three `checked` (1435-1448). G4's Flank typed *arcs*:
+  *Print files wrote nothing: the workbook's changes to OutputGear need a new revision, which Update SolidWorks cannot
+  make; press Build again…, then print the new revision.* naming OutputGear alone (1461-1463); the cell cleared, nothing
+  planned again (1478). G1's Bore typed 14: *Print files wrote nothing: Update SolidWorks would change the values in
+  Gear_m1.5_N17_P; press Update SolidWorks and save, then print.* (1492). Update SolidWorks (8.0 s): ok, the User Keyway
+  in error in G1's part, nothing of the app's (1502-1508); the record marks G1's part alone unsaved: *Print files wrote nothing:
+  Gear_m1.5_N17_P has changes from Update SolidWorks that are not saved; save it in SolidWorks, then print.* (1509-1511).
+  Saved as the person saves: *Print files wrote nothing: in Gear_m1.5_N17_P, User Keyway is in error in SolidWorks; fix
+  it there, then print.*, G1 never activated (1517-1523).
+- *The user's pair open, the copy closed* (Pair_m1.5_25T_50T built, 1527): *Print files wrote nothing: Gear_m1.5_N17_P,
+  Gear_m1.5_N68_P, Gear_m2_N17_P and OutputGear are not open where Print files can reach them while Pair_m1.5_25T_50T is
+  open: they may be lightweight or suppressed components of it, or simply closed; …* (1530): they were simply closed
+  (1534). The form with that assembly active: *Print files prints the part active in SolidWorks, and
+  Pair_m1.5_25T_50T.SLDASM is not a part: make a gear part active there; nothing was written.* (1537).
+
+**userwork.** The master's record at link 7, no part saying a process (1545); the blank Process read Machined
+(1567); the user's five components (1569); the User Keyway in Sun's part at code 0 (1571); the script reads *User Keyway
+Sketch* and *User Keyway* in Sun's part and nothing of the user's in the other four (1573).
+- *As built, Machined:* five written, `{'SaveAs': 5}` (1576-1591); the list *Process: Machined*, each block *Machined …
+  no span*, Planet *print 3*, the dogs *print 2*, Sun's size skipped for the user's feature and named, the ring's, dog's
+  and sleeve's skipped by kind, the Planet's checked (radius 9.375840 against 9.375) (1589).
+- *Printed typed* on the Box sheet; Update plans the five parts in place (1612); the press before the Update: *Print files
+  wrote nothing: Update SolidWorks would change the values in Gear_m1.25_N29, Gear_m1.25_N13, Ring_m1.25_N55,
+  Dog_m1.25_N17 and Sleeve_m1.25_N17; press Update SolidWorks and save, then print.*, nothing submitted (1614).
+- *One Update SolidWorks* (172.7 s, the same calls by member as F1's 2026 press, 1624): ok, nothing of the user's in
+  error (1631); the five marked unsaved (1632); the press: *Print files wrote nothing: Gear_m1.25_N29, Gear_m1.25_N13,
+  Ring_m1.25_N55, Dog_m1.25_N17 and Sleeve_m1.25_N17 have changes from Update SolidWorks that are not saved; save them in
+  SolidWorks, then print.* (1634).
+- *Saved; the press:* the five written and nothing else, `{'SaveAs': 5}` (1643-1658); the list printed: Sun *Span over 4 teeth:
+  13.141 mm*, *Your features left in it: User Keyway Sketch and User Keyway.*, *size not checked (your features in it)*;
+  the Planet *print 3*, *Span over 2 teeth: 5.481 mm*, checked; the ring and the sleeve *No span: internal teeth are
+  measured over pins, not jaws.*; no feature line in the other four (1656).
+- *The user's work neither exported nor touched:* no file of Sprocket or Housing in the press folder (1659); the record
+  file unchanged (1660); the user's part files unchanged (1661); every document, flag and window as before with RangeBox
+  active, no SolidWorks file saved by the press (1657); the user's components there after; every one of the eight user
+  mates joins what it joined before (1664); the User Keyway at code 0 after (1665).
+
+**Windows.** No dialog during a job but SolidWorks' progress boxes: *Opening* (1385), an untitled *Post load updating*
+box at the copy's reopen (1417) and at RangeBox's open (1568), *Calculating Interference Detection* (1526). Two balloon
+tips logged as facts (8, 21). No What's Wrong (none is expected on 2026), though the bore Update put the user's keyway
+into error.
+
+**Facts logged.**
+- The farthest vertex beyond d_a / 2: the coupons and G1 1.2e-3 mm, G3 1.6e-3, G2 5e-5, OutputGear 8e-5, Sun 9e-4 and
+  the Planet 8e-4; past the face 2e-5 to 3e-5 mm; the helical and the herringbone neither (to 1e-6). All within the
+  0.01 mm tolerance; F1 measured the same tip excess on 2026's solids (1.1e-3 mm).
+- The list writes OutputGear's span *33.62 mm*, the app's number style dropping the trailing zero; the script held it
+  as C's own.
+- *Script nit, judged nowhere:* the fact lines for RangeBox's parts give *the gear's … and 10.0* as the face for every
+  part (`rangebox_expect`), the dog's included, whose part is 5 mm thick (read 5.000025; the list says *face 5 mm*).
+  The script makes no size reading of its own where the radius is None, so nothing is judged on that figure; left as
+  it ran, so the committed log matches the script.
+
+## The confirming run on SolidWorks 2024 (2026-11-18, from b3fe4a1, SolidWorks 2024 32.5.0)
+
+**Setup.**
+- Run folder `<probe folder>\f2-demo-sw2024-20261118-120146`, `snap` a `git archive` of `b3fe4a1` with
+  `SNAPSHOT_COMMIT` (log heads 1:2, 2:2). `--self-check` on the snapshot: 35 ok, 0 failed.
+- Two sessions, each started fresh in the background with nothing open and exited after (`taskkill` without `/F`):
+  PID 46964 for `userwork`, then PID 45812 for the rest. The 2026 session had exited first; one SolidWorks at a time.
+  Each invocation started and quit its own Excel.
+- Master, only copied: W9a's 2024 `setup.master` (`<probe folder>\w9a-confirm-sw2024-20261117-002313\out`), hashes
+  unchanged and nothing written outside the run folder (the runner's statements above).
+- Both invocations with `--close-outlived-whats-wrong`; `userwork` first with WSL idle but for a process check and a
+  log grep every 15 s. The close path never acted.
+- Logs `probe/results/sw2024/f2-demo-sw2024-20261118-1-userwork-clean.log` (JSON `f2-demo-20261118-120326.json`) and
+  `…-2-gates-form-workbook-refusals-clean.log` (JSON `f2-demo-20261118-121309.json`); below, `1:` and `2:` are their lines.
+- SolidWorks time about 20 min (12:02 to 12:21), of which the runs 15.5 min (12:03:26 to 12:11:14, 12:13:09 to
+  12:20:54), against the 48 estimated.
+
+| Section | Run | Time | ok | FAIL | STOP | SolidWorks private, peak logged | Free, least logged |
+|---|---|---|---|---|---|---|---|
+| userwork | 1 | 465 s | 54 | 0 | 0 | 6.21 GB (after the Update; 2.30 at the section's end) | 8.22 GB |
+| gates | 2 | 57 s | 36 | 0 | 0 | 1.40 GB | 8.45 GB |
+| form | 2 | 73 s | 44 | 0 | 0 | 1.70 GB | 8.32 GB |
+| workbook (the 12 : 1 built here, 76 s) | 2 | 175 s | 91 | 0 | 0 | 3.81 GB (after the build) | 7.94 GB |
+| refusals | 2 | 157 s | 110 | 0 | 0 | 7.18 GB (the bore Update; 7.13 after the quiet one) | 8.03 GB |
+
+Run 1: 55 ok, 0 failed, 0 noted, 0 STOPs (1:143); run 2: 282 ok, 0 failed, 2 noted (the herringbone's verdict, the What's
+Wrong box), 0 STOPs (2:1554). Free memory never under 7.9 GB, so neither floor came near.
+
+**Every check reads as on 2026**, the same sentences word for word but for the version in GATE's and the job gate's,
+line for line:
+- *gates:* findings 2:11-17; the form wrote 2:133; NO_PART 2:135; GATE_COPY 2:143, 149; GATE by year *… measured on
+  SolidWorks 2024 (32.5.0) …* 2:158, 164; the job's own gate, the plan read as for 34.1.1, calls none, 2:172.
+- *form:* span 2:272, 408; the coupon's presses 2:278-285 (radius 16.500000 over 8.000009, 346 vertices), the same part
+  2:299; the helical 2:418; the herringbone 2:542-543, its verdict **holds** (radius 22.705523608201677 over 20.0, 2:546-547).
+- *workbook:* Visible False 2:1101; component-only 2:1106-1121 (`{'SaveAs': 4}`); G2 GLOBALS_DIFFER 2:1128; G1 MODIFIED 2:1140,
+  GLOBALS_DIFFER 2:1147; G1 behind written 2:1157-1170; the job opening the parts 2:1177-1190; the fallback 2:1192-1212.
+- *refusals:* MODIFIED 2:1318; GLOBALS_DIFFER 2:1326; Update values 2:1333, written 2:1338; the keyway 2:1349-1358; NO_FOLDER 2:1364-1368;
+  NO_RECORD 2:1372; LIGHTWEIGHT 2:1397-1405; suppressed, the same sentence 2:1408-1412; the keyway recorded and the set written
+  2:1431-1448; NEW_REVISION 2:1463; CHANGES_ON_UPDATE 2:1492; UNSAVED_MARK 2:1516; FEATURE_IN_ERROR 2:1525-1528; the pair's
+  LIGHTWEIGHT 2:1534; NOT_A_PART 2:1541.
+- *userwork:* master 1:12; as built 1:46-61; CHANGES_ON_UPDATE 1:84; the Update (296.3 s, the same calls by member as on 2026)
+  1:94, ok 1:101; UNSAVED_MARK 1:104; written 1:113-128; the user's work 1:129-135.
+
+**Windows. One What's Wrong box, in the app's bore Update in `refusals`, as the note expected** (W9a's `box-k3`): up
+9.55 s into the job with the worker in `ActivateDoc3`, owned by SolidWorks' frame, gone by itself 1.01 s later with
+the worker in `GetNextFeature`, nothing closing it; none up at the job's end, the frame enabled (2:1499-1503). Under the
+2024 rule a fact, not a STOP; it did not outlive its job, so the close path did nothing. The Update's status said
+*SolidWorks may have shown its What's Wrong box for up to half a minute during the Update; nothing in it needed
+answering.* (2:1507), a clause 2026's status does not have. Otherwise progress boxes only: *Opening* (1:22), the untitled
+*Post load updating* box at RangeBox's open (1:38) and at each 12 : 1 copy's open (2:1089, 1395).
+
+## What differs between the versions
+
+Every check reads the same on both. Measured differences, none judged a fault:
+- **The STEP files.** On 2024 every spur part reaches d_a / 2 exactly (to 1e-6) and passes the face by 8e-6 to 9e-6
+  mm; on 2026 by up to 1.6e-3 mm and 2e-5 to 3e-5 mm (the facts above). Some files hold two or four more vertices on
+  2024 (the coupon 346 against 344, G2 1162 against 1160, OutputGear 876 against 874, the ring 940 against 936); the helical
+  (322) and the herringbone (480) are the same, and their radius 22.705524 on both. The files are AP203,
+  millimetres, one closed solid on both.
+- **What's Wrong** came in the bore Update on 2024 (up 1 s) and not on 2026, as the harness's rule read them
+  (`swbuild.whats_wrong_shows_in_update` True on 2024, 2:7; False on 2026, 7); the status's extra clause follows it.
+- **Time and memory.** RangeBox's Update 172.7 s on 2026, 296.3 s on 2024 (userwork 273 s and 465 s); SolidWorks 2024's
+  private memory reached 6.21 GB after that Update, and 7.13 to 7.18 GB in run 2's `refusals` after the 12 : 1's quiet
+  Update (from 2.50 at `workbook`'s end; 3.23 at `refusals`' end), against 2026's peak of 1.61 GB. Free memory stayed
+  over 7.9 GB on both.
+- The 12 : 1's build checks its gear mates' sense by the version's own route (2026 made again with the other Flip, 2024
+  the probe's `ring_mate_sense`), both finding nothing turned round.
+
+**Not measured by these runs**, beyond *What the script does not measure*: a What's Wrong that outlives its job (none
+did; the close path was never used); either memory floor's STOP; the suppressed component met by any way but
+LIGHTWEIGHT's sentence (on both versions the job did not find the suppressed part and refused it so); a STEP file in
+Bambu Studio (the user's step).

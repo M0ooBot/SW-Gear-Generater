@@ -1,0 +1,199 @@
+{
+ "sections": {
+  "gates": {
+   "findings": {
+    "SAVE_AS_COPY": "2",
+    "STEP_EXPORT": "True",
+    "STEP_EXPORT_NEEDS_ACTIVE": "False",
+    "STEP_EXPORT_FROM_COMPONENT": "True",
+    "OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN": "True",
+    "PART_WINDOW_READ": "'Visible'"
+   },
+   "extent_measured": true,
+   "job_gate": "SolidWorks changed since Print files was pressed (2024 (32.5.0) then, 2026 (34.1.1) now): press it again. Nothing was written.",
+   "seconds": 59,
+   "failed": []
+  },
+  "form": {
+   "presses": {
+    "coupon 1": {
+     "folder": "2026-11-18 11.50.36",
+     "app": {
+      "schema": "CONFIG_CONTROL_DESIGN",
+      "unit": "MILLI.METRE",
+      "extent": "checked"
+     },
+     "radius": 16.5011849074409,
+     "along_z": 8.000030745716968,
+     "vertices": 344
+    },
+    "coupon 2": {
+     "folder": "2026-11-18 11.50.37",
+     "app": {
+      "schema": "CONFIG_CONTROL_DESIGN",
+      "unit": "MILLI.METRE",
+      "extent": "checked"
+     },
+     "radius": 16.5011849074409,
+     "along_z": 8.000030745716968,
+     "vertices": 344
+    },
+    "helical 1": {
+     "folder": "2026-11-18 11.50.59",
+     "app": {
+      "schema": "CONFIG_CONTROL_DESIGN",
+      "unit": "MILLI.METRE",
+      "extent": "checked"
+     },
+     "radius": 22.70552360820167,
+     "along_z": 10.000000000000002,
+     "vertices": 322
+    },
+    "herringbone 1": {
+     "folder": "2026-11-18 11.51.22",
+     "app": {
+      "schema": "CONFIG_CONTROL_DESIGN",
+      "unit": "MILLI.METRE",
+      "extent": "skipped: herringbone"
+     },
+     "radius": 22.70552360820168,
+     "along_z": 20.0,
+     "vertices": 480
+    }
+   },
+   "herringbone": {
+    "holds": true,
+    "radius": 22.70552360820168,
+    "along_z": 20.0,
+    "d_a/2": 22.70552360820166,
+    "face": 20.0,
+    "app": "skipped: herringbone"
+   },
+   "seconds": 68,
+   "failed": []
+  },
+  "workbook": {
+   "component_only": {
+    "Gear_m1.5_N17_P": {
+     "characters": 761086,
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "units": [
+      "MILLI.METRE"
+     ],
+     "vertices": 296,
+     "radius": 14.251195455998769,
+     "along_z": 15.0000245,
+     "app": {
+      "schema": "CONFIG_CONTROL_DESIGN",
+      "unit": "MILLI.METRE",
+      "extent": "checked"
+     }
+    },
+    "Gear_m1.5_N68_P": {
+     "characters": 3025678,
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "units": [
+      "MILLI.METRE"
+     ],
+     "vertices": 1160,
+     "radius": 52.50005090646527,
+     "along_z": 15.000029222392401,
+     "app": {
+      "schema": "CONFIG_CONTROL_DESIGN",
+      "unit": "MILLI.METRE",
+      "extent": "checked"
+     }
+    },
+    "Gear_m2_N17_P": {
+     "characters": 754732,
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "units": [
+      "MILLI.METRE"
+     ],
+     "vertices": 296,
+     "radius": 19.00157293642542,
+     "along_z": 20.000024500000006,
+     "app": {
+      "schema": "CONFIG_CONTROL_DESIGN",
+      "unit": "MILLI.METRE",
+      "extent": "checked"
+     }
+    },
+    "OutputGear": {
+     "characters": 2232114,
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "units": [
+      "MILLI.METRE"
+     ],
+     "vertices": 874,
+     "radius": 53.000075600931204,
+     "along_z": 20.000022258303623,
+     "app": {
+      "schema": "CONFIG_CONTROL_DESIGN",
+      "unit": "MILLI.METRE",
+      "extent": "checked"
+     }
+    }
+   },
+   "seconds": 162,
+   "failed": []
+  },
+  "refusals": {
+   "suppressed": {
+    "state": 0,
+    "said": "Print files wrote nothing: OutputGear is not open where Print files can reach it while Reducer_12to1 is open: it may be a lightweight or suppressed component of it, or simply closed; resolve it there, or open the part itself, then print again.",
+    "written": []
+   },
+   "seconds": 132,
+   "failed": []
+  },
+  "userwork": {
+   "printed": {
+    "Gear_m1.25_N29": {
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "unit": "MILLI.METRE",
+     "extent": "skipped: user features"
+    },
+    "Gear_m1.25_N13": {
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "unit": "MILLI.METRE",
+     "extent": "checked"
+    },
+    "Ring_m1.25_N55": {
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "unit": "MILLI.METRE",
+     "extent": "skipped: ring"
+    },
+    "Dog_m1.25_N17": {
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "unit": "MILLI.METRE",
+     "extent": "skipped: dog"
+    },
+    "Sleeve_m1.25_N17": {
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "unit": "MILLI.METRE",
+     "extent": "skipped: sleeve"
+    }
+   },
+   "seconds": 273,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {},
+ "revision": [
+  34,
+  1,
+  1
+ ],
+ "snapshot": "b3fe4a1",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": false,
+  "allowance_seconds": 60.0
+ },
+ "fails": [],
+ "notes": [
+  "form, herringbone: the herringbone's size reading holds against d_a / 2 and the face to 0.01 mm (within): a fact for the ruling on \"herringbone\" in printout.EXTENT_SKIPPED"
+ ]
+}
