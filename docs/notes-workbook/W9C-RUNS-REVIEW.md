@@ -761,6 +761,34 @@ stopped.
 runs 1 to 7, before M3; its time estimate counts about five closes, and a box at every activation with the ring in
 error (step 2's two reads, 2b's reads and presses) could make it ten.
 
+*Re-checked after `bf765b3` and `eee5ffe` (2026-11-18, at `eee5ffe`; no SolidWorks; scratch copy deleted).* Both
+are fit for the 2024 `remake-m3` run, with no must-fix. The re-check covered the two diffs; W9c's self-check (0 failed,
+the close path driven through its `io` in each way it closes or fails), W9d's self-check (0 failed) and
+`tests/test_findings.py` with `tests/test_swbuild_in_place.py` (258 passed) were run in the scratch copy.
+- **The pins and the fake.** `bf765b3` takes should-fixes 3 and 4: the docstring is right, the relief's gate is held
+  on both versions, 24-1:1503, 1515 and 1725 are pinned, and one in-place Update runs on the fake at 32.5.0 with no
+  W9c gate patched.
+- **The second try.** It goes only to the box that was judged. Before each press `close_control` reads that box's
+  children again and requires exactly one control named Close, a visible, enabled `Button`; otherwise the STOP.
+  The `WM_COMMAND` is posted to that box's hwnd, with `BN_CLICKED` and that control's own id in its high and low
+  words and the control's hwnd as lParam. A What's Wrong that was not the one judged, found up after the first
+  press, is the STOP. So is any box still up 10 s after the last try, a frame not read as enabled after the close,
+  and any exception (`win32con` names missing included).
+- **Without the flag.** `w9a_demonstration.py`, W8's script and `src` are unchanged since `b1230ab`, so the run
+  is as before. The second pass runs only inside `remake-m3`, which is by name only; `remake` and W9d do not
+  call it.
+- **The second pass cannot touch the first pass's evidence.** It starts after `remake_again` has returned: that
+  pass's own step 3 and `end_copy` have closed its copy, and its checks and JSON entries are already written. A STOP
+  or a raise there leaves the second pass unrun. The second pass works on its own folder (`remake-first`). It ends
+  as the first pass's step 3 does: every document of its copy closed without saving (`W.quit_in`), then
+  `end_copy`, under the same watched job and close path.
+- **One wording point (low).** The note says the second pass shows that the press wrote nothing "by every open
+  document's save flag". After step 1 the ring, the two gears and RangeBox are already modified, so their flags
+  cannot show a further write; for them only the traced calls, the file times and the result speak. The note
+  already says the strict check is the first pass's.
+- **What the second pass shows** is as the note says: whether What's Wrong comes in the app's press as the first
+  activation since step 1, and what it does.
+
 ---
 
 ## The final runs on SolidWorks 2026 (34.0.0), and 007b3aa
