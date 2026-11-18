@@ -546,17 +546,27 @@ At this commit it passes, 0 failed. `--help` imports nothing of SolidWorks.
 |---|---|---|---|---|
 | landing | 987 s | 107 | 0 | 4.68 GB |
 | fixed | 2541 s | 122 | 0 | 6.75 GB |
-| modes | 3886 s | 80 | 0 | 9.98 GB (14.69 GB at its peak) |
+| modes | 3886 s | 80 | 0 | 9.98 GB (14.76 GB at its peak) |
 | remove | 1033 s | 58 | 0 | 3.76 GB |
 | bands-off | 405 s | 13 | 0 | 2.61 GB |
 | m4 | 35 s | 7 | 0 | 2.82 GB |
 | remake | 1542 s, cut | 46 | 1 | 6.38 GB |
 
-**Memory, a measured difference.** SolidWorks 2024 grew to 14.2 GB private during `modes`, with free memory 1.90 GB.
-The run's guard then stopped the run after that section, which had finished, 0 failed. 2026's whole run never went
-past about 1.9 GB.
+*Corrected on 2026-11-18 from the logs' own lines, as `W9C-RUNS-REVIEW.md`'s addendum "SolidWorks 2024" (§1, `78fdcb6`)
+shows: what the first version of this section said of the What's Wrong box, the memory, the times, the codes and the
+interference volumes. Citations: `24-1:` to `24-4:` are the four logs in order, by line.*
+
+**Memory, a measured difference.** SolidWorks 2024 had grown to 14.19 GB private during `modes`, with 1.90 GB free,
+when the watch set its memory STOP (24-1:1680), between N's removal and the refusal of the mode showing. By the
+script's rule the guard acts before the next section, so the section ran on: H's removal started at 14.69 GB private
+and 1.91 GB free and ended at 14.76 GB and 0.94 GB free (24-1:1755, 1758), its checks all passing. The run then ended
+after the section, 0 failed in it (24-1:1855). On 2026, runs 10 and 11 stayed under 2.3 GB private (2.29 GB at most).
 - The remaining sections were split over fresh sessions, as ruled.
-- In `remake`, 2024 reached 7.3 GB after its first press and fell back to 2.0 GB once that copy was closed.
+- In `remake`, SolidWorks grew from 3.59 to 7.09 GB private in the first press, a refusal that only reads (24-4:70,
+  97), and the watch set its memory STOP during the change press, at 7.30 GB private and 1.94 GB free (24-4:98).
+  `remake` was the session's only section and the guard acts between sections, so M3 ran on after it, starting at
+  2.03 GB private and 2.71 GB free once the first copy was closed (24-4:251). The `done` line does not count that STOP
+  (24-4:329).
 
 **What matches 2026:**
 - `landing` "the fix is shown": every foreseen change routed clean, every unforeseen one set straight clean, the
@@ -567,18 +577,37 @@ past about 1.9 GB.
 - The step faces: `GetArea` 114.303 and 114.295 against 114.558342 integrated, as on 2026.
 
 **What differs:**
-- **`landing`.** Set straight, the ring 55 → 54 and 56 → 55 still fail, but read code 51 twice
-  (`swSketchErrorExtRefFail`) where 2026 read 72 and 1.
-- **The interference volumes.** Summed from SolidWorks' interferences, they read 1408.381 for Hub and Sprocket-4,
-  where 2026 read 1408.364. RangeSlv and Sprocket-4 read 392.129 in N against the app's 374.463, and 160.748 in H2
-  against 152.629: SolidWorks' own sums differ from the app's by more than 0.001, said as facts. On 2026 they agreed.
-- **Time.** Each section took 2.5 to 3.5 times as long as on 2026.
+- **`landing`.** Set straight, the ring 55 → 54 and 56 → 55 still fail, and the short line's solved end lies past
+  the origin as on 2026 (24-1:810, 817), so the cause reads the same. Only the codes differ: Tooth Space and Teeth read
+  51 and 51 (24-1:807, 814), where 2026 read 72 and 1. 51 is the number 2024 has given for every feature in error seen
+  so far (W5's over-defined mates, W9a's Sprocket-1, here the ring and the user's cut); no meaning is read into it.
+- **`landing`, case 10** (the user's own feature in error on a routed part). The user's cut reads code 51 before the
+  set (24-1:905), where 2026 read 71. The route and the outcome are as on 2026: both rebuilds False, ending at 54
+  teeth, the user's cut the only feature in error (24-1:902).
+- **The interference volumes.** Within each version SolidWorks' own sums and the app's agree in every mode but one per
+  press, and the pairs are right in every mode (24-1:1282, 1521).
+  - The two that differ are both the RangeSlv and Sprocket-4 pair, the app's read low: in N after `fixed`'s press,
+    392.129 summed from SolidWorks' interferences against the app's 374.463 (24-1:1281), 4.5 % low; in H2 after the
+    add, 160.748 against 152.629 (24-1:1520), 5.1 % low. `modes`' own press read N at 392.129 (24-1:1404). Why the
+    app's read came low is not known.
+  - Across versions, Hub and Sprocket-4 read 1408.381 on 2024 and 1408.364 on 2026, both sides agreeing within each
+    version: a kernel difference.
+- **Time.** Where a section can be compared, 2024 took 1.2 to 4 times as long as run 10 on 2026: `landing` 987 s
+  against 824 (and 2024's built `rangebox.master` too), `modes` 3886 against 1115, `bands-off` 405 against 101,
+  `m4` 35 against 17. `fixed` and `remove` also built their masters on 2024.
 - **`remake` M3, a STOP before step 2.** The script's own read before step 2 (W9a's `read_now` of the assembly,
   just after step 1 left the ring in error) brought up What's Wrong 0.47 s into the job, the worker in
-  `ActivateDoc3`, owned by SolidWorks' frame.
-  - The box went by itself after 60.11 s, against the ruling's 60 s.
-  - The harness took that as §0.3's STOP and left the session alone. It was then killed, since it would not close
-    with the copy's changed parts open.
+  `ActivateDoc3`, owned by SolidWorks' frame (24-4:310). W8's watch listed its controls, `&Close` among them
+  (24-4:311).
+  - **The box did not go.** At the job's end the harness waited the ruling's 60 s for it, and it was still up then:
+    the fact line reads "stayed [] s; after the job it took 60.11 s to go (allowed 60); 1 up at the end, SolidWorks'
+    frame enabled True" (24-4:313), and the JSON's `whats_wrong_lifetimes` holds `stayed []` and `still_up 1`.
+    "Took 60.11 s to go" is the harness's words for the time it waited, which `whats_wrong_end` printed whether or
+    not the box went. Nothing logged says the box ever went. This section first said it went by itself after
+    60.11 s; that was wrong. It is the first What's Wrong seen to outlive its job.
+  - The harness took it as the STOP (24-4:314; the log names W8-PLAN §0.5, 24-4:315), marked the worker hung, closed
+    nothing and left SolidWorks as it stood (24-4:321). By the operator's account, which the log does not hold, the
+    session was then killed, since it would not close with the copy's changed parts open.
   - So steps 2, 2b and 3 did not run on 2024; step 2b's facts are not measured there.
   - 2026 showed no box at that read.
 
