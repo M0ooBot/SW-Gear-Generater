@@ -126,6 +126,51 @@ def test_the_backlash_card_and_derived_row_follow_the_process(app):
     assert card.what.cget("text") == ui_text._PRINTED_BACKLASH_COPY and card.worked.cget("text") == "check the fields"
 
 
+def warnings_shown(app):
+    return [w.cget("text") for w in app._warning_widgets]
+
+
+RING_SAID = "Printed, the tip clearance is 0.2 mm, under the 0.3 mm two printed surfaces take; use a larger module."
+BEVEL_SAID = ("Printed, the tip clearance is 0.282 mm, under the 0.3 mm two printed surfaces take; use a larger "
+              "module.")
+
+
+def test_a_printed_ring_pair_and_bevel_pair_are_told_their_clearance_on_the_form(app):
+    """§2.2: the strip says package A's pair clearance for a pinion in a ring and a bevel pair when printed; machined,
+    neither is told anything new, as before F1."""
+    app.mode.set("pair")
+    app._on_mode_changed()
+    app.mesh.set("internal")
+    for side, teeth in (("a", "20"), ("b", "60")):
+        app.gear_vars[side]["module"].set("0.5")
+        app.gear_vars[side]["teeth"].set(teeth)
+        app.gear_vars[side]["bore"].set("")
+    app._show_helix_rows()
+    app._derive_now()
+    assert ui_text.is_ring(app._derived["b"]) and app._derived["b"].printed
+    assert RING_SAID in warnings_shown(app)
+    app.process.set(PROCESS_MACHINED)
+    app._on_process_changed()
+    app._derive_now()
+    assert not any("tip clearance" in w for w in warnings_shown(app))
+
+    app.process.set(PROCESS_PRINTED)
+    app._on_process_changed()
+    app.mesh.set("external")
+    app.kind.set("bevel")
+    app._on_kind_changed()
+    for side, teeth in (("a", "20"), ("b", "40")):
+        app.gear_vars[side]["module"].set("1.5")
+        app.gear_vars[side]["teeth"].set(teeth)
+    app._derive_now()
+    assert ui_text.is_bevel(app._derived["a"]) and app._derived["a"].printed
+    assert BEVEL_SAID in warnings_shown(app)
+    app.process.set(PROCESS_MACHINED)
+    app._on_process_changed()
+    app._derive_now()
+    assert not any("tip clearance" in w for w in warnings_shown(app))
+
+
 def _record(tmp_path, spec, stem):
     part = str(tmp_path / f"{stem}.SLDPRT")
     store.save(store.sidecar_path(part), store.Sidecar(part_path=part, record=store.GearRecord(kind=spec.kind,

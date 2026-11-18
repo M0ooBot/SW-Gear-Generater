@@ -1349,7 +1349,11 @@ class GearApp(ttk.Frame):
             prefix = f"{side.upper()}: " if len(sides) > 1 else ""
             for diagnostic in self._diagnostics[side]:
                 lines.append((prefix + diagnostic.message, diagnostic.level))
-        if pair is not None and symbol == "C" and not self._crossed() and not ui_text.is_ring(self._derived["b"]):
+        # A machined pair's clearance is said for outside pairs alone, as before F1; a printed pair's for a pinion in
+        # a ring and a bevel pair too (PLAN-PRINTED §2.2, package A's mesh_warnings). Crossed pairs are not judged.
+        if pair is not None and not self._crossed() and (
+                (symbol == "C" and not ui_text.is_ring(self._derived["b"]))
+                or any(getattr(self._derived[s], "printed", False) for s in SIDES)):
             for message in pairs.mesh_warnings(self._derived["a"], self._derived["b"]):
                 lines.append((message, "error" if "cannot be built" in message else "warning"))
         for row, (text, level) in enumerate(dict.fromkeys(lines)):
