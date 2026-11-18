@@ -514,6 +514,12 @@ Run 2's `carry-closed` (401 s, 8 failed) is superseded by run 3: its closed read
     Flip; UserAngle8b has never been made), printed side by side with the worker's sentence (a fact; the audit
     review's D1);
   - a gear mate's alignment is printed before and after and not judged, since AddMate5 ignores it (D3);
+  - (the re-check's D4–D6) the fixed-in-every-mode check skips, and says, a mode where the component is suppressed (a
+    suppressed component reads `IsFixed` False); one suppressed in every mode is not reached, a FAIL. Beside `IsFixed`
+    per mode the fallen cluster's and the old-fixed components' frames are printed: their largest difference from
+    where they stand in the first mode, and a fixed one's from its world frame in the old assembly.
+    `swConstrainedStatus_e`'s names are read once per run from `swconst.tlb` and every constrained status printed
+    (the app bodies' and the carried components' per mode, Sun's in the fixture) carries its name.
   - **kept names**: every remade mate's name against its old one, a check that passes when equal and, when not, only
     if the worker said `<old> is carried as <kept>`. Every mate check finds the mate under its kept name.
 

@@ -563,15 +563,30 @@ def renames_problems(remade, facts):
             if k != o and not any(f.startswith(f"{o} is carried as {k}") for f in facts)]
 
 
-def fixed_problems(fixed_by_mode, names, modes):
-    """Each named component fixed in every mode, by the script's own read (``fixed_by_mode`` {mode: {Name2: IsFixed}}):
-    {Name2: the modes it reads not fixed in}."""
-    out = {}
+def fixed_problems(fixed_by_mode, names, modes, suppressed_by_mode=None):
+    """Each named component fixed in every mode where it is resolved, by the script's own read (``fixed_by_mode``
+    {mode: {Name2: IsFixed}}; ``suppressed_by_mode`` {mode: {Name2: suppressed}}): a suppressed component reads
+    IsFixed False (Sprocket-9 did in H), so that mode is skipped and said (D4); one suppressed in every mode is not
+    reached. Returns ({Name2: the modes it reads not fixed in, or "not reached"}, {Name2: the modes skipped})."""
+    out, skipped = {}, {}
+    sup = suppressed_by_mode or {}
     for n in names:
-        bad = [m for m in modes if fixed_by_mode.get(m, {}).get(n) is not True]
+        hidden = [m for m in modes if sup.get(m, {}).get(n)]
+        if hidden:
+            skipped[n] = hidden
+        if len(hidden) == len(modes):
+            out[n] = "not reached: suppressed in every mode"
+            continue
+        bad = [m for m in modes if m not in hidden and fixed_by_mode.get(m, {}).get(n) is not True]
         if bad:
             out[n] = bad
-    return out
+    return out, skipped
+
+
+def status_named(value, names):
+    """A GetConstrainedStatus value with its swConstrainedStatus_e name as swconst.tlb gives it (D6)."""
+    name = (names or {}).get(value)
+    return f"{value} ({name})" if name else f"{value}"
 
 
 def fix_sentences(facts, lead):
@@ -1211,12 +1226,18 @@ def self_check():
        "7e3ad9a: a remade mate's kept name equal to its old, or said by the worker; one not said FAILs")
     fixed = {"H": {"Sprocket-8": True, "Housing-1": True}, "N": {"Sprocket-8": True, "Housing-1": False},
              "L": {"Sprocket-8": True}}
-    ok(fixed_problems(fixed, ["Sprocket-8", "Housing-1"], MODES) == {"Housing-1": ["N", "L"]}
-       and fixed_problems(fixed, ["Sprocket-8"], MODES) == {}
+    hid = {"H": {"Housing-1": True}, "N": {"Housing-1": True}, "L": {"Housing-1": True}}
+    ok(fixed_problems(fixed, ["Sprocket-8", "Housing-1"], MODES)[0] == {"Housing-1": ["N", "L"]}
+       and fixed_problems(fixed, ["Sprocket-8"], MODES)[0] == {}
+       and fixed_problems(fixed, ["Housing-1"], MODES, {"N": {"Housing-1": True}})
+       == ({"Housing-1": ["L"]}, {"Housing-1": ["N"]})
+       and fixed_problems(fixed, ["Housing-1"], MODES, hid)[0] == {"Housing-1": "not reached: suppressed in every mode"}
+       and status_named(5, {5: "swUnderDefined"}) == "5 (swUnderDefined)" and status_named(5, {}) == "5"
        and fix_sentences(facts, "fell back in") == "one FixComponent"
        and fix_sentences(facts, "fixed as in") == "had to be fixed" and fix_sentences([], "fixed as in") is None,
-       "7e3ad9a: fixed in every mode by the script's read, a mode not fixed or not read said; which of the worker's "
-       "two sentences it gave")
+       "7e3ad9a: fixed in every mode by the script's read, a mode not fixed or not read said; a suppressed mode "
+       "skipped and said, suppressed in every mode not reached (D4); which of the worker's two sentences it gave; a "
+       "status printed with its name (D6)")
     rows = flip_dimensions({"UserDist4": {"values": {"FlipDimension": 1.0}}, "UserAxis1": {"values": {}}},
                            {"UserDist4": {"values": {"FlipDimension": 1.0}}}, [("UserDist4", "UserDist4", ()),
                                                                                 ("UserAxis1", "UserAxis1", ())],
@@ -1883,7 +1904,8 @@ def section_fixture(out):
             A.stop(f"fixture: a new mate's flag did not read back on in every mode: {wrong} (§0.3)")
         bad = {n: c for n, (c, sup) in got["codes"].items() if c and not sup}
         say(f"fact    fixture: the tie's angle between Sprocket-8's and Housing-1's {got.get('angle_pair')} (both at "
-            f"90° across Sun's axis as they stand); Sun reads constrained status {got.get('sun_status')}")
+            f"90° across Sun's axis as they stand); Sun reads constrained status "
+            f"{status_named(got.get('sun_status'), constrained_names())}")
         wrong_fixture = fixture_problems(got["codes"], got.get("sun_status"), findings.COMPONENT_FULLY_DEFINED)
         if wrong_fixture:
             A.stop(f"fixture: as built it is not M9's fixture: {wrong_fixture} (ruling 1: every mate on in "
@@ -2205,7 +2227,20 @@ def judge_carry(label, desk, fx, result, closed, light, out, old_before, old_box
     fallen = sorted({n for f in cr.fixed for n in f.components})
     was_fixed = sorted(old_of[c.name] for c in cr.work.components if c.fixed and c.name in old_of)
     must_fix = sorted(set(fallen) | set(was_fixed))
-    unfixed = fixed_problems(every.get("fixed", {}), must_fix, modes)
+    suppressed = {m: {n: v == SUPPRESSED for n, v in every["states"][m].items()} for m in modes}
+    unfixed, skipped = fixed_problems(every.get("fixed", {}), must_fix, modes, suppressed)
+    if skipped:
+        say(f"fact    {label}: IsFixed not judged where suppressed (a suppressed component reads not fixed): {skipped}")
+    for n in must_fix:
+        old = next((o for o, k in old_of.items() if k == n), n)
+        first = every["frames"][modes[0]].get(n)
+        dist = {m: (round(pose_gap(first, every["frames"][m][n]), 6) if first and every["frames"][m].get(n) else
+                    "unread") for m in modes}
+        was = before_frames_for(old_before, cr, old)
+        say(f"fact    {label}: {as_new(old, old_of)} per mode: IsFixed {[every.get('fixed', {}).get(m, {}).get(n) for m in modes]}; "
+            f"its frame's largest difference from where it stands in {modes[0]} {dist}"
+            + (f"; from its world frame in the old assembly {round(pose_gap(was, first), 6)}" if was and first and
+               old in [c.name for c in cr.work.components if c.fixed] else ""))
     clean["fixed_every_mode"] = check(bool(must_fix) and not unfixed,
                                       f"{label}: every component of the fallen cluster {fallen} and every one fixed in "
                                       f"the old assembly {was_fixed} reads fixed in every mode (the script's IsFixed): "
@@ -2236,7 +2271,12 @@ def judge_carry(label, desk, fx, result, closed, light, out, old_before, old_box
     not_free = {m: {g: v for g, v in status[m].items() if g in gear_ids and v != findings.COMPONENT_UNDER_DEFINED
                     and g not in set(new_box.fixed)} for m in modes}
     not_free = {m: v for m, v in not_free.items() if v}
-    say(f"fact    {label}: GetConstrainedStatus per mode of the app's bodies {status}")
+    names_ = constrained_names()
+    say(f"fact    {label}: GetConstrainedStatus per mode of the app's bodies "
+        f"{ {m: {g: status_named(v, names_) for g, v in st.items()} for m, st in status.items()} }")
+    carried_status = {m: {as_new(o, old_of): status_named(status[m].get(n), names_) for o, n in old_of.items()}
+                      for m in modes}
+    say(f"fact    {label}: GetConstrainedStatus per mode of the carried components {carried_status}")
     clean["free"] = check(not post and not not_free, f"{label}: every app gear free to turn in every mode with the "
                                                      f"carried mates on: {post or not_free or 'all'}")
     say(f"fact    {label}: Sun's frame in the old assembly ({old_before.get('active')}) "
@@ -2503,6 +2543,31 @@ def section_carry(out):
                 say(f"fact    carry: SprocketLight-1 not resolved again: {exc}")
         if not W.HUNG["on"]:
             A.w8_step(W.end_copy, CTX["worker"], folder, "carry", save=False)
+
+
+STATUS = {}
+
+
+def constrained_names():
+    """swConstrainedStatus_e's names from the running SolidWorks' swconst.tlb, read once per run (D6; the W9c probes'
+    reader), logged; {} with the reason said where it will not read."""
+    if "names" not in STATUS:
+        try:
+            enums = CP.swconst(tuple(CP.ENUM_NAMES) + ("swConstrainedStatus_e",))
+            STATUS["names"] = {v: k for k, v in enums.get("swConstrainedStatus_e", {}).items()}
+        except Exception as exc:  # noqa: BLE001 - said; statuses then print as numbers
+            STATUS["names"] = {}
+            say(f"fact    swConstrainedStatus_e not read from swconst.tlb: {type(exc).__name__}: {exc}")
+        say(f"fact    swConstrainedStatus_e as swconst.tlb gives it: {STATUS['names'] or 'unread'}")
+    return STATUS["names"]
+
+
+def before_frames_for(old_before, cr, old):
+    """A component's frame in the old assembly: the script's read, else R's."""
+    frame = (old_before.get("frames") or {}).get(old)
+    if frame is None:
+        frame = next((c.frame for c in cr.work.components if c.name == old), None)
+    return frame
 
 
 def light_in(asm):
