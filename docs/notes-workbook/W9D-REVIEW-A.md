@@ -1158,3 +1158,201 @@ Chain-1) back in 46, carried, with no fallback. That restores the coverage M3 to
 - `OldEntity.select_type` keeps what was read. Use it to tell the two apart, for example *"it is on a kind of entity
   Gear Generator does not make mates again on"*.
 - B's wording of this reason also says SolidWorks twice (`W9D-REVIEW-B.md`).
+
+## The audit of the fake (`ee78ee3` to `a2d0ff2`), its follow-up (`7e3ad9a`) and the seventh round (`6211143`)
+
+Head reviewed: `7e3ad9a`. No SolidWorks was run. Every "fails on the old code" below is a scratch copy of the
+head with that one fix undone, run against the head's tests.
+
+- Suite at `a2d0ff2`: 3945 passed. At `7e3ad9a`: 3954 passed. Both runs had only the two tkinter failures.
+- `probe/w9d_demonstration.py --self-check` ends with 0 failed at both heads.
+
+### Verdict
+
+**Package A is fit for the two-hour run. Nothing must be fixed first.**
+- Each of the six faults is real and fixed at its cause.
+- Each of the six fixes is pinned by a test that fails when the fix is undone. One path of fix 5 is not pinned (note A6).
+- No protective check is loosened. A remade mate on a component other than the old one is still deleted and
+  named.
+- The changed fake defaults match their cited lines, with one exception: the audit claims more for MateEntity order
+  than the logs show. The worker's fix holds whichever reading is true.
+- The follow-up does the three rulings as ruled. For every distance and angle mate the next run meets, the follow-up
+  passes AddMate5 the same Flip as the old code did.
+
+**The script needs no change to follow.** Its kind words already agree with the fixed `carry_kind`. Three should-dos
+are below (D1 to D3). They make the run record what the follow-up now does.
+
+### MateEntity order: what the logs show
+
+There are three readings of the symmetric kinds' order:
+- **Tree order**, the audit's reading: the earlier component first.
+- **The ledger's**: the second selection first, for an axis–axis coincident and a face–axis concentric (`API-LEDGER.md`
+  :612).
+- **Selection order.**
+
+Two mates tell the readings apart, and both are face–face coincidents:
+- **The probe's UserFaceCoin** (`-2.log`, faces (b); `w9d_probes.py` `faces_make`): Sprocket-5 selected first, read
+  first.
+- **Run 2's UserFaceCoin** (demo-2 :609; MATES): Chain-2 selected first, Chain-1 read first.
+
+Together these rule out both the selection order and the ledger's second-selection-first for a face–face coincident.
+In both, the component inserted earlier is read first. Name order and insertion order also fit both mates. The
+tree's own order was never read; the audit takes it to be insertion order.
+
+**Every other coincident, concentric and parallel in the logs is consistent with both remaining readings.** In each one,
+the later component (or the face) was selected first and read second. That is 16 mates in run 2: the 13 axis and
+plane coincidents, UserSunFace, UserFaceConc and UserHousingPar. It is three in the probe: UserFaceConc, UserEdgeConc
+and UserSunPar.
+- So "tree order" is shown for coincident, on two mates.
+- For concentric and parallel it is not distinguished from the ledger's rule.
+- No mate in the logs contradicts tree order.
+
+**Eight mates read in selection order against insertion order:**
+- distances: UserDist4, UserChainDist, UserHousingDist, UserAsm6;
+- angle: UserAngle4;
+- gears: UserGear6, UserGearRoot, UserGearFillet.
+
+**Limit and lock are not distinguished.** UserLimit10 (one mate) and the five locks (UserLock1, 2, 3, 8a and 8b) were each
+selected earlier component first.
+- The audit's table gives them "as selected" as measured.
+- §4 of the audit lists the lock as unmeasured, rightly, but not the limit.
+
+**The worker's fix does not depend on the reading.** `_ORDERLESS_KINDS` takes either order, so whichever reading is
+true for concentric and parallel, the remake is kept. The overclaim is in the note and in the fake's
+`_read_ends` docstring only.
+- The ledger's :612 rule is the same data seen from the other side. It is worth a line in the ledger, which is outside
+  this repo.
+
+### `_ORDERLESS_KINDS`: what it accepts
+
+The read-back compares the sorted Name2s of the two components, with the root mapped to "" and dropped.
+- **It accepts the same two components either way round.**
+- **It rejects an entity on another component.** For example, wanted [A, B] read back as [A, C], or a component lost:
+  the read-back returns `entities`, so the mate is deleted and named.
+- **It does not check which entity of a component was taken.** The ordered compare it replaces did not either, so
+  nothing is loosened. The r3 route's exactly-one `IsSame` match is what guards the entity.
+
+### The six fixes
+
+| Fix | At its cause | Pin fails on the old code | Protective check kept |
+|---|---|---|---|
+| 1 `carry_kind`: limit by type name | yes. Run 2 :604, :605, :617 show plain mates reading their range | yes: three cases plus the remake test | yes: a mate read `MateLimit…` is still a limit |
+| 2 `_ORDERLESS_KINDS` | yes | yes: `listed1` (`listed0` passes either way, as it should) | yes (above) |
+| 3 swapped retry reverses the ratio | yes: AddMate5's pair is positional (GOTCHAS §96) | yes | yes: a wrong ratio is still `ratio`. Unmeasured: no gear has read swapped |
+| 4 type-not-taken only for an unknown type | yes | yes | n/a (a cause, not a check) |
+| 5 selections judged by the count | yes for `select_by_reference` | yes: all three cases | yes: no count rise still raises |
+| 6 gear alignment not compared | yes (ledger :526, GOTCHAS §96) | yes: the test's second half | yes: the gear's sense is compared instead |
+
+**On the tests the audit changed: each one was the test's fault, and none hides a code fault.**
+- **Coincident7, Concentric8 and UserAxis9's index:** these follow the new order.
+- **The r3 walk test:** it is now deterministic, because G1's face comes first. The cap is still pinned on Coincident2.
+- **The not-open tier-1 test:** it now asks `reload_ok = False` by name.
+- **The lightweight test:** it follows the measured resolve (demo-2 :570). It gains *"R opens nothing of the user's"*.
+- **The W5 lightweight-gear tests (G3 to G4):** per-file lightweight would make G1 read lightweight too, so they now set
+  G4.
+- **The gear-flip test:** it used `readback_alignment`, so it pinned a difference in alignment, never the sense retry.
+  Now it pins the sense retry.
+
+**`6211143`: the root read at C.1 is allowed.**
+- `root_component(True)` runs once, right after `open_document(c.asm)`, on the new assembly before any insert.
+- That assembly holds only the app's parts, just built and saved, so none of them is lightweight. That is the case s5
+  (a) measured marking nothing.
+- The old assembly's reads keep `None if lightweight else …`, and the lightweight test pins that no
+  `root_component(True)` comes before `new_part`.
+- Undoing the read (`c.root = ""`) fails both cases of `test_a_mate_to_the_assemblys_own_plane_is_made_again_and_kept`.
+  Undoing the stop's first-mode restore fails `test_a_carry_that_stops_in_a_later_mode_leaves_the_first_mode_showing`.
+  So S5 is pinned again.
+
+### The follow-up (`7e3ad9a`)
+
+**FlipDimension as AddMate5's Flip.**
+- **Nothing measured decides which read matches AddMate5's Flip.**
+  - The ledger (:562, `entries/assemblies/02`) and GOTCHAS §42 show that Flip sets a distance's side, judged by the
+    pose.
+  - No log reads Flipped or FlipDimension after a Flip True. The ledger's :610 says Flipped's meaning was not checked.
+  - Every distance, angle and limit mate ever read was made with Flip False. Each read Flipped False and FlipDimension
+    0: W9c S5 (a) and m1, and run 2's UserDist4, UserAngle4, UserChainDist, UserHousingDist, UserAsm6 and UserLimit10.
+    The only Flipped True in the logs is a gear (UserGearFillet).
+- **So the next run's mates are made exactly as the old code would have made them.**
+  - The six above read 0 and False, so AddMate5 gets Flip False either way.
+  - UserAngle8b is new to the run. It is made by the same `add_mate` with Flip False, and is expected to read the same.
+  - If it read Flipped True with FlipDimension 0, the two codes would differ. The old code would make it with Flip True
+    and compare Flipped. The new code makes it with Flip False and says the read as a fact.
+- **The run will not settle the question.** No fixture mate has Flip True.
+- Undoing `flip = dimension` fails `test_a_distance_is_made_again_on_the_side_…`: the component moves 180 mm.
+
+**A name SolidWorks will not give a remade mate.**
+- The mate is kept under SolidWorks' own name, and the worker says so as a fact.
+- A ComError that is not `lost` is caught. A lost session still raises.
+- `_rename` reads the name back, so a refusal that SolidWorks makes silently is caught the same way.
+- Undoing the catch fails the swcom test.
+
+**Fixed in every mode.**
+- Both new calls end by showing the mode they started in again:
+  - `_fixed_in_every_mode` shows `showing` again;
+  - `_carry_states` already ended with `show(first)`.
+- So the mode left showing is unchanged, the post-check's per-mode loop goes on in its own mode, and the states are set
+  before the fix in each mode.
+- The fake's `fix_per_configuration` defaults to the less kind answer. Undoing either new call fails its test.
+
+**Can the put raise in the tie?** Not in the fixture.
+- Housing-1 is fixed in the old assembly, so C.5 has already fixed it in every mode.
+- After the fallback, in N and L, only Sprocket-8 is put, at its H frame. Sun stands at the same frame in every mode
+  (run 2 :649).
+- The kept UserAngle8b holds Sprocket-8's Top at 90 degrees to Housing-1's Right. At the identity rotations of both, the
+  angle is satisfied whatever the translation.
+
+**In general it can raise.** In another mode, `_fix_here` puts each component and only then fixes it. Each put
+rebuilds while the component is still free.
+- If a later item of the cluster is not yet back at its frame, a kept user–user mate between the two can pull the
+  first one off. `place_component` then raises, and the carry stops with SolidWorks' sentence.
+- Putting every item before fixing any would avoid that. A pin would need two components joined by a kept mate.
+- Note A8 below.
+
+### Notes, none blocking
+
+**A5. `"lock"` is not in `_ORDERLESS_KINDS`.**
+- A lock is as symmetric as a coincident.
+- If SolidWorks lists a lock in tree order, a lock between two carried components inserted against its selection order
+  would be deleted as `entities`.
+- No fixture lock can meet it:
+  - Lock3's Sprocket-1 and Sprocket-3 are listed in their selection order;
+  - the others have an app component or Housing-1 first.
+- Adding it costs nothing.
+
+**A6. Fix 5's whole-component path is not pinned.**
+- Undoing `_select_by_count` in `_select_target`, the lock's selection, leaves the whole suite passing: 3954 passed.
+
+**A7. GetConstrainedStatus 5 is measured, and missing from §4.**
+- Run 2 read 5 on carried components with no mate of their own: Sprocket-10 in H and Sprocket-8 in L (:647). Run 3
+  read it on Sprocket-11 in L (:658). The repo names only 2, 3 and 4.
+- The worker counts anything not 2 as "not free" for an app gear. It counts only 4 as over-defined for a user
+  component.
+- So a 5 on an app gear would stop the carry as "unable to turn". No app body has read 5, and the fake never gives it.
+
+**A8. The fallback puts and fixes one component at a time** (above). It cannot happen in this fixture.
+
+**A9. The audit's §4 list.** Nothing on it is actually measured, apart from these:
+- **GetComponents' order:** the order is not measured, but that it is not tree order is measured, and the fake's
+  default is tree order. The worker no longer depends on it.
+- **GetRootComponent3(True) beside a lightweight component:** run 2 read it resolving nothing.
+
+Missing from the list:
+- A7's status 5.
+- The limit mate's MateEntity order.
+- That every remake, its rename, its read-back and the per-mode fix in C.5 have never run on SolidWorks. Run 2 and run 3
+  both stopped in C.5.
+
+### What the script should do (none is needed to follow)
+
+**D1. Print the follow-up's facts for the remade mates.** `definition_problems` skips FlipDimension and compares
+`flipped` for every kind but a gear. Print each remade distance's and angle's FlipDimension and Flipped beside the
+worker's *"made again with Flip …"* fact. With every mate at 0, this records the reads; it does not change a check.
+
+**D2. Read IsFixed per mode for the fallen and fixed components** (Sprocket-8 and Housing-1), with the worker's
+*"fixed in every mode by one FixComponent"* or *"had to be fixed in …"* fact. Those facts measure the
+per-configuration scope of FixComponent, which the ruling left open. Today `fallback_fixed` judges the worker's
+record only.
+
+**D3. `definition_problems` compares a gear's alignment, which fix 6 no longer does.** Both sides read 2 (ledger
+:526), so this changes nothing in the run. It does not yet follow fix 6.
