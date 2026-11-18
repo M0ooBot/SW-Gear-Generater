@@ -763,7 +763,9 @@ record's problems by kind, so the second `unsettled` overwrites the first's subj
 - **On a SolidWorks measured to leave What's Wrong up (2024; W9C-RUNS-REVIEW.md, the review of 1dc9350, §3).** The
   stop in a part left in error adds once, after its advice and in place of `WHATS_WRONG_AFTER`: *SolidWorks may show
   its What's Wrong box for the part left in error when the assembly is next brought forward; it does not close by
-  itself: close it with its Close button.* The still-in-error sentence adds once after it, in each of its forms:
+  itself: close it with its Close button.* The still-in-error sentence adds once after it, where the press stopped before rebuilding the assembly (the held stop
+  alone or beside another failure; never in place of "already matches" or after a press that went on, where every box
+  measured went while SolidWorks rebuilt):
   *SolidWorks may show its What's Wrong box for that part when this press brings the assembly forward; it does not
   close by itself: close it with its Close button, then close the documents as above.* Never the two together, and
   on 2026 neither (`ui_text.whats_wrong_stays`, `findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD`). Tk-side only.

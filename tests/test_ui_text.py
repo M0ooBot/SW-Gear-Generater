@@ -3811,14 +3811,26 @@ def _three_forms(revision):
             for r in (_held(), beside, nothing)]
 
 
-def test_whats_wrong_stays_is_said_once_after_the_still_in_error_sentence_in_each_form_on_2024():
+def test_whats_wrong_stays_is_said_once_after_the_still_in_error_sentence_where_the_press_stopped_on_2024():
+    """The re-check of 7d96316 (1f8540f, should-fix 1): said only for a press that stopped before rebuilding the
+    assembly, the held stop alone or beside another failure; never in place of 'already matches' or after a press
+    that went on, where every box measured went while SolidWorks rebuilt."""
     said = ui_text.still_in_error_sentence(_still().still_in_error, ASM)
     alone, beside, quiet = _three_forms(Y24)
     assert alone == said + " " + ui_text.WHATS_WRONG_STAYS
     assert beside.endswith(said + " " + ui_text.WHATS_WRONG_STAYS) and beside.startswith("Update SolidWorks stopped.")
-    assert quiet.startswith(said + " " + ui_text.WHATS_WRONG_STAYS)
-    for text in (alone, beside, quiet):
+    for text in (alone, beside):
         assert text.count("What's Wrong") == 1 and ui_text.WHATS_WRONG_NEXT not in text, text
+    assert quiet.startswith(said) and "What's Wrong" not in quiet, quiet
+
+
+def test_whats_wrong_stays_is_not_said_after_a_press_that_went_on_into_the_assembly_on_2024():
+    went_on = _updated()                                       # changed, rebuilt, no failure
+    text, _ = ui_text.gearbox_update_status(_update(), went_on, finished=_still(), revision=Y24)
+    assert ui_text.still_in_error_sentence(_still().still_in_error, ASM) in text and "What's Wrong" not in text, text
+    late = _updated(failures=[("Reducer_12to1.SLDASM", "SolidWorks did not answer.")], skipped="")   # after the
+    text, _ = ui_text.gearbox_update_status(_update(), late, finished=_still(), revision=Y24)       # assembly
+    assert ui_text.WHATS_WRONG_STAYS not in text, text
 
 
 @pytest.mark.parametrize("revision", [Y26, (34, 0, 0), ()])
@@ -3858,5 +3870,8 @@ def test_a_part_left_in_error_and_one_still_in_error_say_stays_alone_never_next_
     stopped = _left_in_error()
     finished = NS(still_in_error=[_path("Gear_m1.5_N17")])
     text, _ = ui_text.gearbox_update_status(_update(), stopped, finished=finished, revision=Y24)
-    assert text.count(ui_text.WHATS_WRONG_STAYS) == 1 and ui_text.WHATS_WRONG_NEXT not in text, text
+    assert text.count(ui_text.WHATS_WRONG_STAYS) == 1 and text.count("What's Wrong") == 1, text
+    # The stop names two parts left in error (the new one and the still one), so the NEXT it would say is the plural:
+    # neither number may stand beside STAYS (the re-check of 7d96316, should-fix 2).
+    assert ui_text.whats_wrong_next_sentence(1) not in text and ui_text.whats_wrong_next_sentence(2) not in text, text
     assert "What's Wrong" not in ui_text.gearbox_update_status(_update(), stopped, finished=finished, revision=Y26)[0]

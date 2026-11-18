@@ -1423,7 +1423,7 @@ What's Wrong box up (2024), such a stop adds once, in place of *may have shown*:
 *SolidWorks may show its What's Wrong box for the part left in error when the
 assembly is next brought forward; it does not close by itself: close it with its
 Close button.* (*the parts* where several); and the still-in-error sentence of a
-later press adds once after it: *SolidWorks may show its What's Wrong box for that
+later press that stopped before rebuilding the assembly adds once after it: *SolidWorks may show its What's Wrong box for that
 part when this press brings the assembly forward; it does not close by itself:
 close it with its Close button, then close the documents as above.* (*those
 parts* where several); the two are never said together. The assembly is named whenever it holds

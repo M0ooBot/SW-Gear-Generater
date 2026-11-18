@@ -1891,9 +1891,11 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), **kwargs)
     said = still_in_error_sentence(still, assembly_holding(update, still),
                                    record=_record_of(finished, kwargs.get("record")),
                                    own=getattr(update, "assembly", "") or "")
-    if whats_wrong_stays(kwargs.get("revision") or ()):
+    if whats_wrong_stays(kwargs.get("revision") or ()) and _stopped_before_the_assembly(result):
         # The review of 1dc9350 (§3): this press brings the assembly forward with the part in error, and the box it
-        # raises does not go by itself; said once, after the sentence, and NEXT not beside it.
+        # raises does not go by itself when nothing rebuilds after it; said once, after the sentence, and NEXT not
+        # beside it. Only for a press that stopped before rebuilding the assembly (the re-check of 7d96316, 1f8540f):
+        # every box measured in a press that went on and rebuilt went by itself.
         said += " " + whats_wrong_stays_sentence(len(still))
         for sentence in (whats_wrong_next_sentence(1), whats_wrong_next_sentence(2)):
             text = text.replace(" " + sentence, "")
@@ -1910,6 +1912,12 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), **kwargs)
         # stays (the second reading of the fixes review, N4).
         return said + text[len(ALREADY_MATCHES):], False
     return f"{text} {said}", False
+
+
+def _stopped_before_the_assembly(result) -> bool:
+    """Whether a press stopped before it rebuilt the assembly: a failure, and the assembly among what its result says
+    it did not get to (``skipped``, as every Update stop that leaves the assembly undone words it)."""
+    return bool(getattr(result, "failures", None)) and "the assembly" in str(getattr(result, "skipped", "") or "")
 
 
 def _record_of(finished, record=None):
