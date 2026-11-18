@@ -327,7 +327,7 @@ def _at(desk):
     return ui_text.read_time(desk.record.gearbox.user_work.read_at)
 
 
-def test_with_carry_inserts_unset_the_question_says_w9as_clause_led_by_that_finding(desk):
+def test_with_carry_inserts_unset_the_question_says_w9as_clause_led_by_that_finding(desk, w9d_unmeasured):
     said = _said(desk)
     assert said == ("Gear Generator has not yet been shown to carry your work into a new revision on SolidWorks 2026 "
                     "(findings.CARRY_INSERTS_ON_2026), so as read at " + _at(desk) + ", your Sprocket-1, Housing-1 "
@@ -1071,7 +1071,33 @@ def test_the_round_trip_classify_question_build_with_carry_finish_record_footer(
     assert line not in ui_text.workbook_footer(a, record=record, digest="d9", folder="C:\\Out\\").text
 
 
-def test_the_round_trip_today_with_every_w9d_finding_unset_says_w9as_sentence_led(monkeypatch):
+def test_a_carry_end_to_end_on_the_fake_at_2026_with_nothing_patched():
+    """findings.py as committed (W9d's probes and M9's second run set on 2026; no fixture, nothing patched): Build
+    again… on the fake at a 2026 revision asks to carry and carries Sprocket-1, Housing-1 and Lock3, unsaved, with
+    nothing named or stopped, and the record and the footer hold it."""
+    desk = _desk(True)
+    assert desk.sw.revision[0] == 34                                          # SolidWorks 2026
+    spec = gears(range_box(), **SUN_FLANK)
+    up = update.classify(desk.record, desk.a(spec), exists=desk.disk.exists, read_sidecar=desk.disk.read_sidecar)
+    question = ui_text.build_again_question(up, _again(desk, spec), record=desk.record)
+    assert (f"As read at {_at(desk)}, RangeBox_r2 takes your Sprocket-1 and Housing-1 and makes your Lock3 again in "
+            "the modes it was on in.") in question, question
+    assert "has not yet been shown" not in question and "Not yet shown" not in question, question
+    again, carry, result, record = _carry_job(desk, spec)
+    done = result.carry
+    assert result.ok and done.work.how == swbuild.OLD_OPEN and done.stopped == "" and done.named == []
+    assert [o for o, _ in done.inserted] == ["Sprocket-1", "Housing-1"] and [m for m, _, _ in done.remade] == ["Lock3"]
+    assert done.unsaved and done.gates == []
+    said = _status_of(desk, again, carry, result)
+    assert said.startswith("Carried into RangeBox_r2, unsaved: your ") and "and your Lock3, on in the modes it was " \
+        "on in." in said, said
+    assert said.endswith("Save RangeBox_r2 in SolidWorks to keep what was carried."), said
+    assert record.gearbox.carry.how == "open" and record.gearbox.carry.unsaved_at == 1763400000.5
+    assert ui_text.carry_footer_line(record) == ("RangeBox_r2 holds what Build again… carried of yours, not saved: "
+                                                 "save it in SolidWorks to keep it.")
+
+
+def test_the_round_trip_today_with_every_w9d_finding_unset_says_w9as_sentence_led(monkeypatch, w9d_unmeasured):
     """M1, end to end: every W9d finding None (today, but for the probe reads the tree may hold), A's worker on the
     fake reads and carries nothing; the result is W9a's sentence led by the finding, as the question is."""
     _reads(monkeypatch)

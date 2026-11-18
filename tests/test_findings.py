@@ -2737,13 +2737,20 @@ W9D_SET_ON_2026 = ("COMPONENT_STATE_PER_CONFIGURATION_ROUTE", "COMPONENT_STATE_P
                    "CARRY_INSERT_MARKS_USER_DOCUMENTS")
 
 
+W9D_SET_BY_M9_ON_2026 = ("CARRY_INSERTS", "CARRY_INSERTS_IN_A_CONFIGURATION", "REFERENCED_CONFIGURATION_READ",
+                         "CARRY_REMAKE_KINDS", "CARRY_GEAR_MATE_ON_AN_APP_GEAR")
+W9D_KEPT_NONE_BY_M9 = ("CARRY_INSERTS_A_SUBASSEMBLY", "CARRY_REMAKES_ON_A_LEAF", "VIRTUAL_READ",
+                       "PATTERN_INSTANCE_READ", "ORIGIN_ENTITY_READ", "PERSIST_REFERENCE_ROUTE_FOR_VERTICES")
+W9D_LIGHTWEIGHT_FACT = "CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY"
+
+
 def test_w9d_findings_are_not_measured_until_a_reviewed_log_sets_them():
     """W9D-INTERFACES.md §8: every name W9d reads is in findings.py, None on both versions until a reviewed run sets
-    it: on 2026 the probes' two runs set §8.1's (pinned below); every one on 2024, and on 2026 the reads M9 sets and
-    every CARRY_* write, stay None."""
+    it: on 2026 the probes' two runs set §8.1's and M9's second run the five of W9D-DEMONSTRATION-REVIEW.md's last
+    section, §4 (each pinned below); every one on 2024, and on 2026 the six M9's fixture does not reach, stay None."""
     for name in W9D_FINDINGS + ("COMPONENT_STATE_PER_CONFIGURATION_ROUTE",):
         for year in (2026, 2024):
-            if year == 2026 and name in W9D_SET_ON_2026:
+            if year == 2026 and name in W9D_SET_ON_2026 + W9D_SET_BY_M9_ON_2026:
                 continue
             assert hasattr(findings, f"{name}_ON_{year}") and getattr(findings, f"{name}_ON_{year}") is None, name
 
@@ -2783,7 +2790,103 @@ def test_w9d_2026_findings_rest_on_the_probes_two_runs():
     assert proposed(two, 104, "PERSIST_REFERENCE_SURVIVES_RELOAD") == repr(findings.PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026)
     for name in W9D_SET_ON_2026:
         assert getattr(findings, f"{name}_ON_2024") is None, name
-    for name in ("REFERENCED_CONFIGURATION_READ", "VIRTUAL_READ", "PATTERN_INSTANCE_READ", "CARRY_INSERTS",
-                 "CARRY_INSERTS_IN_A_CONFIGURATION", "CARRY_INSERTS_A_SUBASSEMBLY", "CARRY_REMAKE_KINDS",
-                 "CARRY_GEAR_MATE_ON_AN_APP_GEAR", "CARRY_REMAKES_ON_A_LEAF"):
+    for name in W9D_KEPT_NONE_BY_M9:                   # what M9 sets is pinned to its own runs below
         assert getattr(findings, f"{name}_ON_2026") is None, name
+
+
+W9D_DEMO_1 = (LATEST.parent / "w9d-demo-20261118-031226.json",
+              LATEST.parent / "w9d-demo-sw2026-20261118-1-whole-closed-read-mode-fault.log")
+W9D_DEMO_2 = (LATEST.parent / "w9d-demo-20261118-042519.json",
+              LATEST.parent / "w9d-demo-sw2026-20261118-2-carry-closed-clean.log")
+W9D_KINDS = ("coincident", "concentric", "parallel", "distance", "angle", "limit distance", "lock", "gear")
+
+
+def test_w9d_demonstration_findings_are_set_on_2026_as_its_review_allows_and_none_on_2024():
+    """findings.py, M9's block (W9D-DEMONSTRATION-REVIEW.md, the second run on 2026, §4, 7996089): five set on 2026,
+    six kept None there, every one None on 2024; the lightweight fact a pair (the coordinator's ruling), True on 2026,
+    None on 2024."""
+    assert findings.CARRY_INSERTS_ON_2026 is True
+    assert findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2026 is True
+    assert findings.REFERENCED_CONFIGURATION_READ_ON_2026 is True
+    assert findings.CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2026 is True
+    assert findings.CARRY_REMAKE_KINDS_ON_2026 == W9D_KINDS
+    assert isinstance(findings.CARRY_REMAKE_KINDS_ON_2026, tuple)
+    assert not {"perpendicular", "tangent", "limit angle"} & set(findings.CARRY_REMAKE_KINDS_ON_2026)
+    for name in W9D_KEPT_NONE_BY_M9:
+        assert getattr(findings, f"{name}_ON_2026") is None, name
+    for name in W9D_SET_BY_M9_ON_2026 + W9D_KEPT_NONE_BY_M9 + (W9D_LIGHTWEIGHT_FACT,):
+        assert hasattr(findings, f"{name}_ON_2024") and getattr(findings, f"{name}_ON_2024") is None, name
+    assert getattr(findings, f"{W9D_LIGHTWEIGHT_FACT}_ON_2026") is True
+
+
+def test_w9d_demonstration_findings_on_2026_rest_on_the_second_runs_two_logs():
+    """Log 1 (fixture, carry-gates, carry and carry-closed at f7c2f0d on 34.1.1) proposes each value as set, and the
+    lines the comments cite hold; log 2 (carry-closed alone at 41afa37) shows the closed path clean."""
+    data, one = _w9a_run(*W9D_DEMO_1, "f7c2f0d", (34, 1, 1))
+    proposal = data["proposal"]
+
+    def proposed(number, name):
+        line = one[number]
+        assert line.startswith(f"propose {name}_ON_2026 = "), (number, line)
+        return line[len(f"propose {name}_ON_2026 = "):].split("  #")[0]
+    for number, name in ((1553, "CARRY_INSERTS"), (1554, "CARRY_INSERTS_IN_A_CONFIGURATION"),
+                         (1555, "REFERENCED_CONFIGURATION_READ"), (1564, "CARRY_REMAKE_KINDS"),
+                         (1565, "CARRY_GEAR_MATE_ON_AN_APP_GEAR"), (1408, W9D_LIGHTWEIGHT_FACT)):
+        value = getattr(findings, f"{name}_ON_2026")
+        assert proposed(number, name) == repr(value), name
+        got = proposal[f"{name}_ON_2026"]
+        assert (tuple(got) if isinstance(got, list) else got) == value, name
+    for number, name in zip(range(1566, 1572), ("CARRY_INSERTS_A_SUBASSEMBLY", "CARRY_REMAKES_ON_A_LEAF",
+                                                "VIRTUAL_READ", "PATTERN_INSTANCE_READ", "ORIGIN_ENTITY_READ",
+                                                "PERSIST_REFERENCE_ROUTE_FOR_VERTICES")):
+        assert proposed(number, name) == "None" and f"{name}_ON_2026" in proposal, name
+        assert proposal[f"{name}_ON_2026"] is None is getattr(findings, f"{name}_ON_2026"), name
+    assert one[1553].endswith("every condition: {'outcome': True, 'components': True, 'fallback': True, "
+                              "'fallback_fixed': True, 'same_error': True, 'anchors': True, 'states': True, "
+                              "'definitions': True, 'flags': True, 'fixed_every_mode': True, 'free': True, 'poses': "
+                              "True, 'interference': True, 'configuration': True, 'referenced_read': True, 'unsaved': "
+                              "True}")
+    kinds = {"coincident": 12, "concentric": 1, "parallel": 1, "distance": 3, "angle": 2, "limit distance": 1,
+             "lock": 3, "gear": 2}
+    for number, kind in zip(range(1556, 1564), W9D_KINDS):
+        assert one[number].startswith(f"fact    carry: the kind '{kind}' stood on ["), one[number]
+        assert len(ast.literal_eval(one[number].split(" stood on ", 1)[1])) == kinds[kind], kind
+    assert one[1477] == ("ok      carry: every component carried (17), or named only as a component suppressed in the "
+                         "mode showing may be: none; wrongly none")
+    assert one[1478].startswith("ok      carry: the tied cluster alone fell back, UserLock8a deleted, UserAngle8b "
+                                "kept, ['Housing-1', 'Sprocket-8 as Sprocket-9'] fixed: [CarryFallback(components=("
+                                "'Housing-1', 'Sprocket-9'), deleted=('UserLock8a',), kept=('UserAngle8b',), "
+                                "why='tie', subjects=('Sun', 'H'))]")
+    assert one[1484] == ("ok      carry: every mate expected to be made again was, its definition and entities in "
+                         "RangeBox_r2 as the old one's, by the script's own reads: all; every one reached")
+    assert one[1486] == ("ok      carry: every mate expected to be made again on in the modes it was on in, read "
+                         "again: all; every one reached")
+    assert one[1503] == "ok      carry: every app gear free to turn in every mode with the carried mates on: all"
+    assert one[1505] == ("ok      carry: each carried component at its pose against its anchor, as it stood in H of "
+                         "the old assembly, in every mode of RangeBox_r2 where it is resolved (49 reads): off none; "
+                         "not read none")
+    assert one[1515] == ("ok      carry: SprocketConf-1 inserted in Z20, read back in every mode: {'H': 'Z20', 'N': "
+                         "'Z20', 'L': 'Z20'}")
+    assert one[1516] == ("ok      carry: R read SprocketConf-1's referenced configuration 'Z20' beside its document's "
+                         "'Default' (REFERENCED_CONFIGURATION_READ)")
+    assert one[1518] == "ok      carry: RangeBox_r2 holds the carried items unsaved (GetSaveFlag True)"
+    assert one[1404].startswith("ok      carry: the old assembly and every user file unchanged on disk (size, time, "
+                                "hash): ")
+    assert one[1406] == ("ok      carry: no write, show, rebuild, save or close of the old assembly or a user document "
+                         "in the traced calls, and nothing saved after RangeBox_r2.SLDASM's first save")
+    assert one[1573].startswith("time    carry: 1716 s; 0 failed")
+
+    data2, two = _w9a_run(*W9D_DEMO_2, "41afa37", (34, 1, 1))
+    assert data2["stops"] == [] and data2["fails"] == []
+    assert two[771] == ("ok      carry-closed: read read-only (read-only), L showing as saved, nothing left open [] or "
+                        "marked []; unread []")
+    assert two[777] == ("ok      carry-closed: every component carried (17), or named only as a component suppressed "
+                        "in the mode showing may be: none; wrongly none")
+    assert two[784] == ("ok      carry-closed: every mate expected to be made again was, its definition and entities "
+                        "in RangeBox_r2 as the old one's, by the script's own reads: all; every one reached")
+    assert two[786] == ("ok      carry-closed: every mate expected to be made again on in the modes it was on in, read "
+                        "again: all; every one reached")
+    assert two[818].startswith("ok      carry-closed: Sprocket-2 as Sprocket-2 placed against RangeSlv, read in L "
+                               "and placed in H, and at its pose against RangeSlv in every mode, N and L with "
+                               "RangeSlv slid (contradiction 6): ")
+    assert two[861].startswith("time    carry-closed: 1208 s; 0 failed")

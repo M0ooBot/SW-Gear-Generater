@@ -1,7 +1,8 @@
 """W9d package A (W9D-INTERFACES.md; ISSUE-1-PLAN §2.5): Build again… carries the user's work. The pure decisions
 (``plan_carry``, ``carry_gates``) on hand-made ``OldWork``s, and the worker against the fake SolidWorks of
-``test_swbuild``. Every finding W9d reads is None in findings.py; a test that needs one set patches it, and each is
-also tested at None, where the item is named with the finding, never guessed."""
+``test_swbuild``. A test that needs a W9d finding set patches it; one that needs it unset takes ``none_on_2026`` (the
+probes' reads) or ``w9d_unmeasured`` (the demonstration's, set on 2026 since its review), and each is also tested at
+None, where the item is named with the finding, never guessed."""
 
 import math
 
@@ -82,7 +83,8 @@ W9D_SET_ON_2026 = ("COMPONENT_STATE_PER_CONFIGURATION_ROUTE", "COMPONENT_STATE_P
 
 @pytest.fixture
 def none_on_2026(monkeypatch):
-    """Every W9d finding None on 2026 (the fake's version), as before W9d's probes set §8.1's."""
+    """Every W9d probe read None on 2026 (the fake's version), as before W9d's probes set §8.1's; the demonstration's
+    findings are ``w9d_unmeasured``'s (conftest)."""
     for name in W9D_SET_ON_2026:
         monkeypatch.setattr(findings, f"{name}_ON_2026", None)
 
@@ -114,13 +116,59 @@ def _named(plan):
 # -- plan_carry and carry_gates: every reason, with its subjects slot by slot (§2.3) ----------------------------------
 
 
-def test_with_every_gate_none_nothing_is_carried_and_each_item_names_its_finding():
+def test_with_every_gate_none_nothing_is_carried_and_each_item_names_its_finding(w9d_unmeasured):
     w = work([comp()], [lock("Lock1", SUN_WHOLE, ent(USER, "Sprocket-1", ENTITY_WHOLE))])
     plan = swbuild.plan_carry(w, _carry(), REVISION)
     assert plan.components == () and plan.mates == ()
     assert _named(plan) == {"Sprocket-1": ("unmeasured", ("insert", "CARRY_INSERTS_ON_2026", Y)),
                             "Lock1": ("component not carried", ("Sprocket-1",))}
     assert swbuild.carry_gates(w, _carry(), REVISION) == [(swbuild.STEP_CARRY_INSERT, "CARRY_INSERTS_ON_2026")]
+
+
+def test_what_a_carry_is_gated_on_per_version_as_committed():
+    """With no fixture (findings.py as committed: W9d's probes and M9's second run set on 2026, nothing on 2024): on
+    2026 a part, a part in one of its file's configurations, a lock, an axis mate and a gear mate on Sun's Gear Axis
+    are carried with nothing gated, and only what M9's fixture had none of is held, each by its finding: a
+    sub-assembly, a kind outside the eight (perpendicular), a vertex and an origin; a virtual part is named by its
+    `^` with no finding. On 2024 every component is held by CARRY_INSERTS alone, and every mate with its component."""
+    face = ent(USER, "Sprocket-1", ENTITY_FACE)
+    values = (("GearRatioNumerator", 29.0), ("GearRatioDenominator", 20.0), ("Reverse", 1.0))
+    params = ((0, 0, 0, 0, 0, 1), (0, 0, 0, 0, 0, 1))
+    mates = [lock("Lock1", SUN_WHOLE, ent(USER, "Sprocket-1", ENTITY_WHOLE)),
+             mate("UserAxis1", 0, ent(USER, "Sprocket-1", ENTITY_FEATURE, "Axis1"),
+                  ent(APP, "Sun", ENTITY_FEATURE, "Gear Axis")),
+             mate("Gear6", 10, ent(USER, "Sprocket-11", ENTITY_FEATURE, "Axis1"),
+                  ent(APP, "Sun", ENTITY_FEATURE, "Gear Axis"), values=values, params=params),
+             mate("Perp1", 2, face, ent(APP, "Sun", ENTITY_PLANE, "plane1")),
+             mate("Vertex1", 0, ent(USER, "Sprocket-1", ENTITY_VERTEX), ent(APP, "Sun", ENTITY_PLANE, "plane2")),
+             mate("Origin1", 0, ent(USER, "Sprocket-1", ENTITY_ORIGIN, "origin"), ent(APP, "Sun", ENTITY_PLANE,
+                                                                                      "plane1"))]
+    w = work([comp(), comp("Sprocket-11", configurations=("Z15", "Z20"), configuration="Z20",
+                           active_configuration="Z15"),
+              comp("Drive-1", r"C:\U\Drive.SLDASM", kind="assembly"),
+              comp("Part1^RangeBox-1", r"C:\Temp\Part1^RangeBox.sldprt")], mates)
+    plan = swbuild.plan_carry(w, _carry(), REVISION)
+    assert swbuild.carry_gates(w, _carry(), REVISION) == [
+        (swbuild.STEP_CARRY_SUBASSEMBLY, "CARRY_INSERTS_A_SUBASSEMBLY_ON_2026"),
+        (swbuild.STEP_CARRY_KIND, "CARRY_REMAKE_KINDS_ON_2026"),
+        (swbuild.STEP_CARRY_VERTICES, "PERSIST_REFERENCE_ROUTE_FOR_VERTICES_ON_2026"),
+        (swbuild.STEP_CARRY_ORIGIN, "ORIGIN_ENTITY_READ_ON_2026")]
+    assert [i.component.name for i in plan.components] == ["Sprocket-1", "Sprocket-11"]
+    assert [m.mate.name for m in plan.mates] == ["Lock1", "UserAxis1", "Gear6"]
+    assert _named(plan) == {
+        "Drive-1": ("unmeasured", ("sub-assembly", "CARRY_INSERTS_A_SUBASSEMBLY_ON_2026", Y)),
+        "Part1^RangeBox-1": ("no file", ("Part1^RangeBox.sldprt", "virtual")),
+        "Perp1": ("unmeasured", ("perpendicular", "CARRY_REMAKE_KINDS_ON_2026", Y)),
+        "Vertex1": ("unmeasured", ("vertex", "PERSIST_REFERENCE_ROUTE_FOR_VERTICES_ON_2026", Y, "Sprocket-1")),
+        "Origin1": ("unmeasured", ("origin", "ORIGIN_ENTITY_READ_ON_2026", Y, "Sprocket-1"))}
+    on_2024 = (32, 5, 0)
+    plan = swbuild.plan_carry(w, _carry(), on_2024)
+    assert swbuild.carry_gates(w, _carry(), on_2024) == [(swbuild.STEP_CARRY_INSERT, "CARRY_INSERTS_ON_2024")]
+    assert plan.components == () and plan.mates == ()
+    named = _named(plan)
+    held = {n for n, (why, s) in named.items() if why == "unmeasured" and s[:2] == ("insert", "CARRY_INSERTS_ON_2024")}
+    assert held == {"Sprocket-1", "Sprocket-11", "Drive-1"}
+    assert {n for n, (why, _) in named.items() if why == "component not carried"} == {m.name for m in mates}
 
 
 def test_a_user_part_locked_to_sun_is_carried_against_sun_and_its_lock_remade(every_gate):
@@ -290,7 +338,7 @@ def test_the_not_open_path_names_tier_one_until_a_reference_is_shown_to_survive_
     assert plan.mates[0].targets == ("gear1:Gear Axis", "ref:carried1:feature:384a0001")
 
 
-def test_an_old_assembly_not_read_names_everything_with_the_reason(every_gate, none_on_2026):
+def test_an_old_assembly_not_read_names_everything_with_the_reason(every_gate, none_on_2026, w9d_unmeasured):
     w = work([comp()], [lock("Lock1", SUN_WHOLE, ent(USER, "Sprocket-1", ENTITY_WHOLE))], how=swbuild.OLD_UNREAD,
              unread=["RangeBox.SLDASM is not open in SolidWorks"])
     plan = swbuild.plan_carry(w, _carry(), REVISION)
@@ -513,7 +561,8 @@ def test_build_again_refuses_a_carry_whose_old_assembly_is_not_the_one_left_behi
 
 
 def test_with_every_gate_none_the_old_assembly_is_read_nothing_is_carried_and_the_build_stands(monkeypatch,
-                                                                                               none_on_2026):
+                                                                                               none_on_2026,
+                                                                                               w9d_unmeasured):
     fake = _old_train()
     _isfile(monkeypatch, fake)
     result = _build_again(fake)

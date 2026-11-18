@@ -1746,7 +1746,7 @@ def test_a_tooth_change_is_an_update_that_sets_the_gear_mate_once_its_ratio_can_
     assert {m.name: m.ratio for m in record_of(window).gearbox.mates}["G1 meshes G2"] == [17, 69]
 
 
-def test_a_gearbox_w4_built_stays_static_and_is_offered_a_turning_revision(desk, monkeypatch):
+def test_a_gearbox_w4_built_stays_static_and_is_offered_a_turning_revision(desk, monkeypatch, w9d_unmeasured):
     """D5: a W4 static record is never changed into a turning one by Update; the footer and the Build again?
     question say the new revision's gears turn."""
     from gear_generator import workbook_gui
@@ -1770,7 +1770,7 @@ def test_a_gearbox_w4_built_stays_static_and_is_offered_a_turning_revision(desk,
     assert window.status.get() == "SolidWorks already matches the workbook: nothing was changed."
 
 
-def test_a_recorded_mate_update_cannot_read_still_offers_build_again(desk, monkeypatch):
+def test_a_recorded_mate_update_cannot_read_still_offers_build_again(desk, monkeypatch, w9d_unmeasured):
     """The refusal names Build again…, so the window keeps that button on and its press asks: the person is never
     left with nothing to press."""
     from gear_generator import workbook_gui

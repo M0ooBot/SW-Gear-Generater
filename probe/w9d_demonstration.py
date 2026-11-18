@@ -896,6 +896,16 @@ def self_check():
     from gear_generator.workbook import update
     from workbook_fixtures import range_box
     bad = []
+    # W9d's demonstration findings are set on 2026 since its review (W9D-DEMONSTRATION-REVIEW.md, 7996089, §4); a 2024
+    # run meets them None, as every _ON_2024 is. The gate sections are checked as a version with them unmeasured meets
+    # them: each patched to None on both versions in this process, as the suite's w9d_unmeasured fixture does.
+    committed = {f"{g}_ON_{y}": getattr(findings, f"{g}_ON_{y}", "missing") for g in list(WRITE_GATES) + list(STAY_NONE)
+                 for y in (2026, 2024)}
+    for name in committed:
+        setattr(findings, name, None)
+    print(f"fact    W9d's demonstration findings on 2026 and 2024 patched to None in this process, as a version that "
+          f"has not measured them meets them; committed on 2026: "
+          f"{ {n: v for n, v in committed.items() if n.endswith('_ON_2026') and v is not None} }")
 
     def ok(cond, what):
         print(("ok      " if cond else "FAIL    ") + what)
@@ -1266,8 +1276,10 @@ def self_check():
     ok(tuple(swbuild.CARRY_KIND_WORDS) == KIND_WORDS and set(WRITE_GATES) | set(STAY_NONE) <= {
         n[:-len("_ON_2026")] for n in dir(findings) if n.endswith("_ON_2026")},
        "the kind words are the worker's; every gate named here is a finding of findings.py")
-    ok(all(getattr(findings, f"{g}_ON_{y}", "x") is None for g in WRITE_GATES for y in (2026, 2024)),
-       "every gate this script patches is None in findings.py on both versions (so it proposes, never sets)")
+    ok(all(committed[f"{g}_ON_2024"] is None for g in WRITE_GATES)
+       and all(committed[f"{g}_ON_{y}"] is None for g in STAY_NONE for y in (2026, 2024)),
+       "every gate this script patches is None in findings.py on 2024, and every one it keeps None is None on both "
+       "versions (so a 2024 run proposes, never sets)")
     ok(propose("X", True, "e") == "propose X = True  # e", "propose's form")
     print(f"fact    the self-check took {time.monotonic() - started:.0f} s")
     print(f"done    {len(bad)} failed")

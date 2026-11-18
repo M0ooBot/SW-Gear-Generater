@@ -2085,8 +2085,8 @@ UPDATE_SUPPRESSES_THE_RELIEF_ON_2024 = None
 # W9d: Build again… carries the user's work (W9D-INTERFACES.md §8). Every name below is None on both versions until a
 # reviewed SolidWorks log sets it: the reads from W9d's probe (probe/w9d_probes.py, W9D-PROBES.md), the writes from
 # the demonstration M9 (patched in that run's process for the measurement only, as W9a's nocarrier and W9c's gates
-# were). Nothing measured them; no run is cited. One not settled keeps its items from being carried, named with the
-# finding, and never stops the build.
+# were). The blocks after this list cite the runs that set them (the probes', then M9's). One not settled keeps its
+# items from being carried, named with the finding, and never stops the build.
 # - OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN (True): the close of a read-only document, shown or not, under no dialog; gates
 #   the not-open read at all and its per-mode show (probe state (h)).
 # - OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS (True): the read-only open leaves the app's documents already open as they
@@ -2142,7 +2142,7 @@ PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026 = True
 PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2024 = None
 COAXIAL_FACE_READ_ON_2026 = True
 COAXIAL_FACE_READ_ON_2024 = None
-REFERENCED_CONFIGURATION_READ_ON_2026 = None
+REFERENCED_CONFIGURATION_READ_ON_2026 = True
 REFERENCED_CONFIGURATION_READ_ON_2024 = None
 VIRTUAL_READ_ON_2026 = None
 VIRTUAL_READ_ON_2024 = None
@@ -2158,23 +2158,30 @@ SUBASSEMBLY_READ_ONLY_INSERT_ON_2026 = True
 SUBASSEMBLY_READ_ONLY_INSERT_ON_2024 = None
 CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2026 = False
 CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2024 = None
-CARRY_INSERTS_ON_2026 = None
+CARRY_INSERTS_ON_2026 = True
 CARRY_INSERTS_ON_2024 = None
-CARRY_INSERTS_IN_A_CONFIGURATION_ON_2026 = None
+CARRY_INSERTS_IN_A_CONFIGURATION_ON_2026 = True
 CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 = None
 CARRY_INSERTS_A_SUBASSEMBLY_ON_2026 = None
 CARRY_INSERTS_A_SUBASSEMBLY_ON_2024 = None
-CARRY_REMAKE_KINDS_ON_2026 = None
+CARRY_REMAKE_KINDS_ON_2026 = ("coincident", "concentric", "parallel", "distance", "angle", "limit distance", "lock",
+                              "gear")
 CARRY_REMAKE_KINDS_ON_2024 = None
-CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2026 = None
+CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2026 = True
 CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 = None
 CARRY_REMAKES_ON_A_LEAF_ON_2026 = None
 CARRY_REMAKES_ON_A_LEAF_ON_2024 = None
+# A fact, read by nothing in src (the worker reads CarryResult.resolved_in_old itself and the result says it); kept so
+# the 2024 run has a name to set (the coordinator's ruling on W9D-DEMONSTRATION-REVIEW.md's open point). Its evidence
+# is in the M9 block below.
+CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2026 = True
+CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2024 = None
 #
 # W9d's probes on SolidWorks 2026 (34.0.0), set as W9D-PROBES-REVIEW.md (94fbebf) and W9D-INTERFACES §8.1 give them.
 # -1.log is probe/results/w9d-probes-sw2026-20261117-1-face-routes-none.log (snapshot 23ed8c5), -2.log is
 # …-2-faces-r3-clean.log (snapshot c86ad54). _ON_2024 stays None for every one until the 2024 run is reviewed; the
-# reads M9 sets (REFERENCED_CONFIGURATION_READ, VIRTUAL_READ, PATTERN_INSTANCE_READ) and every CARRY_* write stay None.
+# reads M9 sets (REFERENCED_CONFIGURATION_READ, VIRTUAL_READ, PATTERN_INSTANCE_READ) and every CARRY_* write stayed None
+# here, and are set or kept None by M9's own block below.
 # - COMPONENT_STATE_PER_CONFIGURATION_ROUTE (set above, in W9c's block): agreed with the shown truth on 3 components x
 #   3 modes, from an unmarked start, marking nothing (-1.log:114-118), suppressed in the mode showing and in another
 #   covered; it reads a lightweight component False (not suppressed) (:121); top-level Name2 only. On 34.0.0
@@ -2216,3 +2223,71 @@ CARRY_REMAKES_ON_A_LEAF_ON_2024 = None
 # - CARRY_INSERT_MARKS_USER_DOCUMENTS: False in one case: user parts loaded as components of the open old assembly,
 #   unchanged, opened and inserted into a second assembly, marking none of them (-2.log:101-102). A user part open in
 #   its own window with unsaved edits is not measured.
+#
+# W9d's demonstration M9 on SolidWorks 2026 (34.1.1), set as the last section of W9D-DEMONSTRATION-REVIEW.md
+# ("The second run on SolidWorks 2026 (34.1.1), and 41afa37", §4, 7996089) gives them. "Log 1" is
+# probe/results/w9d-demo-sw2026-20261118-1-whole-closed-read-mode-fault.log (snapshot f7c2f0d, JSON
+# w9d-demo-20261118-031226.json), "log 2" …-2-carry-closed-clean.log (snapshot 41afa37, carry-closed alone, JSON
+# …-042519.json). The five writes were patched True together in that run's process for the measurement only (log
+# 1:794-798, log 2:80-84); the probes' reads were committed. _ON_2024 stays None for every one: W9d's probes and
+# demonstration have not run on 2024.
+# Every value here carries these caveats (the review's "All"):
+# - measured on 34.1.1 at f7c2f0d, whose src differs from the commit that set these only in W9c's _ON_2024 values and
+#   the review's two wording must-fixes; carry-closed rerun at 41afa37, whose fix is the script's alone;
+# - the probes' reads (W9D-INTERFACES §8.1) were measured on 34.0.0, and this run reads them clean on 34.1.1 too (log
+#   2:771-772, the read-only open and close);
+# - one fixture, 17 user components on RangeBox;
+# - on the open path the old assembly was unmarked at the press (log 1:806); an old assembly open with unsaved changes
+#   is measured by the probe's state (e) only.
+# - CARRY_INSERTS True: every component carried (log 1:1477), the tied cluster alone fell back (1478), states per mode
+#   (1481-1482), anchors (1480), fixed in every mode (1489), every app gear free in every mode (1503), 49 pose reads
+#   none off (1505), flags as on record (1512), the new assembly unsaved (1518), the record at schema 10 (1534), the
+#   old assembly and every user file unchanged on disk (1404) and untouched in the traced calls (1406); the proposal
+#   with every condition True (1553). The closed path: log 2:777-782, 789, 806, 808, 818 (contradiction 6), 834.
+#   Caveats: the fallback shown is FELL_TIE only, with one FixComponent fixing in every mode; FELL_NEW_ERROR,
+#   FELL_OVER_DEFINED, the per-mode fix, a refused put, same_error, moved, a clash sentence, a mode new or gone in the
+#   revision and a stop part way are on the fake only (the stop was met once on SolidWorks, at 90cdf20, the first
+#   run); instances are renumbered in insertion order (log 2:778); a user part open in its own window with unsaved
+#   edits is not measured; the fixed state is read in the mode showing only, so a component the user fixed in some
+#   modes and not others comes over by that one read (the reviewer's inference from OldComponent.fixed and the
+#   one-FixComponent fact, not measured).
+# - CARRY_INSERTS_IN_A_CONFIGURATION True: SprocketConf-1 inserted by add_component_in in Z20 (log 1:859-860), read
+#   back Z20 in every mode (1515), proposal 1554. Caveat: one part with two configurations, its document's active one
+#   Default.
+# - REFERENCED_CONFIGURATION_READ True: ReferencedConfiguration read Z20 beside the document's Default on
+#   SprocketConf-1 (log 1:823, 1438, 1516), proposal 1555; read-only on the closed path (log 2:738). Caveat: the same
+#   component, read open and read-only; on a lightweight or suppressed component the document's configuration reads ''
+#   while the referenced one reads Default (log 1:821-822).
+# - CARRY_REMAKE_KINDS the eight kinds: every mate expected made again, read back equal (log 1:1484), on in its modes
+#   (1486), kept under its name or the name said (1499); the kinds 1556-1563, proposal 1564; closed, log 2:784, 786,
+#   800. What stands for each: coincident 12 mates (axes, planes, one face pair); concentric one (an axis to a bore
+#   face); parallel one (planes); distance three, and UserAsm6 to the assembly's plane on the closed path; angle two,
+#   both 90°; limit distance one; lock three, one between two user parts; gear two, both Reverse 1. A gear mate of the
+#   other sense is not remade on SolidWorks (UserGearFillet, Reverse 0, was named for its face). Every distance and
+#   angle read FlipDimension 0 and Flipped False, so which of the two stands for AddMate5's Flip is not told apart
+#   (FlipDimension 1 is unmeasured). Perpendicular, tangent and limit angle are not in the fixture and, with this
+#   value, are named; the run patched all eleven kinds (log 1:797), so those three are named by the same path that
+#   named UserSunFace, which the run showed.
+# - CARRY_GEAR_MATE_ON_AN_APP_GEAR True: UserGear6 (log 1:1457, as read) made again on the new Sun's Gear Axis with
+#   its ratio and sense read back, UserGearRoot (1464) on a root cylinder read coaxial (COAXIAL_FACE_READ); 1484,
+#   proposal 1565; closed, log 2:784. Caveats: on Sun, a part made new; an app gear reused as the same file under a
+#   user gear mate is not shown; the remake with the other Flip after a wrong sense is the fake's only; alignment 2 is
+#   not judged.
+# - CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY True, a fact (the coordinator's ruling): SprocketLight-1,
+#   set lightweight in the open old assembly, read 1 before the press and 2 after, its part's document opened and
+#   unmarked, set apart by the coordinator's ruling on M1 (b) (log 1:1402); the worker's own line (1410); the script's
+#   proposal (1408); the result's sentence (1397). Caveat: one component, set lightweight in the session (lightweight
+#   is per file in a session), on the open path; read by nothing in src.
+# - Stay None on 2026, each because the fixture has none (log 1:1566-1571): CARRY_INSERTS_A_SUBASSEMBLY (no user
+#   sub-assembly; one would go in by open_document + add_component, not the measured read-only insert);
+#   CARRY_REMAKES_ON_A_LEAF (no target grammar for a leaf is written; every leaf mate is named); VIRTUAL_READ (no
+#   virtual component; IsVirtual is never read by the worker); PATTERN_INSTANCE_READ (no component pattern;
+#   IsPatternInstance is never read by the worker); ORIGIN_ENTITY_READ (no mate on an origin; no route for one is
+#   written); PERSIST_REFERENCE_ROUTE_FOR_VERTICES (no mate on a vertex). While each is None the app names the item
+#   with its finding and leaves it in the old assembly.
+# What no run showed and the review traced to write only into the unsaved new assembly (§5), carried as unmeasured:
+# the fallbacks other than the tie, the per-mode fix, a clash sentence, same_error and moved, a mode new or gone,
+# FlipDimension 1, a gear mate of the other sense, perpendicular, tangent and limit angle, a sub-assembly, a leaf, a
+# virtual component, a pattern, an origin and a vertex, an old assembly open with unsaved changes and a user part open
+# with unsaved edits, a fixed state that differs by mode, and an app gear reused as the same file under a user gear
+# mate.

@@ -237,7 +237,7 @@ def _again(record, spec, exists):
     return upd, again
 
 
-def test_the_build_again_question_names_what_stays_behind_with_its_time(on_fake):
+def test_the_build_again_question_names_what_stays_behind_with_its_time(on_fake, w9d_unmeasured):
     sw, record = on_fake
     _sprocket(sw, record)
     sw.user_feature(next(p.path for p in record.current_parts() if "G4" in p.gears), "Groove")
