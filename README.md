@@ -108,9 +108,9 @@ same way, with these differences.
   teeth, your own features left in it, and the slicer settings below. A part
   changed in SolidWorks and not saved, one whose values are not what its record
   says, one with a feature in error, or a gearbox Update SolidWorks would change
-  is refused by name, and nothing is written. Until Gear Generator has measured
-  writing a STEP file on your SolidWorks version, **Print files** says so and
-  writes nothing.
+  is refused by name, and nothing is written. Writing a STEP file has been
+  measured on SolidWorks 2024 and 2026; on another version **Print files** says
+  so and writes nothing.
 
 A machined gear is built, checked and recorded exactly as before. A
 `.gear.json` written before printed gears existed opens as **Machined**, which is
@@ -196,20 +196,35 @@ example 8.00.
    below.
 5. *Optionally*, measure each gear's outside diameter at three places (33.0 for
    module 1.5, 20 teeth) and its face width (8.0).
-6. **Type and send the numbers.** Put Coupon_A back on the form (Open
-   .gear.json, or type it again) and type **the mean of the twelve** into
+6. **Type the mean, and keep the numbers.** Put Coupon_A back on the form
+   (Open .gear.json, or type it again) and type **the mean of the twelve** into
    **Measured** under *Span over 3 teeth*. The line under it says what your
    printer adds to each flank and the backlash that would keep 0.04 mm of play a
-   flank, never less than 0.1 mm. **If that backlash is more than 0.3 ×
-   module**, the line says so, and you decide: either gears under that module
-   keep today's smaller backlash (0.3 × module), or they take the measured one,
-   at the cost of thinner tips that can come to a point on the smallest modules.
-   Then send the session that set this up: the twelve readings (and
-   Coupon_E's three), for each coupon the bore typed, the bore measured and the
-   two fit grades (top and bed face), the optional diameters, and what you
-   printed with: the printer, the filament (brand, colour), Bambu Studio's
-   version, the nozzle and any setting not as listed. The printed backlash and
-   the bore allowance are set from them, on your word.
+   flank, never less than 0.1 mm. **If that backlash is more than the printed
+   default** (0.3 mm a gear from module 1 up, 0.3 × module below it), the line
+   says so, and there is a choice to make: larger gears can take the measured
+   backlash, but the smallest ones, whose 0.3 × module is under it, either keep
+   today's smaller backlash or take the measured one, at the cost of thinner tips
+   that can come to a point on the smallest modules.
+
+   The mean is the only number typed into the app. Write the rest into the table
+   below and keep it: the twelve readings (and Coupon_E's three), for each coupon
+   the bore typed, the bore measured and the two fit grades (top and bed face),
+   the optional diameters, and what you printed with (the printer, the filament's
+   brand and colour, Bambu Studio's version, the nozzle and any setting not as
+   listed). The printed backlash default and the bore allowance are to be set
+   from these numbers; this version of Gear Generator does not read them yet.
+
+   | | Coupon_A | Coupon_B | Coupon_C | Coupon_D | Coupon_E (optional) |
+   |---|---|---|---|---|---|
+   | Bore typed (mm) | | | | | none |
+   | Bore measured (mm, two readings) | | | | | |
+   | Shaft fit, top face / bed face (a–d) | | | | | |
+   | Span (mm, three readings) | | | | | |
+   | Outside diameter (optional) | | | | | |
+
+   Printed with: printer ___, filament ___, Bambu Studio ___, nozzle ___,
+   settings not as listed ___.
 7. *Optionally*, print a pair from the app and turn it by hand through whole
    turns on your own shafts, before and after a short run. It confirms step 3;
    it does not replace it.
@@ -572,8 +587,10 @@ a planet's copies) and each part's span over k teeth. It asks nothing and is
 refused, by name and before anything is written, while the record marks a part
 unsaved or no longer as built, while Update SolidWorks would change a part's
 values or make it new (a change to the layout or the assembly alone does not
-count), while a gear has no part yet, while the workbook has an error, or while
-Excel has yet to recalculate an Export; *Printed gears* says the rest.
+count), while the workbook's changes need a new revision (press **Build
+again…** first), while a gear has no part yet, while the workbook has an error,
+while Excel has yet to recalculate an Export, or while the Output folder is not
+on disk; *Printed gears* says the rest.
 
 **Build** makes the whole gearbox in the output folder, named for the Box's
 Name: every gear as a part, exactly as the form builds the same values, each
