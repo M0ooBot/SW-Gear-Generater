@@ -349,7 +349,8 @@ The checks:
   tolerance (at module 0.75 it computes as 0.2999999999999998). Two printed surfaces take about that.
   - `pair.tip_clearance` (`pair.py:190-204`) covers outside pairs, and Gleason's figure covers a bevel pair.
   - A ring pair's clearance is new pure code beside `tip_clearance`: the pinion's tip to the ring's root and the
-    ring's tip to the pinion's root, each 0.4 × module unshifted. `internal.tip_clash` (`internal.py:381`) is the
+    ring's tip to the pinion's root, each the depth less two modules (h − 2m) unshifted: 0.4 × module up to module
+    1.25 and 0.25 × module above, as the depth IIF gives. `internal.tip_clash` (`internal.py:381`) is the
     tip clash, not this.
   - On the form the check is said through `pair.mesh_warnings` (`pair.py:989-1009`, shown at `gui.py:1300`). In
     a workbook it is said at each Meshes row from `checks._check_mesh` (`workbook/checks.py:378`).
@@ -447,12 +448,10 @@ tip **after** backlash against the nozzle, and clearance against the larger of 0
 - A row whose tip comes to a point is not offered.
 - Machined pairs keep today's tests.
 
-### 2.6 A measurement to calibrate by
+### 2.6 A measurement to calibrate by (moved to F2)
 
-The Derived panel of a printed spur or helical gear gives its **span over k teeth** (the base tangent
-length, what calipers across k teeth read), for the gear as drawn, backlash included. A printed gear
-measures more than that by twice what the printer adds to a flank. This is what §3.2 uses; it needs no
-rig.
+**Not part of F1** (the coordinator's ruling 1 on F1's review, 2026-11-18). The span over k teeth is F2's first step,
+§3.0, built before any print is measured.
 
 ### 2.7 Proving the rule
 
@@ -705,6 +704,7 @@ run follows.
   against the fake.
 - The boards in `design/` show the Process row, the Workbook panel's Process line and one printed warning.
 - `design/UI-DESIGN.md`, the README and the backlash hints say what Printed does.
+- Not in F1: the span over k teeth (§2.6), which is F2's first step (§3.0).
 - On SolidWorks 2026, three things: one printed spur gear built; one printed pair built; and, on a copy of W9a's
   `setup.master` (RangeBox with the user's work), Printed typed on its Box sheet and one Update. That Update writes
   every part's Backlash in place, touches none of the user's items, and reads back as W9a reads its own Update.
@@ -732,6 +732,14 @@ estimate, not a measurement: about 20 minutes on 2026 and 30 on 2024.
 
 
 ## 3. Stage F2 — the file for the slicer, and the first prints
+
+### 3.0 First, a measurement to calibrate by
+
+F2's first step, before any print is measured (moved from §2.6 by the coordinator's ruling 1 on F1's review,
+2026-11-18). The Derived panel of a printed spur or helical gear gives its **span over k teeth** (the base tangent
+length, what calipers across k teeth read), for the gear as drawn, backlash included. A printed gear measures more
+than that by twice what the printer adds to a flank. This is what §3.2 uses; it needs no rig. It is pure code and
+the card's text, tested against the fake, with a machined gear's card held by `test_printed_rule.py`'s pins.
 
 ### 3.1 Export
 
@@ -781,7 +789,8 @@ No rig, and no gear has to fit a shaft:
    A centre distance out by 0.1 mm moves the play by 0.07 mm, so this confirms the first measurement; it
    does not replace it.
 
-**Done when:** the probe's findings are in `findings.py`; a gear built by the app exports; the STEP
+**Done when:** the Derived panel gives a printed spur or helical gear's span over k teeth (§3.0), first; the probe's
+findings are in `findings.py`; a gear built by the app exports; the STEP
 opens in the user's slicer (the user's step); the measurements of 1 and 2 are written down here and
 D3's number and F3's allowance are set from them; reviewed. **Cost:** two short SolidWorks runs; two
 agent runs and the review.
@@ -1241,3 +1250,22 @@ a margin, and W7's planetary sentence stays exactly as it is.
 since the §2.3 wait the check gave it is discharged by the ruling; it waits only if the coordinating session wants
 this revision checked again.
 
+## Changes after F1's review
+
+2026-11-18. To F1's review (`docs/notes-printed/F1-REVIEW.md`, `be5ae7a`) and the coordinator's rulings on it, each
+the user's to overrule.
+
+- **§2.2, the ring pair's gaps (the review's S3).** Each gap is the depth less two modules, so 0.4 × module only up
+  to module 1.25, where the depth IIF is 2.4 × module, and 0.25 × module above, where it is 2.25 × module. The plan
+  said 0.4 × module at every module; package A's maths was right and the text was not.
+- **§2.6 and §3.0, the span over k teeth (ruling 1).** It was not built in F1, and it is not part of F1: it is F2's
+  first step, before any print is measured. §2.6 now points to §3.0, which holds its text; §2.8's *Done when* says it
+  is not in F1, and F2's *Done when* opens with it.
+- **The rule's pins (ruling 4, the review's S1).** `tests/test_printed_rule.py` now also holds the seven ways the
+  review found of telling a machined gear or gearbox something new that only the packages' own tests caught: a
+  machined gearbox's Meshes rows and fixes, a machined pair on the form, a machined helix over 45°, W9d's columns, and
+  the Workbook window's blank Process on a gearbox built machined. A reader of sidecar 2 refusing a printed
+  `.gear.json` is tested (`tests/test_store.py`).
+- **Recorded, not changed here:** the form judges a printed crossed pair as the workbook does (ruling 2); package B's
+  planet-copy wording in *Build again…* is kept until `w9d` is merged, whose own fix (`d496cfd`) then stands
+  (ruling 3).
