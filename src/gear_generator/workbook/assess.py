@@ -169,7 +169,7 @@ def blank_process(record: Optional[store.LinkRecord]) -> str:
 
 def assess(read: GearboxSpec, read_diagnostics: Sequence[Diagnostic], folder: str, part_template: str = "",
            chosen: Sequence[Fix] = (), provisional: bool = False,
-           blank_process: str = PROCESS_PRINTED) -> Assessment:
+           blank_process: str = PROCESS_PRINTED, record: Optional[store.LinkRecord] = None) -> Assessment:
     """The read worked through: the chosen fixes made, every gear planned, the gearbox checked.
 
     A gear with an error of its own — from the read or the strip's checks — is
@@ -180,6 +180,12 @@ def assess(read: GearboxSpec, read_diagnostics: Sequence[Diagnostic], folder: st
     F1 (PLAN-PRINTED §1.3): a Box whose Process is blank (``""``, the user's blank as read) takes ``blank_process``,
     in the assessment's ``read`` and ``spec`` both, so no Assessment holds a blank Process. The window passes
     :func:`blank_process` of the record beside the workbook; a gearbox built in code says machined and never meets it.
+
+    F3 (PLAN-PRINTED §4.1.1; F3-INTERFACES §14, S3, the rule's tenth caller): ``record``, the record beside the workbook
+    (this workbook's: the window passes the one it reads :func:`blank_process` from, None for another workbook's), reads
+    each row whose gear's part is on record as built (``build.built_globals``), so the window's checks (the printed rim,
+    the bore against the root) speak of the hole that part was cut with, and its job plans that hole. None, every row as
+    a row with no part on record, as before.
     """
     if not str(read.box.process).strip():
         read = replace(read, box=replace(read.box, process=blank_process))
@@ -188,7 +194,8 @@ def assess(read: GearboxSpec, read_diagnostics: Sequence[Diagnostic], folder: st
         spec = fixes.apply(spec, fix)
     read_diagnostics = list(read_diagnostics)
     skip_rows = build.rows_with_errors(read_diagnostics)
-    parts = build.plan_parts(spec, folder, part_template, skip_rows=skip_rows)
+    parts = build.plan_parts(spec, folder, part_template, skip_rows=skip_rows,
+                             built=build.built_globals(record) if record is not None else None)
     bad_rows = skip_rows | build.rows_with_errors(parts.diagnostics)
     report = checks.check(spec, {g.id for g in spec.gears if g.row in bad_rows})
     if provisional:

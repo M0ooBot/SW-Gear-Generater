@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING, Callable, Dict, List, Mapping, Optional, Seque
 from . import findings
 from .gears import kind_for
 from .gears.span import NONE as NO_SPAN, SpanReading, span
-from .spec import GearSpec
+from .spec import GearSpec, as_built
 from .store import SIDECAR_SUFFIX, same_path
 from .swcom import release_year
 
@@ -179,13 +179,28 @@ class BoreFigures:
 
 def bore_figures(part: "PrintPart") -> BoreFigures:
     """The part's hole as built (F3, §4.1.1): from ``spec.as_built(part.spec, part.variables)``, never from the spec
-    alone, so a part cut at 8 says 8 and one cut at 8.2 says 8 and 0.2. **F3-0's stub: the bore as recorded, no
-    allowance and no flat**, what every part built before F3 holds; package B fills it."""
+    alone, so a part cut at 8 says 8 and one cut at 8.2 says 8 and 0.2. F3-0's stub gave the bore as recorded, no
+    allowance and no flat, what every part built before F3 holds; package B's body reads the record as built:
+    ``bore`` the shaft's size, ``allowance`` the figure typed or the recorded ``"Bore Allowance"`` (none on a part
+    built before F3, whose record holds no such global, whatever its Process), ``flat`` the shaft's Flat when the
+    record's Drive is flat. With no bore, nothing (0, 0, None). A figure on record that does not read is left out
+    (0, or None), as a bore that does not read always was."""
+    spec = as_built(part.spec, part.variables)
     try:
-        bore = part.spec.bore_mm() if part.spec.has_bore() else 0.0
+        bore = spec.bore_mm() if spec.has_bore() else 0.0
     except Exception:  # noqa: BLE001 - a recorded bore that does not read: no figure
         bore = 0.0
-    return BoreFigures(bore=bore)
+    if not bore:
+        return BoreFigures()
+    try:
+        allowance = spec.bore_allowance_mm()
+    except Exception:  # noqa: BLE001 - an allowance on record that does not read: none said
+        allowance = 0.0
+    try:
+        flat = spec.flat_mm() if spec.has_flat() else None
+    except Exception:  # noqa: BLE001 - a Flat on record that does not read: none said
+        flat = None
+    return BoreFigures(bore=bore, allowance=allowance, flat=flat)
 
 
 @dataclass(frozen=True)

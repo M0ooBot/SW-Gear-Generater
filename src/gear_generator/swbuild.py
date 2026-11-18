@@ -1302,26 +1302,50 @@ def build_many(sw: SolidWorks, plans: Sequence[BuildPlan],
 # -- changing values in a built part ----------------------------------------
 
 
-STRUCTURAL = ("kind", "recipe", "hand", "teeth_side")
+STRUCTURAL = ("kind", "recipe", "hand", "teeth_side", "drive")
+_STRUCTURAL_DEFAULT = {"teeth_side": "external", "drive": "round"}   # what a key a record leaves out was built as
+
+
+def _allowance_text(values: Mapping[str, str]) -> Optional[float]:
+    """A form's typed Bore allowance, mm, or None when blank (or not a number, which plans nothing)."""
+    text = str(values.get("bore_allowance", "") or "").strip()
+    if not text:
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
 
 
 def structural_change(built: Mapping[str, str], wanted: Mapping[str, str],
                       built_variables: Optional[Sequence[Sequence[str]]] = None) -> str:
     """Why a change cannot go through the equations, as a sentence; empty when it can.
 
-    F3 (PLAN-PRINTED §4.1.1; F3-INTERFACES §6): ``built_variables`` are the built part's globals as its record holds them
-    (None: not known). *Has an allowance* and *has a flat* are read on the built side from them (``"Bore Allowance"``,
-    ``"Bore Flat"`` present) and on the wanted side from the resolved figure, beside ``has_shift``. **F3-0's stub: the
-    argument is accepted and not yet read**; package B fills it, with ``drive`` in :data:`STRUCTURAL`.
+    F3 (PLAN-PRINTED §4.1.1, §4.4; F3-INTERFACES §6): ``built_variables`` are the built part's globals as its record holds
+    them. *Has an allowance* and *has a flat* are read on the built side from them (``"Bore Allowance"``,
+    ``"Bore Flat"`` present), and on the wanted side from the resolved figure: a typed allowance is what it says (0 is
+    none), a blank is the part's as built (``spec.as_built``), so a blank never adds or takes away an allowance. Then
+    *A bore allowance cannot be added to or taken out of a built part through its values; build it again as a new
+    part.*, beside ``has_shift``: the global exists only when the allowance is not 0, so none to some and some to none
+    are features, not values (G4). None (the record's globals not given) is read as a part with no allowance, as
+    ``spec.as_built`` reads an empty ``variables``: the safe side, adding is refused rather than tried. ``drive`` is in
+    :data:`STRUCTURAL` (a key left out read as round, the word in any case): *The drive changed from 'round' to
+    'flat'; build it again as a new part.* The body is package B's, over F3-0's stub, which accepted the argument and
+    read nothing.
 
     The sketch's topology is fixed when it is built: another recipe or kind is
     different entities, and a bore that appears or vanishes is a feature that
     is not there.
     """
     for key in STRUCTURAL:
-        # A record written before a key existed held its default: external teeth.
-        default = "external" if key == "teeth_side" else ""
-        if str(built.get(key, default) or default) != str(wanted.get(key, default) or default):
+        # A record written before a key existed held its default: external teeth, a round bore.
+        default = _STRUCTURAL_DEFAULT.get(key, "")
+        was, now = (str(values.get(key, default) or default) for values in (built, wanted))
+        if key == "drive":
+            was, now = was.strip().lower(), now.strip().lower()
+            if was != now:
+                return f"The drive changed from {was!r} to {now!r}; build it again as a new part."
+        elif was != now:
             return (f"The {key} changed from {built.get(key)!r} to {wanted.get(key)!r}; "
                     "build it again as a new part.")
 
@@ -1368,6 +1392,26 @@ def structural_change(built: Mapping[str, str], wanted: Mapping[str, str],
     if has_bands(built) != has_bands(wanted):
         return ("Bands cannot be given to or taken from a built sleeve through its values; build it again as a new "
                 "part.")
+
+    # F3 (§4.1, G4): an allowance's global exists only when it is not 0, a flat's only with a D. The built side from the
+    # part's globals; the wanted side typed, or (blank) as built.
+    held = {str(pair[0]).strip() for pair in (built_variables or ()) if len(pair) >= 2}
+    if built_variables is not None:
+        built_allowance = "Bore Allowance" in held
+    else:
+        recorded = _allowance_text(built)
+        built_allowance = recorded is not None and recorded != 0
+    typed = _allowance_text(wanted)
+    wanted_allowance = built_allowance if typed is None else typed != 0
+    if has_bore(built) and has_bore(wanted) and built_allowance != wanted_allowance:
+        return ("A bore allowance cannot be added to or taken out of a built part through its values; build it again "
+                "as a new part.")
+    built_flat = ("Bore Flat" in held) if built_variables is not None else \
+        str(built.get("drive", "") or "").strip().lower() == "flat"
+    wanted_flat = str(wanted.get("drive", "") or "").strip().lower() == "flat"
+    if has_bore(built) and has_bore(wanted) and built_flat != wanted_flat:
+        return ("A D-flat cannot be given to or taken from a built part's bore through its values; build it again as a "
+                "new part.")
     # An arc built for a small pinion still closes the space at more teeth (SolidWorks 2024
     # rebuilt 6 → 7 → 12 → 6 through the values); a chord does not at fewer. The record
     # holds the last values, not the build's, so an arc part taken up to 12 and back to 6
@@ -1696,6 +1740,11 @@ class DocumentValues:
     # .unsaved_in_error``). Such a document found still holding the workbook's values with a feature of the app's in
     # error stops the press before any write (:func:`_held_in_error`).
     left_in_error: bool = False
+    # F3 (PLAN-PRINTED §4.1.1, §4.4; package B), Update only, () by a caller that does not know: the globals whose
+    # workbook cell is blank, so that their value is the part's as built (``spec.as_built``): ``"Bore Allowance"`` only.
+    # K11 says the workbook's value of one as *0.2 (from its blank cell, the allowance as built)* and its set-back as the
+    # literal.
+    blank_cells: Tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -2822,7 +2871,8 @@ class ValueEdit:
     last set and left unsaved, and the difference may be the user's edit or that Update lost and the document touched
     since: the sentence says both (not kept in the record's schema; the sentence is). ``blank`` (the coordinator's
     addendum): what the workbook's value stands for when its cell can be blank, said with it — ``"no bore"`` for a
-    bore of 0 (a blank or 0 Bore), or the default equation a blank Backlash or Fillet means (``"0.3 × Module"``);
+    bore of 0 (a blank or 0 Bore), or the default equation a blank Backlash or Fillet means (``"0.3 × Module"``), or (F3)
+    :data:`AS_BUILT_WORDS` for a blank Bore allowance on a part on record (``DocumentValues.blank_cells``);
     ``""`` for a value typed as is (not kept in the record's schema either)."""
 
     document: str
@@ -5473,8 +5523,13 @@ def _value_edits(doc: DocumentValues, current: Sequence[Tuple[str, float]],
                              _number_text(wanted, variable.expression_for(DEGREES)),
                              _number_text(_literal(recorded[variable.name]), recorded[variable.name]),
                              cell=cells.get(variable.name, ""), unsaved=doc.mark == MARK_UNSAVED,
-                             blank=_blank_meaning(variable)))
+                             blank=AS_BUILT_WORDS if variable.name in doc.blank_cells else _blank_meaning(variable)))
     return out
+
+
+# F3 (PLAN-PRINTED §4.1.1, §4.4): what a blank Bore allowance on a part on record stands for in K11's words, as
+# ValueEdit.blank carries it: *0.2 (from its blank cell, the allowance as built)*; its set-back is the literal.
+AS_BUILT_WORDS = "the allowance as built"
 
 
 def _blank_meaning(variable: GlobalVariable) -> str:
@@ -5517,6 +5572,8 @@ def _wanted_words(edit: ValueEdit) -> str:
     takes back as typed."""
     if edit.blank == "no bore":
         return "no bore (its Bore blank or 0)"
+    if edit.blank == AS_BUILT_WORDS:
+        return f"{edit.wanted} (from its blank cell, {AS_BUILT_WORDS})"
     if _printed_default(edit):
         return f"{edit.wanted} (from its blank cell, {_printed_default_words()})"
     if edit.blank:
@@ -5531,6 +5588,8 @@ def _back_words(edit: ValueEdit) -> str:
     (``spur.printed_backlash_expression``): *the equation IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )*."""
     if _printed_default(edit):
         return f"the equation {printed_backlash_expression()}"
+    if edit.blank == AS_BUILT_WORDS:
+        return edit.wanted                  # F3: the figure the part holds, a literal SolidWorks takes back as typed
     if edit.blank and edit.blank != "no bore":
         return f"the equation {edit.blank}"
     return edit.wanted
