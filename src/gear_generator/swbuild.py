@@ -38,7 +38,8 @@ from .gears.spur import AXIS_NAME, BORE as BORE_GLOBAL
 from .gears.spur import SPACE_SKETCH
 from .gears.spur import BACKLASH_FACTOR, PRINTED_BACKLASH, PRINTED_BACKLASH_UP_TO_MODULE, printed_backlash_expression
 from .gears.bevel import HEEL_SKETCH, TOE_SKETCH
-from .printout import GATE, PrintPlan, PrintResult, Refusal
+from . import printout
+from .printout import GATE, PrintPart, PrintPlan, PrintResult, Refusal
 from .store import CARRIER_ID_SUFFIX, GEARBOX_MOTION, GEARBOX_STATIC, now, same_path
 from .swcom import (ASSEMBLY_PAIR, ASSEMBLY_STATIC, ASSEMBLY_TRAIN, COMPONENT_FIND_ROUTES, CONFIGURATION_FINDINGS,
                     COMPONENT_LIGHTWEIGHT, COMPONENT_SUPPRESSED, DOC_ASSEMBLY, MINIMUM_MAJOR, configuration_finding,
@@ -46,8 +47,8 @@ from .swcom import (ASSEMBLY_PAIR, ASSEMBLY_STATIC, ASSEMBLY_TRAIN, COMPONENT_FI
                     ENTITY_ALONG, LINE_TOLERANCE, RESOLVED_ROUTE_FINDING, UNREAD, ComponentGone, ComponentInfo,
                     ConfigurationGone, ComError, DocInfo, FeatureState, MateGone, MateInfo, MateRefused, MateState,
                     ReferenceKindError,
-                    SenseUnreadable, SolidWorksError, Vec3, axes_parallel, entity_kind, lines_meet, meets_minimum,
-                    own_axes_angle, rebuild_call, release_year, turned_refusal)
+                    SenseUnreadable, SolidWorksError, StepExportError, Vec3, axes_parallel, entity_kind, lines_meet,
+                    meets_minimum, own_axes_angle, rebuild_call, release_year, turned_refusal)
 
 VALUE_TOLERANCE = 1e-6
 FULLY_DEFINED = 3
@@ -161,6 +162,10 @@ class SolidWorks(Protocol):
     def close_document(self, title: str) -> None: ...
     def export_step(self, path: str) -> Tuple[int, int]: ...
     def document_by_path(self, path: str) -> Optional[object]: ...
+    # F2, package B's two (F2-0-REVIEW S4, and the read PART_WINDOW_READ names): a found document object made the build
+    # document without opening or activating it; whether it is open in its own window (None while unmeasured).
+    def use_document(self, doc: object) -> DocInfo: ...
+    def window_read(self, doc: object) -> Optional[bool]: ...
 
 
 class BuildError(SolidWorksError):
@@ -10203,18 +10208,302 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
 # -- F2: Print files (PLAN-PRINTED §3.1.3, "How each part is reached"; docs/notes-printed/F2-INTERFACES.md §5) ----------
 
 
-def print_parts(sw: SolidWorks, plan: PrintPlan) -> PrintResult:
-    """The press's job on the shared worker: the gate read again for the session's revision; the active document and
-    every open document's title and save flag recorded; each part reached (open in its own window, open only as a
-    component, or not open) as the interface's §5 says, by the findings that gate each way; every part's three reads
-    (its own save flag, its globals against the record, its features' error codes) made before any export; then each
-    exported into ``plan.folder`` (made here) by ``Session.export_step`` and read back by ``printout.check_step``; only
-    what the job opened closed (``CloseDoc`` on its title, never an assembly, never a document the user had open); and,
-    in a ``finally``, the document active at the start activated again and every save flag read again.
+# How the job makes each part the build document (F2-INTERFACES.md §5.2): by its object alone, by its object after
+# ActivateDoc3, by Session.open_document (which activates and opens its window; the job closes that window after), or
+# not at all (COMPONENT_ONLY).
+REACH_OBJECT, REACH_ACTIVATE, REACH_OPEN, REACH_REFUSED = "object", "activate", "open", "refused"
+REACH_LIGHTWEIGHT = "lightweight"     # not found while an assembly is open: refused (the ruling after F2's probe run)
 
-    F2-0's stub: touches no document and writes nothing. It answers the plan's refusal, or GATE for the session's
-    version (which is what the filled job answers while ``findings.STEP_EXPORT_ON_<year>`` is None). Package B fills
-    it."""
+
+def _print_finding(year: int, name: str) -> Optional[object]:
+    return getattr(findings, f"{name}_ON_{year}", None)
+
+
+def reach_way(year: int, *, found: bool, window: Optional[bool], assembly_open: bool) -> str:
+    """How one part becomes the build document, by F2-INTERFACES.md §5.2's table as the coordinator ruled after F2's
+    probe run (8d2c5fb), from what the job read: whether ``document_by_path`` found it, the window read (True when it is
+    the active document or PART_WINDOW_READ reads it in its own window, False when that read says it is loaded only as a
+    component, None while unread), and whether any assembly is open.
+
+    A part not found while an assembly is open is REACH_LIGHTWEIGHT, refused whatever the findings: the probe found a
+    lightweight component reached by neither the walk nor GetOpenDocumentByName, and opening its part beside resolved it,
+    so the open-beside fallback is kept for a found component (resolved, no window of its own) and only where
+    OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN is True. Every finding None leaves only the conservative ways: activate a part in
+    its own window, open a part not open while no assembly is, refuse the rest."""
+    needs_active = _print_finding(year, "STEP_EXPORT_NEEDS_ACTIVE")
+    from_component = _print_finding(year, "STEP_EXPORT_FROM_COMPONENT")
+    beside = _print_finding(year, "OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN")
+    if not found:
+        # It may be a lightweight component of an open assembly, which nothing reaches (probe step 7c, both versions).
+        return REACH_LIGHTWEIGHT if assembly_open else REACH_OPEN
+    if window is True:
+        return REACH_OBJECT if needs_active is False else REACH_ACTIVATE
+    if window is False:
+        if from_component is True:
+            return REACH_OBJECT
+        return REACH_OPEN if beside is True else REACH_REFUSED
+    return REACH_OBJECT if from_component is True and needs_active is False else REACH_REFUSED
+
+
+@dataclass
+class _Reached:
+    """One part as the job reaches it: its way, its document object, its title once read, and whether the job opened
+    its window (then it closes it)."""
+
+    part: PrintPart
+    way: str
+    doc: object = None
+    title: str = ""
+    opened: bool = False
+
+
+def _make_build(sw: SolidWorks, reached: _Reached, year: int) -> None:
+    """Make a reached part the build document again: activated first when its way says so, or when the job opened its
+    window and STEP_EXPORT_NEEDS_ACTIVE is not False; then by its object."""
+    activate = reached.way == REACH_ACTIVATE or (
+        reached.opened and _print_finding(year, "STEP_EXPORT_NEEDS_ACTIVE") is not False)
+    if activate:
+        sw.activate(reached.title)
+    sw.use_document(reached.doc)
+
+
+def _first_differing(current: Sequence[Tuple[str, float]], recorded: Sequence[Tuple[str, str]]
+                     ) -> Optional[Tuple[str, str, str]]:
+    """The first global of the record SolidWorks holds otherwise, spaces aside (as K11's ``_value_edits`` compares):
+    ``(name, live, recorded)``, live "" for a global no longer there; None when every one matches."""
+    held = _held(current)
+    for name, expression in recorded:
+        live = held.get(name)
+        if live is None or _squash(live) != _squash(expression):
+            return name, "" if live is None else live, expression
+    return None
+
+
+def _job_refusal(failures: Mapping[str, List[Tuple[str, str]]]) -> Optional[Refusal]:
+    """The job's refusal from every part's failed reads, by the order COMPONENT_ONLY, MODIFIED, GLOBALS_DIFFER,
+    FEATURE_IN_ERROR: the first code any part fails, naming every part that fails it (GLOBALS_DIFFER the first part
+    alone, with its first differing global, as F2-INTERFACES.md §2.3's table gives it)."""
+    for code in (printout.COMPONENT_ONLY, printout.MODIFIED, printout.GLOBALS_DIFFER, printout.FEATURE_IN_ERROR):
+        named = failures.get(code) or []
+        if not named:
+            continue
+        if code == printout.GLOBALS_DIFFER:
+            stem, detail = named[0]
+            name, live, recorded = detail
+            return Refusal(code, (stem,), {"name": name, "live": live, "recorded": recorded})
+        if code == printout.MODIFIED:
+            return Refusal(code, tuple(stem for stem, _ in named))
+        return Refusal(code, tuple(stem for stem, _ in named), {stem: detail for stem, detail in named})
+    return None
+
+
+def _read_text(path: str) -> str:
+    """A written file as text, never opened in SolidWorks (GOTCHAS §20): Part 21 is ISO 8859-1, so latin-1 reads every
+    byte; "" when it cannot be read (the check then refuses its frame)."""
+    try:
+        with open(path, encoding="latin-1") as handle:
+            return handle.read()
+    except OSError:
+        return ""
+
+
+def _make_press_folder(planned: str) -> str:
+    """Make the press's folder (and the print folder it is in): the plan's, or the next counter when that name has come
+    to exist since the plan (M3; never a folder that is there)."""
+    os.makedirs(os.path.dirname(planned), exist_ok=True)
+    folder = planned
+    while True:
+        folder = printout.free_folder(folder)
+        try:
+            os.makedirs(folder)
+            return folder
+        except FileExistsError:
+            continue
+
+
+def print_parts(sw: SolidWorks, plan: PrintPlan) -> PrintResult:
+    """The press's job on the shared worker (PLAN-PRINTED §3.1.3, "How each part is reached"; F2-INTERFACES.md §5).
+
+    1. **The gate again** (§3), before any document is touched: the plan's refusal as it is; GATE with the session's
+       year and revision and the plan's (``planned_year``, ``planned_revision``) when the session is not the one the plan
+       was read for; :func:`printout.gate` for the session's revision.
+    2. **At the start**: the active document (``active_document``), every open document's save flag (``save_flags``) and
+       the open documents (``documents``: which assemblies are open).
+    3. **How each part is reached** (:func:`reach_way`), every part decided before anything is opened or activated: found
+       by ``document_by_path``, read for its window (``window_read``, unless it is the active document); any part refused
+       there refuses the set, COMPONENT_ONLY (else LIGHTWEIGHT for a part not found while an assembly is open), naming
+       each with the one assembly open (its file name), else "".
+    4. **The reads, all before any export**, each part made the build document in turn (``open_document``, or
+       ``activate`` then ``use_document``, or ``use_document`` alone): its own save flag (``has_unsaved_changes``:
+       MODIFIED), its globals against the record (``equations``: GLOBALS_DIFFER), its features (``feature_states``: an
+       error is FEATURE_IN_ERROR, a warning is named in ``warnings`` and does not refuse; a code SolidWorks would not
+       give is neither). The first failing code (:func:`_job_refusal`) refuses the set; nothing is written. A
+       SolidWorksError while reaching or reading is SOLIDWORKS_REFUSED with swcom's sentence (``said``).
+    5. **The export**: the press's folder made (the next counter if its name has come to exist), each part made the
+       build document again and written by ``export_step`` to its stem plus .step, each file read back as text and
+       checked (:func:`printout.read_step`; the user's features read live from ``feature_states`` against the record's
+       ``made`` join the record's, so the size check is skipped for a part that holds one), its schema, unit and extent
+       kept in ``facts``. A SolidWorksError there is SOLIDWORKS_REFUSED (``file`` and SolidWorks' ``errors`` and
+       ``warnings``, or ``said``), a failing check FILE_CHECK (``file``, ``reason``) with the file in ``failed``; either
+       stops the export, and the files written stay.
+    6. **In a finally**: every window the job opened closed by ``close_document`` on its title (never an assembly, never
+       a document open in its own window at the start), the document active at the start activated again if it is still
+       open and not active, ``active_restored`` read back, and every save flag read again: one the job turned on is in
+       ``flags_turned_on``, never saved over."""
     revision = tuple(getattr(sw, "revision", ()) or ())
-    detail = {"year": str(release_year(revision[0])), "revision": ".".join(str(n) for n in revision)} if revision else {}
-    return PrintResult(folder="", refusal=plan.refusal or Refusal(GATE, (), detail))
+    if plan.refusal is not None:
+        return PrintResult(refusal=plan.refusal, active_restored=True)
+    if revision != tuple(plan.revision or ()):
+        detail = dict(printout.version_detail(revision))
+        detail.update(printout.version_detail(tuple(plan.revision or ()), "planned_"))
+        return PrintResult(refusal=Refusal(GATE, (), detail), active_restored=True)
+    gate = printout.gate(revision)
+    if gate is not None:
+        return PrintResult(refusal=gate, active_restored=True)
+    if not plan.parts:
+        return PrintResult(active_restored=True)
+
+    start = sw.active_document()
+    before = sw.save_flags()
+    job = _PrintJob(start=start, assemblies=[d for d in sw.documents() if d.is_assembly])
+    try:
+        _run_print_job(sw, plan, release_year(revision[0]), job)
+    finally:
+        restored, turned = _close_and_restore(sw, job.reached, start, before, job.facts)
+    return PrintResult(written=tuple(job.written), folder=job.folder, refusal=job.refusal, failed=tuple(job.failed),
+                       facts=dict(job.facts), active_restored=restored, flags_turned_on=turned,
+                       warnings=tuple(job.warnings))
+
+
+@dataclass
+class _PrintJob:
+    """What one press's job has done so far, so its finally can close and restore whatever happened."""
+
+    start: Optional[DocInfo] = None
+    assemblies: List[DocInfo] = field(default_factory=list)
+    reached: List[_Reached] = field(default_factory=list)
+    refusal: Optional[Refusal] = None
+    written: List[Tuple[str, str]] = field(default_factory=list)
+    failed: List[Tuple[str, str]] = field(default_factory=list)
+    facts: Dict[str, str] = field(default_factory=dict)
+    warnings: List[Tuple[str, Tuple[str, ...]]] = field(default_factory=list)
+    folder: str = ""
+
+
+def _run_print_job(sw: SolidWorks, plan: PrintPlan, year: int, job: _PrintJob) -> None:
+    """Steps 3 to 5 of :func:`print_parts`, into ``job``; it returns at the first refusal."""
+    start = job.start
+    # 3. How each part is reached: decided for every part before anything is opened or activated.
+    refused: List[Tuple[str, str]] = []
+    light: List[Tuple[str, str]] = []
+    holder = _file(job.assemblies[0].path or job.assemblies[0].title) if len(job.assemblies) == 1 else ""
+    for part in plan.parts:
+        doc = sw.document_by_path(part.path)
+        active_here = start is not None and same_path(start.path, part.path)
+        window = True if active_here else (sw.window_read(doc) if doc is not None else None)
+        way = reach_way(year, found=doc is not None, window=window, assembly_open=bool(job.assemblies))
+        if way == REACH_REFUSED:
+            refused.append((part.stem, "" if doc is not None and window is None else holder))
+        elif way == REACH_LIGHTWEIGHT:
+            light.append((part.stem, holder))
+        job.reached.append(_Reached(part, way, doc))
+    for code, named in ((printout.COMPONENT_ONLY, refused), (printout.LIGHTWEIGHT, light)):
+        if named:
+            job.refusal = Refusal(code, tuple(s for s, _ in named), dict(named))
+            return
+
+    # 4. The reads, each part as the build document in turn, before any export.
+    failures: Dict[str, List[Tuple[str, object]]] = {}
+    live_user: Dict[str, Tuple[str, ...]] = {}
+    for r in job.reached:
+        part = r.part
+        try:
+            if r.way == REACH_OPEN:
+                info = sw.open_document(part.path)
+                r.opened, r.title = True, info.title
+                r.doc = sw.document_by_path(part.path)
+                if r.doc is None:
+                    raise SolidWorksError(f"{info.title} was opened but is not among SolidWorks' open documents.")
+                sw.use_document(r.doc)
+            else:
+                r.title = sw.use_document(r.doc).title
+                _make_build(sw, r, year)
+            if sw.has_unsaved_changes():
+                failures.setdefault(printout.MODIFIED, []).append((part.stem, ""))
+            differing = _first_differing(sw.equations(), part.variables)
+            if differing is not None:
+                failures.setdefault(printout.GLOBALS_DIFFER, []).append((part.stem, differing))
+            states = sw.feature_states()
+        except SolidWorksError as exc:
+            job.refusal = Refusal(printout.SOLIDWORKS_REFUSED, (part.stem,), {"said": str(exc)})
+            return
+        in_error = [s.name for s in states if _in_error(s.code) and not s.warning]
+        warned = tuple(s.name for s in states if _in_error(s.code) and s.warning)
+        if in_error:
+            failures.setdefault(printout.FEATURE_IN_ERROR, []).append((part.stem, ", ".join(in_error)))
+        if warned:
+            job.warnings.append((part.path, warned))
+        live_user[part.path] = tuple(u.name for u in _user_features(part.path, states, part.made))
+    job.refusal = _job_refusal(failures)
+    if job.refusal is not None:
+        return
+
+    # 5. The export, into the press's own new folder.
+    job.folder = _make_press_folder(plan.folder)
+    for r in job.reached:
+        part = r.part
+        name = printout.step_name(part)
+        target = os.path.join(job.folder, name)
+        try:
+            _make_build(sw, r, year)
+            sw.export_step(target)
+        except StepExportError as exc:
+            job.refusal = Refusal(printout.SOLIDWORKS_REFUSED, (part.stem,),
+                                  {"file": name, "errors": str(exc.errors), "warnings": str(exc.warnings)})
+            return
+        except SolidWorksError as exc:
+            job.refusal = Refusal(printout.SOLIDWORKS_REFUSED, (part.stem,), {"file": name, "said": str(exc)})
+            return
+        job.written.append((part.path, target))
+        users = tuple(dict.fromkeys(part.user_features + live_user.get(part.path, ())))
+        reading = printout.read_step(_read_text(target), replace(part, user_features=users))
+        job.facts[f"{name}|{printout.FACT_SCHEMA}"] = reading.schema
+        job.facts[f"{name}|{printout.FACT_UNIT}"] = reading.unit
+        if reading.extent:
+            job.facts[f"{name}|{printout.FACT_EXTENT}"] = reading.extent
+        if reading.reason is not None:
+            job.failed.append((target, reading.reason))
+            job.refusal = Refusal(printout.FILE_CHECK, (part.stem,), {"file": name, "reason": reading.reason})
+            return
+
+
+def _close_and_restore(sw: SolidWorks, reached: Sequence[_Reached], start: Optional[DocInfo],
+                       before: Mapping[str, bool], facts: Dict[str, str]) -> Tuple[bool, Tuple[str, ...]]:
+    """The job's end: every window it opened closed (last opened first; never an assembly, never a document open in its
+    own window at the start, since the job opens neither), the start's active document activated again if it is still
+    open and not active, then ``(active_restored, flags_turned_on)``. A step that fails is kept in ``facts`` (a window
+    not closed, the flags unread) or reads as not restored, and the next is still made."""
+    for r in reversed([r for r in reached if r.opened]):
+        r.opened = False
+        try:
+            sw.close_document(r.title)
+        except SolidWorksError as exc:
+            facts[f"{r.title}|{printout.FACT_CLOSE}"] = f"failed: {exc}"
+    restored = True
+    if start is not None:
+        try:
+            if any(d.title == start.title for d in sw.documents()):
+                now = sw.active_document()
+                if now is None or now.title != start.title:
+                    sw.activate(start.title)
+                now = sw.active_document()
+                restored = now is not None and now.title == start.title
+        except SolidWorksError:
+            restored = False
+    turned: Tuple[str, ...] = ()
+    try:
+        after = sw.save_flags()
+        turned = tuple(k for k, flag in after.items() if flag and not before.get(k, False))
+    except SolidWorksError as exc:
+        facts[f"{printout.FACT_JOB}|{printout.FACT_FLAGS}"] = f"unread: {exc}"
+    return restored, turned

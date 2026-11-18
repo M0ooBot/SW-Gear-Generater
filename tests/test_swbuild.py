@@ -2009,6 +2009,102 @@ class FakeSolidWorks:
         return {d.path: (_key(d.path) in self.touched or self.memory.get(_key(d.path)) != self.saved.get(_key(d.path)))
                 for d in self.open_docs}
 
+    # -- F2 (package B): Print files (F2-INTERFACES.md §4, §5.2). Each call as F2's probe is to measure it, taught by
+    # assumption until it has (none of it is measured): ``document_by_path`` finds a document open in its own window
+    # (``open_docs``) or one loaded only as a component (``component_only``, lower-cased paths: the walk's answer for
+    # such a part is the probe's question, step 7a); ``window_read`` answers by PART_WINDOW_READ_ON_<year> as the
+    # Session does, None while it is None, else whether the document has its own window; ``use_document`` makes a found
+    # document the one calls act on, nothing activated; ``activate`` brings an open document forward and makes it the one
+    # read, as Session.activate (ActivateDoc3, the build document forgotten); ``close_document`` closes a window unsaved
+    # (CloseDoc: its changes lost, a component-only part's stay loaded with the assembly); ``export_step`` writes the
+    # document calls act on (``current``) as SolidWorks is assumed to, by its object whether active or not, to a file
+    # holding ``step_texts[path]`` (else STEP_TEXT), refusing a path that exists as Session does, answering (0, 0), and
+    # marking nothing (a copy). ``exports`` keeps (document written, file, the active document's path then);
+    # ``export_fail[path] = (errors, warnings)`` makes SolidWorks answer False with those codes.
+
+    STEP_TEXT = (
+        "ISO-10303-21;\r\nHEADER;\r\nFILE_DESCRIPTION (( 'STEP AP214' ), '1' );\r\n"
+        "FILE_NAME ('Gear.STEP', '2026-11-18T22:10:05', ( '' ), ( '' ), 'SwSTEP 2.0', 'SolidWorks 2026', '' );\r\n"
+        "FILE_SCHEMA (( 'AUTOMOTIVE_DESIGN { 1 0 10303 214 3 1 1 }' ));\r\nENDSEC;\r\n\r\nDATA;\r\n"
+        "#1 = ( LENGTH_UNIT ( ) NAMED_UNIT ( * ) SI_UNIT ( .MILLI., .METRE. ) );\r\n"
+        "#2 = MANIFOLD_SOLID_BREP ( 'Body', #3 ) ;\r\n#3 = CLOSED_SHELL ( 'NONE', ( ) ) ;\r\n"
+        "#4 = CARTESIAN_POINT ( 'NONE', ( 16.5, 0.0, 0.0 ) ) ;\r\n#5 = VERTEX_POINT ( 'NONE', #4 ) ;\r\n"
+        "ENDSEC;\r\nEND-ISO-10303-21;\r\n")
+
+    def _f2(self):
+        for name, value in (("component_only", set()), ("step_texts", {}), ("exports", []), ("export_fail", {})):
+            if not hasattr(self, name):
+                setattr(self, name, value)
+        return self
+
+    def _load(self, path):
+        key = _key(path)
+        if key not in self.memory:
+            eq, made = self.saved.get(key, ([], []))
+            self.memory[key] = (list(eq), list(made))
+        self.equations_text, self.made = self.memory[key]
+        self.mates = self.memory_mates.setdefault(key, copy.deepcopy(self.saved_mates.get(key, [])))
+        self.axis_defs = self.memory_axes.setdefault(key, dict(self.saved_axes.get(key, {})))
+        self.current = path
+        self.epoch += 1
+
+    def document_by_path(self, path):
+        self._log("document_by_path", path)
+        info = next((d for d in self.open_docs if _key(d.path) == _key(path)), None)
+        if info is None and _key(path) in self._f2().component_only:
+            info = DocInfo(title=path.replace("/", "\\").rsplit("\\", 1)[-1], path=path, doc_type=1)
+        return info
+
+    def use_document(self, doc):
+        self._log("use_document", doc.path)
+        self._load(doc.path)
+        return doc
+
+    def window_read(self, doc):
+        self._log("window_read", doc.path)
+        if self._finding("PART_WINDOW_READ") is None:
+            return None
+        return any(_key(d.path) == _key(doc.path) for d in self.open_docs)
+
+    def activate(self, title):
+        self._log("activate", title)
+        info = next((d for d in self.open_docs if d.title == title), None)
+        if info is None:
+            raise SolidWorksError(f"{title} is not open in SolidWorks.")
+        self.active = info
+        self._load(info.path)
+
+    def close_document(self, title):
+        self._log("close_document", title)
+        info = next((d for d in self.open_docs if d.title == title), None)
+        if info is None:
+            return
+        self.open_docs.remove(info)
+        key = _key(info.path)
+        if key not in self._f2().component_only:
+            self.memory.pop(key, None)                  # closed unsaved: its changes are lost
+            self.touched.discard(key)
+        if self.active is not None and self.active.title == title:
+            self.active = self.open_docs[-1] if self.open_docs else None
+        if _key(self.current or "") == key:
+            self.current = ""
+
+    def export_step(self, path):
+        import os
+        self._log("export_step", path)
+        self._f2()
+        if os.path.exists(path):
+            raise SolidWorksError(f"{path} already exists, and Print files never writes over a file.")
+        if findings.SAVE_AS_COPY is None:
+            raise SolidWorksError("Writing a STEP file as a copy has not been measured.")
+        self.exports.append((self.current, path, self.active.path if self.active is not None else ""))
+        fail = self.export_fail.get(_key(self.current or ""))
+        if fail is not None:
+            raise swcom.StepExportError(path, False, fail[0], fail[1], False)
+        with open(path, "w", encoding="latin-1", newline="") as handle:
+            handle.write(self.step_texts.get(_key(self.current or ""), self.STEP_TEXT))
+        return 0, 0
+
     def file_version(self, path):
         self._log("file_version", path)
         self._gate("FILE_VERSION_READ", "Reading a file's version")

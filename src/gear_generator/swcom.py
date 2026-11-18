@@ -1111,6 +1111,24 @@ class DocumentsUnknown(SolidWorksError):
     """SolidWorks' list of open documents did not come to an end (:data:`DOCUMENT_WALK_LIMIT`)."""
 
 
+class StepExportError(SolidWorksError):
+    """F2 (package B): SolidWorks would not write a STEP file (:meth:`Session.export_step`). Its fields are what was read
+    (the file, what ``SaveAs`` answered, its error and warning codes, whether a file is on disk), for the job to hand on
+    as codes (``printout.SOLIDWORKS_REFUSED``'s detail); its message is for a log, never the sentence a user reads."""
+
+    def __init__(self, path: str, returned: bool, errors: int, warnings: int, on_disk: bool) -> None:
+        super().__init__(f"SaveAs to {path} answered {returned!r} with errors {errors} and warnings {warnings}; "
+                         f"{'a' if on_disk else 'no'} file is on disk.")
+        self.path, self.returned, self.errors, self.warnings, self.on_disk = path, returned, errors, warnings, on_disk
+
+
+# F2 (package B): how Session.document_by_path finds an open document by its file. "walk" is the verified document walk;
+# "GetOpenDocumentByName" is F2's probe step 7's candidate, unverified in the macro database and new to the app. The walk
+# stands until the probe's review settles the route (F2-INTERFACES.md §4), the coordinator's to change.
+DOCUMENT_BY_PATH_ROUTES = ("walk", "GetOpenDocumentByName")
+DOCUMENT_BY_PATH_ROUTE = "walk"
+
+
 class Session:
     """One connected SolidWorks. Only ever touched from the worker thread."""
 
@@ -3842,28 +3860,84 @@ class Session:
             out[key] = bool(_read(doc, "GetSaveFlag"))
         return out
 
-    # -- F2: Print files (PLAN-PRINTED §3.1, docs/notes-printed/F2-INTERFACES.md §4). F2-0's stubs; package B fills
-    # them once the probe (probe/f2_probes.py) is run and reviewed. Neither is called by anything until then.
+    # -- F2: Print files (PLAN-PRINTED §3.1, docs/notes-printed/F2-INTERFACES.md §4; package B). Nothing here is measured on
+    # SolidWorks yet: every call is gated by a finding of F2's probe (probe/f2_probes.py), None on both versions until its
+    # runs are reviewed, and swbuild.print_parts refuses before reaching any of them while they are.
 
     def export_step(self, path: str) -> Tuple[int, int]:
         """Write the build document to a STEP file at ``path`` as a copy: ``IModelDocExtension.SaveAs(path, 0,
         SAVE_AS_SILENT | SAVE_AS_COPY, null, out errors, out warnings)``, the format from the extension, so the document
         keeps its own name, path and save flag (the macro database, files/04, verified on 2026 only; F2's probe measures
-        it on both versions). A path that exists is refused before SolidWorks is asked (``SaveAs3`` overwrites without a
-        word, GOTCHAS §34). Answers SolidWorks' ``(errors, warnings)``; raises :class:`SolidWorksError` with those codes
-        in its fields (not a sentence for the user) when the call answers False, a code is not 0, or no file is on disk.
+        it on both versions). ``SaveAs``, not the ``SaveAs3`` :meth:`save_as` calls: the ledger prefers it and it gives the
+        codes back (F2-INTERFACES.md §4).
 
-        F2-0's stub: raises, writing nothing. Package B fills it."""
-        raise SolidWorksError("Writing a STEP file is not built yet (F2-0's stub of Session.export_step), so nothing "
-                              "was written.")
+        Refused before SolidWorks is asked: a path that exists (``SaveAs3`` overwrites without a word, GOTCHAS §34, and
+        nothing says ``SaveAs`` does not), and ``findings.SAVE_AS_COPY`` None. Whether ``SaveAs`` answers a plain bool or a
+        tuple whose tail is the two codes is probe step 2's question, so both are read, as the probe reads them. Answers
+        SolidWorks' ``(errors, warnings)``, both 0; raises :class:`StepExportError` with the codes in its fields (not a
+        sentence for the user) when the call answers False, a code is not 0, or no file is on disk."""
+        if os.path.exists(path):
+            raise SolidWorksError(f"{path} already exists, and Print files never writes over a file.")
+        copy = getattr(findings, "SAVE_AS_COPY", None)
+        if copy is None:
+            raise SolidWorksError("Writing a STEP file as a copy has not been measured (findings.SAVE_AS_COPY is None), "
+                                  "so nothing was written.")
+        doc = self._doc()
+        errors, warnings = _out_long(), _out_long()
+        answer = call(call(doc, "Extension"), "SaveAs", path, 0, int(findings.SAVE_AS_SILENT) | int(copy),
+                      _null_dispatch(), errors, warnings)
+        error_code, warning_code = _by_ref(errors), _by_ref(warnings)
+        returned = answer
+        if isinstance(answer, tuple):
+            returned = answer[0] if answer else None
+            if len(answer) >= 3:
+                error_code, warning_code = _by_ref(answer[1]), _by_ref(answer[2])
+        on_disk = os.path.isfile(path)
+        if not returned or error_code or warning_code or not on_disk:
+            raise StepExportError(path, bool(returned), int(error_code or 0), int(warning_code or 0), on_disk)
+        return int(error_code or 0), int(warning_code or 0)
 
     def document_by_path(self, path: str) -> Optional[Any]:
-        """The open document whose file is ``path``, whether in its own window or loaded only as a component of an open
-        assembly, or None: ``ISldWorks.GetOpenDocumentByName(path)`` (unverified in the macro database and new to the app;
-        F2's probe step 7 measures it beside the document walk :meth:`use_open_document` makes, and the route B uses
-        is the one the probe's review settles).
+        """The open document whose file is ``path`` (its own window, or loaded only as a component of an open assembly
+        when the route reaches one), or None, by :data:`DOCUMENT_BY_PATH_ROUTE`: the document walk (``GetFirstDocument`` /
+        ``GetNext`` / ``GetPathName``, verified, the one :meth:`use_open_document` makes) until F2's probe review settles
+        whether ``ISldWorks.GetOpenDocumentByName`` (unverified, ``API-LEDGER.md:94``, new to the app) holds; that route,
+        when chosen, is read back by ``GetPathName`` and answers None for any other file. Reads only."""
+        if DOCUMENT_BY_PATH_ROUTE == "GetOpenDocumentByName":
+            doc = call(self._app, "GetOpenDocumentByName", path)
+            if doc is None or not same_path(str(call(doc, "GetPathName") or ""), path):
+                return None
+            return doc
+        for doc in self._open_documents():
+            if same_path(str(call(doc, "GetPathName") or ""), path):
+                return doc
+        return None
 
-        F2-0's stub: answers None. Package B fills it."""
+    def use_document(self, doc: Any) -> DocInfo:
+        """Make a document object (:meth:`document_by_path`'s) the build document, for reads and :meth:`export_step`,
+        without opening or activating anything (F2-0-REVIEW S4; :meth:`use_open_document` by its object). Raises the
+        epoch, as an open does. Its title, path and type."""
+        if doc is None:
+            raise SolidWorksError("There is no document to read.")
+        self._build_doc = doc
+        self._raise_epoch()
+        return self._describe(doc)
+
+    def window_read(self, doc: Any) -> Optional[bool]:
+        """Whether a document is open in its own window (True) or loaded only as a component of an open assembly
+        (False), by ``findings.PART_WINDOW_READ_ON_<year>``: "Visible" reads ``IModelDoc2.Visible``, "ActiveView" whether
+        ``IModelDoc2.ActiveView`` is there (both reads only, never set). None while that finding is None or names another
+        read, and when the read itself fails: then only the active document counts as in its own window
+        (F2-INTERFACES.md §5.2)."""
+        year = release_year(self.revision[0]) if self.revision else None
+        route = getattr(findings, f"PART_WINDOW_READ_ON_{year}", None) if year else None
+        try:
+            if route == "Visible":
+                return bool(_read(doc, "Visible"))
+            if route == "ActiveView":
+                return _read(doc, "ActiveView") is not None
+        except Exception:  # noqa: BLE001 - unread is not either answer
+            return None
         return None
 
     def mate_definition(self, handle: str) -> MateDefinition:
