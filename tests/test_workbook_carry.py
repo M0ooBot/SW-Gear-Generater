@@ -348,6 +348,66 @@ def test_with_no_version_on_record_the_question_says_the_mixed_form(desk, monkey
                     "whatever it cannot carry.")
 
 
+def _no_version(desk):
+    record = copy.deepcopy(desk.record)
+    record.gearbox.solidworks, record.gearbox.user_work.revision = [], []
+    return record
+
+
+NO_VERSION_ALIKE = ("{at}RangeBox_r2 takes your Sprocket-1 and Housing-1 and makes your Lock3 again in the modes it "
+                    "was on in. Your Keyway stays in Gear_m1.25_N29, which Sun's new part replaces (its Flank "
+                    "changed); your Groove comes with Sleeve_m1.25_N17. RangeBox_r2 holds what it carries unsaved. If "
+                    "RangeBox.SLDASM is closed, open it first unless this SolidWorks last saved it and its files, "
+                    "those files are where it says, and nothing of yours is open. Assembly features, display states "
+                    "and appearances stay behind; pattern instances come over as components of their own.")
+
+
+def test_with_no_version_on_record_and_the_findings_alike_on_both_the_question_says_them_as_fact(desk):
+    """The coordinator's ruling of 2026-11-18: with no version on record, what every version's findings say alike is
+    said as fact, as for a known version; it said instead that carrying was *not yet shown on the SolidWorks it runs
+    on* when it was shown on both. findings.py as committed: every W9d finding alike on 2026 and 2024."""
+    said = _said(desk, record=_no_version(desk))
+    assert said == NO_VERSION_ALIKE.format(at=f"As read at {_at(desk)}, "), said
+    assert "not yet" not in said.lower() and "SolidWorks it runs on" not in said
+
+
+@pytest.mark.parametrize("unset, set_", [("2024", "2026"), ("2026", "2024")])
+def test_with_no_version_on_record_a_finding_that_differs_is_said_as_may_and_the_rest_as_fact(desk, monkeypatch,
+                                                                                              unset, set_):
+    """The ruling: only where the versions differ is it said as may, each version's own sentences behind *If the press
+    runs on SolidWorks …:*, the rest behind *Whichever it runs on:*; each way round."""
+    monkeypatch.setattr(findings, f"CARRY_REMAKE_KINDS_ON_{unset}", ("coincident",))
+    said = _said(desk, record=_no_version(desk))
+    at = f"As read at {_at(desk)}, "
+    own = {unset: (f"If the press runs on SolidWorks {unset}: {at}RangeBox_r2 takes your Sprocket-1 and Housing-1. "
+                   "Gear Generator has not yet been shown to make lock mates again in a new revision on SolidWorks "
+                   f"{unset}, so Lock3 is not made again. (Not yet shown on SolidWorks {unset}: "
+                   f"findings.CARRY_REMAKE_KINDS_ON_{unset}.)"),
+           set_: (f"If the press runs on SolidWorks {set_}: {at}RangeBox_r2 takes your Sprocket-1 and Housing-1 and "
+                  "makes your Lock3 again in the modes it was on in.")}
+    rest = NO_VERSION_ALIKE.format(at="").split(" in the modes it was on in. ", 1)[1]
+    assert said == f"{own['2024']} {own['2026']} Whichever it runs on: {rest}", said
+
+
+@pytest.mark.parametrize("unset, set_", [("2024", "2026"), ("2026", "2024")])
+def test_with_no_version_on_record_and_carry_inserts_differing_the_question_says_the_mixed_form_each_way(
+        desk, monkeypatch, unset, set_):
+    monkeypatch.setattr(findings, f"CARRY_INSERTS_ON_{unset}", None)
+    assert _said(desk, record=_no_version(desk)) == (
+        f"Whether RangeBox_r2 takes your work depends on the SolidWorks in use: Gear Generator has been shown to do so "
+        f"on SolidWorks {set_}, not yet on SolidWorks {unset} (findings.CARRY_INSERTS_ON_{unset}), and the press reads "
+        "which it runs on. The press reads RangeBox.SLDASM again first, and says whatever it cannot carry.")
+
+
+def test_with_no_version_on_record_and_carry_inserts_unset_on_both_the_question_says_so_of_either(desk, w9d_unmeasured):
+    assert _said(desk, record=_no_version(desk)) == (
+        "Gear Generator has not yet been shown to carry your work into a new revision on the SolidWorks it runs on "
+        f"(findings.CARRY_INSERTS_ON_<year>), so as read at {_at(desk)}, your Sprocket-1, Housing-1 and Lock3 stay in "
+        "RangeBox.SLDASM, and your Keyway stays in Gear_m1.25_N29, which Sun's new part replaces; RangeBox_r2 has none "
+        "of them, nor anything added since. Your Groove in Sleeve_m1.25_N17 comes with that part, which RangeBox_r2 "
+        "reuses.")
+
+
 def test_the_question_says_what_is_carried_and_what_is_not_short_with_the_findings_once_at_the_end(desk, carrying,
                                                                                                    monkeypatch):
     said = _said(desk)

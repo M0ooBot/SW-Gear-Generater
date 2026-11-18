@@ -3432,7 +3432,9 @@ class CarryForesight:
     the old modes the revision has not, ``modes_new`` its modes the old record has not, ``first`` the old record's
     first mode; ``stays`` the features left in parts made new and kept in parts reused (W9a's); ``why_new`` gear ->
     why its part is new; ``made_new`` gear -> ``MadeNew.why``; ``values`` part file name -> the K11 value on record
-    for it (MISMATCHED's advice)."""
+    for it (MISMATCHED's advice). ``per_year``: with no version on record and ``CARRY_INSERTS`` alike on every version
+    the findings know, ``(year, the foresight as if the record were that version's)`` for each, oldest first; the
+    question says as fact what they all say, and as may only what differs (the coordinator's ruling, 2026-11-18)."""
 
     assembly: str
     name: str
@@ -3454,6 +3456,7 @@ class CarryForesight:
     why_new: Mapping[str, str] = field(default_factory=dict)
     made_new: Mapping[str, str] = field(default_factory=dict)
     values: Mapping[str, store.ValueEditEntry] = field(default_factory=dict)
+    per_year: Tuple[Tuple[str, "CarryForesight"], ...] = ()
 
 
 def _finding(name: str, year: str) -> Any:
@@ -3473,8 +3476,8 @@ NOT_OPEN_FINDINGS = ("FILE_VERSION_READ", "DEPENDENCIES_READ", "OPEN_READ_ONLY_S
 
 
 def carry_foresight(record: Optional[LinkRecord], again: Any, *, plan_carry: Optional[Callable[..., Any]] = None,
-                    read_sidecar: Callable[[str], Optional[Sidecar]] = store.read_sidecar
-                    ) -> Optional[CarryForesight]:
+                    read_sidecar: Callable[[str], Optional[Sidecar]] = store.read_sidecar,
+                    as_year: Optional[Tuple[str, Tuple[int, ...]]] = None) -> Optional[CarryForesight]:
     """:class:`CarryForesight` for a Build again… of ``again`` from ``record``; None when the record has no assembly
     (nothing is left behind). ``plan_carry`` is ``swbuild.plan_carry`` (a test passes its own); called on
     :func:`recorded_old_work` with ``new_frames`` empty, each component whose configurations the record does not keep
@@ -3486,12 +3489,20 @@ def carry_foresight(record: Optional[LinkRecord], again: Any, *, plan_carry: Opt
     entry = _on_record(record)
     if entry is not None and (entry.unread or not entry):
         entry = None
-    year = _record_year(record)
+    year = as_year[0] if as_year is not None else _record_year(record)
+    per_year: Tuple[Tuple[str, CarryForesight], ...] = ()
     if year == "?":
         known = [str(y) for y, _ in known_finding_revisions()]
         shown = tuple(y for y in known if _finding("CARRY_INSERTS", y))
         unshown = tuple(y for y in known if y not in shown)
         inserts = None if shown and unshown else bool(shown)
+        if inserts is not None:
+            # The ruling of 2026-11-18: no version on record and CARRY_INSERTS alike on every version known, so the
+            # question is foreseen as on each, and says as fact only what every one of them says.
+            per_year = tuple((str(y), fore) for y, rev in known_finding_revisions()
+                             for fore in [carry_foresight(record, again, plan_carry=plan_carry,
+                                                          read_sidecar=read_sidecar, as_year=(str(y), rev))]
+                             if fore is not None)
     else:
         shown = unshown = ()
         inserts = bool(_finding("CARRY_INSERTS", year))
@@ -3504,7 +3515,7 @@ def carry_foresight(record: Optional[LinkRecord], again: Any, *, plan_carry: Opt
         assumed = tuple(c.name for c in work.components if c.configurations is None)
         work.components = [replace(c, configurations=("",)) if c.configurations is None else c
                            for c in work.components]
-        revision = solidworks_on_record(record)
+        revision = as_year[1] if as_year is not None else solidworks_on_record(record)
         try:
             plan = (plan_carry or swbuild.plan_carry)(work, carry, revision, new_frames={})
         except Exception:  # noqa: BLE001 - a foresight never stops the question: the press reads and says
@@ -3532,4 +3543,4 @@ def carry_foresight(record: Optional[LinkRecord], again: Any, *, plan_carry: Opt
         states_read=bool(_finding("COMPONENT_STATE_PER_CONFIGURATION_ROUTE", probe)),
         modes_gone=gone if new_modes else (), modes_new=added if box.modes else (),
         first=box.modes[0] if box.modes else "", stays=stays_behind(record, again), why_new=why_new, made_new=made,
-        values=values)
+        values=values, per_year=per_year)

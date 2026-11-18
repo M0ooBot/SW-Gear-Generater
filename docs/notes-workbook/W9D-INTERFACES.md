@@ -1017,7 +1017,14 @@ added as they apply, each in the result too:
   on SolidWorks 2024 (findings.CARRY_INSERTS_ON_2024), so as read at 14:02, …*;
 - the version not known (a record no job of this version wrote): W9c's mixed form, *Whether RangeBox_r2 takes your
   work depends on the SolidWorks in use: Gear Generator has been shown to do so on SolidWorks 2026, not yet on
-  SolidWorks 2024 (findings.CARRY_INSERTS_ON_2024), and the press reads which it runs on.*;
+  SolidWorks 2024 (findings.CARRY_INSERTS_ON_2024), and the press reads which it runs on.*; *as built after the
+  coordinator's ruling of 2026-11-18:* the mixed form only where `CARRY_INSERTS` itself differs between the versions.
+  Where it is alike, the question is foreseen as on each version (`CarryForesight.per_year`): what every version says
+  is said as fact, its version words made general (*on the SolidWorks it runs on*, *findings.…_ON_<year>*), and only
+  what differs as may, each version's own sentences first behind *If the press runs on SolidWorks 2024:*, the rest
+  behind *Whichever it runs on:*. It never says carrying is *not yet shown on the SolidWorks it runs on* when it is
+  shown on both (it did, once both were set, until this ruling); with `CARRY_INSERTS` unset on both it says so of
+  either, led by `findings.CARRY_INSERTS_ON_<year>`;
 - nothing on record: *Anything you added to RangeBox.SLDASM in SolidWorks the press reads first and carries into
   RangeBox_r2 where it can, saying whatever it cannot.*;
 - **the standing list of what is not carried as it was**, once, at the end, whenever anything of the user's is on
