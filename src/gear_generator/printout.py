@@ -53,8 +53,13 @@ WORKBOOK_ERROR = "WORKBOOK_ERROR"  # the workbook has an error
 FOREIGN_RECORD = "FOREIGN_RECORD"  # the record is not this workbook's
 NO_RECORD = "NO_RECORD"            # the form: the active part has no readable .gear.json beside it
 NOT_A_PART = "NOT_A_PART"          # the form: nothing is active in SolidWorks, or the active document is not a part
+# F2-REVIEW's must-fix M1 (the coordinator's ruling): a part whose change Update SolidWorks cannot carry, since the
+# Update plan needs a new revision (workbook.update.UpdatePlan.needs_new_revision: Update is then never run and the window
+# offers Build again…). Detail as CHANGES_ON_UPDATE's, {stem: "values" or "new part"}; the user is told to use Build
+# again…, never Update SolidWorks.
+NEW_REVISION = "NEW_REVISION"
 PLANNING_CODES = (GATE, GATE_COPY, UNSAVED_MARK, MISMATCHED_MARK, CHANGES_ON_UPDATE, NO_PART, WORKBOOK_ERROR,
-                  FOREIGN_RECORD, NO_RECORD, NOT_A_PART)
+                  FOREIGN_RECORD, NO_RECORD, NOT_A_PART, NEW_REVISION)
 # The job (swbuild.print_parts), per part, after every part's reads and before any file is written; then the export.
 MODIFIED = "MODIFIED"              # the part's own GetSaveFlag is on
 GLOBALS_DIFFER = "GLOBALS_DIFFER"  # a live global is not what its record says (spaces aside, swbuild._squash)
@@ -360,8 +365,11 @@ def workbook_print(record: Optional["LinkRecord"], assessment: Optional["Assessm
     - WORKBOOK_ERROR again when there is no ``update_plan`` or it is refused for another reason: Update cannot say what it
       would change, so whether the parts are the workbook's cannot be told (B's choice, the coordinator's to rule);
     - UNSAVED_MARK, MISMATCHED_MARK: the record's marks on a part (W9a's, ``update._mark``);
-    - CHANGES_ON_UPDATE: a part whose values Update would change ("values"), one that needs a part of its own or building
-      again ("new part"), and a gear Update would add in place ("new part", its part's stem).
+    - CHANGES_ON_UPDATE: a part whose values Update would change ("values"), and a gear Update would add in place ("new
+      part", its part's stem), while Update can run;
+    - NEW_REVISION instead (F2-REVIEW M1) when the Update plan needs a new revision (``needs_new_revision``: Update is
+      never run, Build again… is the way): the same parts and detail, a part that needs a part of its own or building
+      again among them ("new part").
 
     A change Update would make only to the layout or the assembly does not refuse (E3), and neither does a part whose
     every row has gone from the workbook: it is left out of the set (B's choice, the coordinator's to rule). Each part's
@@ -411,7 +419,8 @@ def workbook_print(record: Optional["LinkRecord"], assessment: Optional["Assessm
     for a in added:
         changes.setdefault(_stem(a.part), CHANGE_NEW_PART)
     if changes:
-        return _refused(Refusal(CHANGES_ON_UPDATE, tuple(changes), changes), version)
+        code = NEW_REVISION if getattr(update_plan, "needs_new_revision", False) else CHANGES_ON_UPDATE
+        return _refused(Refusal(code, tuple(changes), changes), version)
 
     box = record.gearbox
     work = getattr(box, "user_work", None) if box is not None else None

@@ -10,8 +10,9 @@ import pytest
 
 from gear_generator import findings, printout, store, swbuild
 from gear_generator.gears.base import Diagnostic
-from gear_generator.printout import (CHANGES_ON_UPDATE, FOREIGN_RECORD, GATE, GATE_COPY, MISMATCHED_MARK, NO_PART,
-                                     NO_RECORD, NOT_A_PART, UNSAVED_MARK, WORKBOOK_ERROR, PrintResult, Refusal)
+from gear_generator.printout import (CHANGES_ON_UPDATE, FOREIGN_RECORD, GATE, GATE_COPY, MISMATCHED_MARK,
+                                     NEW_REVISION, NO_PART, NO_RECORD, NOT_A_PART, UNSAVED_MARK, WORKBOOK_ERROR,
+                                     PrintResult, Refusal)
 from gear_generator.spec import GearSpec
 from gear_generator.workbook.assess import Assessment
 from gear_generator.workbook.model import Box, Gear, GearboxSpec, Shaft
@@ -269,20 +270,39 @@ def test_a_mark_on_the_layout_or_the_assembly_alone_does_not_refuse(gate_open):
     assert plan_window(rec).refusal is None
 
 
-def test_changes_on_update_values_and_new_parts(gate_open):
+def test_changes_on_update_for_values_update_would_carry(gate_open):
+    rec = record()
+    plan = plan_window(rec, update=update_for(rec, changed=(PART_A, PART_B)))
+    assert plan.refusal == Refusal(CHANGES_ON_UPDATE, ("Gear_m1.5_N20_P", "Gear_m1.5_N40_P"),
+                                   {"Gear_m1.5_N20_P": "values", "Gear_m1.5_N40_P": "values"})
+
+
+def test_a_part_that_needs_a_new_revision_is_new_revision_not_changes_on_update(gate_open):
+    """F2-REVIEW M1: with a structural change Update is never run (UpdatePlan.needs_new_revision), so a part it would
+    change, whether its values or a new part, is NEW_REVISION: the user is told to use Build again…."""
     rec = record()
     structural = ("Gear_m1.5_N40_P (G2 and G3): its Part name now makes X.SLDPRT, and a built part's file is never "
                   "renamed, so it needs a new part.",)
     update = update_for(rec, changed=(PART_A, PART_B), structural=structural)
+    assert update.needs_new_revision
     plan = plan_window(rec, update=update)
-    assert plan.refusal == Refusal(CHANGES_ON_UPDATE, ("Gear_m1.5_N20_P", "Gear_m1.5_N40_P"),
+    assert plan.refusal == Refusal(NEW_REVISION, ("Gear_m1.5_N20_P", "Gear_m1.5_N40_P"),
                                    {"Gear_m1.5_N20_P": "values", "Gear_m1.5_N40_P": "new part"})
 
 
-def test_a_shared_part_whose_rows_now_differ_needs_a_new_part(gate_open):
+def test_values_update_would_change_while_a_part_file_is_missing_are_new_revision(gate_open):
     rec = record()
-    update = UpdatePlan(parts=tuple(p for p in update_for(rec).parts if p.path != PART_B))   # classify leaves it out
-    assert plan_window(rec, update=update).refusal == Refusal(CHANGES_ON_UPDATE, ("Gear_m1.5_N40_P",),
+    update = update_for(rec, changed=(PART_A,), missing=(r"C:\Box\Reducer.SLDASM",))
+    assert plan_window(rec, update=update).refusal == Refusal(NEW_REVISION, ("Gear_m1.5_N20_P",),
+                                                              {"Gear_m1.5_N20_P": "values"})
+
+
+def test_a_shared_part_whose_rows_now_differ_needs_a_new_revision(gate_open):
+    rec = record()
+    update = UpdatePlan(parts=tuple(p for p in update_for(rec).parts if p.path != PART_B),   # classify leaves it out
+                        structural=("G2 and G3 share Gear_m1.5_N40_P.SLDPRT, but G3 now differs from G2, so they need "
+                                    "parts of their own.",))
+    assert plan_window(rec, update=update).refusal == Refusal(NEW_REVISION, ("Gear_m1.5_N40_P",),
                                                               {"Gear_m1.5_N40_P": "new part"})
 
 
@@ -491,6 +511,10 @@ def test_the_extent_is_checked_on_a_machined_gear_too(monkeypatch):
     part = printout.print_part(r"C:\G\Gear.SLDPRT", GearSpec(module="1.5", teeth="20", face_width="8").to_dict())
     assert part.process == "machined"
     assert printout.read_step(step(), part).extent == "checked"
+
+
+def test_new_revision_is_a_planning_code():
+    assert printout.NEW_REVISION == "NEW_REVISION" and printout.NEW_REVISION in printout.PLANNING_CODES
 
 
 def test_the_codes_and_reasons_are_the_interfaces():
