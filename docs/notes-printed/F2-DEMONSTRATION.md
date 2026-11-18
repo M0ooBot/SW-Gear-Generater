@@ -595,9 +595,10 @@ Every check reads the same on both. Measured differences, none judged a fault:
 - **What's Wrong** came in the bore Update on 2024 (up 1 s) and not on 2026, as the harness's rule read them
   (`swbuild.whats_wrong_shows_in_update` True on 2024, 2:7; False on 2026, 7); the status's extra clause follows it.
 - **Time and memory.** RangeBox's Update 172.7 s on 2026, 296.3 s on 2024 (userwork 273 s and 465 s); SolidWorks 2024's
-  private memory reached 6.21 GB after that Update, and 7.13 to 7.18 GB in run 2's `refusals` after the 12 : 1's quiet
-  Update (from 2.50 at `workbook`'s end; 3.23 at `refusals`' end), against 2026's peak of 1.61 GB. Free memory stayed
-  over 7.9 GB on both.
+  private memory reached 6.21 GB after that Update. In run 2 it rose from 2.50 GB at `workbook`'s end (2:1215) to 5.51
+  GB over `refusals`' form presses, the copy's open and the lightweight and suppressed states, before the 12 : 1's
+  quiet Update (2:1422), and stood at 7.13 to 7.18 GB after it (2:1423; 3.23 at `refusals`' end), against 2026's peak
+  of 1.61 GB. Free memory stayed over 7.9 GB on both.
 - The 12 : 1's build checks its gear mates' sense by the version's own route (2026 made again with the other Flip, 2024
   the probe's `ring_mate_sense`), both finding nothing turned round.
 
