@@ -2443,3 +2443,45 @@ CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2024 = (
 # - Constrained status 5 was not read on 2024: the old Sprocket-9, suppressed in H and unmated (carried as
 #   Sprocket-3), read 2 there (24-1:1505). Nothing in the app reads 5.
 # - Instance numbers differ from 2026's (Sprocket-9 as Sprocket-3); the result names each with its old name.
+
+#
+# ---------------------------------------------------------------------------------------------------------------------
+# F2: Print files (PLAN-PRINTED §3.1; docs/notes-printed/F2-INTERFACES.md §7). Every name below is None on both versions
+# until a reviewed run of probe/f2_probes.py (docs/notes-printed/F2-PROBES.md) sets it, in a commit of its own that
+# cites its log lines here and is itself reviewed; nothing may rest on one that is None, and tests/test_findings.py
+# pins every one unset until then.
+# - SAVE_AS_COPY (an int, expected 2): swSaveAsOptions_e.swSaveAsOptions_Copy read from the running install's
+#   swconst.tlb (probe step 1), beside SAVE_AS_SILENT. One name, as SAVE_AS_SILENT is: an enumeration's value, proposed
+#   by each version's run and set when both agree. While None, Print files refuses on every version (GATE_COPY).
+# - STEP_EXPORT (True): IModelDocExtension.SaveAs(path.step, 0, silent | copy, null, out errors, out warnings) on a
+#   saved part, active, answered True with both codes 0, wrote a file of one closed solid within the frame, raised no
+#   window, and left the document's path, title and save flag as they were, on a spur and on a helical part (steps 2 to
+#   4). While None on a version, Print files refuses there (GATE).
+# - STEP_EXPORT_NEEDS_ACTIVE (True or False): False when a part open in its own window but not active, exported by its
+#   own document object, gives its own file and leaves the active document, its title and every save flag as they
+#   were (step 6). While None the job activates each part before exporting it, and puts the user's active document
+#   back.
+# - STEP_EXPORT_FROM_COMPONENT (True or False): True when a part loaded only as a component of an open assembly, reached
+#   by its path with no activation, exports its own file and marks nothing, and a lightweight component is either not
+#   reached that way or exports right too (step 7 (a), (c)). While None such a part goes by the fallback below when that
+#   is measured, else the press refuses it by name (COMPONENT_ONLY).
+# - OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN (True or False): True when that part, opened in its own window by
+#   Session.open_document (which activates), exported and closed by CloseDoc on its title, leaves the assembly open and
+#   unmarked, its component loaded as it was, under no window, the lightweight case included (step 7 (b), (c)). While
+#   None the fallback is not used.
+# - PART_WINDOW_READ (a route string; F2-0's addition beyond the plan's list, the coordinator's to rule): the read that
+#   tells a part open in its own window from one loaded only as a component (step 7's window reads: IModelDoc2.Visible,
+#   or IModelDoc2.ActiveView not None). While None only the active document counts as open in its own window.
+# There is no STEP_FILE_CHECK (M2): the schema and the length unit a file declares are the user's export settings, read
+# as facts, never pinned.
+SAVE_AS_COPY = None
+STEP_EXPORT_ON_2026 = None
+STEP_EXPORT_ON_2024 = None
+STEP_EXPORT_NEEDS_ACTIVE_ON_2026 = None
+STEP_EXPORT_NEEDS_ACTIVE_ON_2024 = None
+STEP_EXPORT_FROM_COMPONENT_ON_2026 = None
+STEP_EXPORT_FROM_COMPONENT_ON_2024 = None
+OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_2026 = None
+OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_2024 = None
+PART_WINDOW_READ_ON_2026 = None
+PART_WINDOW_READ_ON_2024 = None

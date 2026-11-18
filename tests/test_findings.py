@@ -3143,3 +3143,21 @@ def test_w9d_demonstration_findings_on_2024_rest_on_the_confirming_runs_two_logs
     assert two[706].startswith("        in 1160.6 s; SolidWorks 9.12 GB private")
     assert "87 carried" in two[132]
     assert two[870] == "done    0 failed: []; 1 noted; 0 STOP(s), a hung worker included: []"
+
+
+# F2 (PLAN-PRINTED §3.3; docs/notes-printed/F2-INTERFACES.md §7): Print files' findings. Each is None, on both versions
+# where it is per version, until a reviewed run of probe/f2_probes.py sets it in a commit of its own; this pins them
+# unset, so nothing reads as measured before then. That commit moves the names it sets out of this test.
+F2_PER_VERSION = ("STEP_EXPORT", "STEP_EXPORT_NEEDS_ACTIVE", "STEP_EXPORT_FROM_COMPONENT",
+                  "OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN", "PART_WINDOW_READ")
+
+
+def test_f2_findings_are_not_measured_until_a_reviewed_probe_run_sets_them():
+    """F2-0 adds the names the probe proposes, every one None; SAVE_AS_SILENT, their neighbour, is as it was; and the
+    first revision's STEP_FILE_CHECK is not among them (M2: the schema and unit are the user's settings)."""
+    assert hasattr(findings, "SAVE_AS_COPY") and findings.SAVE_AS_COPY is None
+    for name in F2_PER_VERSION:
+        for year in (2026, 2024):
+            assert hasattr(findings, f"{name}_ON_{year}") and getattr(findings, f"{name}_ON_{year}") is None, (name, year)
+    assert not [n for n in dir(findings) if n.startswith("STEP_FILE_CHECK")]
+    assert findings.SAVE_AS_SILENT == 1 and findings.SAVE_AS_CALL == "IModelDocExtension.SaveAs3"

@@ -17,6 +17,8 @@ from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 from .gears import pair as pairs, standards
 from .gears.base import Diagnostic
 from .gears.equations import literal
+from .gears.span import SpanReading
+from .printout import PrintPlan, PrintResult, Refusal
 from .spec import (MODE_PAIR, NOZZLE_DEFAULT, PRINTED_STEM_MARK, PROCESS_MACHINED, PROCESS_PRINTED, RECIPE_ARCS,
                    RECIPE_INVOLUTE, GearSpec, InputError, PairSpec, pair_stems)
 
@@ -6457,3 +6459,50 @@ def carry_unsaid(again, result, exc: BaseException) -> str:
     unsaved = bool(getattr(getattr(result, "carry", None), "unsaved", False))
     return (f"What was carried into {name} could not be said ({said})"
             + ("; it holds it unsaved: save it in SolidWorks to keep it." if unsaved else "."))
+
+
+# -------------------------------------------------- F2: the span over k teeth and Print files (PLAN-PRINTED §3.0, §3.1)
+# F2-0's stubs (docs/notes-printed/F2-INTERFACES.md §6). Package C owns every sentence below and fills these; the
+# interface note gives each refusal code's sentence once, so package B's tests read codes, never words. Until C fills
+# them each answers nothing to say.
+
+
+def span_rows(reading: "SpanReading", measured: Optional[float], alpha_n: float,
+              module: float) -> List[Tuple[str, str]]:
+    """The Derived panel's span row and, under it, the Measured entry's line: ``[(label, value), ...]`` for a
+    :class:`gears.span.SpanReading` (A's), the calipers' reading typed in Measured (None when blank), the gear's normal
+    pressure angle in degrees and its module (for the line past 0.3 × module). Empty for a reading of kind "none".
+
+    F2-0's stub: answers []."""
+    return []
+
+
+def print_refusal(refusal: "Refusal") -> str:
+    """The sentence for a :class:`printout.Refusal` (B's code and detail), as F2-INTERFACES.md §2.3 drafts it.
+
+    F2-0's stub: answers ""."""
+    return ""
+
+
+def print_result(result: "PrintResult") -> str:
+    """The status line after a press's job (B's :class:`printout.PrintResult`): what was written and where, or why not.
+
+    F2-0's stub: answers ""."""
+    return ""
+
+
+def print_list_text(plan: "PrintPlan", result: "PrintResult", version: str) -> str:
+    """The whole text of ``print list.txt`` (§3.1.3): its head (``plan.name``, ``plan.pressed``, the app's ``version``, the
+    process and the nozzle), one block per part, and the settings said once; headed *DO NOT PRINT THIS SET:* when
+    ``result`` refused or failed a file.
+
+    F2-0's stub: answers ""."""
+    return ""
+
+
+def print_bar_line(plan: "Optional[PrintPlan]") -> str:
+    """The form's SolidWorks bar line for Print files, from the form's own planning read (``printout.form_print``): *Print
+    files will write Gear_m1.5_N20_P.step from the active part.* when the plan has one part and no refusal.
+
+    F2-0's stub: answers ""."""
+    return ""

@@ -3842,6 +3842,30 @@ class Session:
             out[key] = bool(_read(doc, "GetSaveFlag"))
         return out
 
+    # -- F2: Print files (PLAN-PRINTED §3.1, docs/notes-printed/F2-INTERFACES.md §4). F2-0's stubs; package B fills
+    # them once the probe (probe/f2_probes.py) is run and reviewed. Neither is called by anything until then.
+
+    def export_step(self, path: str) -> Tuple[int, int]:
+        """Write the build document to a STEP file at ``path`` as a copy: ``IModelDocExtension.SaveAs(path, 0,
+        SAVE_AS_SILENT | SAVE_AS_COPY, null, out errors, out warnings)``, the format from the extension, so the document
+        keeps its own name, path and save flag (the macro database, files/04, verified on 2026 only; F2's probe measures
+        it on both versions). A path that exists is refused before SolidWorks is asked (``SaveAs3`` overwrites without a
+        word, GOTCHAS §34). Answers SolidWorks' ``(errors, warnings)``; raises :class:`SolidWorksError` with those codes
+        in its fields (not a sentence for the user) when the call answers False, a code is not 0, or no file is on disk.
+
+        F2-0's stub: raises, writing nothing. Package B fills it."""
+        raise SolidWorksError("Writing a STEP file is not built yet (F2-0's stub of Session.export_step), so nothing "
+                              "was written.")
+
+    def document_by_path(self, path: str) -> Optional[Any]:
+        """The open document whose file is ``path``, whether in its own window or loaded only as a component of an open
+        assembly, or None: ``ISldWorks.GetOpenDocumentByName(path)`` (unverified in the macro database and new to the app;
+        F2's probe step 7 measures it beside the document walk :meth:`use_open_document` makes, and the route B uses
+        is the one the probe's review settles).
+
+        F2-0's stub: answers None. Package B fills it."""
+        return None
+
     def mate_definition(self, handle: str) -> MateDefinition:
         """S5 (a)'s read of a kept mate (measured marking nothing on both versions; this wrapper as written is not):
         ``GetTypeName2``; ``GetSpecificFeature2`` → ``IMate2`` Type, Alignment, Flipped; ``GetDefinition``'s numbers

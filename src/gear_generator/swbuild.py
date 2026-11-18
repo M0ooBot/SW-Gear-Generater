@@ -38,6 +38,7 @@ from .gears.spur import AXIS_NAME, BORE as BORE_GLOBAL
 from .gears.spur import SPACE_SKETCH
 from .gears.spur import BACKLASH_FACTOR, PRINTED_BACKLASH, PRINTED_BACKLASH_UP_TO_MODULE, printed_backlash_expression
 from .gears.bevel import HEEL_SKETCH, TOE_SKETCH
+from .printout import GATE, PrintPlan, PrintResult, Refusal
 from .store import CARRIER_ID_SUFFIX, GEARBOX_MOTION, GEARBOX_STATIC, now, same_path
 from .swcom import (ASSEMBLY_PAIR, ASSEMBLY_STATIC, ASSEMBLY_TRAIN, COMPONENT_FIND_ROUTES, CONFIGURATION_FINDINGS,
                     COMPONENT_LIGHTWEIGHT, COMPONENT_SUPPRESSED, DOC_ASSEMBLY, MINIMUM_MAJOR, configuration_finding,
@@ -153,6 +154,13 @@ class SolidWorks(Protocol):
     def root_component(self, resolve: bool = True) -> Optional[str]: ...   # W9c: the assembly's own entity
     def delete_component(self, handle: str) -> None: ...                    # W9c: a gear taken out (P1's route)
     def suppress_feature(self, name: str, suppressed: bool) -> None: ...    # W9c: a sleeve's relief taken away
+    # F2 (docs/notes-printed/F2-INTERFACES.md §4): Print files. ``save_flags``, ``activate`` and ``close_document`` are
+    # swcom.Session's own; ``export_step`` and ``document_by_path`` are F2-0's stubs there, filled by package B.
+    def save_flags(self) -> Dict[str, bool]: ...
+    def activate(self, title: str) -> None: ...
+    def close_document(self, title: str) -> None: ...
+    def export_step(self, path: str) -> Tuple[int, int]: ...
+    def document_by_path(self, path: str) -> Optional[object]: ...
 
 
 class BuildError(SolidWorksError):
@@ -10190,3 +10198,23 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
             live = sw.gear_mate_ratio(mate_handle[name])
             settle(name, f"{handle[a]}:{AXIS_NAME}", f"{handle[b]}:{AXIS_NAME}",
                    (int(round(float(live[0]))), int(round(float(live[1])))))
+
+
+# -- F2: Print files (PLAN-PRINTED §3.1.3, "How each part is reached"; docs/notes-printed/F2-INTERFACES.md §5) ----------
+
+
+def print_parts(sw: SolidWorks, plan: PrintPlan) -> PrintResult:
+    """The press's job on the shared worker: the gate read again for the session's revision; the active document and
+    every open document's title and save flag recorded; each part reached (open in its own window, open only as a
+    component, or not open) as the interface's §5 says, by the findings that gate each way; every part's three reads
+    (its own save flag, its globals against the record, its features' error codes) made before any export; then each
+    exported into ``plan.folder`` (made here) by ``Session.export_step`` and read back by ``printout.check_step``; only
+    what the job opened closed (``CloseDoc`` on its title, never an assembly, never a document the user had open); and,
+    in a ``finally``, the document active at the start activated again and every save flag read again.
+
+    F2-0's stub: touches no document and writes nothing. It answers the plan's refusal, or GATE for the session's
+    version (which is what the filled job answers while ``findings.STEP_EXPORT_ON_<year>`` is None). Package B fills
+    it."""
+    revision = tuple(getattr(sw, "revision", ()) or ())
+    detail = {"year": str(release_year(revision[0])), "revision": ".".join(str(n) for n in revision)} if revision else {}
+    return PrintResult(folder="", refusal=plan.refusal or Refusal(GATE, (), detail))
