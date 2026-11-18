@@ -198,6 +198,17 @@ def test_a_record_from_before_f1_opens_machined_and_builds_machined(app, tmp_pat
     assert spec.stem() == "Gear_m2_N30_P" and (spec.process, spec.nozzle) == (PROCESS_PRINTED, "0.6")
 
 
+def test_an_old_records_form_changed_to_printed_is_one_global_for_update_values():
+    """§1.3: an old .gear.json opened Machined and its row changed to Printed is a change of one global's text, the
+    blank Backlash's equation, which Update values carries in place."""
+    from test_printed_rule import RECORDED, sidecar_text, strip_form
+    from gear_generator import gui
+    for name in RECORDED:
+        sidecar = store.from_json(sidecar_text(name))
+        form = replace(GearSpec.from_dict(sidecar.record.spec), process=PROCESS_PRINTED)
+        assert gui.GearApp._update_target(strip_form(sidecar, form))[0] == 1, name
+
+
 # -- the Workbook window --------------------------------------------------------------------------------------------
 
 
