@@ -913,9 +913,10 @@ def self_check():
     from gear_generator.workbook import update
     from workbook_fixtures import range_box
     bad = []
-    # W9d's demonstration findings are set on 2026 since its review (W9D-DEMONSTRATION-REVIEW.md, 7996089, §4); a 2024
-    # run meets them None, as every _ON_2024 is. The gate sections are checked as a version with them unmeasured meets
-    # them: each patched to None on both versions in this process, as the suite's w9d_unmeasured fixture does.
+    # W9d's demonstration findings are set on 2026 since its review (W9D-DEMONSTRATION-REVIEW.md, 7996089, §4) and on
+    # 2024 since the review of the 2024 run (e51de95, §2). The gate sections are checked as a version with them
+    # unmeasured meets them: each patched to None on both versions in this process, as the suite's w9d_unmeasured
+    # fixture does.
     committed = {f"{g}_ON_{y}": getattr(findings, f"{g}_ON_{y}", "missing") for g in list(WRITE_GATES) + list(STAY_NONE)
                  for y in (2026, 2024)}
     for name in committed:
@@ -1293,10 +1294,12 @@ def self_check():
     ok(tuple(swbuild.CARRY_KIND_WORDS) == KIND_WORDS and set(WRITE_GATES) | set(STAY_NONE) <= {
         n[:-len("_ON_2026")] for n in dir(findings) if n.endswith("_ON_2026")},
        "the kind words are the worker's; every gate named here is a finding of findings.py")
-    ok(all(committed[f"{g}_ON_2024"] is None for g in WRITE_GATES)
+    # Set on both versions since the reviews of the second 2026 run (7996089) and the 2024 run (e51de95): the script
+    # proposed each value, the commits set them, and every 2024 value is its 2026 twin's.
+    ok(all(committed[f"{g}_ON_2024"] == committed[f"{g}_ON_2026"] is not None for g in WRITE_GATES)
        and all(committed[f"{g}_ON_{y}"] is None for g in STAY_NONE for y in (2026, 2024)),
-       "every gate this script patches is None in findings.py on 2024, and every one it keeps None is None on both "
-       "versions (so a 2024 run proposes, never sets)")
+       "every gate this script patches is set in findings.py on both versions, each 2024 value its 2026 twin's, and "
+       "every one it keeps None is None on both versions")
     ok(propose("X", True, "e") == "propose X = True  # e", "propose's form")
     # The ruling extended to W9d on 2024 (2026-11-18): the close path is W9c's, wired by the flag only.
     ok(close_path_asked(["w9d_demonstration.py", "src", "out", CLOSE_FLAG]) and not close_path_asked(

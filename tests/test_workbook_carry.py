@@ -338,6 +338,7 @@ def test_with_carry_inserts_unset_the_question_says_w9as_clause_led_by_that_find
 
 def test_with_no_version_on_record_the_question_says_the_mixed_form(desk, monkeypatch):
     monkeypatch.setattr(findings, "CARRY_INSERTS_ON_2026", True)
+    monkeypatch.setattr(findings, "CARRY_INSERTS_ON_2024", None)      # one version shown, the other not (set since)
     record = copy.deepcopy(desk.record)
     record.gearbox.solidworks, record.gearbox.user_work.revision = [], []
     said = _said(desk, record=record)
@@ -1093,6 +1094,38 @@ def test_a_carry_end_to_end_on_the_fake_at_2026_with_nothing_patched():
         "on in." in said, said
     assert said.endswith("Save RangeBox_r2 in SolidWorks to keep what was carried."), said
     assert record.gearbox.carry.how == "open" and record.gearbox.carry.unsaved_at == 1763400000.5
+    assert ui_text.carry_footer_line(record) == ("RangeBox_r2 holds what Build again… carried of yours, not saved: "
+                                                 "save it in SolidWorks to keep it.")
+
+
+def test_a_carry_end_to_end_on_the_fake_at_2024_with_nothing_patched():
+    """The same on the fake at SolidWorks 2024 (32.5.0), findings.py as committed (W9d's probes and M9's confirming run
+    set on 2024 since, each as its 2026 twin; no fixture, nothing patched): the gearbox built and the work read on
+    2024, Build again… asks to carry and carries Sprocket-1, Housing-1 and Lock3, unsaved, nothing named or stopped."""
+    desk = Desk()
+    desk.sw.revision = (32, 5, 0)                                             # SolidWorks 2024, before the build
+    desk.sw.read_entity_kinds = True
+    desk.build(range_box())
+    users_work(desk)
+    desk.disk.files |= {"c:\\parts\\sprocket.sldprt", "c:\\parts\\housing.sldprt"}
+    assert desk.record.gearbox.solidworks == [32, 5, 0]
+    spec = gears(range_box(), **SUN_FLANK)
+    up = update.classify(desk.record, desk.a(spec), exists=desk.disk.exists, read_sidecar=desk.disk.read_sidecar)
+    question = ui_text.build_again_question(up, _again(desk, spec), record=desk.record)
+    assert (f"As read at {_at(desk)}, RangeBox_r2 takes your Sprocket-1 and Housing-1 and makes your Lock3 again in "
+            "the modes it was on in.") in question, question
+    assert "has not yet been shown" not in question and "Not yet shown" not in question, question
+    again, carry, result, record = _carry_job(desk, spec)
+    done = result.carry
+    assert result.ok and done.work.how == swbuild.OLD_OPEN and done.stopped == "" and done.named == []
+    assert [o for o, _ in done.inserted] == ["Sprocket-1", "Housing-1"] and [m for m, _, _ in done.remade] == ["Lock3"]
+    assert done.unsaved and done.gates == []
+    said = _status_of(desk, again, carry, result)
+    assert said.startswith("Carried into RangeBox_r2, unsaved: your ") and "and your Lock3, on in the modes it was " \
+        "on in." in said, said
+    assert "SolidWorks 2024" not in said and said.endswith("Save RangeBox_r2 in SolidWorks to keep what was carried.")
+    assert record.gearbox.carry.how == "open" and record.gearbox.carry.unsaved_at == 1763400000.5
+    assert record.gearbox.solidworks == [32, 5, 0]
     assert ui_text.carry_footer_line(record) == ("RangeBox_r2 holds what Build again… carried of yours, not saved: "
                                                  "save it in SolidWorks to keep it.")
 

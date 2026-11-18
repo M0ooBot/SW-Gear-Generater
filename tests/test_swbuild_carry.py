@@ -126,11 +126,11 @@ def test_with_every_gate_none_nothing_is_carried_and_each_item_names_its_finding
 
 
 def test_what_a_carry_is_gated_on_per_version_as_committed():
-    """With no fixture (findings.py as committed: W9d's probes and M9's second run set on 2026, nothing on 2024): on
+    """With no fixture (findings.py as committed: W9d's probes and M9's runs set on 2026 and on 2024): on
     2026 a part, a part in one of its file's configurations, a lock, an axis mate and a gear mate on Sun's Gear Axis
     are carried with nothing gated, and only what M9's fixture had none of is held, each by its finding: a
     sub-assembly, a kind outside the eight (perpendicular), a vertex and an origin; a virtual part is named by its
-    `^` with no finding. On 2024 every component is held by CARRY_INSERTS alone, and every mate with its component."""
+    `^` with no finding. On 2024, set since the 2024 probes and confirming run each as its 2026 twin, the same."""
     face = ent(USER, "Sprocket-1", ENTITY_FACE)
     values = (("GearRatioNumerator", 29.0), ("GearRatioDenominator", 20.0), ("Reverse", 1.0))
     params = ((0, 0, 0, 0, 0, 1), (0, 0, 0, 0, 0, 1))
@@ -161,14 +161,21 @@ def test_what_a_carry_is_gated_on_per_version_as_committed():
         "Perp1": ("unmeasured", ("perpendicular", "CARRY_REMAKE_KINDS_ON_2026", Y)),
         "Vertex1": ("unmeasured", ("vertex", "PERSIST_REFERENCE_ROUTE_FOR_VERTICES_ON_2026", Y, "Sprocket-1")),
         "Origin1": ("unmeasured", ("origin", "ORIGIN_ENTITY_READ_ON_2026", Y, "Sprocket-1"))}
-    on_2024 = (32, 5, 0)
+    on_2024 = (32, 5, 0)                    # set since the 2024 run as each 2026 twin: the same, on 2024
     plan = swbuild.plan_carry(w, _carry(), on_2024)
-    assert swbuild.carry_gates(w, _carry(), on_2024) == [(swbuild.STEP_CARRY_INSERT, "CARRY_INSERTS_ON_2024")]
-    assert plan.components == () and plan.mates == ()
-    named = _named(plan)
-    held = {n for n, (why, s) in named.items() if why == "unmeasured" and s[:2] == ("insert", "CARRY_INSERTS_ON_2024")}
-    assert held == {"Sprocket-1", "Sprocket-11", "Drive-1"}
-    assert {n for n, (why, _) in named.items() if why == "component not carried"} == {m.name for m in mates}
+    assert swbuild.carry_gates(w, _carry(), on_2024) == [
+        (swbuild.STEP_CARRY_SUBASSEMBLY, "CARRY_INSERTS_A_SUBASSEMBLY_ON_2024"),
+        (swbuild.STEP_CARRY_KIND, "CARRY_REMAKE_KINDS_ON_2024"),
+        (swbuild.STEP_CARRY_VERTICES, "PERSIST_REFERENCE_ROUTE_FOR_VERTICES_ON_2024"),
+        (swbuild.STEP_CARRY_ORIGIN, "ORIGIN_ENTITY_READ_ON_2024")]
+    assert [i.component.name for i in plan.components] == ["Sprocket-1", "Sprocket-11"]
+    assert [m.mate.name for m in plan.mates] == ["Lock1", "UserAxis1", "Gear6"]
+    assert _named(plan) == {
+        "Drive-1": ("unmeasured", ("sub-assembly", "CARRY_INSERTS_A_SUBASSEMBLY_ON_2024", "2024")),
+        "Part1^RangeBox-1": ("no file", ("Part1^RangeBox.sldprt", "virtual")),
+        "Perp1": ("unmeasured", ("perpendicular", "CARRY_REMAKE_KINDS_ON_2024", "2024")),
+        "Vertex1": ("unmeasured", ("vertex", "PERSIST_REFERENCE_ROUTE_FOR_VERTICES_ON_2024", "2024", "Sprocket-1")),
+        "Origin1": ("unmeasured", ("origin", "ORIGIN_ENTITY_READ_ON_2024", "2024", "Sprocket-1"))}
 
 
 def test_a_user_part_locked_to_sun_is_carried_against_sun_and_its_lock_remade(every_gate):
