@@ -243,3 +243,182 @@ my inference, so watch the line.
 
 The face routes r1 and r2 are likely dead there too, and the sub-assembly opens likely as on 2026 (W9c's P2 was alike
 on both).
+
+## The 2024 run (32.5.0, from `891a707`), reviewed
+
+*Independent, 2026-11-18, at `4623701`. I started no SolidWorks or Excel and changed nothing but this file.*
+
+**What I reviewed and ran:**
+- *The run:* `4623701` with sections `faces`, `state` and `sub`. The log is
+  `probe/results/sw2024/w9d-probes-sw2024-20261118.log` (cited `p24:`) and the JSON is
+  `w9d-probes-20261118-051605.json` (revision `[32, 5, 0]`, snapshot `891a707`).
+- *Read:* the log whole, the JSON wherever a line is condensed, the note's section "The run on SolidWorks 2024", and
+  the code each finding gates: `swcom.entity_references`, `file_version`, `dependencies` and
+  `swbuild._not_open_refusal`'s version rule.
+- *Run, in a `git archive` scratch copy with the fourteen values of the table below set on 2024, deleted after:*
+  - `probe/w9d_demonstration.py --self-check`: 0 failed.
+  - `tests/test_findings.py`, `test_swbuild_carry.py` and `test_workbook_carry.py` only (not the whole suite, which
+    another agent is running): 420 passed, 3 failed, each a pin on a 2024 value being None.
+  - The three are `test_w9d_findings_are_not_measured_until_a_reviewed_log_sets_them`,
+    `test_w9d_2026_findings_rest_on_the_probes_two_runs`, and
+    `test_w9c_probes_on_2024_read_as_on_2026_and_set_every_twin`, which asserts
+    `COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2024 is None`.
+  - The findings commit must bring all three to the new values. I did not run the other test files.
+
+**Verdict.**
+- **All fourteen proposals may be set on 2024 to the values 2026 holds**, with the caveats below. Every line bears its
+  proposal out, and no check passed on nothing.
+- `REFERENCED_CONFIGURATION_READ`, `VIRTUAL_READ`, `PATTERN_INSTANCE_READ`, `ORIGIN_ENTITY_READ` and
+  `PERSIST_REFERENCE_ROUTE_FOR_VERTICES` stay None on 2024.
+- **Nothing in `src` has to change before the 2024 demonstration.** The edge prefilter's cost is a should-fix for the
+  contract and `swcom` (below), and M9's fixture has no edge mate.
+
+### The findings for 2024
+
+Set each `_ON_2024` as follows. Each comment names **32.5.0** and `891a707`.
+
+| Finding | Set `_ON_2024` to | Rests on | Caveat the comment must carry |
+|---|---|---|---|
+| `PERSIST_REFERENCE_ROUTE_FOR_FACES` | r3's string, `swcom.PERSIST_ROUTE_R3` exactly (the twin of 2026's) | p24:53-85 (r1 and r2 dead on every entity, r3 clean on all five faces), 86 | 5 faces on two files: one bore, three sprocket end planes, one Sun end plane. Each walk: 1 match of 163 (or 235), resolved `_Ok` to a face, `IsSame` both ways, unmarked at its start and after. On 2024 the walk did not grow (below). |
+| `PERSIST_REFERENCE_ROUTE_FOR_EDGES` | the same string | p24:68, 83, 87 | One circular edge, 482 walked in 6.75 s. The edge prefilter is slower than the walk on 2024 (below). |
+| `PERSIST_REFERENCE_SURVIVES_RELOAD` | `True` | p24:105-106 | 6 references (5 faces, 1 edge) resolved `_Ok` in parts reopened alone and unchanged on disk, with kind, place and area as read and nothing marked. A part edited and saved since may resolve otherwise. |
+| `COAXIAL_FACE_READ` | `True` | p24:53 (the bore coaxial), 58-77 (the planes not), 89, 90 | Cylinders only. Positives: the bore, and Sun's 29 cylinders at 19.375 mm and 29 at 16.375 mm. Negatives: the 58 fillets at 0.475 mm, the keyway at 1.5 mm, every plane. These are 2026's counts exactly. |
+| `CARRY_INSERT_MARKS_USER_DOCUMENTS` | `False` | p24:98-104 | One case: user parts loaded as components of the open assembly, unchanged, inserted into a second assembly, which marked none of them. All four mates were remade equal, every component at 0.0 (p24:102). A user part open with unsaved edits is not measured. |
+| `COMPONENT_STATE_PER_CONFIGURATION_ROUTE` | `"IConfiguration.GetComponentSuppressionState(Name2)"` | p24:132-134, 137 | Agreed with the shown truth on 3 components × 3 modes, suppressed in the mode showing (Housing-1 in H) and in another (Sprocket-4 in L), from an unmarked start, marking nothing. It reads a lightweight component not suppressed (p24:140). Top-level `Name2` only. `GetRootComponent3(True)` marked nothing here (p24:136) where W9c's 2024 probe saw it mark (`w9c-probes-sw2024-20261117.log:283-285`, a different candidate, which is why W9c's run proposed None). Marking can differ by state, so R.6's check after the read stays the guard. |
+| `COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED` | `True` | p24:138-139 | One component suppressed in one mode, unsaved, read right. |
+| `FILE_VERSION_READ` | 2026's string | p24:143-144 | This version's copy read `['17000[2024/282]']` against `GetLatestSupportedFileVersion` 17000. The control, a file 2026 (34.1.1) saved, read `['19000[2026/13]']` closed, with no dialog and nothing left open (p24:168-169). `swcom.file_version` takes the last entry's number and `_not_open_refusal` requires equality (`swbuild.py:7697-7703`), so the year label never matters. An older version's file is refused too, by the same equality, though no older file was read. |
+| `DEPENDENCIES_READ` | 2026's string (`Traverse` False, `Searchflag` False) | p24:145, 147 | All nine named, each under the copy, on disk and last saved by 2024. This confirms on 2024 what was an inference on 2026: the stored paths are the copy's own once the copy is saved. A plain copy of the folder that SolidWorks never opened gives the stored, original paths, none on disk, so the app refuses all nine (p24:142). That is the copied-folder ruling as built. Top level only: a sub-assembly dependency still refuses. |
+| `OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS` | `True` | p24:148-149 | The unchanged Housing and the changed Sprocket (its global kept) were open beside the read-only open, each the same after it. The read-only RangeBox.SLDASM read **marked straight after its open** (warning 32; JSON `state.read_only`, flag True and read-only True), as on 2026. R.6 judges the job's own read-only document from that read, which is as the contract already rules. |
+| `OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN` | `True` | p24:150-151 | Shown mode by mode, closed by `QuitDoc` with its flag True and no dialog. Every document it loaded is gone, no file time changed, and the open parts are as they were. Files saved by this version only. |
+| `SUBASSEMBLY_OPEN_MARKS` | `False` | p24:158-159 | A healthy one-part sub-assembly, opened Silent and not loaded (warning 0): flag False straight after and after the settle. |
+| `SUBASSEMBLY_READ_ONLY_INSERT` | `True` | p24:160-161 | Inserted with its child. The sub-assembly read flag False and read-only after; the host, the job's own, read modified. |
+| `SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED` | `False` | p24:163-164 | Loaded as a component of an open host. `OpenDoc6` answered warning 128, and the flag read False before, after the open and after the insert. |
+
+**What stays None on 2024, as on 2026:**
+- `REFERENCED_CONFIGURATION_READ`: every component here references its file's only configuration (p24:91). The 2024
+  demonstration's SprocketConf-1 sets it, as M9 set it on 2026.
+- `VIRTUAL_READ` and `PATTERN_INSTANCE_READ`: read negative only (p24:92).
+- `ORIGIN_ENTITY_READ` and `PERSIST_REFERENCE_ROUTE_FOR_VERTICES`: nothing in W9d.
+
+The `CARRY_*` writes and the lightweight fact wait for the 2024 demonstration. The JSON's `proposal` is `{}` here, as
+it was in the 2026 probe runs, so the pins are the log lines above and the JSON's `sections`.
+
+**Every name exists in `findings.py` as written,** each at None on 2024: `:1950` for the route, `:2123-2160` for the
+rest. The two route strings must equal `swcom.PERSIST_ROUTE_R3` exactly, because `entity_references` compares them
+(`swcom.py:3946-3947`). Write them as the 2026 twins are written, so that a difference cannot creep in.
+
+**Checks that could have passed on nothing.** None did.
+- Each r3 verdict needs exactly one match, both `IsSame` answers and an unmarked start. The JSON holds `walked`,
+  `matches` 1 and `marked_before` `[]` for all six entities.
+- The state verdict compares against a shown truth that has two suppressed components (p24:133).
+- The version proposal needs both files (p24:144, S-b).
+
+### What differs from 2026, and what it means for the app
+
+- **r3's walks do not grow on 2024.**
+  - *What was read:* every 163-face walk took 2.26-2.36 s through the session (p24:80-85). Five repeated walks took
+    1.68-2.07 s. `component_frame` × 100 took 1.20 s before and 1.33 s after, with private memory flat at 3.064 GB
+    (p24:93, 95).
+  - *What it means:* nothing in `src` changes. The cap (`CARRY_WALK_CANDIDATES` 200, `CARRY_WALK_SECONDS` 20 s)
+    stays the contract's answer on both versions.
+  - *What remains unknown:* whether 2026's growth was per call or a slower session. The 2026 rerun of `faces` (b)
+    has not been made. It is a caveat on the 2026 comment, not the 2024 one.
+- **The edge prefilter costs more than the walk on 2024.**
+  - *What was read:* for one edge, `("circle", 0.005)` kept 82 of 482 edges in 8.05 s, and its walk took 0.83 s.
+    The full walk took 5.07 s (p24:94). That is about 16.7 ms per edge to read its key (`GetCurve`, `IsCircle`,
+    `CircleParams`), against about 10.5 ms per edge to carry and compare it.
+  - *Faces:* the area prefilter still pays: 0.59 s plus 0.009 s, against 1.69 s (p24:93).
+  - *The prefilter loses no match:* both prefilters kept the full walk's match (p24:97).
+  - *What it means for the app (`swcom.py:3964`, `entity_references`):* the cost is time, never a wrong answer,
+    because `IsSame` decides. Two things make it worse than the probe's figure:
+    - the filter reads every candidate's key again for **each** item of the component, with no cache;
+    - the filter runs **before** the clock is checked, so the 20 s cap does not bound it. On 2024 a part with a few
+      thousand edges would spend tens of seconds in one item's prefilter before the cap could name the rest.
+  - *Should-fix, for the designer and package A:*
+    - read each candidate's key once per component;
+    - check the clock inside the filter;
+    - for edges, either walk without the circle filter on 2024 or rule rule 2 per kind.
+  - Not before the demonstration: M9's fixture has no edge mate (its walks on 2026 were faces only). Until then, the
+    `_FOR_EDGES` comment says the prefilter is slower than the walk on 2024, and the cap does not bound it.
+- **2024 reads a 2026-saved file's version history closed, with no dialog** (p24:143, 168-169). This is what
+  `FILE_VERSION_READ` needs on 2024. No change; one file read.
+- **Searchflag, Traverse True and the places were read for the first time, on 2024 only** (p24:141-142, 145-146, 165).
+  - *Searchflag False* (the app's) gives the stored paths, so a plainly copied folder is refused. That is the
+    2026-11-17 ruling, and `dependencies` already reads it that way.
+  - *Searchflag True* would let a copied folder through by SolidWorks' own search. Whether the files it finds are the
+    ones the user means is not something the app can judge. So keep False: a fact, no change.
+  - *Traverse True* lists a sub-assembly's parts (p24:165). That is the read R.2 would need to accept a sub-assembly
+    dependency. It is 2024's reading only, so R.2 keeps refusing until a 2026 read and a contract change. A caveat,
+    no change. M9's fixture has no sub-assembly.
+
+**Two words in the note to correct** (`W9D-PROBES.md`, "The run on SolidWorks 2024"):
+- It says *"no dialog but the progress boxes and the exempt notification box"*. The log has no notification box: its
+  four `DIALOG` lines are progress boxes (p24:22, 37, 157, 162), and *"other windows the watch logged: 0"*
+  (p24:169).
+- The `--other-version-file` it names is the right file, but what that file is (one 2026 saved, outside any master,
+  its time unchanged) is the operator's account. The log only shows its history read (p24:143).
+
+### The 2024 demonstration: may it run?
+
+**Yes, once the fourteen are committed on 2024.** Snapshot head after that commit, and run the snapshot's
+`--self-check` first. With these set:
+- `carry` and `carry-closed` take the unshown-states branch on 2024 as on 2026;
+- the closed path is read;
+- UserFaceConc and UserFaceCoin are carried, and UserGearRoot is remade on `Gear Axis`.
+
+The script patches the write gates in its own process and proposes them, as on 2026 (`WRITE_GATES`, all None on
+2024). Its self-check holds that with the 2024 reads set.
+
+**Command lines** on this laptop, Windows, in two fresh SolidWorks 2024 sessions. `RUN` is the run folder, with
+`snap` the snapshot:
+
+```
+python.exe RUN\snap\probe\w9d_demonstration.py RUN\snap\src RUN\out --pid PID --log RUN\w9d-demo-sw2024-1.log ^
+    --sections fixture,carry-gates,carry ^
+    --master <probe folder>\w9-s0-sw2024-20261116-064725\out\rangebox.master ^
+    --user-master <probe folder>\w9a-confirm-sw2024-20261117-002313\out\setup.master
+
+python.exe RUN\snap\probe\w9d_demonstration.py RUN\snap\src RUN\out --pid PID2 --log RUN\w9d-demo-sw2024-2.log ^
+    --sections carry-closed ^
+    --master <probe folder>\w9-s0-sw2024-20261116-064725\out\rangebox.master ^
+    --user-master <probe folder>\w9a-confirm-sw2024-20261117-002313\out\setup.master ^
+    --other-version-file <probe folder>\w9d-demo-sw2026-20261118-031029\out\carry\RangeBox_r2.SLDASM
+```
+
+The second session finds `w9d-fixture.master` in the same `RUN\out` (or give `--fixture-master`). If the first
+session must stop part way, rerun the remaining sections in a fresh session the same way.
+
+**What to watch on 2024 that 2026 did not show:**
+- **What's Wrong.**
+  - On 2024 the harness reads `whats_wrong_shows_in_update` True (p24:7). A box in a job is logged as a fact and must
+    go within 60 s, with the frame enabled.
+  - W9d does **not** take W9c's `--close-outlived-whats-wrong`: `WW_OUTLIVED` stays None. So a box that outlives its
+    job is the STOP, as the ruling stands for every run but W9c's flagged one.
+  - M9's fixture has no feature in error, and the 2024 boxes so far came at an activation of an assembly in error
+    (W9c's ring), so none is expected. If one comes, it needs a ruling, not a script change in the run.
+  - Note any box in the build of Sun's new part with `Flank` arcs. I did not establish whether an arcs-flank part has
+    been built on 2024 before.
+- **SOLIDWORKS CAM's box on saving an assembly with a lightweight component (S-g).**
+  - The script never saves one: the fixture and `carry-closed` save with nothing lightweight, and `carry` makes the
+    user's save of RangeBox_r2 only if `light_in` reads nothing lightweight there.
+  - Watch `carry`'s *"read 1 before the press and 2 after"* for SprocketLight-1. That is the lightweight fact for
+    2024. If 2024 does not resolve it, the save, and with it the footer line going, is skipped and said, not FAILed.
+  - Any modal box on a save is a STOP: do not answer it.
+- **Memory.** On 2026 SolidWorks stayed under 2.4 GB. On 2024, W9c's first press on a freshly opened RangeBox grew it
+  3.3-4 GB and held it until the assembly closed, and `modes` reached 14.7 GB.
+  - Session 1 makes three presses: the fixture's quiet press, `carry-gates`' build and `carry`'s build.
+  - If SolidWorks is past about 7 GB private, or free memory under 4 GB, after `carry-gates`, end the session and run
+    `carry` alone in a fresh one.
+  - The guard's STOP under 2 GB free stands.
+- **Time.**
+  - On 2026: `fixture` 9 min, `carry-gates` 13 min, `carry` 29 min (its build 12 min), `carry-closed` 20 min.
+  - W9c's 2024 sections ran 1.2 to 4 times 2026's. The probes ran faster on 2024, and r3 does not grow there.
+  - Expect 1 h 30 to 3 h for session 1 and 30 to 60 min for `carry-closed`. A job the harness sees still working is
+    not hung.
+- **Readings that may differ.**
+  - The read-only open's warning and flag in `carry-closed`: on 2024 the probe read warning 32 and marked straight
+    after.
+  - `swConstrainedStatus` values on suppressed components.
+  - Any FlipDimension.
+  - The instance numbers in RangeBox_r2.
+  - Each is logged. The checks key components by old name, as fixed after the first 2026 run.
