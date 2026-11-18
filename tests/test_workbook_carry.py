@@ -1099,6 +1099,77 @@ def test_once_pattern_instances_are_read_the_result_says_each_and_the_standing_l
     assert ui_text.CARRY_STANDING in _status(_done(work))          # the version not known: the clause stays
 
 
+# -- the review of the second 2026 run, its two must-fixes (W9D-DEMONSTRATION-REVIEW.md, 7996089, §7) --------------
+
+def test_a_component_renumbered_by_the_insert_is_said_with_its_old_name_wherever_the_result_names_it():
+    """Must-fix 1 (log 1:1397): the result named the old Sprocket-9 (its UserAxis9 not made again) and, two sentences
+    on, the new Sprocket-9, which is the old Sprocket-8, by one name. Each carried component a sentence names is said
+    as the insert clause says it, its old name beside its new where they differ."""
+    work = _work(components=("Housing-1", "Sprocket-8", "Sprocket-9", "Drive-1"), mates=3)
+    work.components[3] = replace(work.components[3], kind="assembly", path="C:\\Parts\\Drive.SLDASM")
+    fell = swbuild.CarryFallback(("Housing-1", "Sprocket-9"), ("UserLock8a",), ("UserAngle8b",), swbuild.FELL_TIE,
+                                 ("Sun", "H"))
+    clash = swbuild.Clash(("Sprocket-9", "gear6-1"), ("Sprocket-9", "RangeSlv"), 12.3)
+    done = _done(work, inserted=[("Housing-1", "Housing-1"), ("Sprocket-8", "Sprocket-9"),
+                                 ("Sprocket-9", "Sprocket-11"), ("Drive-1", "Drive-2")],
+                 fixed=[fell], moved=[("Sprocket-11", "L", 2.04)], clashes=[("L", clash)])
+    said = _status(done, anchors={"Sprocket-9": "Sun"})
+    for sentence in ("Housing-1 and Sprocket-9 (was Sprocket-8) are fixed where they stood in RangeBox_r2: with your "
+                     "UserLock8a made again SolidWorks reads Sun unable to turn, so it was not kept; UserAngle8b "
+                     "beside it was.",
+                     "SolidWorks moved Sprocket-11 (was Sprocket-9) off where it stood against Sun when your mates "
+                     "were made again: 2.0 mm in L.",
+                     "In mode L, your Sprocket-9 (was Sprocket-8) interferes with RangeSlv (12.3 mm³).",
+                     "Your sub-assembly Drive-2 (was Drive-1) comes over rigid: set it flexible in SolidWorks again "
+                     "if it was."):
+        assert sentence in said, (sentence, said)
+    assert "Sprocket-9 are fixed" not in said and "moved Sprocket-11 off" not in said, said
+    # A component SolidWorks kept by its name is said by it alone, as before.
+    same = _done(work, inserted=[(c.name, c.name) for c in work.components], fixed=[fell])
+    assert ("Housing-1 and Sprocket-9 are fixed where they stood in RangeBox_r2: with your UserLock8a made again "
+            "SolidWorks reads Sun unable to turn, so it was not kept; UserAngle8b beside it was.") in _status(same)
+
+
+BEHIND_PATTERN = ("Assembly features, display states and appearances stay behind; pattern instances come over as "
+                  "components of their own.")
+
+
+def test_the_standing_list_says_sub_assemblies_come_over_rigid_only_where_one_can_be_carried(monkeypatch):
+    """Must-fix 2: with CARRY_INSERTS_A_SUBASSEMBLY unset the result named Drive-1 as not carried and then said
+    *sub-assemblies come over rigid*. The clause is said only where that finding is True on the SolidWorks the job ran
+    on and no sub-assembly is named as not carried."""
+    monkeypatch.setattr(findings, "CARRY_INSERTS_A_SUBASSEMBLY_ON_2026", None)
+    work = _work(components=("Sprocket-1", "Drive-1"), mates=1)
+    work.components[1] = replace(work.components[1], kind="assembly", path="C:\\Parts\\Drive.SLDASM")
+    left = swbuild.CarryNamed("Drive-1", "component", swbuild.WHY_UNMEASURED,
+                              ("sub-assembly", "CARRY_INSERTS_A_SUBASSEMBLY_ON_2026", "2026"))
+    not_carried = _done(work, inserted=[("Sprocket-1", "Sprocket-1")], named=[left])
+    for revision in ((34, 1, 1), ()):
+        said = _status(not_carried, revision=revision)
+        assert "Drive-1 is not carried" in said and BEHIND_PATTERN in said, said
+        assert "come over rigid" not in said, said
+    monkeypatch.setattr(findings, "CARRY_INSERTS_A_SUBASSEMBLY_ON_2026", True)
+    assert "come over rigid" not in _status(not_carried, revision=(34, 1, 1))     # one named as not carried
+    assert "come over rigid" not in _status(_done(work), revision=())              # the version not known
+    said = _status(_done(work), revision=(34, 1, 1))
+    assert ("Assembly features, display states and appearances stay behind; sub-assemblies come over rigid, pattern "
+            "instances as components of their own.") in said, said
+    monkeypatch.setattr(findings, "PATTERN_INSTANCE_READ_ON_2026", True)
+    assert ("Assembly features, display states and appearances stay behind; sub-assemblies come over rigid. "
+            in _status(_done(work), revision=(34, 1, 1)))
+
+
+def test_the_questions_standing_list_follows_the_sub_assembly_finding_on_the_version_on_record(desk, carrying,
+                                                                                               monkeypatch):
+    """Must-fix 2, in the question likewise."""
+    monkeypatch.setattr(findings, "CARRY_INSERTS_A_SUBASSEMBLY_ON_2026", None)
+    said = _said(desk)
+    assert BEHIND_PATTERN in said and "come over rigid" not in said, said
+    monkeypatch.setattr(findings, "CARRY_INSERTS_A_SUBASSEMBLY_ON_2026", True)
+    assert ("Assembly features, display states and appearances stay behind; sub-assemblies come over rigid, pattern "
+            "instances as components of their own.") in _said(desk)
+
+
 # -- the re-check of the fix round (W9D-REVIEW-B.md, 56ca105) -------------------------------------------------------
 
 def test_a_component_a_carried_mate_holds_is_not_said_to_stand_still_in_every_mode():

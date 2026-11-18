@@ -5124,9 +5124,15 @@ def in_place_after(update, result) -> List[str]:
 # The kinds of mate a carry makes again (§2.5), as the sentences and CARRY_REMAKE_KINDS word them.
 CARRY_KIND_WORDS = ("coincident", "concentric", "parallel", "perpendicular", "tangent", "distance", "angle",
                     "limit distance", "limit angle", "lock", "gear")
-CARRY_STANDING = ("Assembly features, display states and appearances stay behind; sub-assemblies come over rigid, "
-                  "pattern instances as components of their own.")
-CARRY_STANDING_NO_PATTERN = "Assembly features, display states and appearances stay behind; sub-assemblies come over rigid."
+# The standing list (§9.1, §9.2). The sub-assembly clause only where the SolidWorks known has
+# CARRY_INSERTS_A_SUBASSEMBLY True and no sub-assembly is named as not carried (the review of the second 2026 run,
+# must-fix 2): while that finding is unset a sub-assembly of yours is named and left, so it comes over no way at all.
+_CARRY_BEHIND = "Assembly features, display states and appearances stay behind"
+CARRY_STANDING = f"{_CARRY_BEHIND}; pattern instances come over as components of their own."
+CARRY_STANDING_NO_PATTERN = f"{_CARRY_BEHIND}."
+CARRY_STANDING_RIGID = (f"{_CARRY_BEHIND}; sub-assemblies come over rigid, pattern instances as components of their "
+                        "own.")
+CARRY_STANDING_RIGID_NO_PATTERN = f"{_CARRY_BEHIND}; sub-assemblies come over rigid."
 CARRY_IN_CONTEXT = "If a part of yours was made in context of {old}, it still refers to that assembly's parts."
 _ENTITY_WORDS = {"face": "a face", "edge": "an edge", "vertex": "a vertex", "origin": "an origin",
                  "feature": "a feature", "plane": "a base plane", "whole": "the whole", "unread": "an entity"}
@@ -5616,7 +5622,9 @@ def carry_sentence(fore, again) -> str:
             texts.append(f"Each component takes, in every mode of {name}, its state in the mode {old} shows; its other "
                          "states cannot be read without changing it.")
         texts += _modes_said(fore, name, old)
-        texts.append(_standing())
+        # Must-fix 2: a sub-assembly the question names as not carried keeps the rigid clause out.
+        subs_left = plan is not None and any(c.kind == "assembly" and c.name not in comps for c in entry.components)
+        texts.append(_standing(fore.year, subassembly_left=subs_left))
     return " ".join([t for t in texts if t] + _findings_sentence(refs, fore.year))
 
 
@@ -5812,16 +5820,33 @@ def _modes_words(gone: Sequence[str], added: Sequence[str], first: str, name: st
     return out
 
 
-def _standing(revision: Sequence[int] = ()) -> str:
-    """The standing list of what is not carried as it was. In the result the pattern clause leaves it once
-    ``PATTERN_INSTANCE_READ`` is set on the SolidWorks the job ran on, and the per-instance sentence says it (D12); the
-    question cannot know which component is an instance, so it keeps the clause."""
-    if revision:
-        from . import findings, swcom
-        year = swcom.release_year(int(revision[0]))
-        if getattr(findings, f"PATTERN_INSTANCE_READ_ON_{year}", None) is True:
-            return CARRY_STANDING_NO_PATTERN
-    return CARRY_STANDING
+def _standing(year: Optional[str] = None, pattern: bool = True, subassembly_left: bool = False) -> str:
+    """The standing list of what is not carried as it was, on the SolidWorks ``year`` (None or ``"?"``: not known).
+    ``pattern`` False drops the pattern clause: the result does once ``PATTERN_INSTANCE_READ`` is set on the SolidWorks
+    the job ran on, and the per-instance sentence says it (D12); the question cannot know which component is an
+    instance, so it keeps the clause. *Sub-assemblies come over rigid* is said only where that SolidWorks has
+    ``CARRY_INSERTS_A_SUBASSEMBLY`` True and no sub-assembly is named as not carried (``subassembly_left``): the review
+    of the second 2026 run, must-fix 2, found it said beside *Drive-1 is not carried*."""
+    from . import findings
+    rigid = (year not in (None, "", "?") and not subassembly_left
+             and getattr(findings, f"CARRY_INSERTS_A_SUBASSEMBLY_ON_{year}", None) is True)
+    if rigid:
+        return CARRY_STANDING_RIGID if pattern else CARRY_STANDING_RIGID_NO_PATTERN
+    return CARRY_STANDING if pattern else CARRY_STANDING_NO_PATTERN
+
+
+def _pattern_read(year: Optional[str]) -> bool:
+    """``PATTERN_INSTANCE_READ`` set True on the SolidWorks ``year`` (the result's per-instance sentence, D12)."""
+    from . import findings
+    return year is not None and getattr(findings, f"PATTERN_INSTANCE_READ_ON_{year}", None) is True
+
+
+def _carried_as(new: str, old_of: Mapping[str, str]) -> str:
+    """A carried component by its name in the new revision, its old name beside it where SolidWorks renumbered it
+    (*Sprocket-9 (was Sprocket-8)*), as the insert clause names it: the review of the second 2026 run, must-fix 1,
+    found one result calling the old Sprocket-9 and the new Sprocket-9 (the old Sprocket-8) by one name."""
+    old = old_of.get(new, new) or new
+    return new if old == new else f"{new} (was {old})"
 
 
 def _split_stop(done) -> Tuple[str, str]:
@@ -5942,7 +5967,7 @@ def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[
     texts.append(_features_left_sentence(stays, name, old, why_new, past=True))
     for fallback in done.fixed:
         texts.append(_fallback_sentence(fallback, name, old, work.active, getattr(again, "modes_plan", None),
-                                        kept_of))
+                                        kept_of, old_of))
     for mate, code in done.same_error:
         # The re-check of 11a63ab, item 2: each name beside the assembly it is in.
         kept = kept_of.get(mate, mate) or mate
@@ -5954,7 +5979,8 @@ def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[
         carried = [n for n in names if n in new_of.values()]
         others = [n for n in names if n not in carried]
         if carried:
-            texts.append(f"{'In mode ' + mode + ', y' if mode else 'Y'}our {_and(carried)} "
+            said = _and(_carried_as(n, old_of) for n in carried)
+            texts.append(f"{'In mode ' + mode + ', y' if mode else 'Y'}our {said} "
                          f"{'interferes' if len(carried) == 1 else 'interfere'} with {_and(others) or 'each other'} "
                          f"({clash.volume:.1f} mm³).")
     modes = [s.name for s in again.modes_plan.steps] if getattr(again, "modes_plan", None) is not None else []
@@ -5981,7 +6007,8 @@ def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[
     for o, n in done.inserted:
         component = next((c for c in work.components if c.name == o), None)
         if component is not None and component.kind == "assembly":
-            texts.append(f"Your sub-assembly {n} comes over rigid: set it flexible in SolidWorks again if it was.")
+            texts.append(f"Your sub-assembly {_carried_as(n, old_of)} comes over rigid: set it flexible in SolidWorks "
+                         "again if it was.")
     if done.marked_user:
         # The fact CARRY_INSERT_MARKS_USER_DOCUMENTS (§8): True, the insert alone marks them, so nothing in them is
         # said to have changed; otherwise only what SolidWorks reads is said.
@@ -5998,9 +6025,14 @@ def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[
         texts.append(_sentence(stop) + skipped + (f" What was carried before it is in {name}, unsaved, and {name} as "
                                                   "built is saved." if done.unsaved else
                                                   f" Nothing of yours was carried, and {name} as built is saved."))
-    texts.append(_standing(revision))
-    if _standing(revision) == CARRY_STANDING_NO_PATTERN:
-        instances = [new_of[c.name] for c in work.components if c.name in new_of and c.pattern_instance]
+    from . import swcom
+    year = str(swcom.release_year(int(revision[0]))) if revision else None
+    pattern = not _pattern_read(year)
+    subs_left = any(c.kind == "assembly" and c.name not in new_of for c in work.components)
+    texts.append(_standing(year, pattern=pattern, subassembly_left=subs_left))
+    if not pattern:
+        instances = [_carried_as(new_of[c.name], old_of) for c in work.components
+                     if c.name in new_of and c.pattern_instance]
         if instances:
             one = len(instances) == 1
             own = "a component of its own" if one else "components of their own"
@@ -6081,7 +6113,8 @@ def _moved_sentences(moved, old_of: Mapping[str, str], anchors: Mapping[str, str
             where = f"{next(iter(sizes))} mm" + (f" in {_and(modes)}" if modes else "")
         else:
             where = _and(f"{mm:.1f} mm in {m}" if m else f"{mm:.1f} mm" for m, mm in items)
-        out.append(f"SolidWorks moved {component} off where it stood{against} when your mates were made again: "
+        out.append(f"SolidWorks moved {_carried_as(component, old_of)} off where it stood{against} when your mates "
+                   "were made again: "
                    f"{where}.")
     return out
 
@@ -6094,13 +6127,15 @@ def _kept_as(old_name: str, kept_of: Mapping[str, str]) -> str:
 
 
 def _fallback_sentence(fallback, name: str, old: str, active: str, modes_plan=None,
-                       kept_of: Optional[Mapping[str, str]] = None) -> str:
+                       kept_of: Optional[Mapping[str, str]] = None, old_of: Optional[Mapping[str, str]] = None) -> str:
     """A cluster that fell back (§6, §9.2): *Sprocket-8 is fixed where it stood in RangeBox_r2: with your Lock8 and
     Lock9 made again SolidWorks reads Sun unable to turn, so those two were not kept; Coincident7 beside them was.*
-    A mate kept is named as it is in the new revision (``kept_of``, old -> kept); one deleted by its old name."""
+    A mate kept is named as it is in the new revision (``kept_of``, old -> kept); one deleted by its old name. Each
+    component fixed is named by its new name with its old beside it where they differ (``old_of``, new -> old;
+    must-fix 1 of the review of the second 2026 run): *Sprocket-9 (was Sprocket-8) is fixed where it stood …*."""
     from . import swbuild as sb
     kept_of = kept_of or {}
-    comps = list(fallback.components)
+    comps = [_carried_as(c, old_of or {}) for c in fallback.components]
     deleted = list(fallback.deleted)
     s = [str(x) for x in fallback.subjects] + ["", "", "", ""]
     one = len(comps) == 1

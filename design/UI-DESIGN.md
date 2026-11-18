@@ -1503,7 +1503,7 @@ part replaces (its Flank changed); your Groove comes with Sleeve_m1.25_N17.
 RangeBox_r2 holds what it carries unsaved. If RangeBox.SLDASM is closed, open
 it first unless this SolidWorks last saved it and its files and nothing of
 yours is open. Assembly features, display states and appearances stay behind;
-sub-assemblies come over rigid, pattern instances as components of their own.*
+pattern instances come over as components of their own.*
 Then, as they apply: what is not carried, a sentence per kind of reason (*Gear
 Generator has not yet been shown to make concentric mates again in a new
 revision on SolidWorks 2024, so Concentric5 and Concentric8 are not made
@@ -1525,7 +1525,12 @@ assembly closed when you press** (the window cannot know, so it is said as
 in SolidWorks first*; once they are, the conditions it is opened under (its file
 versions are read closed, without opening it); the states clause, only where the
 per-mode states cannot be read unshown (2024 until its run); a mode renamed or
-removed; the standing list; and *(Not yet shown on SolidWorks 2026: findings.…)*.
+removed; the standing list (*sub-assemblies come over rigid* in it only where
+`CARRY_INSERTS_A_SUBASSEMBLY` is True on that SolidWorks and no sub-assembly is
+named as not carried: *…stay behind; sub-assemblies come over rigid, pattern
+instances as components of their own.*; while that finding is unset a
+sub-assembly is named and left, the review of the second 2026 run's must-fix 2);
+and *(Not yet shown on SolidWorks 2026: findings.…)*.
 Foreseeing nothing carried, it asks no save and says no closed clause. With
 `CARRY_INSERTS` unset on that SolidWorks (today) the question says W9a's clause
 led by that finding; with no version on record, W9c's mixed form.
@@ -1542,11 +1547,17 @@ in Gear_m1.25_N29, which Sun's new part replaces because its Flank changed
 (*Sprocket-8 is fixed where it stood in RangeBox_r2: with your Lock8 and Lock9
 made again SolidWorks reads Sun unable to turn, so those two were not kept;
 Coincident7 beside them was.*), a mate in the error it had before, a component
-SolidWorks moved (its modes grouped), a clash naming a carried component, where
+SolidWorks moved (its modes grouped), a clash naming a carried component (each
+carried component in these, and in the sub-assembly and pattern-instance
+sentences, by its new name with its old beside it where SolidWorks renumbered
+it, *Housing-1 and Sprocket-9 (was Sprocket-8) are fixed where they stood in
+RangeBox_r2: …*, as the first clause names it, so one name never means two
+components in one result: the review of the second 2026 run's must-fix 1), where
 the components stand and which states were read, a mode gone or new, a
 sub-assembly come over rigid, a part SolidWorks reads changed after the insert,
 a stop (the worker's own sentence, what it did not get to, and what was carried
-before it only when something was), the standing list, *If a part of yours was
+before it only when something was), the standing list (the question's rule for
+its sub-assembly clause, on the SolidWorks the job ran on), *If a part of yours was
 made in context of RangeBox.SLDASM, it still refers to that assembly's parts.*,
 and *Save RangeBox_r2 in SolidWorks to keep what was carried.* **With nothing
 carried** — today, every finding unset — the result is W9a's sentence led by the

@@ -593,7 +593,9 @@ in a configured assembly. For a mate remade from a user's definition it is M9's 
   and must not decide; the `^` name is reading/01's rule for a virtual component's name. Unmeasured for a component's
   path read by `_component_path`; `IComponent2.IsVirtual` (a documented get) decides once `VIRTUAL_READ_ON_<year>` is
   set (the probe reads it negative only; no fixture has a virtual component).
-- **Said, not read**: a sub-assembly comes over rigid; display states and appearances set in the assembly are not
+- **Said, not read**: a sub-assembly comes over rigid (in the standing list only where `CARRY_INSERTS_A_SUBASSEMBLY`
+  is True on the version and no sub-assembly is named as not carried; review of the second 2026 run, must-fix 2);
+  display states and appearances set in the assembly are not
   carried; a component pattern is not carried and an instance comes over as a component of its own (D12 †); a part of
   the user's with in-context references to the old assembly's parts still refers to them (M4 unmeasured, said once
   whenever a user part is carried).
@@ -906,6 +908,13 @@ added as they apply, each in the result too:
   record: *Not carried as they are: assembly features of yours (cuts, patterns, sketches, planes), display states and
   appearances; a sub-assembly comes over rigid, and a component of a pattern of yours comes over as a component of its
   own.* (the pattern clause leaves this list for the per-instance sentence once `PATTERN_INSTANCE_READ` is set, D12 †).
+  *As built after the review of the second 2026 run (must-fix 2):* the app's words are *Assembly features, display
+  states and appearances stay behind; pattern instances come over as components of their own.*, and the clause
+  *sub-assemblies come over rigid* is said in it only where `CARRY_INSERTS_A_SUBASSEMBLY` is True on the version known
+  and no sub-assembly is named as not carried (*…stay behind; sub-assemblies come over rigid, pattern instances as
+  components of their own.*). While that finding is unset a sub-assembly is named and left, so the clause would
+  contradict the sentence beside it (the 2026 runs' fixture holds no sub-assembly; the review drove both sentences
+  together on the fake at `c2d95cc`).
 
 ### 9.2 The result (`carried_status(result, again, old_path)`, after `gearbox_status`, replacing `stayed_behind_status`)
 
@@ -919,7 +928,11 @@ Then, as they apply:
 - the fallback, as the plan words it: *Sprocket-8 is fixed where it stood in RangeBox_r2: with your Lock8 and Lock9
   made again SolidWorks reads Sun unable to turn, so those two were not kept; Coincident7 beside them was.*
   (`FELL_NEW_ERROR`: *… with your Lock3 made again it reads error 46 in L, which it did not in H, the mode
-  RangeBox.SLDASM showed, …*; `FELL_OVER_DEFINED`: *… your Lock3 made again over-defines them, …*);
+  RangeBox.SLDASM showed, …*; `FELL_OVER_DEFINED`: *… your Lock3 made again over-defines them, …*). Each component
+  fixed is named by its name in the new revision with its old beside it where SolidWorks renumbered it, as the first
+  clause names it: *Housing-1 and Sprocket-9 (was Sprocket-8) are fixed where they stood in RangeBox_r2: …* (must-fix 1
+  of the review of the second 2026 run: log 1:1397 called the old Sprocket-9 and the new one, the old Sprocket-8, by
+  one name). The moved, clash, sub-assembly and pattern-instance sentences name a carried component the same way;
 - *Your UserDist4 was in error in RangeBox.SLDASM and is in RangeBox_r2 too, as it was.*;
 - *In L, SolidWorks moved Sprocket-4 2.0 mm from where it stood against Sun when your mates were made again.*;
 - a clash: *In mode L, your Sprocket-2 interferes with RangeSlv (12.3 mm³).*;
