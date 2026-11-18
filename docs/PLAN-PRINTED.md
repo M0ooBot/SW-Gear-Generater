@@ -731,69 +731,492 @@ estimate, not a measurement: about 20 minutes on 2026 and 30 on 2024.
 8. **New:** D11 answered (B) by the coordinating session.
 
 
-## 3. Stage F2 — the file for the slicer, and the first prints
+## 3. Stage F2 — the span over k teeth, the file for the slicer, and the first prints
 
-### 3.0 First, a measurement to calibrate by
+Read against the code at `61460b9` on branch `printed`, which holds F1 closed and W9 merged (`138d646`). Lines below
+are as of that commit.
+
+### 3.0 First, the span over k teeth
 
 F2's first step, before any print is measured (moved from §2.6 by the coordinator's ruling 1 on F1's review,
-2026-11-18). The Derived panel of a printed spur or helical gear gives its **span over k teeth** (the base tangent
-length, what calipers across k teeth read), for the gear as drawn, backlash included. A printed gear measures more
-than that by twice what the printer adds to a flank. This is what §3.2 uses; it needs no rig. It is pure code and
-the card's text, tested against the fake, with a machined gear's card held by `test_printed_rule.py`'s pins.
+2026-11-18). It is pure code and the form's text, and needs no SolidWorks.
 
-### 3.1 Export
+**What it is.** The *span over k teeth* is the base tangent length: the distance between the two flat caliper jaws
+laid across k teeth, each jaw on the outside flank of an end tooth. On an involute gear the jaws' common normal is
+tangent to the base circle, so the reading is the same wherever the jaws touch the involute. That makes it the one
+tooth dimension a person can measure well with ordinary calipers.
 
-**Export STEP** goes on the form, for the active built gear, and in the Workbook window. In the window it exports
-every distinct part of the built gearbox into `print/` beside it, with a text list: each part, how many to print,
-and the settings of *Sources* (flat on the bed, five walls, 35 % infill or more, 0.2 mm layers, first-layer
-compensation 0.15 to 0.2 mm, the seam off the tooth roots, grease). The app keeps its rule: it never writes over a
-file, and an export that exists is named `_r2`.
+**The maths.** For an external involute gear, the app's own sizes are enough. In the transverse plane:
 
-What W9 adds to the window's side of it:
+    W_t = (k − 1) · p_bt + s_bt
+    p_bt = π · d · cos α_t / z          (the base pitch)
+    s_bt = d_b · (s_t / d + inv α_t)    (the tooth's thickness on the base circle)
+    inv α = tan α − α
 
-- *Every distinct part* is the record's current revision (`store.LinkRecord.current_parts`, `store.py:1015`),
-  hubs and sleeves among them. Carrier parts (axes and planes only) and the layout are not exported, and neither
-  are the user's own components.
-- A gear part holding a feature of the user's (a keyway) is exported as it stands in its file, feature and all;
-  the list says so.
-- **The export refuses while the record marks a part unsaved or mismatched** (W9a's marks, `update._mark`,
-  `workbook/update.py:676-683`), naming each part. A STEP written from a document whose changes are not saved is
-  not the file on disk, and the record does not vouch for it.
-- The button sits in the footer's button row, which K12 keeps whole on a short screen (`design/UI-DESIGN.md:406-420`).
+Here `s_t` is the drawn tooth's thickness at the pitch circle, after backlash and shift: the derived gear's `s`
+(`spur.SpurDerived.s`, `gears/spur.py:178`; a helical gear's `section.s`, which is transverse). For a helical gear
+the caliper reads square to the teeth:
 
-`IModelDocExtension.SaveAs3` to a `.step` name is a call the app has not made. It writes a file and may raise a
-dialog, so by the rule it is **probed first**. Today `swcom.Session.save_as` (`swcom.py:1358-1368`) calls it with
-`findings.SAVE_AS_SILENT` to save a part under its own name. The probe uses a scratch part and checks two things:
-that the call returns without a dialog, and that it leaves the part's own path and modified mark as they were (a
-save under a new name renames a document; an export must not).
+    W_n = W_t · cos β_b,   sin β_b = sin β · cos α_n
 
-On SolidWorks 2024, W9a's ruling lets a What's Wrong box come and go by itself during an Update. That ruling is not
-assumed for an export: the probe also exports a part that holds a feature in error, and any box it raises is the
-STOP until it is ruled on.
+The same in closed form, which the tests hold the first form to:
 
-The file is checked without SolidWorks, by counting the solids in its text, since opening a STEP in SolidWorks can
-raise import dialogs of its own. There is one short run on 2026, and the same on 2024.
+    W_n = m_n cos α_n [ (k − 0.5) π + z inv α_t ] + 2 x m_n sin α_n − j_n cos α_n
 
-### 3.2 The user prints and measures
+with `j_n` the backlash the gear was drawn with (0.3 mm printed from module 1 up). Both are textbook relations: the
+base tangent length of ISO 21771:2007 (its section on the base tangent length) and KHK's *Calculation of gear
+dimensions*, span measurement. Before code, package A checks both forms against one worked example printed in one
+of those two sources, quoted in its note with the page. Until then the figures below are this plan's own
+calculation, from the app's derived gears at `61460b9`, in which the two forms agree to 1e-4 mm.
 
-No rig, and no gear has to fit a shaft:
+**Which k.** The contact points sit at radius `r_c = √(r_b² + (W_t / 2)²)`. The panel takes the k whose `r_c` is
+nearest the radius `r + x · m_n`, the middle of the working flank. This is the usual rule `k ≈ z α / 180° + 0.5`
+for an unshifted spur gear, and it carries over to shifted and helical gears. For a helical gear the panel also says
+the face is too narrow to measure when `b < W_n · sin β_b + 2 mm`; the jaws must lie whole on the flanks.
 
-1. **One spur gear**, module 1.5, 20 teeth, face 8, no bore, at the default backlash. Calipers across
-   the teeth the panel names; the reading less the panel's span is twice what this printer adds to a
-   flank. D3's 0.3 mm assumes about 0.1 mm a flank and leaves the rest as running play.
-2. **A bore coupon**: a plain disc with the user's shaft size cut at + 0, + 0.1, + 0.2 and + 0.3 mm
-   (four typed bores; the app's own gears with few teeth will do). The one the shaft goes into as wanted
-   is F3's bore allowance.
-3. **Then a pair** on the user's own shafts, if they have a place to run one: the smallest backlash
-   that turns through whole turns under light load without a tight spot, before and after a short run.
-   A centre distance out by 0.1 mm moves the play by 0.07 mm, so this confirms the first measurement; it
-   does not replace it.
+**Which gears show it.** The span is shown for a printed external spur, helical or herringbone gear, a printed dog
+and a printed hub (each an external spur gear by `clutch._as_spur`). It is not shown for a ring, a sleeve or a bevel
+gear: a ring's span is taken between balls, not jaws, and a bevel gear's tooth is not of one size along its face. A
+**machined gear's Derived panel is unchanged**, as the rule asks, and `tests/test_printed_rule.py` holds it.
 
-**Done when:** the Derived panel gives a printed spur or helical gear's span over k teeth (§3.0), first; the probe's
-findings are in `findings.py`; a gear built by the app exports; the STEP
-opens in the user's slicer (the user's step); the measurements of 1 and 2 are written down here and
-D3's number and F3's allowance are set from them; reviewed. **Cost:** two short SolidWorks runs; two
-agent runs and the review.
+**Where the user sees it.**
+
+- *The form's Derived panel* gains one row, *Span over 3 teeth* with `11.209`, after *Tooth at pitch*
+  (`ui_text.derived_rows`, `ui_text.py:118-180`). Under it goes an entry, **Measured**, mm, blank by default. When
+  the user types their calipers' reading, the row under it says *your printer adds 0.041 mm a flank* (the reading
+  less the span, halved). It also says the backlash that would leave the same running play as D3 assumes (§3.2,
+  step 6). The entry is the form's only, and is not saved.
+- *The print list* of §3.1 gives each exported part's k and span, so each print can be measured.
+- *The explainer card* for the new row says what the span is, how to hold the calipers, and that it is the gear as
+  drawn, backlash included.
+
+**Figures the tests owe** (this plan's calculation at `61460b9`; the test holds each to 1e-4 mm, in both forms):
+
+| Gear | Backlash (mm) | k | W (mm) | Contact radius / pitch radius |
+|---|---|---|---|---|
+| spur m 1.5, z 20, printed | 0.3 | 3 | 11.2088 | 15.169 / 15.0 |
+| spur m 1.5, z 20, machined (not shown; the formula only) | 0.45 | 3 | 11.0678 | 15.143 / 15.0 |
+| spur m 1, z 12, printed | 0.3 | 2 | 4.3144 | 6.037 / 6.0 |
+| spur m 2, z 30, printed | 0.3 | 4 | 21.2233 | 30.122 / 30.0 |
+| spur m 1.5, z 15, x +0.3, printed | 0.3 | 3 | 11.4115 | 12.013 / 11.25 (+0.45) |
+| spur m 1.25, z 29 (RangeBox's Sun), printed | 0.3 | 4 | 13.1414 | 18.255 / 18.125 |
+| spur m 1.25, z 13 (its Planet), printed | 0.3 | 2 | 5.4809 | 8.112 / 8.125 |
+| helical m_n 2, z 20, β 15°, printed | 0.3 | 3 | 15.0972 (W_t 15.5645) | |
+| helical m_n 1.5, z 25, β 20°, printed | 0.3 | 3 | 11.4156 | |
+
+Beside these, the tests owe:
+
+- the row on a printed gear and not on a machined one, a ring, a sleeve or a bevel gear;
+- the narrow-face sentence on a helical gear whose face is under `W_n sin β_b + 2` mm;
+- the Measured row's words for a reading above, at and below the span;
+- the explainer.
+
+### 3.1 Export: a probe first, then the files for the slicer
+
+**The name.** The Workbook window already has **Export** and **Export as…**, which write fixes and the Results
+sheet into the workbook (`workbook_gui.py:518-520`). So the new button is **Print files…** on the form and in the
+window, and its sentences say *STEP file*. That is an assumed answer (E5 below).
+
+#### 3.1.1 What is already known
+
+- **The route is in the user's macro database, on SolidWorks 2026 only.** `/home/m0obot/SW-Macro-Database`,
+  `entries/files/04-export-a-body-to-step.md` and `API-LEDGER.md:190`:
+  `IModelDocExtension.SaveAs(path.STEP, 0, 1 | 2, null, out errors, out warnings)`. That is the current version,
+  options *silent* (1) and *save as copy* (2), the format taken from the extension.
+  - It was verified on SolidWorks 2026 by the Airfoil Converter (2026-09-16), and its STEP files were read back and
+    measured. *Copy* is what keeps the open document under its own name. Without it a save-as renames the
+    document (`documents/02`).
+  - Not seen there: non-zero `errors` or `warnings`; the AP version and the export options (left at the user's
+    *Tools > Options > Export*); the unit the file declares; and any run on SolidWorks 2024.
+- **`SaveAs3` overwrites an existing file without a word** (the macro database's `GOTCHAS.md` §34, and this repo's
+  probe `save_as`, `src/gear_generator/probe/p3_files.py`). The app's `Session.save_as` refuses an existing path
+  itself (`swcom.py:1358-1375`). An export must do the same.
+- **Opening a STEP file in SolidWorks is its own trap**: `OpenDoc6` fails on STEP and `LoadFile4` is the import
+  route (`GOTCHAS.md` §20). This is one more reason the app never reopens what it wrote.
+- **This repo has never written a file other than a part, an assembly and its own records.** `findings.py` has
+  `SAVE_AS_SILENT = 1` (`:58`) and nothing for a copy or a foreign format.
+
+So by the house rule the export is **probed first**, on both versions. It is a call the app has not made, it
+writes a file, and it could raise a dialog or rename a document.
+
+#### 3.1.2 The probe, call by call
+
+`probe/f2_probes.py`, written in the manner of `probe/w9d_probes.py`. It uses W9a's harness: attach by `--pid`,
+check the version, the dialog watch (which logs a window and never answers it), keep-awake, the run's own APPDATA,
+JSON after every section, and `--self-check` for its pure judgements. Its note is
+`docs/notes-printed/F2-PROBES.md`.
+
+- **Scratch only.** Every part is built in the run's folder by the app's own build route: one printed spur gear
+  (m 1.5, z 20, face 8, no bore) and one printed helical gear (m_n 2, z 20, β 15°). Each is saved, so the reads
+  start unmarked.
+- **Nothing of the user's is touched.** The run records the open titles first and closes only what it opened,
+  unsaved.
+
+Each step reads `GetPathName`, `GetTitle` and `GetSaveFlag` before and after, and the dialog watch runs across it.
+
+1. **The constants.** It reads `swSaveAsOptions_e`'s `swSaveAsOptions_Silent` and `swSaveAsOptions_Copy` from
+   `swconst.tlb`, as W9d's probes read their enums. *Sets* `findings.SAVE_AS_COPY` (expected 2) beside
+   `SAVE_AS_SILENT`.
+2. **The export.** `IModelDocExtension.SaveAs(<run>\print\Gear.step, 0, silent | copy, None, out, out)` on the
+   saved spur part, active.
+   - Asks whether it returns True with `errors` and `warnings` 0, whether the file is on disk and not empty, and
+     whether no window appears within the watch.
+   - Asks whether the path, the title and the save flag are all unchanged.
+   - Logs the time it takes.
+   - *Sets* `STEP_EXPORT_ON_<year>` True when every answer is as expected, with its log lines. A rename, a marked
+     flag, a dialog, a non-zero code or no file each leave it None, and the log says which.
+3. **The file, read as text.** It checks:
+   - that the file opens `ISO-10303-21;` and ends `END-ISO-10303-21;`;
+   - its `FILE_SCHEMA` (the AP the user's settings write);
+   - one `MANIFOLD_SOLID_BREP`, at least one `CLOSED_SHELL` and no `OPEN_SHELL`;
+   - the length unit (`SI_UNIT(.MILLI.,.METRE.)` expected).
+
+   These are facts for the note. They *set* `STEP_FILE_CHECK`, the strings the app's check of §3.1.4 looks for,
+   from what this version wrote. The probe's self-check runs on made-up text, not a SolidWorks file.
+4. **The helical part**, the same as 2 and 3: its flanks are spline surfaces, so the file differs in kind, not in
+   count.
+5. **Onto an existing path.** A second export to the same file. This is a fact only, expected to overwrite as
+   `SaveAs3` does; the app refuses an existing path before asking either way.
+6. **A part that is not active.** It opens the spur part by the app's own route (`Session.open_document`,
+   `swcom.py:3541`), makes the helical part active, and exports the spur by its own document object.
+   - *Sets* `STEP_EXPORT_NEEDS_ACTIVE_ON_<year>`: False if the file is right and nothing changed, else True, in
+     which case the app activates each part first, as Update does.
+7. **A modified part.** One global changed and rebuilt, the part not saved, then exported. It asks whether the file
+   holds the changed solid (its text differs from step 2's in the B-rep, a fact) and whether the save flag stays
+   set and the path unchanged.
+   - This is the evidence for refusing unsaved parts. The app refuses them by ruling (open point 6) whatever this
+     shows.
+8. **A part with a feature in error.** On a copy of the spur part, a cut sketch is dimensioned so the cut fails, the
+   part is rebuilt into error, and it is exported.
+   - On 2024, a What's Wrong box is expected from W9a's measurements, and the watch only logs it. A box that
+     outlives the job is the STOP, as every W9 run had it.
+   - It records the return, the codes and whether a file is written. These are facts only: the app refuses a part
+     with any feature in error before exporting (§3.1.3), so nothing in the app rests on this answer. It is asked
+     only to know the risk.
+9. **Closing.** Every probe document is closed unsaved under the watch, and the open titles are compared with the
+   start.
+
+**Which answer sets which finding** (`findings.py`, each None until its run is reviewed, with its log lines in the
+comment as every finding has):
+
+| Finding | Set from | While it is None |
+|---|---|---|
+| `SAVE_AS_COPY` | step 1 | The export is not offered on any version. Its refusal says the call is not measured. |
+| `STEP_EXPORT_ON_2026`, `STEP_EXPORT_ON_2024` | step 2, and step 4 the same | **Print files…** refuses on that version, by name: *Print files waits until writing a STEP file is measured on SolidWorks 2024 (32.5.0); the parts are untouched.* The button is shown and enabled, as other gated presses are. |
+| `STEP_EXPORT_NEEDS_ACTIVE_ON_<year>` | step 6 | The app activates each part before exporting it, the cautious route. |
+| `STEP_FILE_CHECK` | step 3 | The app checks the frame and the solid count only: header, end, one `MANIFOLD_SOLID_BREP`, no `OPEN_SHELL`. |
+
+**On SolidWorks 2026 and 2024.**
+
+- *2026:* it is run on this laptop's 34.1.1, about 10 minutes for the probe. SolidWorks 2026 is where the route was
+  verified before, by another program; this measures it under the app's own session and build.
+- *2024:* it is run on 32.5.0, about 15 minutes. Step 8's What's Wrong is expected there and logged under W9a's
+  rule. Any other window is the STOP.
+- The two runs set each version's finding separately, as W9c's gates were set.
+
+#### 3.1.3 The export on the form and in the Workbook window
+
+**On the form.** **Print files…** sits in the Output panel, beside the build buttons.
+
+- It exports **the part active in SolidWorks**, when it is a part with a readable `.gear.json` beside it: the same
+  condition the SolidWorks bar's snapshot and `_update_target` (`gui.py:1573`) already use to find *this part*.
+- One job on the shared worker reads the part and refuses, with a sentence naming the part, in each of these cases:
+  - **the part is modified in SolidWorks and not saved** (`Session.has_unsaved_changes`, `swcom.py:1161`): *save it
+    first; the STEP file would be what SolidWorks holds, not the file*;
+  - **its globals are not what its record says** (the live `equations()`, `swcom.py:1422`, against the sidecar's
+    `variables`, spaces aside, as K11 compares them): *Backlash in Gear_m1.5_N20_P is 0.25 in SolidWorks and 0.3
+    in its record; make them agree, by Update values or in SolidWorks, then print*;
+  - **any feature in the part is in error** (`GetErrorCode2`, the read Update makes, `swcom.py:900-925`).
+- Then it exports, by the probe's route.
+
+**In the Workbook window.** **Print files…** goes in the footer's button row, before Export. That row is kept whole
+on a short screen by K12 (`design/UI-DESIGN.md:406-420`). It is enabled when the record lists built parts.
+
+- **What is exported.** Every part of the record's current revision (`store.LinkRecord.current_parts`,
+  `store.py:1026`), hubs, dogs and sleeves among them, each once however many rows share it. Not exported: carrier
+  parts (axes and planes only), the layout, the assembly, and the user's own components. A gear part holding a
+  feature of the user's (a keyway) is exported as it stands, feature and all, and the list says so.
+- **When it is refused, before any job** (pure, from the window's planning read), naming each part:
+  - while the record marks a part **unsaved or mismatched** (W9a's marks, `update._mark`,
+    `workbook/update.py:676-683`): *save it in SolidWorks* or *Update SolidWorks first*;
+  - while **the workbook asks something the record does not hold**: Update SolidWorks or Build again… has anything
+    to do for a part, or a gear row has no part yet. The print set would not be the gearbox the workbook describes:
+    *Gear_m1.25_N29_P changes on Update: press Update SolidWorks, then print*;
+  - while the workbook has an error, or the record is not this workbook's.
+- **When it is refused in the job**, per part, before anything is written: modified in SolidWorks, globals not the
+  record's (the K11 read), or a feature in error, as on the form. A refusal of one part refuses the whole print
+  set, and no file is written. Half a set is worse than none.
+
+**Machined parts** are exported too, when the Box says Machined. The list marks each: *machined: its backlash is a
+cutter's, 0.3 × module, not a printer's*. That is an assumed answer (E4).
+
+**The files' names and place.**
+
+- From the form: `print\<part stem>.step`, in a folder `print` beside the part.
+- From the window: `print\<part stem>.step` beside the gearbox's parts (the Box's output folder), and the list
+  `print\<Box name> print list.txt`.
+- The app keeps its rule: it never writes over a file. A name that exists gets `_r2`, `_r3`, as a part does, and
+  the list names the files this press wrote.
+
+**The print list** is plain UTF-8 text, written by the app after every file has passed its check. It holds:
+
+- a head: the gearbox's name, the time, *made by Gear Generator for <the app's version>*, the process and the
+  nozzle;
+- one block per part:
+  - the file, the rows it serves (*Sun, Planet ×3*), and **how many to print**: one per row it serves, times a
+    planet's copies (Shafts' *Copies*);
+  - module, teeth, face, bore, backlash (*0.3, printed default*);
+  - for an external spur or helical part, **span over k teeth** and k, from §3.0;
+  - the user's features left in the part, by name;
+- the settings, from *Sources*, said once:
+  - flat on the bed, on the face the part was built from;
+  - 0.2 mm layers; five walls; 35 % infill or more;
+  - the first layer's squish taken off by the slicer's own setting (0.15 to 0.2 mm);
+  - the slicer's X-Y compensation for holes and contours left at 0, since the app's backlash already allows for
+    the walls;
+  - the seam kept off the tooth roots;
+  - grease on the running teeth.
+
+On the form the list is the same with one block, `print\<part stem> print list.txt`.
+
+#### 3.1.4 Checking a file without opening it
+
+Each file is read back as text, never opened in SolidWorks (§3.1.1). It passes when:
+
+- it begins with `ISO-10303-21;` and ends with `END-ISO-10303-21;`;
+- it holds exactly one `MANIFOLD_SOLID_BREP` and no `OPEN_SHELL`;
+- its length unit and schema are the ones `STEP_FILE_CHECK` records for that version.
+
+A file that fails is left where it is, since it is the app's own file, and the press says which and why. The list
+is then not written.
+
+The solid's volume is not read: that would need a STEP reader the app does not have. The slicer step of §3.2 is
+where the user sees the solid.
+
+### 3.2 What you print and measure (the user's step)
+
+This is the part of F2 only you can do. It tells the app how much your printer adds to a printed tooth, and which
+bore fits your shaft. Nothing needs a rig, and no gear has to run. Allow about two hours of printing and half an
+hour of measuring.
+
+**What you need.**
+
+- Your Bambu printer with a 0.4 mm nozzle, PLA, and Bambu Studio.
+- Calipers that read to 0.01 mm. Digital ones are fine.
+- One length of the shaft you mean to use. Measure its diameter at three places and write down the smallest
+  reading, for example 8.00.
+
+**1. Make the four parts in the app.**
+
+On the form, choose *Single gear*, *Spur*, *Involute*, Process **Printed**, and Nozzle 0.4 (or yours). Then type:
+
+- Module **1.5**, Teeth **20**, Face width **8**, Pressure angle 20, Backlash and Fillet left blank;
+- Bore: your shaft's diameter plus **0.0**, for example 8.0;
+- Name: **Coupon_A**.
+
+Press **Build**, then, with the part open in SolidWorks, **Print files…**. Do the same three more times, changing
+only the Bore and the Name:
+
+| Name | Bore |
+|---|---|
+| Coupon_A | shaft + 0.0 |
+| Coupon_B | shaft + 0.1 |
+| Coupon_C | shaft + 0.2 |
+| Coupon_D | shaft + 0.3 |
+
+Each name has to be typed, because a gear's default name does not include its bore. Keep the Derived panel's
+**Span over 3 teeth** figure. With the printed default it should read 11.209.
+
+If your shaft is over 18 mm, use Module 2 and Teeth 30 instead. The panel then gives its own span (k = 4, 21.223
+mm).
+
+**2. Slice them in Bambu Studio.** Open the four `.step` files from the `print` folder. *Opening them in Bambu
+Studio is itself a check this stage asks of you: say if it refuses them.* Lay each flat on its face. Then set
+these, under the names this plan reads them by. These names are not checked against your version; if one differs,
+the setting described is the one meant:
+
+- **Layer height** 0.2 mm;
+- **Wall loops** 5;
+- **Sparse infill density** 35 %;
+- **Elephant foot compensation** 0.15 mm;
+- **X-Y hole compensation** 0 and **X-Y contour compensation** 0, so that what you measure is the printer and the
+  app, not a correction on top;
+- **Seam position**: Aligned;
+- no brim, no supports;
+- your usual PLA filament profile.
+
+Print all four on one plate and let them cool on the plate.
+
+**3. Measure the span over 3 teeth**, on each of the four gears.
+
+- Lay the calipers' flat outside jaws across three teeth, one jaw on the outer flank of the first tooth and one on
+  the outer flank of the third. The jaws touch the flanks about halfway up the teeth, not the tips and not the
+  roots.
+- Hold the calipers square to the gear's axis, at mid-face, not at the bed face, where the first layer spreads.
+- Rock them gently and take the **smallest steady reading**.
+- Do this at three places round the gear, about a third of a turn apart.
+
+That is twelve readings for the four gears.
+
+**4. Try your shaft in each bore**, and write down for each coupon one of:
+
+- (a) it does not go in;
+- (b) it goes in with a firm push and does not wobble;
+- (c) it slides in by hand with no play you can feel;
+- (d) it is loose.
+
+Then measure each bore with the inside jaws, at two places a quarter turn apart.
+
+**5. Optionally,** measure each gear's outside diameter at three places (the panel says 33.0 for module 1.5, 20
+teeth) and its face width (8.0).
+
+**6. Type and send the numbers.**
+
+- Type your average span reading into the form's **Measured** box under *Span over 3 teeth*, with the same gear on
+  the form. The app says how much your printer adds to each flank: the reading less 11.209, halved.
+- Then send the coordinating session the twelve span readings, the four bore results with their measured bores, and
+  the optional diameters. They are written into the table below, and from them:
+  - **D3's printed backlash is set** so that, after what your printer adds, the running play per flank is what D3
+    assumed. That is `j = 2 (e + 0.04) / cos 20°` mm, where `e` is what your printer adds per flank: 0.3 mm stays
+    if `e` is about 0.10 mm. The number is the user's to accept.
+  - **F3's bore allowance is set** from the coupon you mark (c), or between (b) and (c) if none is (c).
+
+**7. Optionally, a pair.** If you have a place to run one on your own shafts, print a pair from the app and turn it
+by hand through whole turns, before and after a short run. It confirms step 3; it does not replace it.
+
+**Measured (filled in when you report):**
+
+| | Coupon_A | Coupon_B | Coupon_C | Coupon_D |
+|---|---|---|---|---|
+| Bore typed (mm) | | | | |
+| Bore measured (mm, two readings) | | | | |
+| Shaft fit (a–d) | | | | |
+| Span over 3 teeth (mm, three readings) | | | | |
+| Outside diameter (optional) | | | | |
+
+### 3.3 F2, ready to execute
+
+**F2-0, the interface and the probe** (one agent, first, alone):
+
+- **Interface.** A note, `docs/notes-printed/F2-INTERFACES.md`, with every name, signature and sentence below. The
+  names are importable from its commit, with stubs that return neutral values:
+  - `gears/span.py`: `span(derived) -> Optional[Span]`, where `Span(k: int, w_mm: float, w_t_mm: float,
+    contact_d: float, narrow_face: bool)`. None where §3.0 shows none. The stub returns None;
+  - `printout.py`, a new module of pure planning:
+    - `form_print(sidecar, ...) -> PrintPlan`;
+    - `workbook_print(record, assessment, update_plan) -> PrintPlan`, where `PrintPlan(refusal: str, parts:
+      Tuple[PrintPart, ...], folder: str, list_name: str)` and `PrintPart(path, step_path, rows, count, block)`;
+    - `check_step(text, expected) -> str`, `""` when the file passes;
+    - `print_list(plan, ...) -> str`;
+  - in `swcom.Session`: `export_step(path: str, *, activate: bool) -> None`, raising `SolidWorksError` with a
+    sentence. The stub raises *not built yet*;
+  - in `swbuild`: `print_parts(sw, plan) -> PrintResult`, the job;
+  - in `findings`: `SAVE_AS_COPY`, `STEP_EXPORT_ON_2026`, `STEP_EXPORT_ON_2024`,
+    `STEP_EXPORT_NEEDS_ACTIVE_ON_2026`, `STEP_EXPORT_NEEDS_ACTIVE_ON_2024` and `STEP_FILE_CHECK`, all None.
+- **The probe** of §3.1.2, `probe/f2_probes.py`, with its self-check and note. It is run on 2026, then on 2024, in
+  fresh sessions, and reviewed by a subagent. Its findings are then set in `findings.py` with
+  `tests/test_findings.py`'s pins, in a commit of its own.
+
+F2-0's files: `docs/notes-printed/F2-INTERFACES.md`, `docs/notes-printed/F2-PROBES.md`, `probe/f2_probes.py`,
+`src/gear_generator/findings.py`, `tests/test_findings.py`, and the stubs' lines in `gears/span.py` (new),
+`printout.py` (new), `swcom.py` and `swbuild.py`.
+
+**Then three packages, each owning its files outright, disjoint in `src` and in `tests`:**
+
+- **A, the span** (pure). It can start as soon as F2-0's interface commit is in, before the probe has run.
+  - Files: `gears/span.py`; tests: a new `tests/test_span.py` with §3.0's table, both forms, the k rule, the
+    narrow-face case, and None for a ring, sleeve and bevel gear.
+  - It checks the formula against a worked example in ISO 21771 or KHK first, quoted in its note.
+- **B, the export.** It can start with A. Its job's live calls run only against the fake until the findings are
+  set.
+  - Files: `printout.py`, `swcom.py` (`export_step`, with the existing-path refusal), `swbuild.py` (`print_parts`:
+    the live reads of §3.1.3, then each export and its check).
+  - Tests: a new `tests/test_printout.py` (each refusal of §3.1.3, the count with planet copies, the names and
+    `_r2`, the list's text, `check_step` on made-up texts); a new `tests/test_swbuild_print.py`; and in
+    `tests/test_swbuild.py` the fake `FakeSolidWorks` gaining `export_step` and the reads it needs, as its only
+    edit there; `tests/test_swcom.py` for `export_step` on `FakeSession`.
+- **C, what the user sees.** It can start with A and B.
+  - Files: `gui.py` (the span row, the Measured entry, **Print files…** and its job), `ui_text.py` (the row, the
+    explainer, the Measured line, every refusal and result sentence, the gate sentence), `workbook_gui.py` (the
+    footer's **Print files…**, its planning read and finish), `design/` (the board first: the form with the span row
+    and a reading typed; the window's footer with **Print files…**; one refusal), `design/UI-DESIGN.md` and
+    `README.md`.
+  - Tests: `tests/test_ui_text.py`, and new `tests/test_print_form.py` and `tests/test_print_window.py`.
+
+B's `printout` calls A's `span` for the list. C's sentences take B's plans and A's `Span`. Each meets the others
+through F2-0's names only.
+
+**What must not move.**
+
+- F1's pins: `tests/test_printed_rule.py` whole, which holds the machined Derived panel among the rest, and F1's
+  tests.
+- W9's pins: `BEFORE_W7`, `BEFORE_W8`, the W8 and W9 fixtures' counts, and every W9 test against the fake.
+- `tests/test_findings.py`'s existing values and log lines; F2 only adds.
+- No SolidWorks call changes but the new export: no build, Update or Build again… path changes.
+- The machined Derived panel and every machined record. The workbook's own Export and Export as… are unchanged.
+
+**The SolidWorks demonstration**, `probe/f2_demonstration.py`, on W9a's harness as F1's was:
+
+- `form`: from the strip's own form, a printed spur gear built and **Print files…** pressed. The file is checked by
+  the app and by the script, which reads the part's path, title and save flag unchanged, then the list. Then one
+  global changed in SolidWorks, unsaved: refused. Saved but not the record's: refused. Then a second press after
+  Update values: `_r2`.
+- `workbook`: the 12 : 1 reducer fixture, printed, built. **Print files…** writes every part and the list, with the
+  counts. Then one Gears cell edited: refused until Update SolidWorks. Updated and not saved: refused. Saved:
+  printed again, `_r2`.
+- On 2026 about 15 minutes and on 2024 about 25, the confirming build, each in a fresh session.
+
+**Done when:**
+
+- §3.0's span shows on the form for a printed external gear, with its Measured line, and is held by its tests.
+- The probe has run on 2026 and 2024 and been reviewed, and its findings are set in `findings.py` with their pins.
+- **Print files…** exports from the form and from the Workbook window against the fake, each refusal said, the
+  files checked and the list written.
+- The demonstration has run on 2026 and on 2024, every section clean, and been reviewed.
+- The four coupons are exported, and the STEP files open in the user's Bambu Studio (the user's step, §3.2 step 2).
+- The measurements of §3.2 are written in its table, and D3's number and F3's allowance are set from them, on the
+  user's word.
+- The stage's result is reviewed by a subagent.
+
+The code can close before the user's measurements are in; the stage closes with them.
+
+**Cost.** About ten agent runs:
+
+- F2-0's interface and probe script (1), the probe's runs on both versions (1), its review (1);
+- the three packages (3);
+- the stage review (1);
+- the demonstration's script and runs (1 or 2), and its review (1).
+
+SolidWorks time is an estimate from F1's measured runs (16 and 18 minutes for F1's three sections): the probe
+about 10 minutes on 2026 and 15 on 2024, the demonstration about 15 and 25. That is about 65 minutes in all, in four
+fresh sessions.
+
+### 3.4 The decisions F2 needs
+
+**Standing on an assumed answer, so the code can go ahead:**
+
+- **E1. Which gears show the span:** printed external spur, helical and herringbone gears, dogs and hubs; not
+  rings, sleeves or bevel gears; never a machined gear (§3.0). It is cheap to widen later.
+- **E2. The Measured entry** on the form, not saved (§3.0). It is one entry and one sentence; dropping it later
+  moves nothing.
+- **E3. Refusals:** an unsaved or mismatched part, one whose globals differ from its record, one in error, and a
+  workbook that Update would change, all refused; a whole print set or nothing. This is open point 6 of F1's plan,
+  confirmed by the second review, carried further.
+- **E4. Machined parts are exported**, each marked in the list. Refusing them would be one line.
+- **E5. The button's name**, **Print files…**, because the window's *Export* is taken.
+- **E6. The place**: `print\` beside the parts, `.step`, `_r2` on a clash, the list as UTF-8 text.
+- **E7. The slicer settings in the list and in §3.2**, from *Sources*. Bambu Studio's names are read, not checked.
+
+**Needing the user, but not before code:**
+
+- **U1.** Their shaft's diameter, and that it is under 18 mm (§3.2's coupon module).
+- **U2.** Their printer, its nozzle (0.4 assumed) and their PLA.
+- **U3.** That they have calipers reading 0.01 mm.
+- **U4.** After §3.2, D3's printed backlash and F3's bore allowance, from their numbers.
+- **U5.** That Bambu Studio opens the files (§3.2 step 2).
+
+**Needing the user before code: none.** The coordinating session may still put E4 and E5 to them, since both are
+words they will see.
 
 
 ## 4. Stage F3 — the bore (existing ops only)
@@ -1277,3 +1700,41 @@ the user's to overrule.
 - **Recorded, not changed here:** the form judges a printed crossed pair as the workbook does (ruling 2); package B's
   planet-copy wording in *Build again…* is kept until `w9d` is merged, whose own fix (`d496cfd`) then stands
   (ruling 3).
+
+
+## Changes before F2
+
+2026-11-18. Section 3 read against the code at `61460b9` on `printed` (F1 closed; W9 merged at `138d646`) and made
+ready to execute, as §2.8 made F1. Each change is by section, with why.
+
+- **§3.0, the span over k teeth.** The maths is given in two forms that agree, with its sources (ISO 21771's base
+  tangent length and KHK's span measurement), and package A checks it against a worked example before code. The
+  rule for k is stated, through the contact radius. The plan says which gears show the span, where the user sees it
+  (a Derived row, a *Measured* entry, the print list, the explainer), and gives nine figures for the tests,
+  computed from the app's own derived gears at `61460b9`. Before, it was one paragraph with no maths, no figures and
+  no place on the window.
+- **§3.1, Export.**
+  - What is already known is gathered from the user's macro database (`entries/files/04`, `API-LEDGER.md:190`,
+    `GOTCHAS.md` §20 and §34) and this repo: the route, its copy option, the overwrite, and STEP not to be reopened.
+  - The probe is written call by call. Each answer is tied to a finding in `findings.py`, with what the app does
+    while that finding is None, on 2026 and on 2024. Before, it was one sentence.
+  - The button is renamed **Print files…**, since the window's *Export* already writes the workbook.
+  - What is exported, when it is refused, the files' names and place, the print list's contents and the file check
+    are made concrete on the form and in the window. Refusals: an unsaved or mismatched part, globals not the
+    record's, a feature in error, or a workbook Update would change; a whole set or nothing.
+  - Citations corrected: `store.LinkRecord.current_parts` is now at `store.py:1026`, and `gui._update_target` at
+    `gui.py:1573`.
+- **§3.2, the user's step.** It is rewritten as instructions the user follows: four copies of one gear as span gears
+  and bore coupons at once, the Bambu Studio settings by name (read, not checked), how to hold the calipers, the
+  shaft-fit grades, where each number is typed (the form's *Measured* entry, then the session), how D3's number
+  follows from them (`j = 2 (e + 0.04) / cos 20°`), and a table to fill. Before, it was three short items.
+- **§3.3, new.** F2 made ready: F2-0 (the interface, then the probe run and reviewed on both versions, its findings
+  set), then packages A (span), B (export) and C (window and form) with disjoint files in `src` and `tests`; what
+  must not move; the demonstration on both versions; Done when (the code can close before the measurements, the
+  stage with them); and the cost, about ten agent runs and about 65 SolidWorks minutes.
+- **§3.4, new.**
+  - Seven decisions on assumed answers (E1 to E7), each said to go ahead.
+  - Five that need the user but not before code (U1 to U5): their shaft, printer, calipers, the numbers and the
+    slicer's opening.
+  - None needs the user before code.
+
