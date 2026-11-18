@@ -2523,6 +2523,15 @@ OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_2024 = True
 # size check of printout.check_step (the vertices' largest radius from Z against d_a / 2 and their axial extent against
 # the face, each to printout.EXTENT_TOL 0.01 mm) is made. Borne out on both versions on the printed spur (z 20), the
 # helical (m_n 2, z 20, beta 15) and the 50-tooth spur (q26:23, :28, :70; q24:23, :28, :70: "holds True"), the largest
-# miss 0.001185 mm. Not measured: a herringbone (printout skips it, "herringbone", until a run shows its vertices) and
-# larger gears (2026's tip error was 0.0012 mm at z 20 and 0.0002 at z 50); the F2 demonstration's reducer shows them.
+# miss 0.001185 mm; larger gears (2026's tip error was 0.0012 mm at z 20 and 0.0002 at z 50) by the F2 demonstration's
+# reducer (F2-DEMONSTRATION-RUNS-REVIEW §4: up to 1.57e-3 mm on 2026, on d_a / 2 to 1e-6 on 2024, z up to 68).
+# The herringbone, skipped until then, is checked since the demonstration measured one on both versions
+# (F2-DEMONSTRATION-RUNS-REVIEW §3, 70a2c42, the coordinator's ruling): its file AP203, millimetres, one closed solid of
+# 480 vertices (26:542, 2:541), its vertices reaching radius 22.70552360820168 on 2026 and 22.705523608201677 on 2024
+# against d_a / 2 22.705524, over 20.0 along Z against the face 20.0, holding to 0.01 mm (26:547-548, 2:546-547), where
+# "26:" is probe/results/f2-demo-sw2026-20261118-1-gates-form-workbook-refusals-userwork-clean.log and "2:"
+# probe/results/sw2024/f2-demo-sw2024-20261118-2-gates-form-workbook-refusals-clean.log (snapshot b3fe4a1). Caveat:
+# one gear, printed, m_n 2, z 20, beta 15, face 20, unshifted, built from the form, with NO GROOVE; a grooved
+# herringbone is not measured (the groove cuts to the root inside the face, so it should move neither the outermost
+# radius nor the axial extent; a slip would be a FILE_CHECK EXTENT refusal, the safe side).
 EXTENT_MEASURED = True

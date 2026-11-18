@@ -3196,6 +3196,30 @@ def _f2_run(path, log, revision):
     return data, lines
 
 
+F2_DEMO = {2026: LATEST.parent / "f2-demo-sw2026-20261118-1-gates-form-workbook-refusals-userwork-clean.log",
+           2024: LATEST.parent / "sw2024" / "f2-demo-sw2024-20261118-2-gates-form-workbook-refusals-clean.log"}
+
+
+@pytest.mark.parametrize("year,first,radius", [(2026, 542, "22.70552360820168"), (2024, 541, "22.705523608201677")])
+def test_the_herringbone_is_size_checked_as_f2s_demonstration_measured_it(year, first, radius):
+    """findings.EXTENT_MEASURED's comment (F2-DEMONSTRATION-RUNS-REVIEW §3, 70a2c42; the coordinator's ruling): the
+    herringbone's file and its size reading on each version, at 26:542, 547-548 and 2:541, 546-547 (b3fe4a1's run), and
+    the herringbone lifted from printout.EXTENT_SKIPPED with the size check on."""
+    from gear_generator import printout
+    d = [""] + _w9_log(F2_DEMO[year])
+    assert "(snapshot: b3fe4a1)" in "".join(d[1:4])
+    assert d[first].startswith("fact    form, herringbone, press 1: Herringbone_m2_N20_15R_P.step: ")
+    assert ("schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 480 vertices reaching radius 22.705524 over 20.000000 "
+            "along Z") in d[first]
+    assert d[first + 5] == ("fact    form, herringbone: a herringbone (the size check measured on spur and helical gears "
+                            f"only): the app's size check 'skipped: herringbone'; this script reads radius {radius} over "
+                            "20.0 along Z, against d_a / 2 22.705524 and the face 20.0")
+    assert d[first + 6] == ("NOTE    form, herringbone: the herringbone's size reading holds against d_a / 2 and the face "
+                            "to 0.01 mm (within): a fact for the ruling on \"herringbone\" in printout.EXTENT_SKIPPED")
+    assert abs(float(radius) - 22.70552360820166) < 1e-9 and findings.EXTENT_MEASURED is True
+    assert "herringbone" not in printout.EXTENT_SKIPPED
+
+
 @pytest.mark.parametrize("year", [2026, 2024])
 def test_f2_findings_rest_on_the_probes_rerun_on_each_version(year):
     """findings.py's F2 block, line by line: each value is its rerun's proposal on that version (from d333ff8, 0 failed,

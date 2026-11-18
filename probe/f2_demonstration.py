@@ -140,7 +140,7 @@ RANGEBOX_SPANS = {"Gear_m1.25_N29": (1.25, 29), "Gear_m1.25_N13": (1.25, 13)}   
 INTERNAL_SPAN = "  No span: internal teeth are measured over pins, not jaws."
 MACHINED_SPAN = "  Machined: its backlash is a cutter's, not a printer's; no span."
 SIZE_WORDS = {"bevel": "a bevel gear", "ring": "a ring", "sleeve": "a sleeve", "dog": "a dog", "hub": "a hub",
-              "herringbone": "a herringbone, not yet measured", "user features": "your features in it",
+              "user features": "your features in it",
               "not measured": "not yet shown on SolidWorks"}      # C's PRINT_SIZE_SKIPPED, held to it
 # SolidWorks members a press's job may call that open, activate, close, save or write (counted while a job runs).
 WATCHED = ("ActivateDoc3", "OpenDoc6", "CloseDoc", "QuitDoc", "SaveAs", "SaveAs3", "Save3", "ForceRebuild3",

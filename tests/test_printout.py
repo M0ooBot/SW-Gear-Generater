@@ -521,9 +521,8 @@ def test_the_extent_once_measured_checks_d_a_over_2_and_the_face(monkeypatch):
     (GearSpec(kind="sleeve", module="1", teeth="20", face_width="8", bore=""), "sleeve"),
     (GearSpec(kind="dog", module="1", teeth="20", face_width="8", bore=""), "dog"),
     (GearSpec(kind="hub", module="1", teeth="20", face_width="8", bore=""), "hub"),
-    (GearSpec(kind="herringbone", module="2", teeth="20", helix_angle="15", face_width="14", bore=""), "herringbone"),
 ])
-def test_the_extent_is_never_checked_on_a_bevel_ring_sleeve_dog_hub_or_herringbone(monkeypatch, spec, why):
+def test_the_extent_is_never_checked_on_a_bevel_ring_sleeve_dog_or_hub(monkeypatch, spec, why):
     monkeypatch.setattr(findings, "EXTENT_MEASURED", True)
     part = printout.print_part(r"C:\G\X.SLDPRT", spec.to_dict())
     reading = printout.read_step(step(points=((99.0, 0.0, 0.0),)), part)
@@ -535,6 +534,19 @@ def test_the_extent_is_never_a_refusal_for_a_part_holding_the_users_features(mon
     part = printout.print_part(r"C:\G\Gear.SLDPRT", SPUR.to_dict(), user_features=("Boss-Extrude1",))
     reading = printout.read_step(step(points=((40.0, 0.0, 0.0), (0.0, 0.0, 30.0))), part)
     assert (reading.reason, reading.extent) == (None, "skipped: user features")
+
+
+def test_a_herringbone_is_size_checked_as_f2s_demonstration_measured_it():
+    """F2-DEMONSTRATION-RUNS-REVIEW §3 (the coordinator's ruling): the herringbone's size held on both versions, so it is
+    checked like a helical gear: d_a / 2 and the whole face, groove or none."""
+    gear = printout.print_part(r"C:\G\Herringbone.SLDPRT", GearSpec(kind="herringbone", module="2", teeth="20",
+                                                                     helix_angle="15", face_width="20", bore="",
+                                                                     process="printed").to_dict())
+    tip = 22.70552360820166
+    assert printout.read_step(step(points=((tip, 0.0, 0.0), (0.0, 0.0, 20.0))), gear).extent == "checked"
+    assert printout.check_step(step(points=((tip, 0.0, 0.0), (0.0, 0.0, 20.0))), gear) is None
+    assert printout.check_step(step(points=((tip + 0.02, 0.0, 0.0), (0.0, 0.0, 20.0))), gear) == printout.EXTENT
+    assert printout.check_step(step(points=((tip, 0.0, 0.0), (0.0, 0.0, 10.0))), gear) == printout.EXTENT
 
 
 def test_the_extent_is_checked_on_a_machined_gear_too(monkeypatch):
@@ -553,8 +565,8 @@ def test_the_codes_and_reasons_are_the_interfaces():
     assert printout.REASONS == (printout.FRAME, printout.SCHEMA, printout.SOLIDS, printout.OPEN_SHELL,
                                 printout.SURFACE_MODEL, printout.UNIT, printout.EXTENT)
     assert all(getattr(printout, code) == code for code in printout.CODES)
-    assert set(printout.EXTENT_SKIPPED) >= {"bevel", "ring", "sleeve", "dog", "hub", "herringbone", "user features",
-                                            "not measured"}
+    assert set(printout.EXTENT_SKIPPED) >= {"bevel", "ring", "sleeve", "dog", "hub", "user features", "not measured"}
+    assert "herringbone" not in printout.EXTENT_SKIPPED
 
 
 # -- the result and the list ----------------------------------------------------------------------------------------------

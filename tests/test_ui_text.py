@@ -4411,7 +4411,7 @@ def test_the_print_list_says_each_kind_of_part_and_heads_a_failed_set():
         refusal=po.Refusal(po.FILE_CHECK, ("Gear_a",), {"file": "F\\Gear_a.step", "reason": po.SOLIDS}),
         warnings=((parts[0].path, ("Fillet3",)),), live_features=((parts[2].path, ("User Keyway",)),),
         facts={"Gear_h.step|extent": "skipped: user features",
-                                                           "Gear_m1.5_N68.step|extent": "skipped: herringbone"},
+                                                           "Gear_m1.5_N68.step|extent": "skipped: not measured"},
         active_restored=True)
     text = ui_text.print_list_text(plan, result, "0.9")
     assert text.startswith("DO NOT PRINT THIS SET: Gear_a.step is not fit to print: it does not hold exactly one "
@@ -4427,8 +4427,8 @@ def test_the_print_list_says_each_kind_of_part_and_heads_a_failed_set():
             "  NOT FIT TO PRINT: it does not hold exactly one solid.\n") in text
     assert ("Gear_m1.5_N68.step\n  For G4 · print 1\n  Module 1.5 · 68 teeth · face 10 mm · bore 10 mm · backlash "
             "0.45 mm (0.3 × module)\n  Machined: its backlash is a cutter's, not a printer's; no span.\n  Your "
-            "features left in it: User Keyway.\n  Checked: one closed solid; size not checked (a herringbone, not yet "
-            "measured).\n") in text
+            "features left in it: User Keyway.\n  Checked: one closed solid; size not checked (not yet shown on "
+            "SolidWorks).\n") in text
     assert "Ring.step\n  For R · print 1\n" in text and "No span: internal teeth are measured over pins, not jaws.\n" \
         "  Not written.\n" in text
     assert "Bev.step\n  For B · print 3\n" in text and "No span: a bevel tooth is not one size along its face.\n" in text

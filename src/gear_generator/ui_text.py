@@ -6935,8 +6935,7 @@ PRINT_UNITS = {"MILLI.METRE": "millimetres", "METRE": "metres", "CENTI.METRE": "
 
 # Why B's size check was skipped (printout.EXTENT_SKIPPED), in the list's words.
 PRINT_SIZE_SKIPPED = {"bevel": "a bevel gear", "ring": "a ring", "sleeve": "a sleeve", "dog": "a dog", "hub": "a hub",
-                      "herringbone": "a herringbone, not yet measured", "user features": "your features in it",
-                      "not measured": "not yet shown on SolidWorks"}
+                      "user features": "your features in it", "not measured": "not yet shown on SolidWorks"}
 
 
 def _print_user_features(part, result: "PrintResult", written: bool) -> Tuple[str, ...]:

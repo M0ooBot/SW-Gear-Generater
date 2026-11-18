@@ -109,7 +109,7 @@ STEP_SUFFIX = ".step"              # each part's file: its stem + STEP_SUFFIX, s
 # "<file>|unit" the length unit as read ("MILLI.METRE", "METRE", "INCH", "FOOT"), "<file>|extent" "checked" or
 # "skipped: <why>" (EXTENT_SKIPPED). Facts, never refusals.
 FACT_SCHEMA, FACT_UNIT, FACT_EXTENT = "schema", "unit", "extent"
-EXTENT_SKIPPED = ("bevel", "ring", "sleeve", "dog", "hub", "herringbone", "user features", "not measured")
+EXTENT_SKIPPED = ("bevel", "ring", "sleeve", "dog", "hub", "user features", "not measured")
 # Package B's additions to the facts (data, never a sentence; the coordinator's to rule): "<title>|close" is
 # "failed: <swcom's sentence>" for a window the job opened and could not close, and "job|flags" is "unread: <swcom's
 # sentence>" when the save flags could not be read again at the end (then flags_turned_on cannot be known).
@@ -118,7 +118,8 @@ FACT_CLOSE, FACT_FLAGS, FACT_JOB = "close", "flags", "job"
 # Whether the size check is made is findings.EXTENT_MEASURED (moved there by the coordinator's ruling on F2-REVIEW's
 # choice B6): True since F2's probe reruns bore it out on spur and helical gears on both versions. EXTENT_TOL's 0.01 mm
 # keeps eight times 2026's largest measured excess (0.0012 mm at the spur's tip), while a cut missing, another part's
-# file or a unit slip is off by far more. A herringbone is skipped ("herringbone") until a run has measured one.
+# file or a unit slip is off by far more. A herringbone is checked like a helical gear since F2's demonstration measured
+# one on both versions (F2-DEMONSTRATION-RUNS-REVIEW §3, the coordinator's ruling); findings.EXTENT_MEASURED's comment.
 
 # CHANGES_ON_UPDATE's detail values (F2-INTERFACES.md §2.3): Update would change a part's values, or put a new part in
 # the gearbox (a part it would build new, one that needs building again, or a part a gear added in place brings).
@@ -661,12 +662,12 @@ def _vertices(data: Mapping[int, str]) -> List[Tuple[float, ...]]:
 
 def extent_skipped(part: PrintPart) -> str:
     """Why the size check is not made on ``part`` (one of :data:`EXTENT_SKIPPED`), or "" when it is: a bevel gear, a
-    sleeve, a dog, a hub, a herringbone (not measured yet) or a ring (teeth inside) by its kind; a part holding the
-    user's features; and every part while ``findings.EXTENT_MEASURED`` is not True."""
+    sleeve, a dog, a hub or a ring (teeth inside) by its kind; a part holding the user's features; and every part while
+    ``findings.EXTENT_MEASURED`` is not True. A herringbone is checked (measured in F2's demonstration)."""
     kind = str(part.spec.kind or "").strip().lower()
     if kind == "bevel":
         return "bevel"
-    if kind in ("sleeve", "dog", "hub", "herringbone"):
+    if kind in ("sleeve", "dog", "hub"):
         return kind
     if str(part.spec.teeth_side or "").strip().lower() == "internal":
         return "ring"
