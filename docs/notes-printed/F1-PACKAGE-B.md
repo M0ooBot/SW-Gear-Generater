@@ -140,3 +140,28 @@ when) is what shows the Update of a W9a master with Printed typed.
 - The clearance check's placement in `_check_mesh` and `_check_turned`, and that no machined gearbox's report moves
   (`test_printed_rule`'s W8 fingerprints and `BEFORE_W7` / `BEFORE_W8` hold).
 - The planet-copy change in `_why_part_new` (choice 9).
+
+## The coordinator's rulings on the F1 review (`F1-REVIEW.md`, `be5ae7a`; 2026-11-18, each the user's to overrule)
+
+- **Ruling 2:** every choice above is accepted as the review recommends. Choice 2 (Nozzle checked whatever the
+  Process) is accepted for F1, to be revisited if a user meets it. Choice 5 (the bevel figure) is accepted with S4,
+  below. Choice 9 (a planet copy's reason) is ruled in as the one change to what a machined gearbox is told.
+- **Ruling 3:** choice 9 is kept, and `w9d` has since fixed the same fault its own way (`d496cfd`, reviewed). Where the
+  two meet, `w9d`'s code stands: `_why_part_new` looks a planet copy up by its row alone, `why_new_of` gives the
+  reasons, and `carry_for` finds a copy's job by its row, which also gives a planet copy made new its feature names
+  (the first of *Found and not fixed* above, now fixed on `w9d`). Of B's change only Process in `_SPEC_COLUMNS` stays.
+- **Ruling 4:** the review's should-fixes are taken, each by the author of its files.
+
+## After the review
+
+- `91f6a6f` **The merge of `w9d` (`12cf15d`) into `printed`.** One conflict, in `update._why_part_new`, resolved to
+  `w9d`'s version by ruling 3. No pin moved: `test_printed_rule.py` pins no planet copy's reason. B's tests agree with
+  the merged behaviour as they stood (a printed RangeBox's planet copies say *its Process changed*).
+- `f1d36bf` **S4, S6, S7** (A's and B's files, A's author not recalled):
+  - **S4.** `pair.bevel_tip_clearance(g1, g2)`, each gear's dedendum less its mate's addendum (0.188 × module for a
+    cone pair), is the one figure `mesh_warnings` and `checks._check_turned` judge a printed bevel pair by; tested
+    equal to Gleason's at four shaft angles, and the Meshes row's sentence equal to the form's for the same gears.
+  - **S7.** A printed bevel Solve row whose gear does not derive with the form's face width is dropped, as a pointed
+    row is, where before it was offered unmarked; machined rows as before.
+  - **S6.** A printed crossed Solve is tested to mark each row by each gear's own helix angle.
+- F1-0's should-fix 4 (a reader of sidecar 2 refusing a printed `.gear.json`) was taken by F1-0's author (`f6fe978`).

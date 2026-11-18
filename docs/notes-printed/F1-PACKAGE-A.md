@@ -142,3 +142,20 @@ unshifted". That is so only up to module 1.25; above it the depth IIF gives 0.25
 - `ring_tip_clearance` with a shifted pinion: the formula and sign convention are the ones `checks` uses; I tested
   them against a hand computation, not against a drawn outline.
 - The bevel Solve derives two gears per row; fine for its 120 rows, but it is the only Solve path that derives.
+
+## The coordinator's rulings on the F1 review (`F1-REVIEW.md`, `be5ae7a`; 2026-11-18, each the user's to overrule)
+
+Recorded here by package B's author, as the coordinator asked; A's author was not recalled.
+
+- **Ruling 2:** every choice above is accepted as the review recommends, with one change: the form judges printed
+  crossed pairs as the workbook does (choice 11, taken by C in `368db90`: `pair.tip_clearance` unshifted, in
+  `printed_clearance_sentence`'s words), so the two never disagree. Choice 4 is accepted as the plan's figure, with
+  the record that a bevel pair's clearance at the toe is 0.70 of the heel's; choice 5 is accepted, the toe's tip check
+  covering the small end.
+- **Ruling 4:** the review's should-fixes in A's files are taken (by B's author, `f1d36bf`):
+  - **S4.** `pair.bevel_tip_clearance(g1, g2)` is the one bevel clearance figure; `_printed_mesh_warnings` and
+    `workbook.checks` both call it.
+  - **S6.** `test_printed_gears.py` tests a printed crossed Solve marking each row by each gear's own helix.
+  - **S7.** `_printed_row` drops a printed bevel row whose gear does not derive, as it drops a pointed row.
+- S1 (machined pins in `test_printed_rule.py` for what only A's and B's tests held) was taken by F1-0's author
+  (`f6fe978`).
