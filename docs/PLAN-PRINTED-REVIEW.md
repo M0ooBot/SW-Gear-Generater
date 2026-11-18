@@ -998,3 +998,252 @@ mate not checked, turn the pair in SolidWorks.
 
 **Ready.** F1-0 may start once `printed` is cut, and then A, B and C together. The small-backlash sentence can go
 into the plan or into F1-0's interface note; it changes no interface.
+
+---
+
+# Review of stage F2 as made ready to execute (2026-11-18)
+
+**Read at `dce5aff` on `printed`**, which holds `6d616fa` (section 3, 3.0 to 3.4, and *Changes before F2*); `src`
+is unchanged since `61460b9`, the commit the plan was read against. Nothing was run on SolidWorks or Excel, and the
+suite was not run. The figures below are from scratch scripts run with `PYTHONPATH=src` against this checkout's
+`gears/spur.py` and `gears/helical.py` (import path checked), plus an independent closed form and, for the spur
+rows, the span read off the app's own drawn outline (`SpurGear.outline`). KHK's *Gear Technical Reference* page on
+tooth thickness was fetched; its formulas are images there, so only its text is quoted. ISO 21771 was not available.
+
+## 1. The span over k teeth (§3.0)
+
+**The formula is right, and every W in the table is right.** The transverse form (`W_t = (k−1) p_bt + s_bt`, `s_bt
+= d_b (s_t/d + inv α_t)`, `W_n = W_t cos β_b`) and the closed form `W_n = m_n cos α_n [(k−0.5)π + z inv α_t] +
+2 x m_n sin α_n − j_n cos α_n` are the standard base tangent length (KHK's span measurement, Tables 5.10 and 5.11;
+DIN 3960 and ISO 21771 give the same as I know them, not checked here; the backlash term is the usual `A_Wk = A_sn cos α_n`). The `− j_n cos α_n`
+term is right for this app because `helical.derive` thins the transverse section by `j / cos β` (`helical.py:354`),
+so its backlash is a normal one. I recomputed all nine rows three ways (the plan's first form from the derived gear,
+the closed form from the spec alone, and for four spur rows the span measured off `SpurGear.outline`'s recipe-A
+points, whose involute property held to 1e-15 rad). **All nine W agree with the plan to 1e-4 mm**, and so do the
+seven spur contact radii.
+
+**k is right for every spur row, shifted included**: the usual `zα/180° + 0.5` gives 2.72, 2.72, 1.83, 3.83, 3.72,
+1.94 → 3, 3, 2, 4, 4, 2, and KHK's shifted rule gives 2.62 → 3 for z 15, x +0.3. The contact radius rule picks the
+same.
+
+**k is wrong for the second helical row, because the contact radius is wrong for helical gears (must-fix M1).**
+The jaws' common normal is the base-cylinder tangent inclined at β_b, with the jaws ±W_n/2 along it from the tangent
+point; projected on the transverse plane that is W_n cos β_b, so
+
+    r_c = √(r_b² + (W_n cos β_b / 2)²)      not √(r_b² + (W_t / 2)²)
+
+(the same for spur, where β_b = 0). With the right radius the plan's own nearest-to-`r + x m_n` rule agrees with
+the textbook k (ISO 21771's rule through `d_M = d + 2 x m_n`, as I know it and computed it here):
+
+| Gear | Plan k, W_n | Right k | W_n (W_t) at right k | r_c at k 3 / k 4, pitch r |
+|---|---|---|---|---|
+| helical m_n 2, z 20, β 15° | 3, 15.0972 | **3** (ISO 2.95) | 15.0972 (15.5645) | 20.713 / 21.890, 20.706 |
+| helical m_n 1.5, z 25, β 20° | 3, 11.4156 | **4** (ISO 3.80) | **15.8438 (16.7315)** | 19.376 / 20.062, 19.953 |
+| (β 30°, m_n 2, z 20: not in the plan) | rule gives 3 | 4 (ISO 3.79) | 21.2255 | 22.338 / 23.260, 23.094 |
+
+11.4156 is a correct span over 3 teeth of that gear (its contact, r 19.38, is on the drawn involute), but the test
+would pin a k the textbook does not choose, and the error grows with β. The table row, the `r_c` formula and the
+`Span.contact_d` the interface names change; the face condition for that row becomes `15.8438 sin 18.747° + Δb`.
+
+**Should-fix on §3.0:**
+
+- **Bound the contact.** Withhold the span (or take the next k) when r_c falls below where the app's involute
+  starts (`max(flank_start_d, form_d)/2`; below it the app draws a radial flank) or within a small margin of the tip.
+  None of the nine rows is near either (the Planet's 8.112 against 7.635 is the closest), but a z 6 or a negative
+  shift could be.
+- **The narrow face.** KHK's text gives `b_min = W sin β_b + Δb` with "Δb > 3 mm to make a stable measurement";
+  the plan's 2 mm is under it. And for a **herringbone** the b is one half, `HelicalDerived.half_width` (face/2 less
+  half the groove, `helical.py:183`), which the plan does not say.
+- **Recipe B (arcs).** The span is a constant only on an involute. On the m 1.5, z 20 printed gear drawn with
+  arcs, the span read off the outline runs from 11.139 to 11.221 mm across the flank, 0.08 mm, about the size of
+  what the user is measuring. Show it for recipe A only, or say *approximate* for B.
+- **A ring** is measured over pins (balls for a helical ring), not balls only; the wording.
+- **The check owed by package A** "against a worked example in ISO 21771 or KHK" may not be obtainable (ISO is
+  sold; KHK's web formulas are images). Let the check also be the outline route above: the span read off the
+  drawn outline equals the formula for recipe A, which tests the app's own backlash and shift conventions, which a
+  textbook example cannot.
+
+**What a measured span tells the user, and the arithmetic back.** The jaws read square to both flanks, so
+`e = (W_measured − W) / 2` is how far the printer pushed each flank out, square to it, on spur and helical alike.
+That is right. D3's 0.3 mm leaves `0.15 cos 20° = 0.141` mm a flank; less a printer's 0.10 it leaves 0.04, so
+`j = 2 (e + 0.04) / cos α` keeps 0.04 mm a flank a gear (0.16 mm normal play for a pair), and e = 0.10 gives
+0.298 (0.3 stays), as the plan says. Three should-fixes:
+
+- write `cos α_n` of the gear, not `cos 20°`, in the Measured line;
+- **a floor**: below e ≈ −0.04 mm the formula gives j ≤ 0, and §2.3 found drawn parts overlapping under about
+  0.04 mm a gear (0.08 for a 6 / 30 pair);
+- **D3's promise "never more than today's"**: a printer adding 0.12 mm gives j = 0.34, more than 0.3 × module
+  below module 1.13. Setting D3 from the measurement moves the IIF's breakpoint (`"Module" <= j / 0.3`) as well as
+  its constant, which the plan should say, and which is the user's to accept (U4).
+
+## 2. The STEP probe (§3.1.2)
+
+**The calls.** `IModelDocExtension.SaveAs(path, 0, 1|2, null, out, out)` is in the macro database exactly as the
+plan cites it (`API-LEDGER.md:190`, `entries/files/04`), *Verified, SW 2026, Airfoil Converter 2026-09-16*, through
+the same `_out_long()` and `_null_dispatch()` this repo's `swcom` has, on the active part. **Unverified, as the
+plan says:** 2024; non-zero codes; the schema and unit written; a non-active document; a modified one. Also
+unverified and not said: exporting a part **loaded only as a component of an open assembly**. `GetSaveFlag`,
+`CloseDoc` (discards, no prompt, parts on both versions), `OpenDoc6` and `ActivateDoc3` are verified on both
+versions in the ledger (lines 107-116, 150, 171). One choice is not argued: the app already calls `SaveAs3` on the
+same `Extension` with the same typed nulls on both versions (`swcom.py:1366-1376`); the ledger says to prefer
+`SaveAs`. Either is fine; F2-0's note should say which and why.
+
+**Safe on a live session?** Yes, as written: scratch parts in the run's folder, titles recorded, only its own
+documents closed unsaved, the dialog watch, fresh sessions. Steps 1 to 7 cannot overwrite anything of the user's
+(step 5 overwrites its own file on purpose). Two points:
+
+- **Step 8 (a part built into error) asks a question nothing depends on**, adds the one dialog the run expects, and
+  on 2026 a What's Wrong box is the STOP. By the handoff's rule (a probe only for a call that could hang, raise a
+  dialog or damage; a point the app does not depend on written as a caveat) it should be dropped, or run last on
+  its own copy with the box allowed on both versions. *A ruling.*
+- **Record the save flags of the user's own open documents** before and after, not only their titles.
+
+**Does each finding gate exactly what depends on it?**
+
+- `STEP_EXPORT_ON_<year>` gates the press per version, both steps 2 and 4 needed. Right.
+- `SAVE_AS_COPY`'s row says *the export is not offered*; the next row says the button is *shown and enabled* and
+  refuses. Say one thing.
+- `STEP_EXPORT_NEEDS_ACTIVE_ON_<year>` is measured on parts in their own windows, but the Workbook window's press
+  meets parts that are components of an open assembly, or not open at all. And `Session.export_step` exports the
+  session's *build document*: a part already open becomes that by `use_open_document` (no activation,
+  `swcom.py:3528`), one not open by `open_document`, which **always activates** (`:3546-3606`). So *activate=False*
+  is only reachable for parts already open. The probe should export a part open only as an assembly component (the
+  assembly's save flag read too), and the interface should say how each part becomes the build document, that the job
+  closes only what it opened (never the assembly; the ledger's line 113 records a 2024 *Save Modified Documents* box
+  on closing an assembly) and gives the user back the document that was active. **Must-fix M5**, since the probe
+  gets one follow-up round per version.
+- **Step 6's "the file is right" is not defined.** Define it: the file's text equal to step 2's but for the
+  `FILE_NAME` header line, and unlike step 4's.
+- `STEP_FILE_CHECK` is one name in the interface (§3.3) but *per version* in §3.1.4. **Must-fix M2, below.**
+
+**Checking the file as text (§3.1.4).** Reading the frame, the solid count and `OPEN_SHELL` is sound and safe, and
+never reopening a STEP file is right (`GOTCHAS.md` §20). Two faults:
+
+- **The schema and the unit are not version facts.** The AP is the user's *Tools > Options > Export* setting (the
+  plan says so in §3.1.1), and the unit follows the document. Pinning what the probe's session wrote would refuse
+  every file of a user who exports AP242, with the list left unwritten. Accept the frame, exactly one solid, no open
+  shell, a `FILE_SCHEMA` among AP203, AP214 and AP242, and a length unit the check can read (millimetre expected;
+  Bambu Studio reads others through OpenCascade); log the rest as facts. `STEP_FILE_CHECK` then needs no per-version
+  value. **Must-fix M2** (it changes F2-0's finding names).
+- **What it misses.** A file with one closed solid of the wrong shape: another document's part (the activation
+  question), a part as it was before an unsaved change (refused before, but the check would not catch a fault in
+  that refusal), a scale or unit slip, a body with a cut missing. A cheap text check catches all of these: read the
+  `VERTEX_POINT` coordinates and require the largest radius from the axis to be the part's `da/2` and the axial
+  extent its face width, each to 0.01 mm (the build's frame is the app's own). Also count entity instances
+  (`= MANIFOLD_SOLID_BREP(`), not substrings, and refuse `SHELL_BASED_SURFACE_MODEL`. Should-fix.
+
+## 3. The export itself (§3.1.3)
+
+**Refusals.** Unsaved, mismatched against the record (W9a's marks), globals not the record's (K11's read,
+`swbuild.py:5407`), a feature in error, a workbook that Update would change, the whole set or nothing: right, and
+nothing is written before every part has passed. One citation is wrong: the feature-error read is not at
+`swcom.py:900-925` (that is `MateState` and `ComponentInfo`) but the `GetErrorCode2` helper at `:1083-1095` and the
+build walk at `:2614`/`:2816`. And `Session.has_unsaved_changes` (`:1161`) reads the build document only.
+
+**Nothing of the user's is overwritten or saved**, provided the probe shows `SaveAs` with *copy* leaves path, title
+and save flag alone, which is what it asks. W9's rule holds: the user's features in a gear part go out in the file
+and are named in the list; nothing in the assembly, the layout or a carrier is touched; no build, Update or Build
+again… path changes. F1's rule holds: a machined part is exported, nothing of it changes, and its Derived panel
+stays (but the list's *span over k teeth* "for an external spur or helical part" contradicts E1's *never a
+machined gear*: say which).
+
+**Names: must-fix M3.** *A name that exists gets `_r2`, `_r3`, as a part does.* In this app `_r2` already means a
+part's second revision (Build again…). Print revision 1's `Gear_m1.5_N20_P` twice and you have
+`Gear_m1.5_N20_P_r2.step`, which reads as the file of the part `Gear_m1.5_N20_P_r2.SLDPRT`; build that revision and
+print it, and its file must become `…_r2_r2` or `…_r3`, either misleading. The list's own name is not said to take a
+suffix at all, so a second press could overwrite it. A folder per press, `print\<Box name> <date time>\`, holding
+the files and the list, never reused, removes the clash, keeps each set whole and lets the window name the set. *A
+ruling* (it changes `PrintPlan.folder` and `list_name` in the interface).
+
+**A set that fails its check after export** leaves files with no list beside them, and the next press writes the
+whole set again. With a folder per press, name that folder *not checked* or write a list that says *do not print*.
+Should-fix. Also say that the app makes the `print` folder before the first export.
+
+## 4. The user's step (§3.2)
+
+**Could someone who never saw the plan follow it?** Nearly. It is in order, names every field and what to type, and
+the figures it quotes are right (11.209 for m 1.5, z 20; k 4 and 21.223 for m 2, z 30; outside diameter 33.0).
+What is missing or may mislead:
+
+- **Where the files are**: *the `print` folder inside the Output folder you built into*, and that a list file is
+  there too.
+- **The seam.** §3.2 says *Seam position: Aligned*; the list says *the seam kept off the tooth roots*. Say one thing,
+  and tell the user to measure away from the tooth that carries the seam. (Whether Bambu Studio's *Aligned* puts a
+  gear's seam in the roots was not checked here.)
+- **The jaws.** Zero the calipers, close with the same light force each time (the thumb roller, not a squeeze), and
+  for a helical gear (the explainer) let the calipers tilt with the teeth: *square to the axis* is for spur gears.
+- **Which average.** The average of the twelve smallest-steady readings; any reading 0.05 mm off the rest is taken
+  again.
+- **The bore coupons' range and the rule's gaps.** Small FDM holes often print 0.1 to 0.3 mm under (my
+  understanding, not measured), so all four may come out (a) or (b). The rule "(c), or between (b) and (c) if none
+  is (c)" says nothing when two are (c) (take the smaller), when none is (b) or (c) (print +0.4 to +0.7, or −0.1
+  and below if all are (d)), or which face the shaft enters from: try it from the top face and from the bed face,
+  where the first layer narrows the hole. A round coupon also says nothing about F3's D-flat, whose flat is a
+  straight wall; say so.
+- **One size cannot tell shrink from a fat wall.** ΔW on one gear mixes a fixed flank growth with PLA's
+  size-proportional shrink (a few tenths of a per cent, about 0.02 mm a flank over 11 mm). Printing one m 2, z 30
+  gear beside them (k 4, 21.223) separates the two. Optional, about twenty minutes of printing.
+- **The record of the print.** Add to the table: the printer, the filament (brand, colour), Bambu Studio's version,
+  the nozzle, and any setting not as listed.
+- **Bambu Studio's STEP import** may show a mesh-precision dialog in recent versions (not checked here): keep its
+  default, since a coarser mesh lays chords inside the involute and shrinks the reading.
+
+**Are the numbers used correctly?** The span gives e, square to the flank, and D3's j follows correctly from the
+0.04 mm a flank the plan budgets (§1 above, with its floor, its cos α_n and its breakpoint). The bore allowance is a
+grade, used as F3 needs it (F3's `Bore Allowance` added to the bore diameter). Both stay on the user's word.
+
+## 5. Readiness
+
+- **Disjoint files:** A (`gears/span.py`, `test_span.py`), B (`printout.py`, `swcom.py`, `swbuild.py`, four test
+  files) and C (`gui.py`, `ui_text.py`, `workbook_gui.py`, `design/`, `README.md`, three test files) are disjoint,
+  and F2-0's stubs in B's and A's files come first. **But the sentences have two owners (must-fix M4):** B's
+  `PrintPlan.refusal` is a string, `export_step` raises "with a sentence" and `print_parts` returns a result, while C
+  owns "every refusal and result sentence, the gate sentence" in `ui_text`. Either F2-0 stubs the `ui_text` functions
+  B calls, with their exact words in the interface note, or B returns codes and C words them. Say which, and who
+  checks the per-version gate (the planning read or the job).
+- **The interface** also leaves `form_print(sidecar, ...)`'s other arguments and `PrintResult`'s fields open, and
+  should name the K11 comparison B reuses (`workbook/update.py:3096`, private), so B does not need a file it does not
+  own.
+- **Tests owed, missing:** the helical k at β 20° (and a β 30° case), the contact bound, the herringbone half, recipe
+  B, the Measured line's floor and breakpoint, the per-version gate, `_r2`/folder naming against existing revision
+  stems and the list never overwritten, a part open only as a component, and that the job leaves the open documents
+  and the active one as it found them.
+- **Done when** should add the board and `UI-DESIGN.md`/`README.md` updated, and the interface reviewed.
+- **Cost.** F1 was costed at six agent runs; its notes record about ten reviewed steps (F1-0 and its review, three
+  packages, the review and its fixes, the demonstration script, its review, the runs and their review). F2's ten
+  leave out the interface review, the should-fix round after the stage review, the review of the findings commit,
+  and the probe's follow-up round the house rule allows. **Thirteen to fifteen** is the honest figure, and about 90
+  SolidWorks minutes with one follow-up round per version (the 65 is the arithmetic of 10 + 15 + 15 + 25 and holds as
+  the floor).
+- **The button.** `design/UI-DESIGN.md` §2 puts **Build** and **Update values** in the form's **footer**; the
+  **Output** panel is the folder, the templates and **Open .gear.json** (`:210-228`). *In the Output panel, beside the
+  build buttons* cannot both hold: the footer is the place. In this app's names an ellipsis means a question or a
+  dialog follows (**Export as…**, **Build again…**, **Locate…**); **Print files…** asks nothing, so **Print files**.
+  The window's footer is drawn at 1080 px *with all four buttons* (`:623-628`); a fifth needs the board to show the
+  sentence keeps its 400 px. And the form exports *the part active in SolidWorks*, which may not be the gear on the
+  form: the SolidWorks bar should say which file it will write, as it does for Update values (`:216-221`).
+- **Decisions taken silently:** the folder layout and repeat naming (M3); the D3 floor and breakpoint; refusing a
+  print when only a shaft's place would change on Update (E3 as written refuses it; a print set does not depend on
+  the layout); and dropping probe step 8.
+
+## 6. Before F2-0 starts
+
+**Must-fix** (each changes the interface note, the probe or a figure the tests pin):
+
+- **M1.** The helical contact radius: `r_c = √(r_b² + (W_n cos β_b / 2)²)`; the m_n 1.5, z 25, β 20° row becomes
+  k 4, W_n 15.8438 (W_t 16.7315); `Span.contact_d` follows.
+- **M2.** `STEP_FILE_CHECK`: one set of accepted values (frame, one solid, no open shell, AP203/214/242, a readable
+  length unit), not a per-version pin of the probe session's schema; the interface's finding names match.
+- **M3.** Repeat presses: a folder per press, or a suffix that cannot be read as a part revision; the list never
+  overwritten. A ruling, then the interface.
+- **M4.** Who owns the refusal and result sentences between `printout`/`swbuild` (B) and `ui_text` (C), and who
+  checks the gate.
+- **M5.** The probe adds a part open only as an assembly component, and the interface says how each part becomes the
+  build document, what is activated, what is closed, and what is put back.
+
+**Should-fix** (can go into F2-0's note or the packages): the contact bound, Δb ≥ 3 mm and the herringbone half,
+recipe B, the Measured line's cos α_n, floor and breakpoint, step 6's "right file" and step 8, the user documents'
+save flags, the vertex-extent check, the failed-set folder, the list's span for machined parts, `SAVE_AS_COPY`'s
+wording, the `swcom.py:900-925` citation, the button's place and ellipsis, the cost, and §3.2's items in section 4.
+
+**Ready for F2-0 once M1 to M5 are in the plan or ruled.** None needs the user; M3 and step 8 need the coordinator.
