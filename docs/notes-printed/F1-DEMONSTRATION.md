@@ -4,7 +4,7 @@ The script is `probe/f1_demonstration.py`. It is the SolidWorks part of PLAN-PRI
 review (`F1-REVIEW.md` §1, §8) left to do: on SolidWorks 2026, and then on 2024 as the confirming build, one printed
 spur gear built, one printed pair built, and Printed typed on the Box sheet of a copy of W9a's `setup.master` with
 one Update SolidWorks. **It has not run on SolidWorks.** It was written on Linux against the app at `e0a8d62` on
-branch `printed`; its self-check passes there (51 checks, 0 failed), and its rangebox planning was rehearsed offline
+branch `printed`; its self-check passes there (61 checks, 0 failed, after the review's should-fixes), and its rangebox planning was rehearsed offline
 on scratch copies of both masters (below). Expect script faults on its first live run, as every demonstration had.
 
 **How it works.** It runs W9a's `main` with its own three sections, as W9b's and W9c's scripts do, and changes no
@@ -207,8 +207,9 @@ No What's Wrong is expected: nothing of the user's is in error in setup.master.
 These end the `rangebox` section only, its copy ended:
 
 - the master not built before F1;
-- under 6 GB free just before the press (2024's first press on a freshly opened RangeBox costs 3.3 to 4 GB over the
-  2 GB floor);
+- under 6 GB free before the copy, and again just before the press (2024's first press on a freshly opened RangeBox
+  costs 3.3 to 4 GB over the 2 GB floor; the first check stops the section before it has spent anything, the review's
+  S2);
 - the press refusing (its sentence kept).
 
 A script fault fails its section with the traceback's tail, as in W9a.
@@ -216,8 +217,9 @@ A script fault fails its section with the traceback's tail, as in W9a.
 ## Without SolidWorks
 
 `python probe/f1_demonstration.py --self-check` (from the worktree, with `PYTHONPATH=src`) ran 51 checks, 0 failed, on
-2026-11-18 at `e0a8d62`. Each judgement the live sections make is a plain function, shown holding on the app's own
-figures and failing each way it can fail:
+2026-11-18 at `e0a8d62`, and 61 after the review's should-fixes (`F1-DEMONSTRATION-REVIEW.md`: S1, three readings that
+could pass on an empty set now hold their counts; S3, each judgement's branch failed on its own). Each judgement the
+live sections make is a plain function, shown holding on the app's own figures and failing each way it can fail:
 
 - **The Backlash text and value**, on the app's own variables at modules 1.5 and 0.8 both ways. It fails on the IIF
   read machined, a wrong value, a literal, no equation, two equations, and the app's figure off.
@@ -280,6 +282,15 @@ snapshot:
 
 This script's own work-round Desk was then removed: Desk9 serves.
 
+**And one F1 itself changes in the older scripts.**
+
+- The committed Excel-saved fixtures (`tests/fixtures/excel-windows`, which `workbook_window_check` and W8's
+  `FIXTURE_DIR` build from) have no Process row and no record. Under D2 they now read Printed, as a new gearbox
+  does.
+- So a W4 to W8 section run again on this branch builds _P parts with the printed Backlash, where its committed logs
+  show machined ones. That is the app's answer, not a fault of the harness. A note for whoever reruns them (the
+  review's S4).
+
 ## What the script does not measure
 
 - **The play in a mesh**, as said under pair.
@@ -308,6 +319,8 @@ This script's own work-round Desk was then removed: Desk9 serves.
   - SolidWorks 2024 in a fresh session for `rangebox`.
 - **Excel.** The script starts and quits its own. No `RangeBox.xlsx` may be open in the user's.
 - **The laptop.** On mains power, the lid open. Over 6 GB free for rangebox.
+- **WSL idle during the 2024 rangebox.** The free memory read is Windows', and WSL2's VM counts as used there: other
+  agents running the test suite in WSL could push it under 6 GB and stop the section falsely (safe, but lost).
 - **Tk.** The spur and pair sections open a hidden Tk window in the script's own process; nothing needs doing with it.
 
 ## Command lines

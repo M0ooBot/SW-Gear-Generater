@@ -227,10 +227,13 @@ def turn_judged(seen, ratio, span):
     return out
 
 
-def as_built_judged(read_process, read_cell, resolved, job_stems, printed_jobs, update):
+def as_built_judged(read_process, read_cell, resolved, job_stems, printed_jobs, update, job_gears, record_gears):
     """D11 (B), a W9 master opened: the blank Process as read (no row), resolved machined, no gear planned printed or
-    named _P, and Update with nothing to do."""
+    named _P, and Update with nothing to do; the gears planned (``job_gears``) the record's gears, none missing and
+    not none, so the judgement cannot pass on an empty plan."""
     out = []
+    if not record_gears or sorted(set(job_gears)) != sorted(set(record_gears)):
+        out.append(f"the gears planned {sorted(set(job_gears))} are not the record's {sorted(set(record_gears))}")
     if read_process != "" or read_cell != "":
         out.append(f"the workbook's Process reads {read_process!r} at {read_cell!r}, not blank with no row")
     if resolved != "machined":
@@ -246,6 +249,39 @@ def as_built_judged(read_process, read_cell, resolved, job_stems, printed_jobs, 
         changed = [stem_of(p.path) for p in update.changed_parts]
         if busy or changed or not update.record_matches:
             out.append(f"Update has something to do: {busy} changed {changed} matches {update.record_matches}")
+    return out
+
+
+def count_judged(what, names, expected):
+    """A set read back holding exactly the expected names, none missing, none more, and not empty."""
+    if not expected or sorted(names) != sorted(expected):
+        return [f"{what}: read {sorted(names)}, not {sorted(expected)}"]
+    return []
+
+
+def raw_record(workbook):
+    """A workbook's link record as its file holds it (read only)."""
+    from gear_generator import store
+    with open(store.link_record_path(workbook), encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def master_before_f1(master):
+    """The master's own record, read from its file (nothing written): its link schema, and any part's spec saying a
+    process. W9a's setup.master was written before F1: none does."""
+    from gear_generator import store
+    raw = raw_record(os.path.join(master, "RangeBox.xlsx"))
+    said = [p.get("spec", {}).get("process") for p in raw.get("parts", []) if "process" in p.get("spec", {})]
+    return raw.get(store.LINK_SCHEMA_KEY), said
+
+
+def before_f1_judged(schema, said):
+    """A master built before F1: its record below link 11, and no part saying a process."""
+    out = []
+    if not isinstance(schema, int) or schema >= LINK_SCHEMA:
+        out.append(f"its record is at link schema {schema!r}, not below {LINK_SCHEMA}")
+    if said:
+        out.append(f"parts say a process: {said}")
     return out
 
 
@@ -440,6 +476,14 @@ def _self_check(ok, scratch):
        and sidecar_judged(1, mspec.to_dict(), dict(md.to_dict(), nozzle=0.4), mv, False) != []
        and sidecar_judged(2, mspec.to_dict(), md.to_dict(), mv, False) != [],
        "sidecar: a machined record with a process key, a nozzle, or at schema 2 is not W9's")
+    pspec = GearSpec(process="printed")
+    pk = kind_for(pspec)
+    pd = pk.derive(pspec)
+    pv = {v.name: v.expression for v in pk.variables(pspec, pd)}
+    no_nozzle = {k: v for k, v in pd.to_dict().items() if k != "nozzle"}
+    ok(sidecar_judged(3, pspec.to_dict(), no_nozzle, pv, True) != []
+       and sidecar_judged(3, pspec.to_dict(), pd.to_dict(), dict(pv, Backlash=MACHINED_TEXT), True) != [],
+       "sidecar: a printed record lacking its nozzle, or holding the machined rule, fails alone")
 
     # volume_judged on the app's own outlines (small_pinion_check's expected_volume, restated: outline less bore).
     def outline_volume(spec):
@@ -502,7 +546,8 @@ def _self_check(ok, scratch):
     def as_built(spec, a, up):
         return as_built_judged(spec.box.process, spec.box.process_cell, a.spec.box.process,
                                [j.stem for j in a.parts.jobs], [j.stem for j in a.parts.jobs if j.spec.is_printed()],
-                               up)
+                               up, [g for j in a.parts.jobs for g in j.gear_ids],
+                               [g for e in rec0.current_parts() for g in e.gears])
     spec0, a0, rec0, up0, foot0 = opened(read_spec, "")
     ok(as_built(spec0, a0, up0) == [], f"as built: W9's gearbox opened with no Process row reads Machined, nothing to "
                                        f"do: {as_built(spec0, a0, up0)}")
@@ -515,11 +560,23 @@ def _self_check(ok, scratch):
     ok(line0 == LINE_AS_BUILT, f"as built: the Process line is the pinned one: {line0!r}")
     spec1, a1, rec1, up1, foot1 = opened(read_spec, "printed", "Box!B10")
     ok(as_built(spec1, a1, up1) != [], "as built: the same gearbox with Printed typed fails it")
-    ok(as_built_judged("", "", "machined", ["Gear_m1.5_N25_P"], [], up0) != []
-       and as_built_judged("", "Box!B10", "machined", [], [], up0) != []
-       and as_built_judged("", "", "printed", [], [], up0) != []
-       and as_built_judged("", "", "machined", [], [], None) != [],
-       "as built: a _P name, a Process row, a blank read printed and no plan each fail")
+    gears = [g for e in rec0.current_parts() for g in e.gears]
+    ok(as_built_judged("", "", "machined", [], [], up0, gears, gears) == [],
+       f"as built: the judgement's own arguments hold on W9's record ({len(gears)} gears)")
+    ok(as_built_judged("", "", "machined", ["Gear_m1.5_N25_P"], [], up0, gears, gears) != []
+       and as_built_judged("", "Box!B10", "machined", [], [], up0, gears, gears) != []
+       and as_built_judged("", "", "printed", [], [], up0, gears, gears) != []
+       and as_built_judged("", "", "machined", [], ["Gear_m1.25_N29"], up0, gears, gears) != []
+       and as_built_judged("", "", "machined", [], [], None, gears, gears) != [],
+       "as built: a _P name, a Process row, a blank read printed, a gear planned printed and no plan each fail alone")
+    ok(as_built_judged("", "", "machined", [], [], up1, gears, gears) != [],
+       "as built: an Update with work to do fails alone (the Process as read blank)")
+    ok(as_built_judged("", "", "machined", [], [], up0, [], []) != []
+       and as_built_judged("", "", "machined", [], [], up0, gears[1:], gears) != [],
+       "as built: no gears planned, or one of the record's gears missing, fails (it cannot pass on an empty plan)")
+    ok(count_judged("x", ["a", "b"], ["b", "a"]) == [] and count_judged("x", ["a"], ["a", "b"]) != []
+       and count_judged("x", ["a", "b", "c"], ["a", "b"]) != [] and count_judged("x", [], []) != [],
+       "count: the expected names hold; one missing, one more, and an empty expectation each fail")
     line1 = ui_text.workbook_process_line(spec1.box, a1.spec.box)
     ok(line1 == LINE_PRINTED, f"printed: the Process line is the pinned one: {line1!r}")
     entries = rec1.current_parts()
@@ -544,6 +601,17 @@ def _self_check(ok, scratch):
         + tuple(up1.parts[1:]))
     ok(any("Gear_m1.25_N29" in p for p in backlash_only_judged(kept, entries, RANGEBOX_PARTS)),
        "printed: a part whose Backlash stays the machined rule fails it, naming the part")
+    machined_first = replace(up1, parts=(replace(first, spec=replace(first.spec, process="machined")),)
+                             + tuple(up1.parts[1:]))
+    ok(any("Gear_m1.25_N29 planned printed False" in p for p in backlash_only_judged(machined_first, entries,
+                                                                                    RANGEBOX_PARTS)),
+       "printed: a part planned machined fails it alone, naming the part")
+    renamed = rec1.current_parts()[0].path[:-len(".SLDPRT")] + "_P.SLDPRT"
+    renamed_plan = replace(up1, parts=(replace(first, path=renamed),) + tuple(up1.parts[1:]))
+    renamed_entries = [copy.copy(e) for e in entries]
+    renamed_entries[0].path = renamed
+    ok(any("its file renamed" in p for p in backlash_only_judged(renamed_plan, renamed_entries, RANGEBOX_PARTS)),
+       "printed: a part whose file is named _P fails it, said as renamed")
 
     # The Update's sentence: package C's once, against C's code; not again once the record says printed (the S2 fix).
     pressed = types.SimpleNamespace(parts=[types.SimpleNamespace(changed=True) for _ in up1.parts])
@@ -596,6 +664,20 @@ def _self_check(ok, scratch):
        and record_judged(LINK_SCHEMA, rec_after.current_parts(), before,
                          dict(cars, **{RANGEBOX_PARTS[0]: (1, {})})) != [],
        "record: link 10, the parts still machined, a renamed part and a sidecar at 1 each fail")
+    ok(record_judged(LINK_SCHEMA, rec_after.current_parts(), before, dict(cars, **{RANGEBOX_PARTS[2]: None})) != [],
+       "record: a .gear.json missing fails alone")
+
+    # master_before_f1 and before_f1_judged on W9's own record (link 10, no process), then on one an F1 app wrote.
+    master = os.path.join(scratch, "setup.master")
+    os.makedirs(master)
+    with open(store.link_record_path(os.path.join(master, "RangeBox.xlsx")), "w", encoding="utf-8") as handle:
+        handle.write(snap["record"])
+    schema, said = master_before_f1(master)
+    ok((schema, said) == (10, []) and before_f1_judged(schema, said) == [],
+       f"master: W9's record reads link {schema}, no part saying a process, and is a master built before F1")
+    ok(before_f1_judged(LINK_SCHEMA, []) != [] and before_f1_judged(7, ["printed"]) != []
+       and before_f1_judged(None, []) != [],
+       "master: one at link 11, one with a part saying a process, and one with no schema each fail")
 
     # files_changed and snapshot on a scratch folder.
     folder = os.path.join(scratch, "files")
@@ -885,19 +967,6 @@ def process_line(desk):
                                          record=getattr(desk, "process_record", ""))
 
 
-def raw_record(workbook):
-    with open(store.link_record_path(workbook), encoding="utf-8") as handle:
-        return json.load(handle)
-
-
-def master_before_f1(master):
-    """The master's own record, read from its file (nothing written): its link schema, and any part's spec saying a
-    process. W9a's setup.master was written before F1: none does."""
-    raw = raw_record(os.path.join(master, "RangeBox.xlsx"))
-    said = [p.get("spec", {}).get("process") for p in raw.get("parts", []) if "process" in p.get("spec", {})]
-    return raw.get(store.LINK_SCHEMA_KEY), said
-
-
 def box_process_row(book):
     """The Box sheet's row labelled Process (any case), and the first row whose label is empty (as W8's ``cell`` finds
     one)."""
@@ -911,12 +980,14 @@ def box_process_row(book):
 def judged_live_backlash(label, desk):
     """Every part's Backlash read from SolidWorks (``Session.equations``), held to the printed IIF and its value at
     the part's module as the record holds it."""
-    clean = True
+    clean, read = True, []
     for entry in desk.record.current_parts():
         path, module = entry.path, str(dict(entry.spec or {}).get("module", ""))
         eqs = run(f"{label} {stem_of(path)}: globals", job(path, lambda s: s.equations()), 300)
         clean = judged_backlash(f"{label} {stem_of(path)}", eqs, module, True, None) and clean
-    return clean
+        read.append(stem_of(path))
+    wrong = count_judged("the parts whose Backlash was read", read, RANGEBOX_PARTS)
+    return check(not wrong, f"{label}: Backlash read from SolidWorks in each of the five parts: {wrong or read}")         and clean
 
 
 def section_rangebox(out):
@@ -930,11 +1001,15 @@ def section_rangebox(out):
                              "gearbox built before F1 the plan names; this script does not build one)")
     schema, said = master_before_f1(master)
     out["master_schema"] = schema
-    check(isinstance(schema, int) and schema < LINK_SCHEMA and not said,
-          f"rangebox: the master's own record was written before F1: link schema {schema}, no part saying a process "
-          f"({said or 'none'})")
-    if said or not isinstance(schema, int) or schema >= LINK_SCHEMA:
+    wrong = before_f1_judged(schema, said)
+    check(not wrong, f"rangebox: the master's own record was written before F1: link schema {schema}, no part saying a "
+                     f"process: {wrong or 'holds'}")
+    if wrong:
         A.section_stop(f"rangebox: {os.path.basename(master)} is not a gearbox built before F1")
+    if W.free_gb() < PRESS_FREE_GB:          # the review's S2: the press's floor before anything is spent
+        A.section_stop(f"rangebox: {W.memory()}: under {PRESS_FREE_GB:g} GB free before the copy (SolidWorks 2024's "
+                       "first press on a freshly opened RangeBox costs 3.3 to 4 GB; run it in a fresh session, WSL "
+                       "idle)")
     try:
         folder = A.w8_step(W.copy_built, master, "rangebox")
     except W.CopyStop as exc:
@@ -964,8 +1039,10 @@ def _rangebox(out, folder, path):
     a = desk.a
     read_box = desk.reading.spec.box
     jobs = list(a.parts.jobs)
+    record_gears = [g for e in desk.record.current_parts() for g in e.gears]
     wrong = as_built_judged(read_box.process, read_box.process_cell, a.spec.box.process, [j.stem for j in jobs],
-                            [j.stem for j in jobs if j.spec.is_printed()], desk.update)
+                            [j.stem for j in jobs if j.spec.is_printed()], desk.update,
+                            [g for j in jobs for g in j.gear_ids], record_gears)
     check(not wrong, f"rangebox, as built: no Process row, the blank read {a.spec.box.process!r} (D11 (B)), "
                      f"{len(jobs)} gears planned machined with no _P, Update with nothing to do: {wrong or 'holds'}")
     f = desk.say_footer("rangebox, opened as built")
@@ -1081,8 +1158,11 @@ def _rangebox(out, folder, path):
                      f"the IIF, each .gear.json at sidecar {PRINTED_SCHEMA}: {wrong or 'holds'}")
     entities_after = A.entities_of("rangebox, after", desk, folder)
     moved = {n: (entities_before.get(n), v) for n, v in entities_after.items() if entities_before.get(n) != v}
-    check(entities_after == entities_before, f"rangebox: every user mate joins what it joined before the press: "
-                                             f"{moved or 'the same'}")
+    wrong = (count_judged("the user's mates read before", entities_before, A.RB_USER_MATES)
+             + count_judged("the user's mates read after", entities_after, A.RB_USER_MATES))
+    check(entities_after == entities_before and not wrong,
+          f"rangebox: every one of the user's eight mates joins what it joined before the press: "
+          f"{moved or 'the same'}; {wrong or 'all eight read both times'}")
     every = A.read_every("rangebox, after", box.assembly, A.pairs_of(box, users), modes)
     A.go_judge("rangebox after the press", desk, every, rel_orig, flags_set, out, dz_set)
     keyway = [f_ for f_ in A.feature_list(A.sun_part(box)) if f_[0] == "User Keyway"]
