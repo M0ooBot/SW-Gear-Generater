@@ -808,3 +808,133 @@ plan already says it.
 12. Say that a new part built from a loaded old record's form is machined.
 13. Under (B), rewrite D11, §1's "what the default carries", §6's W9-era bullet and the Done-when line, and key the
     blank's meaning on the record's parts, not on the schema.
+
+
+---
+
+# Third check, of the revision to the second review (2026-11-18)
+
+**Read at `ffe8812`** (the revision, with the coordinator's ruling of D11 as (B)), against the code at `5de0290`. Since
+`ffe8812` the code has changed only in `findings.py` and ten lines of `swbuild.py`, which move none of the plan's
+citations; K11's functions are still at `:5423`, `:5460` and `:5484`. The figures in §3 below come from a
+pure-Python sweep of the app's own outlines (`kind.outline`, recipe A) in a `git archive` scratch copy, since
+deleted. Nothing was run on SolidWorks or in the suite.
+
+## 1. The five must-fixes
+
+- **1, the derived gear in the record: fixed at its cause.** `nozzle: Optional[float] = None` is the one new field,
+  on the three section classes. `printed` and `backlash_printed` are properties, so `asdict` never sees them,
+  and the four `to_dict`s drop `nozzle` while it is None. A machined `.gear.json` is then W9's byte for byte, and
+  the pin over the whole file can hold at F1-0's commit.
+- **2, every derived class: fixed.** The checks read the process and nozzle from the derived gear, so the signatures
+  stay as they are.
+- **3, the schema pins: not quite.** `git grep` at `ffe8812` finds **ten** lines pinning the literal 10, not eight.
+  The two the plan misses are `test_workbook_carry.py:79` (`["link_schema_version"] == 10`) and `:1057` (the
+  same). Both are in a file F1-0 already touches, so the fix is two lines. But F1-0 written to the list of eight
+  would be red at its own commit. Better still, say "every literal 10, found by grep at the cut", since the W9 work
+  still landing tonight may add more.
+- **4, the tests over the committed workbooks: fixed.** F1-0 owns the ten files, adds one helper, and marks inside
+  `test_workbook_demo_fixtures.assessed`.
+- **5, *Box!B9*: fixed.** The sentence is gone. Under (A), the sentences kept for a later switch name the cell only
+  when the row exists.
+
+**A collision the revision brings in (must-fix).** `test_workbook_model.py:24-27` pins `schema.BOX_SETTINGS`'s
+titles exactly. Adding Process and Nozzle is listed under B (`workbook/schema.py`), but the pin is in a file only
+F1-0 may touch, so B's commit would fail a test B may not edit. And the settings cannot land alone. `to_sheets`
+writes `box_values.get(key, "")` for every setting, so without `box_values` mapping `process` and `nozzle`, a
+gearbox built in code would be written with a blank Process. Read back with no record, that blank is Printed. **So
+F1-0 should take the two `Setting`s, `to_sheets`' two `box_values` keys and that pin together.** B keeps
+`_read_box`'s word check and `template`.
+
+## 2. D11 as (B), keyed on the record's parts
+
+**The rule is sound.** `LinkRecord.parts` holds gear parts only; the layout and the assembly are on `gearbox`. So
+"current parts, none built printed" means what it says. I traced its cases:
+
+- a fresh workbook (no record, or a journal only) is Printed;
+- a gearbox built before F1 is Machined, and so is a v1 record whose parts carry no spec, which is right;
+- a gearbox whose user typed Printed and updated, or one rebuilt printed, is Printed;
+- a gearbox stopped part way, with any part printed, is Printed, so the rest of its parts read as changed;
+- the schema moving to 11 changes nothing.
+
+**It is one switch for what a blank means.** (A) would add three sentences, as the plan says.
+
+Three should-fixes, all in C's `workbook_gui.py`:
+
+- **Resolve inside `_assess`, not only in `_plan`.** `_assess` has a second caller,
+  `raw = self._assess(reading.spec, reading.diagnostics)` (`workbook_gui.py:692`), which feeds `wb_link.consequence`.
+  It must resolve the blank the same way.
+- **Pass no record when the record beside the workbook is another workbook's** (`store.foreign_workbook`, a copy
+  not yet settled). Otherwise a copied workbook would read Machined from its original's parts.
+- **Leave no blank Process in the assessment.** `Assessment.read` keeps the unresolved Box. `Gear.spec_values` turns
+  `""` into `GearSpec`'s default, which is machined, so anything that later builds a spec from `a.read.box` would be
+  machined without a word. Resolve `read`'s Box too, and test that nothing in an `Assessment` holds `""`.
+
+## 3. The planetary warning and the half-nozzle margin
+
+**The measure itself is the problem, not the margin.** `√(rb₂² + (C sin αw)²) − ra₂` is how far the mate's tip
+circle reaches past the pinion's tangent point. It is not how far the mate's tooth runs into the pinion **as the app
+draws it**. Below its base circle the app draws a radial line and a fillet, not a tooth a hob would leave. And the
+mate's tip reaches only 1 m past its pitch line, where a hob reaches 1.25 m.
+
+I swept the two drawn outlines through three pitches. The app's phases were used, the detector was checked to find a
+clash when one is forced, and depth was measured normal to the boundary:
+
+| Pair (m, teeth) | Radial reach | Overlap, no backlash | Overlap, printed default | Printed, each flank 0.1 mm fat |
+|---|---|---|---|---|
+| ring 12 in 54 (1) | 0.369 | 0.025 | 0 | 0 |
+| ring 14 in 54 (1) | 0.278 | 0.013 | 0 | — |
+| ring 16 / 18 / 20 in 54 (1) | 0.191 / 0.108 / 0.029 | 0.006 / 0.002 / 0.001 | 0 | — |
+| RangeBox 13 in 55 (1.25) | 0.401 | 0.023 | 0 | 0 |
+| ring 14 in 54 (2) | 0.555 | 0.026 | 0 | 0 |
+| ring 15 in 60 (1.5) | 0.333 | 0.012 | 0 | — |
+| Sun 29 / Planet 13 (1.25) | 0.122 | 0.001 | 0 | 0 |
+| outside 6 / 30, 8 / 40, 10 / 40, 12 / 60, 13 / 80 (1, 1.5) | 0.62 to 0.24 | 0.067 to 0.005 | 0 | — |
+
+"Printed default" is 0.3 mm per gear. "Each flank 0.1 mm fat" is the flank offset only, taken as an effective
+backlash of 0.087 mm. A dash is a case not run.
+
+- **Every ring case clears once each gear has 0.04 mm of backlash.** The printed default's 0.3 mm leaves about 0.12
+  mm per flank for the printer before any overlap.
+- **The worst outside case, 6 / 30, needs about 0.08 mm.**
+
+The deepest point is, as expected, below the pinion's base circle, for example at radius 7.40 on RangeBox's planet,
+whose base radius is 7.64.
+
+**Which pairs would warn.** With the half-nozzle margin, RangeBox 13 in 55, the 12 and 14 in 54 and the 14 in 54 at
+module 2 would warn, and the 18 in 54 would not. All of them clear in the drawn parts with the default backlash.
+
+**Limits of this sweep.** These are inferences from the app's outlines, not measurements:
+
+- **Not modelled:** a printed tip's radial growth, a helical or shifted pair, recipe B, and SolidWorks' built
+  geometry beyond its being the same sketch.
+- **Sampling:** 40 to 150 positions over three pitches.
+
+**Verdict: neither the margin nor the plain warning is a sound default.** Both rest on a measure that reports an
+interference the drawn parts do not have. The margin would keep the warning on RangeBox, which clears by about 0.12
+mm a flank, and would drop it elsewhere by accident rather than by geometry.
+
+**Recommendation.**
+
+- **For F1:** a printed planetary keeps W7's sentence word for word, as a machined one does. Add no pair interference
+  warning, and keep the single gear's printed undercut sentence.
+- **For the warning itself, later:** build it on a sweep of the drawn outlines with the gear's own backlash, less a
+  printer allowance of the size D3 already budgets (about 0.1 mm a flank), warning on any overlap. This is pure code
+  beside `internal.tip_clash`. That function samples the pinion only above its base circle, which is why it reads
+  near zero. The sweep would be rated once §3.2's prints give the printer's real figure.
+- **If the coordinator wants the warning in F1 regardless,** its signature (§2.8 item 4) must take each gear's recipe,
+  since the outlines need it, and `PairWarning.depth_mm` must mean overlap, not reach. That has to be settled before
+  F1-0 is written.
+
+## 4. F1-0's interface, and whether it may start
+
+**The interface is now precise.** Items 1 to 8 give names, defaults, stub returns and owners, and the packages' files
+are disjoint in `src` and in `tests`, with three exceptions:
+
+- the ten schema lines (§1);
+- `BOX_SETTINGS` and its pin (§1);
+- item 4's pair-check signature, which depends on §3's ruling.
+
+**F1-0 may start once `printed` is cut, with those three settled in the plan first.** Each is a sentence or two.
+After F1-0, A can start once §2.3 is rewritten, and B and C can start as they are, with §2's three should-fixes
+going to C.
