@@ -732,7 +732,8 @@ check was changed.
 - the old assembly and every user file unchanged on disk (1405), its save flag, mode, frames, states, mates, flags and
   entities as before but M1 (b)'s set-apart (1404, 1409), no traced write, show, rebuild, save or close of either and
   nothing saved after the first save (1407);
-- confirmed on 2024: this run; its review is to come.
+- confirmed on 2024: this run, reviewed in `W9D-DEMONSTRATION-REVIEW.md`'s last section (e51de95), which allows the
+  2024 findings; they are set in `findings.py` (e7a3577).
 
 **Further items of §15 shown:**
 - the fixture (log 1): the three parts of their own built by the strip (11-13); every mate made (67) and on in H at
@@ -794,6 +795,13 @@ check was changed.
   Chain-2, Chain-1 and Sprocket-5 in `carry` (823-827) and 2.2 to 2.7 s in `carry-closed` (2:126-130), against 1.16 to
   1.69 s; Sun's 87 candidates at 0.095 and 0.072 s each (829; 2:132). Nothing was capped. That the walks did not
   grow through either session is read from these few lines only.
+- **The face prefilter barely narrowed Sun's faces.** On Sun's part (235 faces) the area key kept 29 for UserGearRoot
+  and 58 for UserGearFillet, 87 carried (829; 2:132), where on 2026 it kept 1 and 2, 3 carried (2026 log 1:832);
+  `IsSame` still found exactly one each. That the 2024-built Sun's equal tooth faces read equal areas to within the
+  key's tolerance, where 2026's did not, is the review's likely reason, not traced. On 2024 a face mate on a gear's
+  root cylinder or fillet therefore carries about one candidate per tooth (two for a fillet), so the 200-candidate cap
+  comes at about 100 teeth for a fillet and 200 for a root, and then names the mate; the cost is time, not a wrong
+  answer.
 - **Constrained status 5 did not come.** On 2026 the old Sprocket-9, suppressed in H with no mate on it in the new
   assembly, read 5 there (2026 log 1:1502); on 2024 the same component (carried as Sprocket-3) read 2 in H (1505). So
   the review's *suppressed and unmated* pattern for 5 is 2026's only; nothing in the app depends on 5 (the review's §6).
@@ -801,7 +809,7 @@ check was changed.
   the anchors and poses, the configuration, the record, the footer, R.2's refusals and the lost line. SprocketLight-1
   came out resolved in the old assembly on 2024 too (1409).
 
-**Gate proposals printed for 2024** (`carry`, log 1; nothing set in findings.py):
+**Gate proposals printed for 2024** (`carry`, log 1; set since in findings.py as the review allows, e7a3577):
 - 1409: `CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2024 = True`, SprocketLight-1 read 1 before
   and 2 after, set apart: its state and its file going from not open to open, unmarked;
 - 1556: `CARRY_INSERTS_ON_2024 = True`, every condition True;
