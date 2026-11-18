@@ -409,6 +409,11 @@ radial growth. **So no outside-pair warning is kept either**: none is true of th
 default in any case the sweep covered. The cases it did not cover are not checked by F1 at all, rather than checked
 by a measure shown to overstate.
 
+**A typed small backlash is not guarded.** The overlap the sweep found appears below about 0.04 mm of backlash a
+gear for a ring pair, and below about 0.08 mm for a pair like 6 / 30. A user who types a backlash under those values
+gets parts that, as drawn, can overlap by up to about 0.03 mm (rings) or 0.07 mm (6 / 30), with no warning, and a
+printer's fat walls add to that. The single gear's *turn the pair in SolidWorks* is then the only guard.
+
 **W7's planetary sentence stays exactly as it is** for printed and machined stages alike
 (`checks._check_stages`, `workbook/checks.py:358-366`, with `report.undercut` at `:362` feeding the build's
 interference clause, `gearbox.py:280-282`). It already says the right thing: the undercut is not modelled, and the
