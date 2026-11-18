@@ -1669,6 +1669,16 @@ makes every gear new, and W9d names the reason *its Process changed*. Under (B)
 the footer says nothing new and no way back is offered: the user asked for it by
 typing Printed.
 
+An Update never renames a file (D10), so parts built machined and made printed
+keep names without `_P`. The result says so once for the gearbox, not as a
+stale name for each part: *The 4 parts now printed keep their file names,
+without the _P a part built printed is named with: Update SolidWorks never
+renames a file, and Build again… makes new parts named with _P if you want the
+mark.* (one part: *Gear_m1.5_N17, now printed, keeps its file name, …*; the
+other way: *… now machined, keeps its file name, with the _P it was built
+printed with: … named without it if you want.*). A part's own tooth count or
+module said in its name is still told as before, the mark set aside.
+
 Boards: `WorkbookBeforeF1` (the reducer as an app before F1 built it, its
 workbook with no Process row, opened Machined, as built, nothing changed) and
 `WorkbookPrinted` (the same with Printed typed: *Printed, 0.4 mm nozzle*, every
