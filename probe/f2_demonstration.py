@@ -48,11 +48,13 @@ Sections (each runs alone; ``workbook`` and ``refusals`` share the printed 12 : 
                 and untouched: on the form, a global changed and left unsaved (MODIFIED), then saved (GLOBALS_DIFFER), the
                 user's keyway in the coupon (written, its size check skipped on the job's live read), a part with no
                 .gear.json (NO_RECORD); in the window, on a copy of the printed 12 : 1: a component set lightweight
-                (LIGHTWEIGHT, the sentence true), a component suppressed (the same words, untrue), the user's keyway in
+                (LIGHTWEIGHT), a component suppressed (the same words, which name that case), the user's keyway in
                 G1's part recorded by a quiet press and the set written, G1's Bore typed in Excel (CHANGES_ON_UPDATE),
                 Update SolidWorks rebuilding the keyway into error (UNSAVED_MARK), saved (FEATURE_IN_ERROR, the part
-                not active); then the reducer closed and an unrelated assembly of the user's open (LIGHTWEIGHT again,
-                untrue), and the form pressed with that assembly active (NOT_A_PART).
+                not active); then the reducer closed and an unrelated assembly of the user's open (LIGHTWEIGHT again, a
+                part simply closed), and the form pressed with that assembly active (NOT_A_PART, naming it). On the
+                form, after GLOBALS_DIFFER, the value is put back by the form's own Update values, saved, and a press
+                writes a folder of its own.
 - ``userwork``  a copy of W9a's setup.master (RangeBox with the user's work): Print files as built (Machined, E4); then
                 Printed typed on the Box sheet and one Update SolidWorks, as F1's demonstration did; Print files before
                 the save (UNSAVED_MARK), then after the person's save: the five parts written, none of the user's
@@ -221,11 +223,15 @@ def said_feature(stem, features):
 
 
 def said_lightweight(stems, assembly):
+    """LIGHTWEIGHT as C words it since 567773c: true of each case B's job folds into it (a lightweight or a suppressed
+    component, or a part simply closed, while an assembly is open)."""
     one = _one(stems)
-    opened = f"with {assembly} open" if assembly else "with an assembly open"
-    return (f"Print files wrote nothing: {opened}, {names(stems)} may be "
-            f"{'a lightweight component' if one else 'lightweight components'} of it; resolve {'it' if one else 'them'} "
-            f"there, or open {'the part itself' if one else 'the parts themselves'}, then print again.")
+    opened = f"{assembly} is open" if assembly else "an assembly is open"
+    return (f"Print files wrote nothing: {names(stems)} {'is' if one else 'are'} not open where Print files can reach "
+            f"{'it' if one else 'them'} while {opened}: {'it' if one else 'they'} may be "
+            f"{'a lightweight or suppressed component' if one else 'lightweight or suppressed components'} of it, or "
+            f"simply closed; resolve {'it' if one else 'them'} there, or open "
+            f"{'the part itself' if one else 'the parts themselves'}, then print again.")
 
 
 def said_not_a_part(file_name=""):
@@ -603,6 +609,27 @@ def copies_of(spec, row):
     return int(float(text)) if text else 1
 
 
+def herringbone_judged(reach, along, radius, face, tol=EXTENT_TOL):
+    """The herringbone's verdict (F2-PROBES-REVIEW §2): its vertices' largest radius and axial extent against d_a / 2
+    and the face, to the size check's tolerance; what does not hold, or nothing."""
+    if reach is None or along is None:
+        return ["no vertex was read"]
+    out = []
+    if abs(reach - radius) > tol:
+        out.append(f"radius {reach:.6f} against {radius:.6f}")
+    if abs(along - face) > tol:
+        out.append(f"along Z {along:.6f} against {face:.6f}")
+    return out
+
+
+def resolved_judged(states, components):
+    """Components' states as read ({Name2: GetSuppression2}) against the assembly's own: exactly those components, each
+    resolved (2). A read of none, or of other components, fails."""
+    if not states or not components or set(states) != set(components):
+        return [f"the components read {sorted(states or {})} are not the assembly's {sorted(components)}"]
+    return [f"{n} reads {v}, not resolved (2)" for n, v in sorted(states.items()) if v != 2]
+
+
 def stem_lists_judged(what, got, want):
     """Two lists of names the same, none missing, none more, and not empty."""
     if not want or sorted(got) != sorted(want):
@@ -699,16 +726,35 @@ def form_press(app, strand, snapshot):
     return {"bar": bar, "bar_shown": shown, "status": app.status.get(), "job": job, "began": began, "ended": ended}
 
 
-# The attributes the Workbook window's press reads on itself (press_print, _submit, _collect_job, _finish_print,
-# _worker_free, _foreign_record, _folder), each one DeskP (W9a's Desk9 and W8's Desk beneath it) has: held to the
-# window's source in the self-check, so a new one the press comes to read is seen before a live run.
-DESK_PROVIDES = ("_pending", "reading", "_plan", "error", "plan_trouble", "recalc", "note", "_refresh_state", "_folder",
-                 "app", "record", "state", "update_plan", "_foreign_record", "_worker_free", "_submit", "link",
-                 "_settled", "_set_status", "_job", "_finish_print", "_mark_not_as_built", "_record_refusal",
-                 "_settle_journal", "positions_per_configuration", "_finish_update", "_finish_build",
-                 "_close_when_done", "close", "_plan", "_refresh_read_line", "_paint")
-DESK_APP_PROVIDES = ("_snapshot", "_worker", "_pending_build", "out_folder")
+# The Workbook window's methods DeskP runs as themselves (its press and what the press reaches). The self-check holds
+# what they read on the window and on its strip to what DeskP, W9a's Desk9 and W8's Desk give, each read from its source
+# (DeskP is not importable off Windows), so a read the window comes to make that the stand-in lacks is seen before a run.
 WINDOW_PRESS = ("press_print", "_submit", "_collect_job", "_finish_print", "_worker_free", "_foreign_record", "_folder")
+
+
+def _class_body(path, name):
+    src = open(path, encoding="utf-8").read()
+    m = re.search(r"\nclass " + name + r"\b[\s\S]*?(?=\n\S)", src)
+    return m.group(0) if m else ""
+
+
+def desk_provides(bodies=None):
+    """What DeskP gives the window's press, read from the sources of DeskP (here), W9a's Desk9 and W8's Desk: their
+    methods and class attributes, every self.x assigned, and on the strip every self.app.x assigned (Desk9's strip
+    holds recent). (on itself, on its strip, the window's methods DeskP binds)."""
+    if bodies is None:
+        bodies = [_class_body(os.path.abspath(__file__), "DeskP"),
+                  _class_body(os.path.join(HERE, "w9a_demonstration.py"), "Desk9"),
+                  _class_body(os.path.join(HERE, "workbook_assembly_check.py"), "Desk")]
+    own, app, bound = set(), {"recent"}, set()
+    for body in bodies:
+        own |= set(re.findall(r"\n    def (\w+)\(", body)) | set(re.findall(r"\n    (\w+) = ", body))
+        own |= set(re.findall(r"self\.(\w+)\s*=(?!=)", body))
+        for targets in re.findall(r"\n\s+((?:self\.\w+\s*,\s*)+self\.\w+)\s*=(?!=)", body):
+            own |= set(re.findall(r"self\.(\w+)", targets))
+        app |= set(re.findall(r"self\.app\.(\w+)\s*=(?!=)", body))
+        bound |= {a for a, b in re.findall(r"\n    (\w+) = _WINDOW\.(\w+)", body) if a == b}
+    return own, app, bound
 
 
 def window_reads():
@@ -1008,6 +1054,38 @@ def _self_check(ok, scratch):
        "list: a part missing, a count off, the span 0.002 off, the size check said otherwise, a feature not named, a "
        "set headed DO NOT PRINT, another name, nothing expected and the settings twice each fail")
 
+    ok(herringbone_judged(22.7055, 20.0, 22.70552, 20.0) == [] and herringbone_judged(22.72, 20.0, 22.70552, 20.0) != []
+       and herringbone_judged(22.7055, 19.98, 22.70552, 20.0) != [] and herringbone_judged(None, None, 22.7, 20.0) != [],
+       "herringbone: the size reading holds within 0.01 mm; the radius off, the face off and no vertex each give a "
+       "verdict that it does not")
+    comps = {"Gear_m1.5_N17_P-1", "OutputGear-1", "Reducer_12to1_Layout-1"}
+    ok(resolved_judged({c: 2 for c in comps}, comps) == [] and resolved_judged({}, comps) != []
+       and resolved_judged(None, comps) != [] and resolved_judged(dict({c: 2 for c in comps}, **{"OutputGear-1": 1}),
+                                                                  comps) != []
+       and resolved_judged({"Other-1": 2}, comps) != [] and resolved_judged({c: 2 for c in comps}, set()) != [],
+       "components: the assembly's own components each resolved holds; none read, a read of other components, one "
+       "lightweight and nothing expected each fail")
+    ring = GearSpec(module="1.25", teeth="55", teeth_side="internal", process="printed")
+    sun = GearSpec(module="1.25", teeth="29")
+    mplan = po.PrintPlan(None, (po.print_part("C:\\a\\Gear_m1.25_N29.SLDPRT", sun.to_dict(), rows=("Sun",),
+                                              user_features=("User Keyway",)),), folder="F", name="RangeBox", pressed=now)
+    mres = po.PrintResult(written=(("C:\\a\\Gear_m1.25_N29.SLDPRT", "F\\Gear_m1.25_N29.step"),), folder="F",
+                          facts={"Gear_m1.25_N29.step|extent": "skipped: user features"}, active_restored=True)
+    mwant = {"Gear_m1.25_N29.step": {"rows": ("Sun",), "count": 1, "span": MACHINED_SPAN, "size": "skipped: user features",
+                                     "features": ("User Keyway",)}}
+    rplan2 = po.PrintPlan(None, (po.print_part("C:\\a\\Ring.SLDPRT", ring.to_dict(), rows=("Ring",)),), folder="F",
+                          name="RangeBox", pressed=now)
+    rres = po.PrintResult(written=(("C:\\a\\Ring.SLDPRT", "F\\Ring.step"),), folder="F",
+                          facts={"Ring.step|extent": "skipped: ring"}, active_restored=True)
+    rwant = {"Ring.step": {"rows": ("Ring",), "count": 1, "span": INTERNAL_SPAN, "size": "skipped: ring"}}
+    mtext = ui_text.print_list_text(mplan, mres, "0.9")
+    ok(list_judged(mtext, "RangeBox", mwant, process="Process: Machined") == []
+       and list_judged(ui_text.print_list_text(rplan2, rres, "0.9"), "RangeBox", rwant) == []
+       and list_judged(mtext, "RangeBox", mwant) != [],
+       f"list: C's list of a machined part (Process: Machined, no span, the user's feature named) and of a printed ring "
+       f"(over pins) holds as userwork expects it; the machined list read as printed fails: "
+       f"{list_judged(mtext, 'RangeBox', mwant, process='Process: Machined')}")
+
     # 8. The findings and the gate.
     ok(findings_judged(REVIEWED) == [] and all(findings_judged(dict(REVIEWED, **{n: None})) for n in REVIEWED)
        and findings_judged(dict(REVIEWED, STEP_EXPORT=1)) != []
@@ -1065,11 +1143,18 @@ def _self_check(ok, scratch):
 
     # 10. The window's press, read as source: what it reads on itself and on its strip is what DeskP gives it.
     own, app_reads = window_reads()
+    has, has_app, bound = desk_provides()
     from gear_generator import workbook_gui
-    ok(own and set(own) <= set(DESK_PROVIDES) and set(app_reads) <= set(DESK_APP_PROVIDES)
+    ok(own and has and set(own) <= has and set(app_reads) <= has_app and set(WINDOW_PRESS) <= bound
        and all(hasattr(workbook_gui.WorkbookWindow, n) for n in WINDOW_PRESS),
-       f"window: every attribute the window's press reads on itself and its strip DeskP gives it: more "
-       f"{sorted(set(own) - set(DESK_PROVIDES))} {sorted(set(app_reads) - set(DESK_APP_PROVIDES))}")
+       f"window: every attribute the window's press reads on itself ({len(own)}) and on its strip ({sorted(app_reads)}) "
+       f"DeskP, Desk9 or W8's Desk gives, read from their sources, and DeskP binds the seven methods themselves: "
+       f"missing {sorted(set(own) - has)} {sorted(set(app_reads) - has_app)} {sorted(set(WINDOW_PRESS) - bound)}")
+    bare, bare_app, bare_bound = desk_provides([_class_body(os.path.join(HERE, "w9a_demonstration.py"), "Desk9"),
+                                                _class_body(os.path.join(HERE, "workbook_assembly_check.py"), "Desk")])
+    ok(not set(own) <= bare and not set(app_reads) <= bare_app and not set(WINDOW_PRESS) <= bare_bound,
+       f"window: without DeskP's own body the check fails (Desk9 and W8's Desk lack {sorted(set(own) - bare)} and on "
+       f"the strip {sorted(set(app_reads) - bare_app)})")
 
     _self_check_form(ok, scratch)
 
@@ -1133,9 +1218,8 @@ def _self_check_form(ok, scratch):
                f"form: a part with no .gear.json: NO_RECORD's words, nothing submitted: {seen['status']!r}")
             seen = form_press(app, strand, dict(snapshot, path=os.path.join(folder, "Pair.SLDASM"), is_part=False,
                                                 doc_type=2))
-            ok(seen["status"] == said_not_a_part() and seen["job"] is None,
-               f"form: an assembly active: NOT_A_PART's words (the form hands the planner no path for what is not a "
-               f"part, so no name), nothing submitted: {seen['status']!r}")
+            ok(seen["status"] == said_not_a_part("Pair.SLDASM") and seen["job"] is None,
+               f"form: an assembly active: NOT_A_PART's words naming it, nothing submitted: {seen['status']!r}")
     finally:
         root.destroy()
 
@@ -1364,6 +1448,19 @@ def set_global(label, path, value, save=False, close=False, name=FACE_WIDTH):
     check(rebuilt and (not save or saved == [(file_of(path), True)]), f"{label}: made as a person makes it")
 
 
+def close_window(label, path):
+    """A document's own window closed by CloseDoc on its title as SolidWorks gives it (read by the walk), as a person
+    closes it; a part an open assembly holds stays loaded as its component."""
+    def work(s):
+        doc = next((d for d in W.documents(s._app)  # noqa: SLF001
+                    if store.same_path(str(call(d, "GetPathName") or ""), path)), None)
+        if doc is None:
+            return False
+        s.close_document(str(call(doc, "GetTitle")))
+        return True
+    check(run(label, work), f"{label}: {file_of(path)} was open and its window was closed")
+
+
 def save_one(label, path):
     saved = run(label, lambda s: W.save_docs(s, [path]))
     check(saved == [(file_of(path), True)], f"{label}: {file_of(path)} saved as a person saves it: {saved}")
@@ -1491,6 +1588,7 @@ def window_press(desk, label):
         say(f"fact    {label}: W8's Desk held the last job's raise where the window keeps a failed read; cleared before "
             f"the press: {desk.error}")
         desk.error = None
+    desk.note, desk.said = None, []              # nothing of an earlier press can be read as this one's
     jobs, began = len(desk.strand.jobs), time.time()
     desk.press_print()
     if desk._pending is not None:  # noqa: SLF001
@@ -1817,10 +1915,16 @@ def section_form(out):
                     say(f"fact    {label}: a herringbone (the size check measured on spur and helical gears only): the "
                         f"app's size check {app_extent!r}; this script reads radius {reach.get('radius')} over "
                         f"{reach.get('along_z')} along Z, against d_a / 2 {radius:.6f} and the face {face}")
+                    holds = herringbone_judged(reach.get("radius"), reach.get("along_z"), radius, face)
+                    out["herringbone"] = {"holds": not holds, "radius": reach.get("radius"),
+                                          "along_z": reach.get("along_z"), "d_a/2": radius, "face": face,
+                                          "app": app_extent}
+                    note(f"{label}: the herringbone's size reading {'holds' if not holds else 'does not hold'} against "
+                         f"d_a / 2 and the face to {EXTENT_TOL:g} mm ({holds or 'within'}): a fact for the ruling on "
+                         "\"herringbone\" in printout.EXTENT_SKIPPED")
                     if app_extent == "checked":
-                        off = abs(reach["radius"] - radius) > EXTENT_TOL or abs(reach["along_z"] - face) > EXTENT_TOL
-                        check(not off, f"{label}: the app checked the herringbone's size and passed it, as this "
-                                       "script's reading does")
+                        check(not holds, f"{label}: the app checked the herringbone's size and passed it, as this "
+                                         "script's reading does")
                 if press == 1:
                     first = reach
                 elif first is not None:
@@ -1970,9 +2074,11 @@ def section_workbook(out):
         say("-- workbook  every part loaded only as a component: written by the job's own handle, nothing activated")
         got = judged_written("workbook: component-only", press("component-only"), folders, reducer_expect(desk), uk,
                              {"SaveAs": 4, "GetOpenDocumentByName": None}, name)
+        components = {n for _, n in W.bodies(box)} | {box.layout_component}
         states = component_states("workbook: the components after the press", asm)
-        check(states is not None and all(v == 2 for v in states.values()),
-              f"workbook: every component still resolved after the press: {states}")
+        check(resolved_judged(states, components) == [],
+              f"workbook: every component of the assembly read, each still resolved after the press: "
+              f"{resolved_judged(states, components) or states}")
         out["component_only"] = got and {s: {k: v for k, v in r.items() if k != "points"}
                                          for s, r in got["reads"].items()}
 
@@ -2003,8 +2109,13 @@ def section_workbook(out):
         save_one("workbook: G1 saved", g1)
         judged_refusal("workbook: G1's global, saved, behind the user's part", desk, press("G1 saved"),
                        said_globals(stem_of(g1), FACE_WIDTH, "16", was), folders, uk)
-        set_global(f"workbook: G1's Face Width put back to {was}, saved, its window closed", g1, was, save=True,
-                   close=True)
+        set_global(f"workbook: G1's Face Width put back to {was}, saved, its window left open", g1, was, save=True)
+        activate("workbook", user)
+        say("-- workbook  G1 open in its own window behind the user's part, as recorded: written by its object, not "
+            "activated")
+        judged_written("workbook: G1 behind the user's part", press("G1 behind"), folders, reducer_expect(desk), uk,
+                       {"SaveAs": 4, "GetOpenDocumentByName": None}, name)
+        close_window("workbook: G1's own window closed", g1)
         activate("workbook", user)
 
         say("-- workbook  the assembly and its parts closed, no assembly open: the job opens each part, writes it, "
@@ -2026,8 +2137,9 @@ def section_workbook(out):
                            uk, {"SaveAs": n, "OpenDoc6": n, "CloseDoc": n, "ActivateDoc3": None,
                                 "GetOpenDocumentByName": None}, name)
         states = component_states("workbook: the components after the fallback", asm)
-        check(states is not None and all(v == 2 for v in states.values()),
-              f"workbook: after the fallback's closes every component is still resolved: {states}")
+        check(resolved_judged(states, components) == [],
+              f"workbook: after the fallback's closes every component of the assembly read and still resolved: "
+              f"{resolved_judged(states, components) or states}")
         check(sorted(stems) == sorted(s for s, _, _, _ in REDUCER.values()),
               f"workbook: the record's parts throughout: {stems}")
     finally:
@@ -2086,7 +2198,24 @@ def section_refusals(out):
         save_one("refusals, the form: Coupon_R saved", coupon)
         judged_refusal("refusals, the form: GLOBALS_DIFFER", app, form("saved"),
                        said_globals(stem, FACE_WIDTH, "9", was), folders, None)
-        set_global(f"refusals, the form: Coupon_R's Face Width put back to {was}, saved", coupon, was, save=True)
+        say("-- refusals  the form: Face Width put back by the form's own Update values (the form still says the "
+            "record's value), saved as the person saves; then a press writes into a folder of its own")
+        jobs = len(strand.jobs)
+        app._derive_now()  # noqa: SLF001
+        app._update_values()  # noqa: SLF001 - the form's own: its record loaded by the build's finish
+        if app._pending_build is not None:  # noqa: SLF001
+            app._collect_build()  # noqa: SLF001 - its own finish: the status and the record
+        done = strand.jobs[-1]["value"] if len(strand.jobs) > jobs else None
+        say(f"status  refusals, the form: Update values: {app.status.get()}")
+        check(done is not None and done.ok and FACE_WIDTH in list(done.changed) and done.rebuilt,
+              f"refusals, the form: Update values set \"{FACE_WIDTH}\" back to {was} and rebuilt Coupon_R: "
+              f"{app.status.get()!r}")
+        save_one("refusals, the form: Coupon_R saved after Update values", coupon)
+        k, w = span_expected(1.5, 20)[:2]
+        judged_written("refusals, the form: after Update values", form("after Update values"), folders,
+                       {stem: {"radius": outer_radius(1.5, 20), "face": 8.0, "extent": extent_want(), "rows": (),
+                               "count": 1, "span": ("span", k, w, False)}}, None,
+                       {"SaveAs": 1, "GetOpenDocumentByName": None}, stem)
 
         say("-- refusals  the form: the user's keyway cut in the coupon and saved: written, its size check skipped on "
             "the job's own read of the part")
@@ -2116,7 +2245,7 @@ def section_refusals(out):
             open_doc("refusals, the form: the user's Sprocket opened", sprocket)
             judged_refusal("refusals, the form: NO_RECORD", app, form("no record"), said_no_record(file_of(sprocket)),
                            folders, None, in_job=False)
-            run("refusals: the user's Sprocket closed", lambda s: s.close_document(file_of(sprocket)))
+            close_window("refusals: the user's Sprocket closed", sprocket)
         activate("refusals", user)
 
         say("-- refusals  the window, on a copy of the printed 12 : 1, its assembly open, the user's part active")
@@ -2154,7 +2283,7 @@ def section_refusals(out):
                              "written": [file_of(f) for _, f in value.written] if value else None}
         if value is not None and value.refusal is not None:
             say(f"fact    refusals: with {g4_name} suppressed (state {state}) the app meets it with LIGHTWEIGHT's "
-                "sentence, which is untrue of a suppressed component (F2-PROBES-REVIEW §3.3)")
+                "sentence, which names a suppressed component among its cases since 567773c")
             refused("refusals, the window: suppressed", seen, said_lightweight([g4], assembly), before[0], after[0],
                     (before[1], after[1]), (before[2], after[2]), uk)
         else:
@@ -2180,9 +2309,11 @@ def section_refusals(out):
         listed = [(f.name, file_of(f.path)) for f in (work.features if work else [])]
         check(quiet is not None and ("User Keyway", file_of(g1)) in listed,
               f"refusals: the record lists the User Keyway in G1's part: {listed}")
+        # The names the list gives are the record's (W9a allows its inventory the keyway's sketch beside the keyway).
+        g1_features = tuple(dict.fromkeys(n for n, f in listed if f == file_of(g1)))
         activate("refusals", user)
         judged_written("refusals, the window: the set with the user's keyway", window("keyway on record"), folders,
-                       reducer_expect(desk, sizes={"G1": "skipped: user features"}, features={"G1": ("User Keyway",)}),
+                       reducer_expect(desk, sizes={"G1": "skipped: user features"}, features={"G1": g1_features}),
                        uk, {"SaveAs": len(REDUCER), "GetOpenDocumentByName": None}, desk.reading.spec.box.name)
 
         say("-- refusals  the window: G4's Flank typed arcs in Excel, a change Update cannot carry (G4's part made new, "
@@ -2232,9 +2363,9 @@ def section_refusals(out):
         judged_refusal("refusals, the window: parts closed, the user's assembly open", desk, window("parts closed"),
                        said_lightweight(stems, stem_of(pair)), (copy, os.path.dirname(user), pair_folder),
                        path_key(pair))
-        say("fact    refusals: the sentence says the parts may be lightweight components of the user's assembly; they "
-            "are closed and in no assembly (F2-PROBES-REVIEW §3.3: LIGHTWEIGHT is inferred, not read)")
-        judged_refusal("refusals, the form: NOT_A_PART", app, form("an assembly active"), said_not_a_part(),
+        say("fact    refusals: the parts are closed and in no assembly; the sentence names that case among the three it "
+            "stands for (LIGHTWEIGHT is inferred, not read: F2-PROBES-REVIEW §3.3)")
+        judged_refusal("refusals, the form: NOT_A_PART", app, form("an assembly active"), said_not_a_part(file_of(pair)),
                        (folder, os.path.dirname(user), pair_folder), path_key(pair), in_job=False)
     finally:
         root.destroy()
@@ -2343,6 +2474,9 @@ def section_userwork(out):
         check(desk.a.spec.box.process == "printed" and u is not None and len(u.changed_parts) == n
               and not u.needs_new_revision, f"userwork: the Box reads Printed; Update plans the {n} parts in place: "
                                             f"{[file_of(p.path) for p in (u.changed_parts if u else [])]}")
+        stems = [stem_of(e.path) for e in desk.record.current_parts()]
+        judged_refusal("userwork: Printed typed, before the Update", desk, window("Printed typed"), said_values(stems),
+                       folders, uk, in_job=False)
         if W.free_gb() < PRESS_FREE_GB:
             A.section_stop(f"userwork: {W.memory()}: under {PRESS_FREE_GB:g} GB free before the press")
         result, _ = A.press(desk, "userwork: Printed, one Update")
