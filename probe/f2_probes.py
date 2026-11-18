@@ -25,12 +25,16 @@ Sections, in this order (each runs alone and builds what it needs; "component" i
                before and after. (3) The file read as text (never opened in SolidWorks, GOTCHAS §20): the frame, the
                FILE_SCHEMA (matched by prefix), the solid, shell and surface-model instances counted as instances, the
                length unit, and from the VERTEX_POINTs the largest radius from Z and the axial extent against the app's
-               d_a / 2 and face width. (4) The helical part, the same. (5) A second export onto (2)'s file: a fact, and
-               the text compared with (2)'s, the control that the comparison of (6) can be made at all. (6) The spur open
-               in its own window, the helical active, the spur exported by its own document object (the app's
-               ``use_open_document``, no activation): its file against (2)'s and (4)'s. (8) One global of the spur
-               changed and rebuilt, not saved, the spur activated and exported: whether the file holds the changed solid
-               and the save flag stays on. (9) Everything of the folder closed unsaved (``QuitDoc``) under the watch, and
+               d_a / 2 and face width. (4) The helical part, the same. (5) A second export onto (2)'s file: a fact
+               (its text differs from (2)'s on both versions: SolidWorks numbers each export's entities otherwise). (6) The spur open in
+               its own window, the helical active, the spur exported by its own document object (the app's
+               ``use_open_document``, no activation). (8) One global of the spur changed and rebuilt, not saved, the spur
+               activated and exported: whether the file holds the changed solid and the save flag stays on. Then **the
+               files are compared by geometry, not text** (the coordinator's ruling 1, 2026-11-18; ``same_part``): the
+               same counts of every entity kind, the same set of CARTESIAN_POINTs and the same radii, within
+               ``GEOMETRY_TOL`` (1e-4 mm), header and numbering ignored; held in the run itself to (2) and (5) being the
+               same part and to the spur against the helical (2, 4) and the 8 mm spur against the 9 mm one (2, 8) not
+               being, before (6)'s file is judged against (2)'s and (4)'s. (9) Everything of the folder closed unsaved (``QuitDoc``) under the watch, and
                the user's documents compared with the section's start.
 - ``component``  a printed pair, 25 / 50 at module 1.5, fixed, built by the form's pair route in ``f2-component``,
                closed, and its assembly opened alone, so both parts are loaded only as its components. Every open
@@ -42,15 +46,18 @@ Sections, in this order (each runs alone and builds what it needs; "component" i
                ``Session.open_document`` (which activates), exported, closed by ``CloseDoc`` on its title; whether the
                assembly is still open and unmarked, its component loaded and resolved, which document is active, and any
                window; then the assembly activated again, as the job puts the user's document back. (7d) Everything
-               closed; the gear opened alone and exported twice (the reference and its determinism control), then the
-               pinion opened and exported once (the file that must differ), the gear's window read while it is open
+               closed; the gear opened alone and exported twice (the reference and the comparison's positive control), then the
+               pinion opened and exported once (the negative control: another part), the gear's window read while it is open
                but not active (F2-0-REVIEW's M1: the case PART_WINDOW_READ is for; step 6 reads the spur the same way);
                ``GetOpenDocumentByName`` on the gear open alone (it must answer) and closed (it must not). The files of
-               (7a) and (7b) are held to the reference and PART_WINDOW_READ is proposed here, before (7c), so a hang
+               (7a) and (7b) are held to the reference by geometry (judged only when both sections' controls held in this
+               run) and PART_WINDOW_READ is proposed here, before (7c), so a hang
                there cannot void them (S2). (7c), last: the assembly opened again, the gear's component set
-               lightweight (a fact: that marks the assembly); whether the walk and ``GetOpenDocumentByName`` still
-               reach a document; if one, its export; then the not-open path (opened beside, exported, closed) and the
-               component's state after; then resolved again; its files held to the reference.
+               lightweight (the assembly's flag read after); whether the walk and ``GetOpenDocumentByName`` still
+               reach a document; if one, its export; then the not-open path (opened beside, exported, closed), and after
+               that close **the assembly's save flag and the component's state, as facts** (ruling 2: the fallback
+               resolves a lightweight component in the user's assembly, so the job refuses one by name and
+               OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN is proposed for a resolved component only); then resolved again.
 
 **A dialog is a finding, not a failure.** Every call that may raise one runs under W9c's watch (``w9c_probes.watched``:
 logs class, caption, buttons and texts, never SolidWorks' frame title, never answers). A dialog that came and went ends
@@ -88,7 +95,9 @@ if "--help" in sys.argv or "-h" in sys.argv:
 # -- pure judgements (no SolidWorks; --self-check runs them) --------------------------------------------------------
 
 EXTENT_TOL = 0.01          # mm: the largest radius and the axial extent against the app's (printout.EXTENT_TOL)
-GEOMETRY_TOL = 1e-6        # mm: two files' vertices the same point
+GEOMETRY_TOL = 1e-4        # mm: two files' points (and radii) the same; 1/100 of EXTENT_TOL, far under any change a
+#                            part's dimensions make (the coordinator's ruling 1, 2026-11-18)
+RADIUS_KINDS = ("CIRCLE", "CYLINDRICAL_SURFACE", "SPHERICAL_SURFACE", "TOROIDAL_SURFACE")   # their lengths compared too
 # The schemas a file may declare, matched by the FILE_SCHEMA name's prefix (printout.STEP_SCHEMAS; the self-check holds
 # the two the same when the app's source is importable).
 STEP_SCHEMAS = (
@@ -327,35 +336,115 @@ def differing(a, b):
     return sum(1 for i in range(max(len(x), len(y))) if i >= len(x) or i >= len(y) or x[i] != y[i])
 
 
-def geometry_of(text):
-    """The instances counted by entity name and the vertices in millimetres, rounded to GEOMETRY_TOL: two files of the
-    same solid written with other numbering share it."""
-    _, _, data = sections_of(statements(text))
-    counts = {}
-    for body in data.values():
-        for name in entity_names(body):
-            counts[name] = counts.get(name, 0) + 1
+def part_geometry(text):
+    """What two STEP files of one part share however SolidWorks numbers them (the coordinator's ruling 1): ``(counts,
+    points, radii)`` read from the DATA section alone, so the header (its FILE_NAME, time, author) and every entity's
+    number and reference are left out. ``counts``: how many instances of each entity kind (a complex instance counting
+    each of its kinds). ``points``: every CARTESIAN_POINT's coordinates in millimetres: the vertices, the B-spline curves'
+    and surfaces' control points, and the location of every axis placement that places a plane, a cylinder or a circle.
+    ``radii``: every circle's, cylinder's, sphere's and torus's radii in millimetres, sorted. None when the file's length
+    unit cannot be read (no millimetre can be said then)."""
+    _, _, data = sections_of(statements(text or ""))
     _, mm = length_unit(data)
-    points = sorted(tuple(round(v * (mm or 1.0) / GEOMETRY_TOL) for v in p) for p in vertices(data))
-    return counts, points
+    if not mm:
+        return None
+    counts, points, radii = {}, [], []
+    for body in data.values():
+        names = entity_names(body)
+        for name in names:
+            counts[name] = counts.get(name, 0) + 1
+        plain = _unquoted(body)
+        if names == ["CARTESIAN_POINT"]:
+            p = re.search(r"\(\s*'[^']*'\s*,\s*\(([^)]*)\)\s*\)\s*$", plain)
+            try:
+                if p:
+                    points.append(tuple(float(v) * mm for v in p.group(1).split(",")))
+            except ValueError:
+                pass
+        elif len(names) == 1 and names[0] in RADIUS_KINDS:
+            radii += [float(v) * mm for v in re.findall(r"(?<![#\w.])[-+]?\d+\.\d*(?:E[-+]?\d+)?", plain, re.I)]
+    return counts, points, sorted(radii)
+
+
+def points_match(a, b, tol=GEOMETRY_TOL):
+    """Whether two lists of points are the same set, one to one, each pair within ``tol`` mm in every coordinate (a point
+    kept twice must be there twice): a grid of cells ``tol`` wide, each point of ``a`` taking an unused point of ``b`` from its
+    own or a neighbouring cell."""
+    if len(a) != len(b):
+        return False
+    import itertools
+    grid = {}
+    for i, q in enumerate(b):
+        grid.setdefault((len(q),) + tuple(math.floor(v / tol) for v in q), []).append(i)
+    used = set()
+    for p in a:
+        key = tuple(math.floor(v / tol) for v in p)
+        found = None
+        for step in itertools.product((-1, 0, 1), repeat=len(p)):
+            for i in grid.get((len(p),) + tuple(k + d for k, d in zip(key, step)), ()):
+                if i not in used and all(abs(x - y) <= tol for x, y in zip(p, b[i])):
+                    found = i
+                    break
+            if found is not None:
+                break
+        if found is None:
+            return False
+        used.add(found)
+    return True
+
+
+def same_part(a, b, tol=GEOMETRY_TOL):
+    """Whether two STEP texts are files of the same part (the coordinator's ruling 1): ``(answer, why)``. True when both
+    read, every entity kind has the same count in both, their points are the same set within ``tol`` mm, and their radii
+    the same within ``tol``. Two different parts cannot pass: a solid's faces and edges are its surfaces and curves, each
+    placed by a point or shaped by control points or a radius, so a part of another shape or size moves at least one
+    point or radius by its whole change (0.5 mm on the spur made 9 mm thick, step 8), or has other counts (the helical
+    against the spur, step 4); the run holds this on its own files as its negative controls."""
+    ga, gb = part_geometry(a), part_geometry(b)
+    if ga is None or gb is None:
+        return None, "a file not read, or its length unit unreadable"
+    (ca, pa, ra), (cb, pb, rb) = ga, gb
+    if ca != cb:
+        kinds = sorted(k for k in set(ca) | set(cb) if ca.get(k) != cb.get(k))
+        return False, f"{len(kinds)} entity kinds counted otherwise, e.g. " + ", ".join(
+            f"{k} {ca.get(k, 0)}/{cb.get(k, 0)}" for k in kinds[:3])
+    if len(ra) != len(rb) or any(abs(x - y) > tol for x, y in zip(ra, rb)):
+        return False, "the radii differ"
+    if not points_match(pa, pb, tol):
+        return False, f"the points differ ({len(pa)} and {len(pb)}, not one to one within {tol:g} mm)"
+    return True, f"the same counts of {len(ca)} entity kinds, {len(pa)} points and {len(ra)} radii within {tol:g} mm"
+
+
+def comparison_controls(positives, negatives):
+    """The run's own controls on the comparison (the coordinator's ruling 1): every pair in ``positives`` (two exports of
+    one document) the same part and every pair in ``negatives`` (two different parts) not; each pair ``(label, text a,
+    text b)``. ``(holds, what)``; a pair not read does not hold."""
+    said, holds = [], bool(positives) and bool(negatives)
+    for want, pairs in ((True, positives), (False, negatives)):
+        for label, a, b in pairs:
+            got, why = same_part(a, b)
+            ok = got is want
+            holds = holds and ok
+            said.append(f"{label}: {'same part' if got else 'not the same part' if got is False else 'unread'} "
+                        f"({why}){'' if ok else ' -- NOT as it must be'}")
+    return holds, "; ".join(said) or "no control read"
 
 
 def rightness(text, own, other, control):
-    """Whether ``text`` is the file of the document it was exported from: True when it is ``own`` but for FILE_NAME and
-    not ``other``; False when it is ``other``, or not ``own`` and not even its geometry; None when the run cannot tell
-    (the control, two exports of one document, differed; or the text differs from ``own`` with the same geometry).
-    ``(answer, why)``."""
+    """Whether ``text`` is the file of the part it was exported from, by geometry (the coordinator's ruling 1): True when
+    it is the same part as ``own`` (a reference export of that part) and not as ``other``; False when it is ``other``'s part,
+    or not ``own``'s; None when the run cannot tell: a file not read, or the run's controls on the comparison did not
+    hold (``control`` not True). ``(answer, why)``."""
     if text is None or own is None:
         return None, "a file was not read"
-    if control is not None and not control:
-        return None, "two exports of one document differ beyond FILE_NAME, so a file cannot be told by its text"
-    if other is not None and same_file(text, other):
+    if control is not True:
+        return None, "the comparison's controls did not hold in this run, so a file cannot be told by it"
+    if other is not None and same_part(text, other)[0]:
         return False, "it is the other part's file"
-    if same_file(text, own):
-        return True, "the same as its own part's file but for FILE_NAME"
-    if geometry_of(text) == geometry_of(own):
-        return None, f"{differing(text, own)} statements differ from its own part's file, with the same geometry"
-    return False, f"{differing(text, own)} statements differ from its own part's file, and the geometry differs"
+    same, why = same_part(text, own)
+    if same:
+        return True, f"the same part as its reference: {why}"
+    return (None, why) if same is None else (False, f"not the same part as its reference: {why}")
 
 
 def flags_turned_on(before, after):
@@ -486,13 +575,17 @@ def from_component_proposal(d):
 
 
 def open_beside_proposal(d):
-    """OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_<year> from step 7 (b) and (c): True when the part opened in its own window
-    beside the assembly wrote its own file cleanly and CloseDoc left the assembly open, its flag as it was (from an
-    unmarked start), the component in the state it had, under no window; and the not-open path of the lightweight case
-    came under no window, left the assembly open and wrote the part's own file. ``(value, why)``."""
+    """OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_<year> from step 7 (b): True when the part, its component **resolved**, opened in
+    its own window beside the assembly wrote its own file cleanly and CloseDoc left the assembly open, its flag as it
+    was (from an unmarked start), the component in the state it had, under no window. Proposed for a resolved component
+    only (the coordinator's ruling 2): the lightweight case (7c) is facts, since opening its part beside resolved it in
+    the user's assembly, and the job refuses a lightweight component by name. ``(value, why)``."""
     if not d or d.get("stop"):
         return None, (d or {}).get("stop") or "step 7 (b) did not run"
     why, unknown = [], []
+    if d.get("component_resolved_before") is not True:
+        unknown.append(f"the component was not read resolved before ({d.get('state_before')!r}): the finding is for a "
+                       "resolved component only")
     if d.get("assembly_flag_before"):
         unknown.append("the assembly was marked before, so a mark could not show")
     if d.get("dialogs"):
@@ -513,24 +606,11 @@ def open_beside_proposal(d):
         unknown.append(said)
     elif not right:
         why.append(said)
-    light = d.get("light") or {}
-    if not light or light.get("stop"):
-        unknown.append(f"the lightweight case: {light.get('stop') or 'not read'}")
-    else:
-        if light.get("dialogs"):
-            unknown.append(f"lightweight: {len(light['dialogs'])} window(s) came")
-        if not light.get("assembly_open_after"):
-            why.append("lightweight: the assembly was not open after CloseDoc")
-        lr, ls = light.get("beside_right") or (None, "not compared")
-        if lr is None:
-            unknown.append(f"lightweight: {ls}")
-        elif not lr:
-            why.append(f"lightweight: {ls}")
     if why:
         return False, "; ".join(why + unknown)
     if unknown:
         return None, "; ".join(unknown)
-    return True, f"{said}; lightweight: {(light.get('beside_right') or (None, ''))[1]}"
+    return True, said
 
 
 def window_proposal(own, component_only, background):
@@ -613,6 +693,16 @@ def _step(schema="AUTOMOTIVE_DESIGN { 1 0 10303 214 3 1 1 }", unit="( LENGTH_UNI
     return "\r\n".join(lines) + "\r\n"
 
 
+def _renumbered(text):
+    """A made-up file as SolidWorks writes another export of the same part: the DATA statements in reverse order and
+    every instance numbered otherwise."""
+    head, data = text.split("DATA;", 1)
+    body, tail = data.split("ENDSEC;", 1)
+    parts = [p.strip() for p in body.split(";") if p.strip()]
+    parts = [re.sub(r"#(\d+)", lambda m: f"#{500 - int(m.group(1))}", p) for p in reversed(parts)]
+    return head + "DATA;\r\n" + ";\r\n".join(parts) + ";\r\nENDSEC;" + tail
+
+
 def self_check():
     bad = []
 
@@ -664,13 +754,48 @@ def self_check():
     ok(same_file(good, other_name) and differing(good, other_name) == 0, "two exports differing in FILE_NAME are the same")
     moved = _step(points=((16.5, 0.0, 0.0), (0.0, -16.5, 9.0), (3.0, 4.0, 4.0)))
     ok(not same_file(good, moved) and differing(good, moved) == 1, "a changed vertex is a different file")
-    ok(rightness(other_name, good, moved, True) == (True, "the same as its own part's file but for FILE_NAME"),
-       "the file is right: its own part's, not the other's")
+    # Ruling 1: a file is told by its geometry (part_geometry, points_match, same_part), not its text.
+    shuffled = _renumbered(good)
+    ok(not same_file(good, shuffled) and same_part(good, shuffled)[0] is True,
+       "renumbered and reordered, as SolidWorks writes each export: another text, the same part")
+    ok(same_part(good, other_name)[0] is True, "another header (FILE_NAME, its time and author): the same part")
+    ok(same_part(good, moved)[0] is False, "a point moved 1 mm (8 mm made 9): not the same part")
+    near = _step(points=((16.5 + 5e-5, 0.0, 0.0), (0.0, -16.5, 8.0), (3.0, 4.0, 4.0)))
+    far = _step(points=((16.5 + 5e-4, 0.0, 0.0), (0.0, -16.5, 8.0), (3.0, 4.0, 4.0)))
+    ok(same_part(good, near)[0] is True and same_part(good, far)[0] is False,
+       f"a point moved 5e-5 mm is the same part, 5e-4 mm is not (GEOMETRY_TOL {GEOMETRY_TOL:g} mm)")
+    ok(same_part(good, _step(solids=2))[0] is False, "another count of an entity kind: not the same part")
+    ok(same_part(good, _step(points=((16.5, 0.0, 0.0), (0.0, -16.5, 8.0))))[0] is False,
+       "a point fewer: not the same part")
+    circle = _step(extra="CIRCLE ( 'NONE', #2, 5.0 )")
+    ok(same_part(circle, _step(extra="CIRCLE ( 'NONE', #2, 5.0 )"))[0] is True
+       and same_part(circle, _step(extra="CIRCLE ( 'NONE', #2, 5.001 )"))[0] is False,
+       "a circle's radius changed by 0.001 mm, every point kept: not the same part")
+    ok(same_part(good, _step(unit="PRODUCT ( 'no unit', 'x', '', ( #1 ) )"))[0] is None,
+       "a file whose unit cannot be read: cannot tell")
+    ok(same_part(None, good)[0] is None, "a file not read: cannot tell")
+    ok(points_match([(0.0, 0.0, 0.0), (1.0, 2.0, 3.0)], [(1.0, 2.0, 3.0), (0.0, 0.0, 0.0)]),
+       "the points as a set: their order does not count")
+    ok(not points_match([(0.0, 0.0, 0.0), (0.0, 0.0, 0.0)], [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0)]),
+       "a point twice in one file must be there twice in the other")
+    ok(points_match([(0.99996e-4, 0.0, 0.0)], [(1.00004e-4, 0.0, 0.0)]),
+       "two points within the tolerance across a cell's edge match")
+    ok(points_match([(1.0, 2.0)], [(1.0, 2.0)]) and not points_match([(1.0, 2.0)], [(1.0, 2.0, 0.0)]),
+       "a 2D point matches a 2D point only")
+    ok(comparison_controls([("same", good, shuffled)], [("other", good, moved), ("helical", good, _step(solids=2))])[0],
+       "the controls hold: one export the same part, two different parts not")
+    ok(not comparison_controls([("same", good, moved)], [("other", good, _step(solids=2))])[0],
+       "a positive control failing (two exports of one part judged different): the controls do not hold")
+    ok(not comparison_controls([("same", good, shuffled)], [("other", good, near)])[0],
+       "a negative control failing (two different parts judged the same): the controls do not hold")
+    ok(not comparison_controls([("same", good, None)], [("other", good, moved)])[0]
+       and not comparison_controls([], [("other", good, moved)])[0] and not comparison_controls([("s", good, good)], [])[0],
+       "a control not read, or no positive or no negative control: the controls do not hold")
+    ok(rightness(shuffled, good, moved, True)[0] is True, "the file is right: its own part's by geometry, not the other's")
     ok(rightness(moved, good, moved, True)[0] is False, "the other part's file is wrong")
-    ok(rightness(other_name, good, moved, False)[0] is None, "a failed determinism control: cannot tell")
-    renumbered = good.replace("#1 = PRODUCT", "#99 = PRODUCT").replace("( #1 )", "( #99 )")
-    ok(rightness(renumbered, good, moved, True)[0] is None, "numbering differs, geometry the same: cannot tell")
     ok(rightness(_step(points=((20.0, 0.0, 0.0),)), good, None, True)[0] is False, "another geometry: wrong")
+    ok(rightness(shuffled, good, moved, False)[0] is None and rightness(shuffled, good, moved, None)[0] is None,
+       "the run's controls not holding, or not read: cannot tell")
     ok(rightness(None, good, None, True)[0] is None, "a file not read: cannot tell")
     clean_doc = {"path": "f2-export\\Gear.SLDPRT", "title": "Gear.SLDPRT", "flag": False}
     clean = {"read": {"returned": True, "errors": 0, "warnings": 0, "on_disk": True, "size": 5000},
@@ -764,6 +889,7 @@ def self_check():
     beside = {"opened": True, "export_reasons": ["the active document changed: 'Pair.SLDASM' -> 'Gear.SLDPRT'"],
               "assembly_open_after": True, "assembly_flag_before": False, "assembly_flag_after": False,
               "state_before": 2, "state_after": 2, "dialogs": [], "users_turned_on": [], "right": right,
+              "component_resolved_before": True,
               "light": {"assembly_open_after": True, "beside_right": right, "dialogs": []}}
     ok(open_beside_proposal(beside)[0] is True, "OPEN_BESIDE: clean (open_document's activation is its own): True")
     for key, value, want, said in (("assembly_open_after", False, False, "the assembly closed"),
@@ -776,13 +902,12 @@ def self_check():
                                    ("assembly_flag_before", True, None, "marked before"),
                                    ("users_turned_on", ["<user document 1>"], False, "a user document marked"),
                                    ("export_reasons", ["errors 1"], False, "an export code"),
-                                   ("light", {}, None, "the lightweight case not read"),
-                                   ("light", {"assembly_open_after": False, "beside_right": right}, False,
-                                    "lightweight: the assembly closed"),
-                                   ("light", {"assembly_open_after": True, "beside_right": (False, "x")}, False,
-                                    "lightweight: the wrong file"),
-                                   ("light", {"assembly_open_after": True, "beside_right": right, "dialogs": [1]},
-                                    None, "lightweight: a window")):
+                                   ("component_resolved_before", False, None,
+                                    "ruling 2: the component not resolved before: not proposed"),
+                                   ("component_resolved_before", None, None, "ruling 2: its state not read: not proposed"),
+                                   ("light", {}, True, "ruling 2: the lightweight case is facts only, not read"),
+                                   ("light", {"assembly_open_after": False, "beside_right": (False, "x"), "dialogs": [1]},
+                                    True, "ruling 2: the lightweight case is facts only, whatever it read")):
         changed = dict(beside, **{key: value})
         if key == "assembly_flag_before":
             changed["assembly_flag_after"] = value           # marked before and after: unchanged, but unjudgeable
@@ -854,6 +979,7 @@ HELICAL = GearSpec(kind="helical", module="2", teeth="20", helix_angle="15", fac
 PINION = GearSpec(kind="spur", module="1.5", teeth="25", face_width="8", bore="", process="printed")
 WHEEL = GearSpec(kind="spur", module="1.5", teeth="50", face_width="8", bore="", process="printed")
 ENUMS_F2 = {}
+CONTROLS = {}              # the geometry comparison's controls in this run, by section (ruling 1)
 BACKGROUND = []            # window reads of a part open in its own window but not active (steps 6 and 7d; M1)
 
 
@@ -1169,11 +1295,12 @@ def section_export(out):
             text = read_text(files["spur"])
             texts["again"] = text
             d["overwrote"] = d["read"]["mtime"] is not None and before is not None and d["read"]["mtime"] != before
-            d["control"] = text is not None and texts.get("spur") is not None and same_file(text, texts["spur"])
+            d["same_text"] = bool(text and texts.get("spur")) and same_file(text, texts["spur"])
             say(f"fact    export (5): the existing file {'was overwritten' if d['overwrote'] else 'was NOT overwritten'}"
-                f" (its time before {before}, after {d['read']['mtime']}); the text the same as (2)'s but for "
-                f"FILE_NAME: {d['control']} ({differing(text, texts['spur']) if text and texts.get('spur') else '?'} "
-                "statements differ): the control step 6's comparison rests on")
+                f" (its time before {before}, after {d['read']['mtime']}); its text the same as (2)'s but for "
+                f"FILE_NAME: {d['same_text']} ({differing(text, texts['spur']) if text and texts.get('spur') else '?'} "
+                "statements differ; a fact: the comparison is by geometry, ruling 1); the same part by geometry: "
+                f"{same_part(text, texts.get('spur'))}")
             return d
         again = part(out, "again", "export (5) onto an existing file", overwrite, needs=("spur",))
 
@@ -1188,13 +1315,9 @@ def section_export(out):
                          export_case(folder, paths["spur"], files["inactive"], "object"))
             if d.get("stop"):
                 return d
-            text = read_text(files["inactive"])
-            d["right"] = rightness(text, texts.get("spur"), texts.get("helical"), (again or {}).get("control", False))
-            say(f"fact    export (6): the file is the spur's own: {d['right'][0]} ({d['right'][1]})")
+            texts["inactive"] = read_text(files["inactive"])     # judged after step 8, whose file is a control
             return d
         step6 = part(out, "inactive", "export (6) a part not active", inactive, needs=("spur", "helical"))
-        value, why = needs_active_proposal(step6)
-        suggest("STEP_EXPORT_NEEDS_ACTIVE", value, f"step 6: {why}")
 
         def modified():
             def change(s):
@@ -1215,17 +1338,33 @@ def section_export(out):
             if d.get("stop"):
                 return d
             text = read_text(files["modified"])
+            texts["modified"] = text
             facts = step_facts(text) if text else {}
             d["facts"] = facts
             b, a = d["before"]["doc"] or {}, d["after"]["doc"] or {}
             d["held"] = {"flag_stays_on": bool(b.get("flag")) and bool(a.get("flag")),
                          "path_unchanged": b.get("path") == a.get("path"),
-                         "differs_from_saved": bool(text and texts.get("spur")) and not same_file(text, texts["spur"]),
+                         "same_part_as_saved": same_part(text, texts.get("spur"))[0],
                          "axial_extent_mm": facts.get("axial_extent_mm")}
             say(f"fact    export (8): {d['held']} (the changed solid's face is {CHANGED_FACE} mm; the app refuses an "
                 "unsaved part by ruling, whatever this shows)")
             return d
         part(out, "modified", "export (8) a modified part", modified, needs=("spur",))
+
+        # Ruling 1 (2026-11-18): a file is told by its geometry, not its text, and the comparison is held in this run
+        # to two exports of one document (2, 5) being the same part and to two different parts (the spur and the
+        # helical, 2 and 4; the spur at 8 mm and at 9 mm, 2 and 8) not being.
+        holds, said = comparison_controls(
+            [("the spur exported twice (2, 5)", texts.get("spur"), texts.get("again"))],
+            [("the spur against the helical (2, 4)", texts.get("spur"), texts.get("helical")),
+             ("the spur at 8 mm against 9 mm (2, 8)", texts.get("spur"), texts.get("modified"))])
+        CONTROLS["export"] = holds
+        check(holds, f"export: the geometry comparison's controls: {said}")
+        if step6 and not step6.get("stop"):
+            step6["right"] = rightness(texts.get("inactive"), texts.get("spur"), texts.get("helical"), holds)
+            say(f"fact    export (6): the file is the spur's own: {step6['right'][0]} ({step6['right'][1]})")
+        value, why = needs_active_proposal(step6)
+        suggest("STEP_EXPORT_NEEDS_ACTIVE", value, f"step 6: {why}")
     finally:
         closing(out, "export", folder, users_start)
 
@@ -1351,6 +1490,8 @@ def section_component(out):
                 state_before = components_by_file(s).get(os.path.basename(gear_path))
                 asm_before = doc_read(doc_at(s, asm_path))
                 users_before = user_flags(s)
+                states = C.swconst(C.ENUM_NAMES)["swComponentSuppressionState_e"]
+                resolved = next(v for k, v in states.items() if k.endswith("FullyResolved"))
                 info = s.open_document(gear_path)            # the fallback: OpenDoc6 (warning 128), then ActivateDoc3
                 doc = s._doc()  # noqa: SLF001
                 opened = store.same_path(info.path, gear_path)
@@ -1363,6 +1504,7 @@ def section_component(out):
                 closed = bracket(s, folder, gear_path)
                 asm = doc_at(s, asm_path)
                 out_ = {"opened": opened, "state_before": state_before, "asm_before": asm_before,
+                        "component_resolved_before": state_before == resolved,
                         "windows_open": win_open, "before": before, "read": read, "after": after, "closed": closed,
                         "assembly_open_after": asm is not None, "asm_after": doc_read(asm),
                         "gear_after_close": {"walk": doc_at(s, gear_path) is not None,
@@ -1381,7 +1523,8 @@ def section_component(out):
             d["assembly_flag_before"] = (d["asm_before"] or {}).get("flag")
             d["assembly_flag_after"] = (d["asm_after"] or {}).get("flag")
             d["export_reasons"] = export_reasons(d)
-            say(f"fact    component (7b): opened {d['opened']}; windows while open {d['windows_open']}; after CloseDoc "
+            say(f"fact    component (7b): opened {d['opened']}, the component resolved before "
+                f"{d['component_resolved_before']}; windows while open {d['windows_open']}; after CloseDoc "
                 f"{d['closed']}; the assembly open {d['assembly_open_after']}, {d['asm_before']} -> {d['asm_after']}; "
                 f"the component's state {d['state_before']} -> {d.get('state_after')}; the gear after the close "
                 f"{d['gear_after_close']}; the assembly activated again {d.get('restored')}")
@@ -1416,18 +1559,22 @@ def section_component(out):
             BACKGROUND.append(dict(d["background"] or {}, what=f"the gear in its own window, {d['active_now']} active"))
             for key in ("alone", "alone again", "pinion", "component", "beside"):
                 texts[key] = read_text(files[key]) if os.path.isfile(files[key]) else None
-            d["control"] = bool(texts["alone"] and texts["alone again"]) and same_file(texts["alone"],
-                                                                                      texts["alone again"])
+            d["control"], said = comparison_controls(
+                [("the gear alone exported twice (7d)", texts["alone"], texts["alone again"])],
+                [("the gear against the pinion (7d)", texts["alone"], texts["pinion"])])
+            check(d["control"], f"component (7d): the geometry comparison's controls: {said}")
             facts = step_facts(texts["alone"]) if texts["alone"] else {}
             say_facts("component (7d) the gear alone, the file", facts, float(kind_for(WHEEL).derive(WHEEL).da) / 2.0,
                       float(WHEEL.face_width))
-            say(f"fact    component (7d): the gear alone exported twice, the same but for FILE_NAME {d['control']}; "
-                f"the pinion's file differs {texts['pinion'] is not None and not same_file(texts['pinion'], texts['alone'] or '')}; "
+            say(f"fact    component (7d): the comparison's controls hold {d['control']}; "
                 f"GetOpenDocumentByName on the gear open alone {d['by_path_open_alone']}, closed {d['by_path_closed']}; "
                 f"windows {len(dialogs)}; left {left}")
             return d
         ref = part(out, "alone", "component (7d) the reference files", alone, needs=("built",))
-        control = (ref or {}).get("control", False)
+        control = (ref or {}).get("control", False) is True and CONTROLS.get("export") is True
+        if CONTROLS.get("export") is not True:
+            say(f"fact    component: the export section's controls (the spur against the helical, 8 mm against 9 mm) "
+                f"{'did not hold' if 'export' in CONTROLS else 'were not read in this run'}, so no file is judged here")
 
         def judged(key):
             return rightness(texts.get(key), texts.get("alone"), texts.get("pinion"), control)
@@ -1483,6 +1630,9 @@ def section_component(out):
                 asm = doc_at(s, asm_path)
                 out_["assembly_open_after"] = asm is not None
                 if asm is not None:
+                    # Ruling 2: what the fallback leaves in the user's assembly, as facts: its flag and the component's
+                    # state after the part's window is closed, before the probe resolves the component itself.
+                    out_["asm_after_close"] = doc_read(asm)
                     s.use_open_document(asm_path)
                     out_["state_after_close"] = components_by_file(s).get(os.path.basename(gear_path))
                     comp = swcom.Session._component_by(findings.COMPONENT_FIND_ROUTE, s._doc(), name)  # noqa: SLF001
@@ -1497,11 +1647,12 @@ def section_component(out):
             d["dialogs"] = dialogs
             say(f"fact    component (7c): the assembly opened again {d['opened_as']}; {d['component']} set lightweight "
                 f"reads {d['state_set']}; the assembly then "
-                f"{d['assembly']} (marked by the set itself, a fact); the walk reaches it {d['walk']}; "
+                f"{d['assembly']} (its flag after the set, a fact); the walk reaches it {d['walk']}; "
                 f"GetOpenDocumentByName {d['by_path']}; exported by that object {d.get('object_read', 'not reached')}; "
                 f"the not-open path: opened {d['opened']}, exported {d['beside_read']}, the assembly open after the "
-                f"close {d['assembly_open_after']}, the component's state after {d.get('state_after_close')}, resolved "
-                f"again {d.get('state_resolved_again')}; windows {len(dialogs)}")
+                f"close {d['assembly_open_after']}; after the close (ruling 2, facts) the assembly "
+                f"{d.get('asm_after_close')} and the component's state {d.get('state_after_close')}; resolved again "
+                f"{d.get('state_resolved_again')}; windows {len(dialogs)}")
             return d
         step7c = part(out, "lightweight", "component (7c), last", lightweight, needs=("loaded",))
 
@@ -1517,7 +1668,8 @@ def section_component(out):
             step7b["light"] = ({"stop": light["stop"]} if light.get("stop") else
                                {"assembly_open_after": light.get("assembly_open_after"), "dialogs": light.get("dialogs"),
                                 "beside_right": judged("light beside")} if light else {})
-            say(f"fact    component (7c): beside, the file is the gear's own {step7b['light'].get('beside_right')}")
+            say(f"fact    component (7c): beside, the file is the gear's own {step7b['light'].get('beside_right')} (a "
+                "fact: OPEN_BESIDE is proposed for a resolved component only, ruling 2)")
         value, why = open_beside_proposal(step7b)
         suggest("OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN", value, f"step 7 (b), (c): {why}")
     finally:
