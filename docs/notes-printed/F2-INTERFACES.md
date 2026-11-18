@@ -74,14 +74,14 @@ Pure planning. It imports, at run time, `gears.span` and `spec` only; `store`'s,
 
 Planning (pure, before any job; `PLANNING_CODES`): `GATE`, `GATE_COPY`, `UNSAVED_MARK`, `MISMATCHED_MARK`,
 `CHANGES_ON_UPDATE`, `NO_PART`, `WORKBOOK_ERROR`, `FOREIGN_RECORD`, `NO_RECORD`, `NOT_A_PART`. The job (`JOB_CODES`):
-`MODIFIED`, `GLOBALS_DIFFER`, `FEATURE_IN_ERROR`, `COMPONENT_ONLY`, `SOLIDWORKS_REFUSED`, `FILE_CHECK`. `CODES` is both.
+`LIGHTWEIGHT` (added after the probe's runs by ruling 2, §5.2), `MODIFIED`, `GLOBALS_DIFFER`, `FEATURE_IN_ERROR`, `COMPONENT_ONLY`, `SOLIDWORKS_REFUSED`, `FILE_CHECK`. `CODES` is both.
 Each is a module constant whose value is its own name; B returns them, C's tests and B's import them, and no test of B
 reads a word.
 
 **The order a planner takes them in** (F2-0's choice, the first that applies is the refusal): `GATE_COPY`, `GATE`; then
 on the form `NOT_A_PART`, `NO_RECORD`; in the window `FOREIGN_RECORD`, `WORKBOOK_ERROR`, `NO_PART`, `UNSAVED_MARK`,
 `MISMATCHED_MARK`, `CHANGES_ON_UPDATE`. One refusal names every part it applies to. **In the job**: the gate again,
-then every part reached and read, then the first failing part's first failing read in the order `COMPONENT_ONLY`,
+then every part reached and read, then the first failing part's first failing read in the order `COMPONENT_ONLY`, `LIGHTWEIGHT`,
 `MODIFIED`, `GLOBALS_DIFFER`, `FEATURE_IN_ERROR` (one refusal, naming every part that fails that read), before any file
 is written; then `SOLIDWORKS_REFUSED` or `FILE_CHECK` during the export, after which the files written stay and the set
 is not to be printed.
@@ -106,6 +106,7 @@ The sentences are drafts in the plan's words where it gives them; C owns them an
 | `MODIFIED` | stems | {} | *Print files wrote nothing: Gear_m1.5_N20_P is changed in SolidWorks and not saved; save it, or close it without saving, then print.* |
 | `GLOBALS_DIFFER` | (stem,) | `name`, `live`, `recorded` (the first differing global of the first part) | *Print files wrote nothing: in Gear_m1.5_N20_P, "Face Width" is 9 where its record says 8; press Update values (Update SolidWorks in the Workbook window), or put it back, then print.* |
 | `FEATURE_IN_ERROR` | stems | {stem: feature names joined by ", "} | *Print files wrote nothing: in Gear_m1.5_N20_P, User Keyway is in error in SolidWorks; fix it there, then print.* |
+| `LIGHTWEIGHT` (ruling 2) | stems | {stem: the assembly's file name} | *Gear_m1.25_N29_P is lightweight in RangeBox; resolve it there, or open the part, then print. Nothing was written.* |
 | `COMPONENT_ONLY` | stems | {stem: the assembly's file name, or ""} | *Gear_m1.25_N29_P is open only inside RangeBox; close the assembly or open the part, then print.* With "": *Gear_m1.25_N29_P is open in SolidWorks but not as the active document; make it active, or close it, then print.* |
 | `SOLIDWORKS_REFUSED` | (stem,) | `file` and `errors`, `warnings` (SolidWorks' codes), or `said` (swcom's sentence) | *Print files stopped: SolidWorks would not write Gear_m1.5_N20_P.step (errors 1, warnings 0). The files written are in print\2026-11-18 14.32.05; its print list says not to print them.* |
 | `FILE_CHECK` | (stem,) | `file`, `reason` (§2.4) | *Print files stopped: Gear_m1.5_N20_P.step is not fit to print: it does not hold exactly one solid. Its print list says not to print this set.* |
@@ -215,13 +216,30 @@ part is not active. "Found" is `document_by_path`.
 | found, W True | by its object (`use_open_document`), no activation, when `STEP_EXPORT_NEEDS_ACTIVE_ON_<year>` is False; else (True or None) activated by `ActivateDoc3` first | never |
 | found, W False | by its object when `STEP_EXPORT_FROM_COMPONENT_ON_<year>` is True; else, when `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_<year>` is True, `open_document` (activates, opens its window); else refused, `COMPONENT_ONLY` | only the window `open_document` opened, by `CloseDoc` on its title |
 | found, W None | by its object when `STEP_EXPORT_FROM_COMPONENT_ON_<year>` is True **and** `STEP_EXPORT_NEEDS_ACTIVE_ON_<year>` is False (right either way); else refused, `COMPONENT_ONLY` with ""  | never |
+| a lightweight component (ruling 2) | **refused by name**, `LIGHTWEIGHT`: never reached and never opened beside, since opening its part resolves it in the user's assembly (probe step 7c, both versions) | never opened |
 | not found | `open_document` (activates). **When any assembly is open in the session**, only when `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_<year>` is True, else refused `COMPONENT_ONLY`: a part not found may be a lightweight component of it (probe step 7c) | yes, by `CloseDoc` on its title |
 
-**Lightweight components** (the re-check's should-fix): a part whose component is lightweight is reached only as the
-table says. `STEP_EXPORT_FROM_COMPONENT` is proposed True only if step 7c shows a lightweight component's document is
-either not reached by the object route or reached and written right, and `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN` only if 7c's
-not-open path is clean; so neither way is used for one unless the probe covered it. The job never sets a component's
-state.
+**Lightweight components** (the coordinator's ruling 2, 2026-11-18, the user's to overrule). The probe's runs showed,
+on both versions, that a lightweight component's part is reached by neither the document walk nor
+`GetOpenDocumentByName`, and that opening it beside the assembly **resolves the component in the user's assembly**, a
+change to their session. Until a run shows what that leaves behind, **the job refuses a lightweight component by name**
+and tells the user to resolve it or open the part:
+
+- **How the job knows.** Before any part is reached, for each open assembly (in the Workbook window at least the
+  record's own assembly when it is open), made the build document by `use_open_document` with no activation, the job
+  reads `Session.components()` (each top-level component's `GetSuppression2`, verified on both versions) and takes every
+  part of the plan whose component reads lightweight (`swComponentSuppressionState_e`'s Lightweight, 1 on both versions)
+  as one to refuse. Read only; the job never sets a component's state.
+- **The code** is a job code, `LIGHTWEIGHT` (parts: stems; detail {stem: the assembly's file name}), refused in the
+  job's order after `COMPONENT_ONLY` and before `MODIFIED`. `printout.py` is package B's: the coordinator tells B, and if
+  B names it otherwise, B's name stands and its note says so. Draft sentence (C's): *Gear_m1.25_N29_P is lightweight in
+  RangeBox; resolve it there, or open the part, then print. Nothing was written.*
+- **Not covered**: a lightweight component inside a user's sub-assembly (only top-level components are read); such a
+  part is "not found" and goes by the last row, gated by `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN`.
+- `STEP_EXPORT_FROM_COMPONENT` is still proposed True only if step 7c shows a lightweight component's document not
+  reached by the object route (or reached and written right); `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN` is proposed for a
+  resolved component only, and 7c's beside path is read as facts (the assembly's flag and the component's state after
+  the close).
 
 ### 5.3 The reads, all before any export
 
@@ -283,11 +301,22 @@ All None until a reviewed run of `probe/f2_probes.py` sets them, in a commit of 
 | `SAVE_AS_COPY` (one name, as `SAVE_AS_SILENT`; set when both versions' runs agree) | step 1 | `GATE_COPY` on every version |
 | `STEP_EXPORT_ON_2026`, `_ON_2024` | steps 2 to 4 | `GATE` on that version |
 | `STEP_EXPORT_NEEDS_ACTIVE_ON_<year>` | step 6 | a part open in its window is activated first; the active document put back |
-| `STEP_EXPORT_FROM_COMPONENT_ON_<year>` | step 7 (a), (c) | a component-only part goes by the fallback if measured, else `COMPONENT_ONLY` |
-| `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_<year>` | step 7 (b), (c) | the fallback is not used; a part not found while an assembly is open is refused |
+| `STEP_EXPORT_FROM_COMPONENT_ON_<year>` | step 7 (a), (c) | a component-only part goes by the fallback if measured, else `COMPONENT_ONLY`; a lightweight one is refused, `LIGHTWEIGHT`, whatever the findings |
+| `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_<year>` | step 7 (b), a resolved component only (ruling 2; 7c's beside path facts) | the fallback is not used; a part not found while an assembly is open is refused |
 | `PART_WINDOW_READ_ON_<year>` (**F2-0's addition**, the coordinator's to rule) | step 7's window reads | only the active document counts as in its own window |
 
 There is no `STEP_FILE_CHECK` (M2).
+
+**When a file is "right"** (the probe's judgement behind `STEP_EXPORT_NEEDS_ACTIVE`, `STEP_EXPORT_FROM_COMPONENT` and
+`OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN`; the coordinator's ruling 1, 2026-11-18): it is the same part as a reference export of
+its own part, and not the same part as another part's, **by geometry, not text**. SolidWorks numbers each export's
+entities otherwise, so two exports of one unchanged document differ in nearly every statement (the runs, both
+versions). The probe's `same_part` ignores the header and every entity number and reference, and holds the two files to
+the same count of every entity kind, the same set of CARTESIAN_POINTs (vertices, curve and surface control points,
+placement origins) one to one and the same circle, cylinder, sphere and torus radii, each within 1e-4 mm, in
+millimetres. Its controls run in the probe's own run: two exports of one document the same part; the spur against the
+helical and the 8 mm spur against the 9 mm one not. The job (B) never compares two files; it checks each with
+`check_step` alone.
 
 ## 8. Who owns which file
 
@@ -314,6 +343,6 @@ There is no `STEP_FILE_CHECK` (M2).
 | the schema matched by its name's prefix | §2.4, `printout.STEP_SCHEMAS`; the probe's `schema_ap`, self-checked against it |
 | the size check not refusing a part with the user's features | §2.4: a fact, never a refusal |
 | `GetOpenDocumentByName` unverified and new | §4; probe step 7 measures it by path and by file name, with two controls, beside the walk |
-| lightweight components | §5.2; probe step 7c |
+| lightweight components | §5.2 (refused by name since ruling 2); probe step 7c |
 | whether a warning refuses | §5.4: an error refuses, a warning is named |
 | Coupon_E for a shaft over 18 mm | §6: module 1.5, 20 teeth, in C's instructions |

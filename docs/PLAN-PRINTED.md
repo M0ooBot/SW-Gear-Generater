@@ -955,8 +955,14 @@ Each step reads `GetPathName`, `GetTitle` and `GetSaveFlag` before and after, an
    `SaveAs3` does; the app never asks it to.
 6. **A part open in its own window but not active.** The spur part is open in its window, the helical part is made
    active, and the spur is exported by its own document object.
-   - **The file is right** when its text equals step 2's but for the `FILE_NAME` line of its header, and differs
-     from step 4's.
+   - **The file is right** when it is **the same part** as step 2's file and not step 4's, **by geometry, not text**
+     (the coordinating session's ruling 1, 2026-11-18, after the probe's runs: SolidWorks numbers each export's
+     entities otherwise, so two exports of one unchanged document differ in nearly every statement, and the first
+     revision's text test could never hold). Two files are the same part when, header and entity numbering aside,
+     they hold the same count of every entity kind, the same set of CARTESIAN_POINTs one to one and the same circle,
+     cylinder, sphere and torus radii, each within 1e-4 mm. The run holds the comparison to its own files first: step
+     2's and step 5's (one document twice) the same part; the spur against the helical (steps 2, 4) and the 8 mm spur
+     against the 9 mm one (steps 2, 8) not. Without those, no file is judged.
    - *Sets* `STEP_EXPORT_NEEDS_ACTIVE_ON_<year>`: False if the file is right and the active document, its title and
      every save flag are unchanged, else True.
 7. **A part open only as a component of an assembly (the Workbook window's case, must-fix M5).**
@@ -964,15 +970,23 @@ Each step reads `GetPathName`, `GetTitle` and `GetSaveFlag` before and after, an
      assembly's component. The gear is reached by `ISldWorks.GetOpenDocumentByName(<part path>)` and exported by
      that document object, with no activation.
    - It reads the assembly's title and save flag, the active document, and the component's state before and after.
-   - The file is right by step 6's test against a fresh export of the same part, opened alone after the step.
+   - The file is right by step 6's test (the same part by geometry) against a fresh export of the same part, opened
+     alone after the step, and not the pinion's; that pair and two exports of the gear alone are this step's own
+     controls, beside step 6's.
    - *Sets* `STEP_EXPORT_FROM_COMPONENT_ON_<year>` True when the file is right, nothing is activated, and the
      assembly's save flag is unchanged.
    - **Then the fallback, the same part opened in its own window by `Session.open_document`** (`swcom.py:3541`, which
      activates), exported, then closed by `CloseDoc` on its title. It reads whether the assembly is still open,
      unmarked, its component still loaded and resolved, and whether any window came. This *sets*
-     `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_<year>`.
+     `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_<year>`, **for a resolved component only**.
+   - **A lightweight component** (the coordinating session's ruling 2, 2026-11-18): the runs showed that neither the
+     document walk nor `GetOpenDocumentByName` reaches its part, and that opening the part beside the assembly resolves
+     the component in the user's assembly, a change to their session. Until a run shows what that leaves behind, **the
+     export refuses a lightweight component by name** and tells the user to resolve it or open the part
+     (`LIGHTWEIGHT`, `F2-INTERFACES.md` §5.2). The probe's next run reads the assembly's save flag and the component's
+     state after that close, as facts.
 8. **A modified part.** One global changed and rebuilt, the part not saved, then exported. It asks whether the file
-   holds the changed solid (its text differs from step 2's in the B-rep, a fact) and whether the save flag stays
+   holds the changed solid (not the same part as step 2's by geometry, a fact, and step 6's negative control) and whether the save flag stays
    set and the path unchanged.
    - This is the evidence for refusing unsaved parts. The app refuses them by ruling (open point 6) whatever this
      shows.
@@ -1046,6 +1060,8 @@ comment as every finding has):
 2. For each part, by its path:
    - **open in its own window**: it becomes the build document by `use_open_document` (`swcom.py:3528`), with no
      activation, unless `STEP_EXPORT_NEEDS_ACTIVE_ON_<year>` is True, when it is activated by `ActivateDoc3`;
+   - **a lightweight component of an open assembly** (its `GetSuppression2` read, no activation): refused by name,
+     never opened beside (ruling 2);
    - **open only as a component of an open assembly**: it is reached by `GetOpenDocumentByName` and exported by that
      object, if `STEP_EXPORT_FROM_COMPONENT_ON_<year>` is True. Otherwise it is opened in its own window by
      `Session.open_document` (`:3541`, which activates), if `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_<year>` is True.
@@ -2091,3 +2107,17 @@ F2-0's twenty decisions (all accepted as the review recommends; recorded in `doc
 - The probe's changes for its run (`probe/f2_probes.py`, `F2-PROBES.md`): `PART_WINDOW_READ` is proposed only from a
   reading of a part open in its own window but not active, the case the job uses it for (M1); `STEP_EXPORT` needs the
   spur's file to be the spur's size (S1); step 7c, the lightweight case, runs last (S2).
+
+## Changes after F2's probe runs
+
+2026-11-18. To the probe's runs on SolidWorks 2026 34.1.1 and 2024 32.5.0 (`8d2c5fb`, `docs/notes-printed/F2-PROBES.md`)
+and the coordinating session's two rulings on them, each the user's to overrule.
+
+- **Ruling 1, §3.1.2 steps 6 to 8: a file is told by its geometry, not its text.** Two exports of one document differ in
+  nearly every statement on both versions, so the text test never held and three findings went unproposed. Two files are
+  now the same part when their entity counts, their CARTESIAN_POINTs and their radii agree within 1e-4 mm, header and
+  numbering aside, with the run's own controls (one document twice; the spur against the helical; 8 mm against 9 mm).
+- **Ruling 2, §3.1.2 step 7 and §3.1.3: a lightweight component is refused by name** (resolve it or open the part),
+  since the fallback resolves it in the user's assembly. `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN` is proposed for a resolved
+  component only, and the probe reads the assembly's flag and the component's state after the fallback's close.
+- The probe is changed to both and run again on both versions (`F2-PROBES.md`, *After the runs*).
