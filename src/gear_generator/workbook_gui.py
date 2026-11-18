@@ -344,6 +344,7 @@ class WorkbookWindow(tk.Toplevel):
         # What a press would do, planned on every re-plan (see the module's docstring), and the record it read.
         self.record: Optional[store.LinkRecord] = None
         self.record_problem = ""       # why the record beside the workbook cannot be read ("" when it can)
+        self.process_record = ""       # F1: "broken" or "newer" when _blank_process could not read the record
         self.plan: Optional[wb_gearbox.GearboxPlan] = None      # what the build button would run
         self.update_plan: Optional[wb_update.UpdatePlan] = None    # what Update SolidWorks would do (not Tk's update)
         self.plan_trouble = ""         # planning itself raised: said, and both buttons held
@@ -837,11 +838,17 @@ class WorkbookWindow(tk.Toplevel):
         it, without moving anything. Here, so both callers of :meth:`_assess` (``_plan``, and the raw read ``_show``
         works the consequence of a save out from) resolve a blank alike. No record when it is another workbook's (a
         copy, or not yet said: ``store.foreign_workbook``), so a copy does not read Machined from its original's parts;
-        none either when it cannot be read, or is newer than this app (both buttons wait then)."""
+        none either when it cannot be read (Build then makes a new gearbox, as ``_plan_solidworks_pass`` plans it) or is
+        newer than this app (both buttons wait). Which of those two it was is kept in ``process_record``
+        (``"broken"``, ``"newer"`` or ``""``), so the Process line does not say a blank was read as built or as new
+        when it could not be (the F1 review's S5)."""
+        self.process_record = ""
         try:
             record = store.read_link_record(self.link.path)
+        except store.UnknownSchema:
+            record, self.process_record = None, ui_text.PROCESS_RECORD_NEWER
         except store.StoreError:
-            record = None
+            record, self.process_record = None, ui_text.PROCESS_RECORD_BROKEN
         if record is not None and store.foreign_workbook(self._settled(record), self.link.path):
             record = None
         return wb_assess.blank_process(record)
@@ -927,8 +934,8 @@ class WorkbookWindow(tk.Toplevel):
                                    else ("the strip's Output" if folder else "set one on the Box sheet"))
         # The Box as read says whether Process was typed or left blank, and whether the sheet has its row; the Box as
         # assessed says what a blank resolved to.
-        self.box_values["process"].configure(text=ui_text.workbook_process_line(self.reading.spec.box, spec.box),
-                                             font=f.label)
+        self.box_values["process"].configure(text=ui_text.workbook_process_line(
+            self.reading.spec.box, spec.box, record=getattr(self, "process_record", "")), font=f.label)
         self.box_values["type"].configure(text=self.report.worked_out_as if self.report else "—", font=f.label)
 
         self.parts_readout.set(ui_text.workbook_parts_readout(self.parts, record=self.record))

@@ -809,9 +809,15 @@ PROCESS_NO_ROW = " (add a row labelled Process)"
 PROCESS_TYPED_MACHINED = "Machined, as the Box sheet says: type Printed beside Process to print it"
 PROCESS_UNREAD = "Process does not read: the Checks panel says why"
 PROCESS_NOZZLE_UNREAD = "Printed; its Nozzle does not read: the Checks panel says why"
+# The F1 review's S5: a blank Process beside a record the window could not read is not read as built.
+PROCESS_RECORD_BROKEN, PROCESS_RECORD_NEWER = "broken", "newer"
+PROCESS_BLANK_BROKEN = ("Printed, as for a new gearbox: the record of what was built beside this workbook cannot be "
+                        "read, so a blank Process is not read as built")
+PROCESS_BLANK_NEWER = ("Not known: the record beside this workbook is from a newer Gear Generator, so a blank Process "
+                       "is not read as built here")
 
 
-def workbook_process_line(read_box, box) -> str:
+def workbook_process_line(read_box, box, record: str = "") -> str:
     """The Workbook panel's Process line, for every gearbox (F1, PLAN-PRINTED §6 and open point 3).
 
     ``read_box`` is the Box as the workbook was read, before :func:`workbook.assess.assess` (its ``process`` is
@@ -823,12 +829,17 @@ def workbook_process_line(read_box, box) -> str:
       Process row, since a workbook written before F1 has none;
     - Machined typed: :data:`PROCESS_TYPED_MACHINED`;
     - a word that is neither (the Box's check is an error at its cell, said in Checks): :data:`PROCESS_UNREAD`; a
-      printed Box whose Nozzle is not a number above zero: :data:`PROCESS_NOZZLE_UNREAD`.
+      printed Box whose Nozzle is not a number above zero: :data:`PROCESS_NOZZLE_UNREAD`;
+    - a blank beside a record the window could not read (``record``, the window's ``process_record``): one it cannot
+      read at all, :data:`PROCESS_BLANK_BROKEN` (Build then makes a new gearbox, printed), with the nozzle; one from a
+      newer app, :data:`PROCESS_BLANK_NEWER` (both buttons wait).
     """
     typed = str(getattr(read_box, "process", "") or "").strip().lower()
     word = str(getattr(box, "process", "") or "").strip().lower()
     if typed and typed not in (PROCESS_PRINTED, PROCESS_MACHINED):
         return PROCESS_UNREAD
+    if not typed and record == PROCESS_RECORD_NEWER:
+        return PROCESS_BLANK_NEWER
     if word == PROCESS_PRINTED:
         nozzle = str(getattr(box, "nozzle", "") or "").strip()
         try:
@@ -837,6 +848,8 @@ def workbook_process_line(read_box, box) -> str:
             width = 0.0
         if not (width > 0 and math.isfinite(width)):
             return PROCESS_NOZZLE_UNREAD
+        if not typed and record == PROCESS_RECORD_BROKEN:
+            return f"{PROCESS_BLANK_BROKEN}; {_n(width)} mm nozzle"
         return f"Printed, {_n(width)} mm nozzle"
     if word != PROCESS_MACHINED:
         return PROCESS_UNREAD

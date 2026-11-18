@@ -361,6 +361,28 @@ def test_printed_typed_on_a_built_gearbox_says_the_names_kept_once_and_not_on_th
     assert "now printed" not in printed.status.get(), printed.status.get()
 
 
+def test_a_blank_process_beside_a_broken_or_newer_record_says_so(desk, monkeypatch):
+    """The F1 review's S5, through the window: a record that does not read, and one from a newer app, leave a blank
+    Process resolved with no record; the line says what is true of each, not plain Printed."""
+    window = built_before_f1(desk)
+    path = pathlib.Path(store.link_record_path(window.link.path))
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    box_read_as(monkeypatch, "", cell="")
+    raw["link_schema_version"] = store.LINK_SCHEMA_VERSION + 1
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    newer = desk.open(path=window.link.path)
+    assert newer.process_record == "newer" and not newer.footer().build_enabled
+    assert not newer.footer().update_enabled
+    assert process_line(newer) == ("Not known: the record beside this workbook is from a newer Gear Generator, so a "
+                                   "blank Process is not read as built here")
+    path.write_text("{ not json", encoding="utf-8")
+    broken = desk.open(path=window.link.path)
+    assert broken.process_record == "broken" and broken.state.read.box.process == PROCESS_PRINTED
+    assert broken.footer().build_enabled, broken.status.get()                 # Build makes a new gearbox: printed
+    assert process_line(broken) == ("Printed, as for a new gearbox: the record of what was built beside this workbook "
+                                    "cannot be read, so a blank Process is not read as built; 0.4 mm nozzle")
+
+
 def test_a_copy_beside_its_originals_record_reads_a_blank_as_a_new_gearbox(desk, monkeypatch):
     """§1.3, the third check's should-fix: the record beside a copied workbook is the original's, so a blank Process
     is resolved with no record, Printed, and not Machined from the original's parts; by both of the window's reads."""

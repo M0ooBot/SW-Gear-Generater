@@ -3961,6 +3961,21 @@ def test_the_workbook_panels_process_line(typed, resolved, cell, nozzle, line):
     assert ui_text.workbook_process_line(*_boxes(typed, resolved, cell, nozzle)) == line
 
 
+@pytest.mark.parametrize("typed, record, line", [
+    ("", "broken", "Printed, as for a new gearbox: the record of what was built beside this workbook cannot be read, "
+                   "so a blank Process is not read as built; 0.4 mm nozzle"),
+    ("", "newer", "Not known: the record beside this workbook is from a newer Gear Generator, so a blank Process is "
+                  "not read as built here"),
+    ("printed", "broken", "Printed, 0.4 mm nozzle"),              # a typed word needs no record
+    ("machined", "newer", "Machined, as the Box sheet says: type Printed beside Process to print it"),
+])
+def test_a_blank_process_beside_a_record_that_cannot_be_read_is_not_said_as_built(typed, record, line):
+    """The F1 review's S5: the window resolves such a blank with no record, Printed; the line says why, or, for a
+    newer app's record (both buttons wait), that it is not known."""
+    resolved = typed or "printed"
+    assert ui_text.workbook_process_line(*_boxes(typed, resolved), record=record) == line
+
+
 def _backlash_part(stem, **fields):
     return PartUpdate(_path(stem), ("G1",), GearSpec(**fields), None, (GlobalVariable("Backlash", "x"),), changed=True)
 
