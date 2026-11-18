@@ -296,6 +296,49 @@ def test_a_gearbox_built_before_f1_opens_machined_as_built_and_unchanged(desk, m
     assert gear_states(printed) == {g: "changes on Update" for g in ("G1", "G2", "G3", "G4")}
 
 
+def test_end_to_end_a_workbook_with_no_process_row_beside_a_machined_gearbox_reads_machined_as_built(desk):
+    """With package B's read, no stand-in: the reducer built Machined, then its workbook saved again with no Process or
+    Nozzle row on its Box sheet, as every workbook written before F1 is. The window reads the blank as built, says to
+    add the row, and every gear is as built. Then a new workbook with no row and no record reads Printed."""
+    from gear_generator.workbook import model, xlsx
+    from test_workbook_model import reducer
+
+    def rowless(path, spec):
+        sheets = [replace(s, rows=[r for r in s.rows if not (r and r[0] in ("Process", "Nozzle"))])
+                  if s.name == "Box" else s for s in model.to_sheets(spec)]
+        pathlib.Path(path).unlink(missing_ok=True)
+        xlsx.write_new(str(path), sheets)
+
+    window = built(desk)
+    rowless(window.link.path, desk.spec())
+    reopened = desk.open(path=window.link.path)
+    assert reopened.reading.spec.box.process == "" and reopened.reading.spec.box.process_cell == ""
+    assert reopened.state.read.box.process == PROCESS_MACHINED
+    assert process_line(reopened) == AS_BUILT + NO_ROW
+    assert gear_states(reopened) == {"G1": "built", "G2": "built", "G3": "built", "G4": "built"}
+
+    fresh = desk.tmp / "fresh"
+    fresh.mkdir()
+    rowless(fresh / f"{NAME}.xlsx", desk.spec(reducer()))
+    new = desk.open(path=fresh / f"{NAME}.xlsx")
+    assert new.record is None and new.state.read.box.process == PROCESS_PRINTED
+    assert process_line(new) == "Printed, 0.4 mm nozzle"
+
+
+@pytest.mark.parametrize("typed, nozzle, line", [
+    ("PRINTED", "0.6", "Printed, 0.6 mm nozzle"),
+    ("Machined", "", "Machined, as the Box sheet says: type Printed beside Process to print it"),
+    ("wood", "", "Process does not read: the Checks panel says why"),
+    ("printed", "0", "Printed; its Nozzle does not read: the Checks panel says why"),
+])
+def test_end_to_end_the_process_line_of_a_typed_box(desk, typed, nozzle, line):
+    """With package B's read, no stand-in: what the line says of each word typed on the Box sheet."""
+    from test_workbook_model import reducer
+    spec = reducer()
+    window = desk.open(replace(spec, box=replace(spec.box, process=typed, nozzle=nozzle)))
+    assert process_line(window) == line
+
+
 def test_a_copy_beside_its_originals_record_reads_a_blank_as_a_new_gearbox(desk, monkeypatch):
     """§1.3, the third check's should-fix: the record beside a copied workbook is the original's, so a blank Process
     is resolved with no record, Printed, and not Machined from the original's parts; by both of the window's reads."""
