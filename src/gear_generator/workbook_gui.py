@@ -456,8 +456,9 @@ class WorkbookWindow(tk.Toplevel):
         box.grid(row=1, column=0, sticky="ew", pady=(0, px(8)))
         box.body.columnconfigure(1, weight=1)
         self.box_values: Dict[str, tk.Label] = {}
+        # F1 (PLAN-PRINTED §6, open point 3): the Box's Process, for every gearbox, machined ones too.
         for row, (key, text) in enumerate((("file", "File"), ("name", "Name"), ("folder", "Output folder"),
-                                           ("type", "Worked out as"))):
+                                           ("process", "Process"), ("type", "Worked out as"))):
             tk.Label(box.body, text=text, bg=theme.WHITE, fg=theme.LABEL, font=f.label, anchor="w",
                      width=0).grid(row=row, column=0, sticky="w", padx=(0, px(24)), pady=(0, px(2)))
             cell = tk.Frame(box.body, bg=theme.WHITE)
@@ -470,8 +471,9 @@ class WorkbookWindow(tk.Toplevel):
                 self.folder_hint.pack(side="left", padx=(px(10), 0))
         # "Worked out as" wraps in the room its column leaves (W8: a gearbox with modes names every mode's ratio),
         # as the footer and the Speeds lines wrap, so the window keeps its width.
-        labels = max(f.label.measure(t) for t in ("File", "Name", "Output folder", "Worked out as")) + px(24)
-        self.box_values["type"].configure(justify="left", wraplength=px(LEFT_WIDTH - 2 * 12 - 2) - labels)
+        labels = max(f.label.measure(t) for t in ("File", "Name", "Output folder", "Process", "Worked out as")) + px(24)
+        for key in ("process", "type"):
+            self.box_values[key].configure(justify="left", wraplength=px(LEFT_WIDTH - 2 * 12 - 2) - labels)
 
         gears = widgets.Panel(body, "Gears", self.parts_readout)
         gears.grid(row=2, column=0, sticky="ew", pady=(0, px(8)))
@@ -827,7 +829,22 @@ class WorkbookWindow(tk.Toplevel):
         """A read worked through by :func:`workbook.assess.assess`, the one pipeline the boards and W4 share.
         ``provisional`` while Excel has yet to recalculate the app's own Export (``recalc``): no fixes then."""
         return wb_assess.assess(spec, read_diagnostics, self._folder(spec), self._template(spec), chosen,
-                                provisional=provisional)
+                                provisional=provisional, blank_process=self._blank_process())
+
+    def _blank_process(self) -> str:
+        """What a blank Process on the Box sheet means here (F1, PLAN-PRINTED §1.3; D11 ruled (B)): as built, by
+        :func:`workbook.assess.blank_process` of the record beside the workbook, read as ``_plan_solidworks_pass`` reads
+        it, without moving anything. Here, so both callers of :meth:`_assess` (``_plan``, and the raw read ``_show``
+        works the consequence of a save out from) resolve a blank alike. No record when it is another workbook's (a
+        copy, or not yet said: ``store.foreign_workbook``), so a copy does not read Machined from its original's parts;
+        none either when it cannot be read, or is newer than this app (both buttons wait then)."""
+        try:
+            record = store.read_link_record(self.link.path)
+        except store.StoreError:
+            record = None
+        if record is not None and store.foreign_workbook(self._settled(record), self.link.path):
+            record = None
+        return wb_assess.blank_process(record)
 
     def _folder(self, spec: wb_model.GearboxSpec) -> str:
         return spec.box.output_folder or self.app.out_folder.get().strip()
@@ -908,6 +925,10 @@ class WorkbookWindow(tk.Toplevel):
         self.box_values["folder"].configure(text=ui_text.short_path(folder, PATH_CHARS - 20) if folder else "—")
         self.folder_hint.configure(text="from the Box sheet" if spec.box.output_folder
                                    else ("the strip's Output" if folder else "set one on the Box sheet"))
+        # The Box as read says whether Process was typed or left blank, and whether the sheet has its row; the Box as
+        # assessed says what a blank resolved to.
+        self.box_values["process"].configure(text=ui_text.workbook_process_line(self.reading.spec.box, spec.box),
+                                             font=f.label)
         self.box_values["type"].configure(text=self.report.worked_out_as if self.report else "—", font=f.label)
 
         self.parts_readout.set(ui_text.workbook_parts_readout(self.parts, record=self.record))

@@ -3860,3 +3860,91 @@ def test_a_part_left_in_error_and_one_still_in_error_say_stays_alone_never_next_
     text, _ = ui_text.gearbox_update_status(_update(), stopped, finished=finished, revision=Y24)
     assert text.count(ui_text.WHATS_WRONG_STAYS) == 1 and ui_text.WHATS_WRONG_NEXT not in text, text
     assert "What's Wrong" not in ui_text.gearbox_update_status(_update(), stopped, finished=finished, revision=Y26)[0]
+
+
+# -- F1: what a printed gear and a gearbox's Process are told (PLAN-PRINTED §1.3, §2.1, §6; package C) -------------
+
+from gear_generator.gears import kind_for  # noqa: E402
+from gear_generator.spec import PROCESS_MACHINED, PROCESS_PRINTED  # noqa: E402
+
+PRINTED_BACKLASH_WHAT = (
+    "How much each tooth is thinned at the pitch circle so the pair does not bind: the space grows by this and the "
+    "tooth shrinks by it, on both gears, so the play in the mesh is twice the number. Printed, blank uses 0.3 mm, or "
+    "0.3 × module below module 1: room for walls printed a little fat, and a starting value until your own prints "
+    "are measured. A slicer's X-Y compensation does the same job, so use one or the other, not both.")
+
+
+def _printed(**fields):
+    spec = GearSpec(process="printed", **fields)
+    return kind_for(spec).derive(spec)
+
+
+@pytest.mark.parametrize("fields, row", [
+    ({}, "0.3 · printed default"),
+    ({"module": "0.5", "teeth": "30"}, "0.15 · printed default"),          # 0.3 × module below module 1
+    ({"kind": "helical", "helix_angle": "15"}, "0.3 · printed default"),
+    ({"teeth": "60", "teeth_side": "internal"}, "0.3 · printed default"),
+    ({"kind": "bevel", "teeth": "20", "mate_teeth": "40", "face_width": "10"}, "0.3 · printed default"),
+    ({"backlash": "0.1"}, "0.1"),                                            # typed: as typed, printed or not
+])
+def test_a_printed_gears_derived_backlash_row_says_the_printed_default(fields, row):
+    assert dict(ui_text.derived_rows(_printed(**fields)))["Backlash"] == row
+
+
+def test_a_printed_gears_backlash_card_says_the_printed_default_and_the_bevels_toe():
+    assert ui_text.explainer("backlash", _printed(), "Gear_m1.5_N25_P") == (
+        "Backlash", "j", PRINTED_BACKLASH_WHAT,
+        "blank → 0.3 mm · printed default · tooth 2.056 · space 2.656 · play in the mesh 0.6")
+    assert ui_text.explainer("backlash", _printed(module="0.5", teeth="30"), "x")[3] == (
+        "blank → 0.15 mm · printed default · tooth 0.635 · space 0.935 · play in the mesh 0.3")
+    bevel = _printed(kind="bevel", teeth="20", mate_teeth="40", face_width="10")
+    assert round(bevel.toe_scale, 2) == 0.70                                 # §2.1's 20 / 40 at module 1.5, face 10
+    assert ui_text.explainer("backlash", bevel, "x")[3] == (
+        "blank → 0.3 mm · printed default, 0.211 at the toe · tooth 2.433 · space 2.279 · play in the mesh 0.6")
+    typed = ui_text.explainer("backlash", _printed(backlash="0.1"), "x")
+    assert typed[2] == PRINTED_BACKLASH_WHAT and typed[3].startswith("0.1 mm · tooth ")
+
+
+def test_the_backlash_card_takes_the_forms_process_when_the_gear_does_not_work_out():
+    assert ui_text.explainer("backlash", None, printed=True)[2:] == (PRINTED_BACKLASH_WHAT, "check the fields")
+    machined = ui_text.explainer("backlash", None, printed=False)[2]
+    assert machined == ui_text.explainer("backlash", None)[2] and "Blank uses 0.3 × module" in machined
+    # Only Backlash changes its copy: every other card is the machined gear's, printed or not.
+    g, m = _printed(), KINDS["spur"].derive(GearSpec())
+    for field in ui_text.GEAR_EXPLAINERS:
+        if field != "backlash":
+            assert ui_text.explainer(field, g, "x")[2] == ui_text.explainer(field, m, "x")[2], field
+
+
+def test_the_forms_process_row_and_what_it_does_to_the_backlash_field():
+    assert ui_text.PROCESS_LABELS == {PROCESS_PRINTED: "Printed", PROCESS_MACHINED: "Machined"}
+    assert (ui_text.NOZZLE_PLACEHOLDER, ui_text.NOZZLE_HINT) == ("0.4", "the printer's line width")
+    assert ui_text.BACKLASH_PLACEHOLDERS == {PROCESS_MACHINED: "0.3 × module", PROCESS_PRINTED: "0.3 · printed"}
+    assert ui_text.BACKLASH_HINTS == {PROCESS_MACHINED: "ISO: 0.02–0.05 × m", PROCESS_PRINTED: "0.3 × m below m1"}
+
+
+def _boxes(typed, resolved=None, cell="Box!B9", nozzle=""):
+    """The Box as read (``typed``, "" for a blank) and as assessed (its blank resolved to ``resolved``)."""
+    read = model.Box(name="R", process=typed, nozzle=nozzle, process_cell=cell)
+    return read, dataclasses.replace(read, process=resolved if resolved is not None else typed)
+
+
+@pytest.mark.parametrize("typed, resolved, cell, nozzle, line", [
+    ("printed", None, "Box!B9", "", "Printed, 0.4 mm nozzle"),
+    ("Printed", "printed", "Box!B9", "0.6", "Printed, 0.6 mm nozzle"),
+    ("", "printed", "Box!B9", "", "Printed, 0.4 mm nozzle"),                  # a new gearbox left blank
+    ("", "printed", "", "", "Printed, 0.4 mm nozzle"),                        # … with no row: Printed all the same
+    ("", "machined", "Box!B9", "",
+     "Machined, as built: type Printed beside Process on the Box sheet to print it"),
+    ("", "machined", "", "",                                                  # built before F1: no Process row
+     "Machined, as built: type Printed beside Process on the Box sheet to print it (add a row labelled Process)"),
+    ("machined", None, "Box!B9", "", "Machined, as the Box sheet says: type Printed beside Process to print it"),
+    ("MACHINED", "machined", "Box!B12", "0.6",
+     "Machined, as the Box sheet says: type Printed beside Process to print it"),
+    ("wood", None, "Box!B9", "", "Process does not read: the Checks panel says why"),
+    ("", "wood", "Box!B9", "", "Process does not read: the Checks panel says why"),
+    ("printed", None, "Box!B9", "x", "Printed; its Nozzle does not read: the Checks panel says why"),
+    ("printed", None, "Box!B9", "0", "Printed; its Nozzle does not read: the Checks panel says why"),
+])
+def test_the_workbook_panels_process_line(typed, resolved, cell, nozzle, line):
+    assert ui_text.workbook_process_line(*_boxes(typed, resolved, cell, nozzle)) == line

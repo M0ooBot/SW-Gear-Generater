@@ -32,6 +32,8 @@ from .spec import (
     TEETH_SIDES,
     MODE_PAIR,
     MODE_SINGLE,
+    PROCESS_MACHINED,
+    PROCESS_PRINTED,
     RECIPE_ARCS,
     RECIPE_INVOLUTE,
     GearSpec,
@@ -158,6 +160,10 @@ class GearApp(ttk.Frame):
         recipe = self.recent.recipe if self.recent.recipe in (RECIPE_INVOLUTE, RECIPE_ARCS) else findings.DEFAULT_RECIPE
         self.recipe = tk.StringVar(value=recipe)
         self.mode = tk.StringVar(value=self.recent.mode if self.recent.mode in MODE_VALUES else MODE_SINGLE)
+        # F1 (PLAN-PRINTED §1.3): the pair's Process, which starts at Printed whatever GearSpec() says (machined, as
+        # in code), and the nozzle's line width, blank meaning 0.4 mm; both go into each gear in _gear_spec.
+        self.process = tk.StringVar(value=PROCESS_PRINTED)
+        self.nozzle = tk.StringVar(value="")
 
         self.gear_vars: Dict[str, Dict[str, tk.StringVar]] = {
             side: {attr: tk.StringVar(value=getattr(defaults, field)) for field, attr in GEAR_VARS}
@@ -216,6 +222,8 @@ class GearApp(ttk.Frame):
         # Each gear's Hand row, and the hint that says gear B's follows gear A's.
         self.hand_segs: Dict[str, widgets.Segmented] = {}
         self.hand_hints: Dict[str, tk.Label] = {}
+        # Each gear's Backlash hint, which says what a blank means for the Process chosen.
+        self.backlash_hints: Dict[str, tk.Label] = {}
         self._card_panel = "a"
         self._card_field = "module"
 
@@ -247,6 +255,7 @@ class GearApp(ttk.Frame):
 
         self._build()
         self._show_helix_rows()
+        self._show_process_rows()
         self._watch_form()
         self._show_card("a", "module")
         self._on_mode_changed()
@@ -418,7 +427,24 @@ class GearApp(ttk.Frame):
         self._row_label(body, 2, "Make")
         widgets.Segmented(
             body, self.mode, MODE_VALUES, labels=MODE_LABELS, command=self._on_mode_changed, width=200,
-        ).grid(row=2, column=1, sticky="w")
+        ).grid(row=2, column=1, sticky="w", pady=(0, theme.px(6)))
+
+        # F1 (PLAN-PRINTED §1.3): one Process for both gears of a pair, as Kind and Flank are; Nozzle under it, shown
+        # while Process is Printed.
+        self._row_label(body, 3, "Process")
+        self.process_seg = widgets.Segmented(
+            body, self.process, (PROCESS_PRINTED, PROCESS_MACHINED), labels=ui_text.PROCESS_LABELS,
+            command=self._on_process_changed, width=200,
+        )
+        self.process_seg.grid(row=3, column=1, sticky="w", pady=(0, theme.px(6)))
+        nozzle_label = self._row_label(body, 4, "Nozzle")
+        nozzle_label.grid_configure(pady=0)
+        cell = self._cell(body, 4, pady=0)
+        self.nozzle_field = widgets.Field(cell, self.nozzle, width=84, unit="mm",
+                                          placeholder=ui_text.NOZZLE_PLACEHOLDER)
+        self.nozzle_field.grid(row=0, column=0)
+        self._hint(cell, ui_text.NOZZLE_HINT).grid(row=0, column=1, padx=(theme.px(8), 0))
+        self.nozzle_row = (nozzle_label, cell)
 
         # A whole gearbox, specified in a workbook, opens in a window of its own (PLAN-WORKBOOK §5).
         slot = panel.header_slot()
@@ -492,9 +518,11 @@ class GearApp(ttk.Frame):
 
         self._row_label(body, 5, "Backlash")
         cell = self._cell(body, 5)
-        fields["backlash"] = widgets.Field(cell, v["backlash"], width=150, unit="mm", placeholder="0.3 × module")
+        fields["backlash"] = widgets.Field(cell, v["backlash"], width=150, unit="mm",
+                                           placeholder=ui_text.BACKLASH_PLACEHOLDERS[PROCESS_MACHINED])
         fields["backlash"].grid(row=0, column=0)
-        self._hint(cell, "ISO: 0.02–0.05 × m").grid(row=0, column=1, padx=(theme.px(8), 0))
+        self.backlash_hints[side] = self._hint(cell, ui_text.BACKLASH_HINTS[PROCESS_MACHINED])
+        self.backlash_hints[side].grid(row=0, column=1, padx=(theme.px(8), 0))
 
         self._row_label(body, 6, "Fillet")
         cell = self._cell(body, 6)
@@ -618,7 +646,8 @@ class GearApp(ttk.Frame):
         side = "a" if self._card_panel == "pair" else self._card_panel
         pair = self._pair_spec() if self.mode.get() == MODE_PAIR else None
         card.show(self._card_field, *ui_text.explainer(
-            self._card_field, self._derived[side], self._side_stems[side], pair, self.out_folder.get()))
+            self._card_field, self._derived[side], self._side_stems[side], pair, self.out_folder.get(),
+            printed=self._printed()))
 
     def _pick_value(self, side: str, attr: str, picked: tk.StringVar) -> None:
         """A dropdown beside a field writes into the field, and then lets go."""
@@ -963,11 +992,32 @@ class GearApp(ttk.Frame):
         for side in SIDES:
             for var in self.gear_vars[side].values():
                 var.trace_add("write", lambda *_: self._schedule_derive())
-        for var in (self.kind, self.recipe, self.centre_distance, self.ratio, self.pair_module,
-                    self.series, self.min_teeth, self.max_teeth, self.pair_helix_angle, self.helix_min,
-                    self.helix_max, self.mesh, self.shafts, self.pair_shaft_angle, self.cone_distance,
+        for var in (self.kind, self.recipe, self.process, self.nozzle, self.centre_distance, self.ratio,
+                    self.pair_module, self.series, self.min_teeth, self.max_teeth, self.pair_helix_angle,
+                    self.helix_min, self.helix_max, self.mesh, self.shafts, self.pair_shaft_angle, self.cone_distance,
                     self.motion, self.hands, self.assembly_name, self.out_folder):
             var.trace_add("write", lambda *_: self._schedule_derive())
+
+    def _printed(self) -> bool:
+        return self.process.get() == PROCESS_PRINTED
+
+    def _on_process_changed(self) -> None:
+        self._show_process_rows()
+        self._schedule_derive()
+
+    def _show_process_rows(self) -> None:
+        """Nozzle while Process is Printed, and each gear's Backlash placeholder and hint for the Process chosen: a
+        printed gear's blank is the smaller of 0.3 mm and 0.3 × module (PLAN-PRINTED §2.1)."""
+        process = PROCESS_PRINTED if self._printed() else PROCESS_MACHINED
+        for widget in self.nozzle_row:
+            widget.grid() if process == PROCESS_PRINTED else widget.grid_remove()
+        # The last row shown sits on the panel's foot, as Make did before Process was under it.
+        self.process_seg.grid_configure(pady=(0, theme.px(6)) if process == PROCESS_PRINTED else 0)
+        for side in SIDES:
+            if side in self.backlash_hints:
+                self._side_fields(side)["backlash"].set_placeholder(ui_text.BACKLASH_PLACEHOLDERS[process])
+                self.backlash_hints[side].configure(text=ui_text.BACKLASH_HINTS[process])
+        self._relayout()
 
     def _on_kind_changed(self) -> None:
         self._show_helix_rows()
@@ -1115,7 +1165,9 @@ class GearApp(ttk.Frame):
         across as 0: the row is hidden because that kind of gear refuses one.
         """
         values = {field: self.gear_vars[side][attr].get() for field, attr in GEAR_VARS}
-        values.update(kind=self.kind.get(), recipe=self.recipe.get())
+        # The Nozzle row shows only while Printed, so a machined gear's goes across blank, as a hidden shift goes as 0.
+        values.update(kind=self.kind.get(), recipe=self.recipe.get(), process=self.process.get(),
+                      nozzle=self.nozzle.get() if self._printed() else "")
         if not self._takes_shift(side):
             values["profile_shift"] = "0"
         if not self._takes_groove(side):
@@ -1478,6 +1530,12 @@ class GearApp(ttk.Frame):
         self._on_mode_changed()
         if spec.recipe in (RECIPE_INVOLUTE, RECIPE_ARCS):
             self.recipe.set(spec.recipe)
+        # F1 (PLAN-PRINTED §1.3): the row says what was built. A record from before F1 has no process and opens
+        # Machined, and a part built from this form afterwards is machined too unless the row is changed.
+        self.process.set(PROCESS_PRINTED if spec.is_printed() else PROCESS_MACHINED)
+        if spec.is_printed():
+            self.nozzle.set(spec.nozzle)
+        self._show_process_rows()
         for field, attr in GEAR_VARS:
             self.gear_vars["a"][attr].set(getattr(spec, field))
         self._loaded, self._loaded_path = sidecar, path

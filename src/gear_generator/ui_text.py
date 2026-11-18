@@ -17,7 +17,8 @@ from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 from .gears import pair as pairs, standards
 from .gears.base import Diagnostic
 from .gears.equations import literal
-from .spec import MODE_PAIR, RECIPE_ARCS, RECIPE_INVOLUTE, GearSpec, InputError, PairSpec, pair_stems
+from .spec import (MODE_PAIR, NOZZLE_DEFAULT, PROCESS_MACHINED, PROCESS_PRINTED, RECIPE_ARCS, RECIPE_INVOLUTE, GearSpec,
+                   InputError, PairSpec, pair_stems)
 
 RECIPE_WORDS = {RECIPE_INVOLUTE: "involute curve", RECIPE_ARCS: "arc flanks"}
 RECIPE_LABELS = {RECIPE_INVOLUTE: "Involute", RECIPE_ARCS: "Arcs"}
@@ -33,6 +34,15 @@ HAND_LABELS = {"right": "Right", "left": "Left"}
 # the Gear panel's readout still says the whole word.
 KIND_BUTTON_LABELS = {**KIND_LABELS, "herringbone": "Double"}
 SERIES_LABELS = {standards.SERIES_1: "Series 1", standards.SERIES_1_2: "1 + 2", standards.SERIES_ALL: "+ fine"}
+# F1 (PLAN-PRINTED §1.3): the form's Process row, and what it does to the Backlash field beside each gear. A printed
+# gear's blank Backlash is the smaller of 0.3 mm and 0.3 × module (§2.1); a machined gear's is 0.3 × module, as before.
+PROCESS_LABELS = {PROCESS_PRINTED: "Printed", PROCESS_MACHINED: "Machined"}
+NOZZLE_PLACEHOLDER = literal(NOZZLE_DEFAULT)
+NOZZLE_HINT = "the printer's line width"
+BACKLASH_PLACEHOLDERS = {PROCESS_MACHINED: "0.3 × module", PROCESS_PRINTED: "0.3 · printed"}
+BACKLASH_HINTS = {PROCESS_MACHINED: "ISO: 0.02–0.05 × m", PROCESS_PRINTED: "0.3 × m below m1"}
+# The derived rows' and the card's mark for a printed gear's blank Backlash: the third state beside typed and 0.3m.
+PRINTED_DEFAULT = "printed default"
 
 # What a readout says when the gear it stands for does not work out yet.
 CHECK_THE_FIELDS = "check the fields"
@@ -125,7 +135,7 @@ def derived_rows(g) -> List[Tuple[str, str]]:
             ("Virtual teeth", "∞ · a rack" if g.crown else _n(g.virtual_teeth, 2) + (" · a ring" if g.ring else "")),
             ("Toe scale", _n(g.toe_scale, 4)),
             ("Tooth at pitch", _n(g.section.s)),
-            ("Backlash", _n(g.section.backlash) + ("" if g.section.backlash_typed else " · 0.3m")),
+            ("Backlash", _n(g.section.backlash) + _backlash_note(g.section)),
         ]
     ring = []
     if is_ring(g):
@@ -164,9 +174,17 @@ def derived_rows(g) -> List[Tuple[str, str]]:
         ("Space at pitch", _n(g.space)),
         ("Tooth at pitch", _n(g.s)),
         ("Tip thickness", _n(g.tip_thickness)),
-        ("Backlash", _n(g.backlash) + ("" if g.backlash_typed else " · 0.3m")),
+        ("Backlash", _n(g.backlash) + _backlash_note(g)),
         ("Fillet", _n(g.fillet) + ("" if g.fillet_typed else fillet_note)),
     ]
+
+
+def _backlash_note(section) -> str:
+    """What a derived Backlash row says of where its value came from: nothing when typed, `` · printed default`` for
+    a printed gear's blank (F1, PLAN-PRINTED §2.1), `` · 0.3m`` for a machined gear's blank, as before."""
+    if section.backlash_typed:
+        return ""
+    return f" · {PRINTED_DEFAULT}" if getattr(section, "backlash_printed", False) else " · 0.3m"
 
 
 def warning_lines(diagnostics: Sequence[Diagnostic]) -> List[str]:
@@ -455,8 +473,18 @@ _EXPLAINER_COPY: Dict[str, Tuple[str, str, str]] = {
 }
 
 
+# F1 (PLAN-PRINTED §2.1, §8): what Backlash is, for a printed gear, in place of the machined copy above. The first
+# sentence is the machined one's; the rest say what a blank means printed, that it is a starting value, and that a
+# slicer's own compensation does the same job.
+_PRINTED_BACKLASH_COPY = (
+    "How much each tooth is thinned at the pitch circle so the pair does not bind: the space grows by this and the "
+    "tooth shrinks by it, on both gears, so the play in the mesh is twice the number. Printed, blank uses 0.3 mm, or "
+    "0.3 × module below module 1: room for walls printed a little fat, and a starting value until your own prints "
+    "are measured. A slicer's X-Y compensation does the same job, so use one or the other, not both.")
+
+
 def explainer(field: str, derived, stem: str = "", pair: Optional[PairSpec] = None,
-              folder: str = "") -> Tuple[str, str, str, str]:
+              folder: str = "", printed: Optional[bool] = None) -> Tuple[str, str, str, str]:
     """``(name, symbol, what it is, the worked line)`` for one field of the form.
 
     ``derived`` is the :class:`spur.SpurDerived` of the gear the caret is in and
@@ -469,6 +497,11 @@ def explainer(field: str, derived, stem: str = "", pair: Optional[PairSpec] = No
 
     The sentences are fixed copy; the worked line is derived text, so the card
     is filled in again on every re-derive and not only when the caret moves.
+
+    F1: Backlash says what a blank means for a printed gear in place of the
+    machined copy. ``printed`` is the form's Process (the strip passes it, so
+    the card is right while the gear does not work out); ``None`` reads it off
+    ``derived``, and a gear that says nothing is machined, as in code.
     """
     try:
         name, symbol, what = _EXPLAINER_COPY[field]
@@ -477,6 +510,10 @@ def explainer(field: str, derived, stem: str = "", pair: Optional[PairSpec] = No
             f"There is no explainer for a field called {field!r}; the fields with one are "
             f"{', '.join(EXPLAINER_FIELDS)}."
         ) from None
+    if printed is None:
+        printed = bool(getattr(derived, "printed", False))
+    if field == "backlash" and printed:
+        what = _PRINTED_BACKLASH_COPY
     return name, symbol, what, _worked_line(field, derived, stem, pair, folder)
 
 
@@ -517,6 +554,12 @@ def _gear_worked(field: str, g, stem: str, folder: str) -> str:
     if field == "backlash":
         # The equations thin the tooth by j and widen the space by j on both
         # gears, so what a mesh actually has to play with is 2 j.
+        if getattr(g, "backlash_printed", False):
+            # F1 (PLAN-PRINTED §2.1): a printed gear's blank. On a bevel gear the allowance shrinks toward the
+            # small end with the tooth, and the toe governs, so the card gives the toe's figure too.
+            toe = f", {_n(g.backlash * g.toe_scale)} at the toe" if is_bevel(g) else ""
+            return (f"blank → {_n(g.backlash)} mm · {PRINTED_DEFAULT}{toe} · tooth {_n(g.s)} · space {_n(g.space)} · "
+                    f"play in the mesh {_n(2 * g.backlash)}")
         blank = "" if g.backlash_typed else "blank → "
         default = "" if g.backlash_typed else " (0.3 m)"
         return (f"{blank}{_n(g.backlash)} mm{default} · tooth {_n(g.s)} · space {_n(g.space)} · "
@@ -757,6 +800,47 @@ def workbook_counts(spec) -> str:
 def workbook_read_line(clock_text: str, open_in_excel: bool) -> str:
     """``read 14:02:31 · open in Excel`` — when the file was last read, and whether Excel holds it."""
     return f"read {clock_text}" + (" · open in Excel" if open_in_excel else "")
+
+
+PROCESS_AS_BUILT = "Machined, as built: type Printed beside Process on the Box sheet to print it"
+PROCESS_NO_ROW = " (add a row labelled Process)"
+PROCESS_TYPED_MACHINED = "Machined, as the Box sheet says: type Printed beside Process to print it"
+PROCESS_UNREAD = "Process does not read: the Checks panel says why"
+PROCESS_NOZZLE_UNREAD = "Printed; its Nozzle does not read: the Checks panel says why"
+
+
+def workbook_process_line(read_box, box) -> str:
+    """The Workbook panel's Process line, for every gearbox (F1, PLAN-PRINTED §6 and open point 3).
+
+    ``read_box`` is the Box as the workbook was read, before :func:`workbook.assess.assess` (its ``process`` is
+    ``""`` for a blank cell or no row, and ``process_cell`` is ``""`` when the sheet has no Process row); ``box`` is
+    the Box as assessed, its blank resolved by :func:`workbook.assess.blank_process` (D11, ruled (B)).
+
+    - printed, typed or a blank resolved so: ``Printed, 0.4 mm nozzle`` (the Box's Nozzle, 0.4 when blank);
+    - a blank resolved machined, as built: :data:`PROCESS_AS_BUILT`, with :data:`PROCESS_NO_ROW` when the sheet has no
+      Process row, since a workbook written before F1 has none;
+    - Machined typed: :data:`PROCESS_TYPED_MACHINED`;
+    - a word that is neither (the Box's check is an error at its cell, said in Checks): :data:`PROCESS_UNREAD`; a
+      printed Box whose Nozzle is not a number above zero: :data:`PROCESS_NOZZLE_UNREAD`.
+    """
+    typed = str(getattr(read_box, "process", "") or "").strip().lower()
+    word = str(getattr(box, "process", "") or "").strip().lower()
+    if typed and typed not in (PROCESS_PRINTED, PROCESS_MACHINED):
+        return PROCESS_UNREAD
+    if word == PROCESS_PRINTED:
+        nozzle = str(getattr(box, "nozzle", "") or "").strip()
+        try:
+            width = float(nozzle) if nozzle else NOZZLE_DEFAULT
+        except ValueError:
+            width = 0.0
+        if not (width > 0 and math.isfinite(width)):
+            return PROCESS_NOZZLE_UNREAD
+        return f"Printed, {_n(width)} mm nozzle"
+    if word != PROCESS_MACHINED:
+        return PROCESS_UNREAD
+    if typed:
+        return PROCESS_TYPED_MACHINED
+    return PROCESS_AS_BUILT + ("" if getattr(read_box, "process_cell", "") else PROCESS_NO_ROW)
 
 
 GEAR_STATE_BUILDS, GEAR_STATE_SHARES, GEAR_STATE_LATER, GEAR_STATE_ERROR = "builds", "shares", "later", "error"
