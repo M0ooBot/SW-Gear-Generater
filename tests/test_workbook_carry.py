@@ -1866,3 +1866,92 @@ def test_with_no_close_advice_the_carry_line_stands_as_today(desk, carrying):
     text = _footer_with(desk, [sun], [])
     assert text.endswith(CARRY_SAVE) and "without saving, answering No" not in text, text
     assert COSTS not in text and "discards whatever else" not in text
+
+
+# -- a planet copy made new (W9D-DEMONSTRATION-REVIEW.md, the assessment at 34e39ac, 7f91037) -----------------------
+
+PLANET_FACE = dict(Planet=dict(face_width="12"))
+
+
+def _planet_desk(entity_kinds=True):
+    """RangeBox on the fake with W9a's user work and a feature of the user's, PlanetPin, in Planet's part (one file
+    for its three copies), read by the quiet press."""
+    from test_workbook_in_place_round_trip import _part
+    d = Desk()
+    d.sw.read_entity_kinds = entity_kinds
+    d.build(range_box())
+    d.sw.user_feature(_part(d.record, "Planet"), "PlanetPin")
+    users_work(d)
+    d.disk.files |= {"c:\\parts\\sprocket.sldprt", "c:\\parts\\housing.sldprt"}
+    return d
+
+
+def test_a_planet_copy_made_new_takes_its_rows_jobs_feature_names_and_why():
+    """carry_for looked a part made new up by the body's id, and a copy's id (*Planet copy 1*) is never a Gears row:
+    each copy got no app feature names and *its values changed*. By the row, each copy's names are its job's and its
+    reason is the true one, from the Gears columns or from made_new (unsaved, mismatched)."""
+    desk = _planet_desk()
+    again = _again(desk, gears(range_box(), **PLANET_FACE))
+    job = next(j for j in again.build if "Planet" in j.gear_ids)
+    by = {b.old: b for b in _carry(desk, again).bodies}
+    for k in (1, 2, 3):
+        copy_k = by[f"Planet copy {k}"]
+        assert not copy_k.same_file and copy_k.handle == f"gear2c{k}"
+        assert copy_k.names == swbuild.plan_features(job.plan) and "Gear Axis" in copy_k.names
+        assert copy_k.why_new == "its Face width changed"
+    planet_part = next(p.path for p in desk.record.parts if "Planet" in p.gears)
+    for why, said in ((gearbox.UNSAVED, update.WHY_NEW_UNSAVED), (gearbox.MISMATCHED, update.WHY_NEW_MISMATCHED)):
+        made = replace(again, made_new=(gearbox.MadeNew(("Planet",), planet_part, again.part_of["Planet"], why),))
+        assert {b.old: b.why_new for b in _carry(desk, made).bodies if b.old.startswith("Planet copy")} == {
+            f"Planet copy {k}": said for k in (1, 2, 3)}
+
+
+def test_a_users_feature_in_a_planets_part_is_said_with_the_true_reason_and_how_to_keep_it(carrying):
+    """The question named PlanetPin as staying in a part *RangeBox_r2 does not use*, Planet's reason keyed only by its
+    copies; it is said with the reason Planet's new part replaces it, and, where Update left that part unsaved, with
+    how to keep it."""
+    desk = _planet_desk()
+    again = _again(desk, gears(range_box(), **PLANET_FACE))
+    fore = update.carry_foresight(desk.record, again, read_sidecar=desk.disk.read_sidecar)
+    said = ui_text.carry_sentence(fore, again)
+    assert ("Your PlanetPin stays in Gear_m1.25_N13, which Planet's new part replaces (its Face width changed)"
+            in said), said
+    assert "does not use" not in said
+    planet_part = next(p.path for p in desk.record.parts if "Planet" in p.gears)
+    unsaved = replace(again, made_new=(gearbox.MadeNew(("Planet",), planet_part, again.part_of["Planet"],
+                                                       gearbox.UNSAVED),))
+    fore = update.carry_foresight(desk.record, unsaved, read_sidecar=desk.disk.read_sidecar)
+    said = ui_text.carry_sentence(fore, unsaved)
+    assert ("Your PlanetPin stays in Gear_m1.25_N13, which Planet's new part replaces (it had changes from Update "
+            "SolidWorks that were not saved); your Keyway comes with Gear_m1.25_N29; your Groove comes with "
+            "Sleeve_m1.25_N17. Gear_m1.25_N13 is new only because Update SolidWorks left it unsaved: answer No and "
+            "save it in SolidWorks first, and Build again… reuses it with your PlanetPin.") in said, said
+    assert "its values changed" not in said
+
+
+def test_a_users_mates_on_planet_copies_own_gear_axes_are_made_again_when_the_planet_is_made_new():
+    """End to end on the fake at 2026, the findings as committed: Planet's Face width changed, so its part is made new;
+    a coincident of the user's on Planet copy 2's Gear Axis and a gear mate of the user's on Planet copy 1's are each
+    made again on that copy's Gear Axis in the new part, and the result names neither as gone; PlanetPin is said with
+    its reason."""
+    desk = _planet_desk()
+    assert desk.sw.revision[0] == 34
+    asm = desk.record.gearbox.assembly
+    name = {c.gear: c.name for c in desk.record.gearbox.components}
+    desk.sw.user_mate(asm, "UserPlanetAxis", kind="coincident", a=("Sprocket-1", "Sprocket Axis"),
+                      b=(name["Planet copy 2"], "Gear Axis"))
+    desk.sw.user_mate(asm, "UserPlanetGear", kind="gear", a=("Housing-1", "Housing Axis"),
+                      b=(name["Planet copy 1"], "Gear Axis"))
+    again, carry, result, record = _carry_job(desk, gears(range_box(), **PLANET_FACE))
+    done = result.carry
+    assert result.ok and done.stopped == "" and done.named == []
+    assert {m for m, _, _ in done.remade} == {"Lock3", "UserPlanetAxis", "UserPlanetGear"}
+    new_name = {c.gear: c.name for c in record.gearbox.components}
+    for mate, copy_k in (("UserPlanetAxis", "Planet copy 2"), ("UserPlanetGear", "Planet copy 1")):
+        made = desk.sw.mate(mate, record.gearbox.assembly)
+        assert made is not None and (new_name[copy_k], "Gear Axis") in (made.a, made.b), (mate, made and made.a)
+    said = _status_of(desk, again, carry, result)
+    assert "does not have" not in said and "UserPlanet" not in said, said
+    assert "and your 3 mates, each on in the modes it was on in." in said, said
+    assert ("Your PlanetPin stays in Gear_m1.25_N13, which Planet's new part replaces because its Face width changed "
+            "(RangeBox.SLDASM and that file keep it).") in said, said

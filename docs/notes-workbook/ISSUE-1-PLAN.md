@@ -1093,8 +1093,8 @@ measured, on SolidWorks 2024 32.5.0 from `c2d95cc`, the close path asked for:
   enabled, and each went 0.25 s after the script's `BM_CLICK` on its own Close. The app's press returned its
   still-in-error stop with the box up, so it blocked nothing. No box came at a second activation or in a press that
   rebuilt. *Inference:* the box comes at the first activation with a feature in error and goes only when SolidWorks
-  rebuilds after it (`findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2024` True; on 2026 False, no box at all, on run
-  11's log, to be re-based on the 2026 run of remake-m3).
+  rebuilds after it (`findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2024` True; on 2026 False, no box at all,
+  measured by remake-m3 on 2026 below).
 - *The assembly's save flag.* SolidWorks 2024 marked RangeBox at its first open-and-activate after step 1, whoever
   made it, not at step 1; the app wrote nothing and saved nothing.
 
@@ -1118,6 +1118,19 @@ not shown); which document's `ActivateDoc3` raised the box in the app's press; a
 box's own checkbox while an Update runs; a Build with the user's work in error; the mate case on a gearbox without
 modes; other kinds of mate error; a box longer than 23 s in an Update that rebuilt; "show errors every rebuild" off.
 *Measured since the list above:* a box that outlives its job (twice, each closed by the script's press of its Close).
+
+**2026-11-18, remake-m3 on SolidWorks 2026 34.1.1** (`5aca9c1`, from `23107c2`, the any-dialog STOP in force, the
+close path not asked). Step 2b read as on 2024. No What's Wrong came anywhere: not at the script's own first activation
+after step 1, and not in the second pass's app press again, the first activation since step 1, which run 11 never
+showed; so `WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2026` False now rests on this run (`ea4efec`), and none of the
+three 2024 sentences is said on 2026. The second pass's one FAIL is the same single change as on 2024, RangeBox.SLDASM
+False to True with no changing call traced and no file written. The coordinating session's ruling, the user's to
+overrule: **the same fact holds on SolidWorks 2026 as on 2024: the assembly is marked at its first activation after
+step 1, not by step 1 and not by a write; it is not a fault of the app and nothing is run again for it.** Run 11's
+reading, that step 1's press leaves the assembly modified, is on both versions the first activation after step 1 (its
+read activated RangeBox before reading the flag). *Not measured on 2026*, beside the 2024 list where it applies: a person's
+own activation of the assembly after a stop, a press stopping before any rebuild with the user's own work in error, and
+"show errors every rebuild" off.
 
 **2026-11-18, the close path extended.** The coordinating session's ruling, the user's to overrule: the closing of a
 What's Wrong that outlives its job, as ruled above, applies to every demonstration run on SolidWorks 2024 that asks for

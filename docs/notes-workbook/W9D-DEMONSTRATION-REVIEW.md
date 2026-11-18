@@ -1251,3 +1251,154 @@ holds a user document title (*"open before: []"*).
    - `W9D-DEMONSTRATION.md`: N1-N3;
    - `HANDOFF-WORKBOOK.md`: stale after 2026-11-17 midday, so W9d's state, both 2026 runs and the reviews;
    - `design/UI-DESIGN.md` §9 if must-fix 1 or 2 changes its examples.
+
+## Re-check of `891a707`, `225e3d7`, `e3395d3`, `2b51fbe` and `a3e05fe`, before the 2024 run
+
+*Independent, 2026-11-18, at `2b51fbe`. No SolidWorks was run. I ran no whole suite and changed nothing but this
+file. In a `git archive` scratch copy, deleted after, I ran:*
+- `test_findings.py`, `test_swbuild_carry.py`, `test_workbook_carry.py` and `test_workbook_user_record.py`: 473
+  passed;
+- W9d's `--self-check`: 0 failed;
+- ten flips, one at a time, each against its test file.
+
+**Verdict: fit for the 2024 run. Nothing must be fixed first.**
+
+**The values.**
+- `git diff c2d95cc HEAD -- src/gear_generator/findings.py` changes these assignments and no others:
+  - on 2026, the five my §4 allowed, at exactly those values: the kinds are the eight words, with no perpendicular,
+    tangent or limit angle;
+  - the lightweight fact as a pair, True on 2026 and None on 2024;
+  - on 2024, the fourteen probe reads, each written as its 2026 twin. The two r3 strings are the constant
+    `entity_references` compares (`swcom.py:3947`);
+  - `WHATS_WRONG_STAYS_WITHOUT_A_REBUILD`, from W9c's `29d09da`, which is outside these commits.
+- Every `CARRY_*` write, `REFERENCED_CONFIGURATION_READ`, `VIRTUAL_READ`, `PATTERN_INSTANCE_READ`,
+  `ORIGIN_ENTITY_READ` and the vertex route stay None on 2024.
+- The comments carry the caveats as given, and §8, §8.2 and §8.3 of `W9D-INTERFACES.md` say the same.
+
+**The pins pin.** Each of these flips fails its test:
+- `CARRY_INSERTS_ON_2024` True;
+- `COAXIAL_FACE_READ_ON_2024` False;
+- `REFERENCED_CONFIGURATION_READ_ON_2024` True;
+- the kinds without `gear`, and the kinds with `perpendicular`;
+- the lightweight fact True on 2024;
+- `DEPENDENCIES_READ_ON_2024` changed;
+- the fallback sentence's `(was …)` taken out;
+- the moved sentence's `(was …)` taken out;
+- the rigid clause forced on.
+
+**No test asserts less than before.**
+- The eight tests given `w9d_unmeasured` still assert what they did, with the M9 findings None on both versions.
+- The three tests that held a 2024 value at None now hold it equal to its 2026 twin and not None.
+- The new `test_w9d_2024_findings_rest_on_the_probes_2024_run` pins each value to its `propose` line, and the
+  differing facts to their lines and the JSON's `sections`.
+
+**The wording** (`ui_text.py`) is true in each state that says it:
+- Renamed components:
+  - `_carried_as` takes the new → old map, so a component SolidWorks kept by its name is said alone, as the test's
+    second half holds.
+  - The fallback, moved, clash, sub-assembly and pattern-instance sentences each name a carried component by its new
+    name with its old one beside it.
+  - The moved sentence still finds its anchor by the old name.
+- The rigid clause (`_standing`, `:5879-5891`):
+  - It is said only where `CARRY_INSERTS_A_SUBASSEMBLY` is True on a known version and no sub-assembly is left. That
+    finding is None on both versions today, so it is said nowhere.
+  - In the question, `comps` is read only when there is a plan.
+  - Where nothing is carried, every sub-assembly counts as left.
+- No probe script matches the changed words.
+
+**`carry-gates` on 2024 with the probe reads set and every write None.** This is the state the second 2026 run met,
+with every write None and the reads set, which passed 27 ok:
+- `section_gates` reads the standing gates through `finding_name`, which is `_ON_2024` there;
+- `unset` holds `CARRY_INSERTS_ON_2024`, so the question and the result must lead with it;
+- there is no r3 walk while it is None;
+- each gate's own refusal is checked with the others patched True, and every one of them is None on 2024;
+- `probe_reads(2024)` now gives the 2026 expectations, so `carry` and `carry-closed` take the unshown-states branch
+  and the closed path is read;
+- `test_what_a_carry_is_gated_on_per_version_as_committed` holds that on 2024 `CARRY_INSERTS` alone gates the
+  carry.
+
+**A correction to my probe review's watch list.** Since `f3c4873`, W9d takes `--close-outlived-whats-wrong` (the
+coordinator's extension). Use `W9D-DEMONSTRATION.md`'s 2024 command lines, which carry it, not the ones in
+`W9D-PROBES-REVIEW.md`'s last section. Without the flag, a box that outlives its job is still the STOP.
+
+**Still open, not before the run:** the edge prefilter's should-fix in `swcom.entity_references` (`:3964`). M9's
+fixture has no edge mate.
+
+## A planet copy made new: `carry_for`'s names and why (assessed 2026-11-18, at `34e39ac`)
+
+*Read-only. No SolidWorks was run, and no code was changed. I reproduced and fixed the fault only in a `git archive`
+scratch copy, deleted after.*
+
+**What happens.** In `update.carry_for` (`src/gear_generator/workbook/update.py:3306`), a body whose part is made
+new looks up its build job by `c.gear in j.gear_ids`. `_why_part_new` (`:3226-3231`) looks up `made_new` and the
+job the same way. A planet copy's id (*Planet copy 1*) is never in `gear_ids`, which hold the Gears row (*Planet*).
+Reproduced on the fake: RangeBox with Planet's Face width changed gives each copy `names == ()` and
+`why_new == "its values changed"`. Every other new body gets 6 names, and `old_names` is right for the copies too (6).
+
+**What a carrying Build again… then does.** `names` is read only at `swbuild.py:7484` and `:7488`.
+`old_names`, which is right, decides what is the app's.
+- **A mate of the user's on a planet copy's own feature** (its Gear Axis, or any app feature named in its sidecar):
+  - A gear mate on its Gear Axis or a coaxial face is not made. It is named `WHY_GONE`: *"UserGearP was on Planet
+    copy 1's Gear Axis, which Planet copy 1's new part does not have"*.
+  - A mate on any other app feature of the planet gets the same sentence.
+  - The mate is left behind in the old assembly. Nothing is made on the wrong thing. **But the sentence is untrue:**
+    the new part has that feature, and the mate should have been made on it.
+  - Base planes (`plane1`-`plane3`) are not affected.
+- **A feature of the user's in a planet's part, and a mate on it:**
+  - The feature is still told from the app's by `old_names`, which is correct, so no app feature is called the user's.
+  - A mate on it is named `WHY_PART_NEW` and the feature is named as staying behind, both true.
+  - But the reason is only *"its values changed"*: *"its Face width changed"* is lost. Where the planet's part is new
+    because Update left it unsaved (`UNSAVED`), *"its values changed"* is **untrue**, and `MISMATCHED`'s
+    *how to keep it* sentence is lost. I reasoned this from the code and did not run it.
+- **Nothing else reads these names.** Nothing is lost silently, and nothing is written outside the unsaved new
+  assembly.
+
+**So the effect is conservative but the words are wrong.** Each item affected is left behind, and none is made
+wrongly. But two sentences can be untrue: *"… new part does not have"*, and *"its values changed"* where the cause was
+unsaved or mismatched.
+
+**Recommendation: fix now.** It is small and does not touch the SolidWorks evidence.
+- *The change* (`update.py`):
+  - `:3306`: `job = next((j for j in again.build if planetary.copy_of(c.gear)[0] in j.gear_ids), None)`;
+  - in `_why_part_new`: `row = planetary.copy_of(gear)[0]`, and `row` in place of `gear` in its three
+    `gear_ids` tests (`:3227`, `:3229`, `:3231`).
+- *Checked in the scratch copy:* each copy gets 6 names and *"its Face width changed"*.
+  `test_workbook_carry.py`, `test_swbuild_carry.py`, `test_workbook_update.py` and `test_workbook_user_record.py`:
+  419 passed.
+- *Tests it owes, on the fake:*
+  - `carry_for` after Planet's Face width changes: each copy's `names` equal its job's `plan_features`, and its
+    `why_new` is *"its Face width changed"*;
+  - `_why_part_new` for a copy whose row is in `made_new` as `UNSAVED`, and as `MISMATCHED`, gives those phrases;
+  - a carry end to end (gates set on 2026) with a user coincident on *Planet copy 2*'s Gear Axis and a user gear mate
+    on a planet's Gear Axis, each made again on that copy's new Gear Axis, and the result naming neither as gone.
+- *The evidence still stands for the fixed code.* `copy_of` returns any id without the copy word unchanged, and the
+  changed lines run only for a part made new. In M9's fixture, on 2026 tonight and on 2024 now, the only parts made
+  new are Sun and Aux, and the planets are reused, so every body those runs met takes exactly the same path.
+- *Remaking by name on a gear part made new is measured on SolidWorks:* UserGear6 on Sun's Gear Axis was made again
+  (log 1:1484, 1565). A copy takes that path with its own handle.
+- No rerun is needed.
+
+**Re-check of `d496cfd` (2026-11-18, at `d496cfd`).** I changed no code and started no SolidWorks; the targeted tests
+ran in a `git archive` scratch copy, deleted after.
+
+**Fit, and nothing must be fixed.**
+
+- **The fix is as I gave it.** Both lookups now use the Gears row, `planetary.copy_of(id)[0]`: the job lookup in
+  `carry_for`, and the `made_new` and job tests in `_why_part_new`.
+- **The addition, `update.why_new_of`, is right.**
+  - It keys each reason by body and also, with `setdefault`, by the planet's Gears row. That row is the id
+    `StaysBehind.left` records W9a's features by.
+  - The question (`_features_question`, through `carry_foresight`) and the result (`_parts_left`, through
+    `carried_status`) now find a row such as *Planet* there. Before, they said the feature stays in a part
+    *RangeBox_r2 does not use*, which was untrue.
+  - The new sentence is true in each state that says it. All copies of a row share one part, so the row's reason is
+    every copy's: *"Your PlanetPin stays in Gear_m1.25_N13, which Planet's new part replaces (its Face width changed)"*.
+    With `UNSAVED` it says the unsaved reason with how to keep the part. A gear with no copies keys the same id twice
+    to one reason. A part that is reused gives no reason, as before.
+- **The tests pin.** At head the four carry and update test files and `test_findings.py` pass (581). The three new
+  tests all fail with `7f91037`'s `src`. With only `why_new_of`'s row key taken out, two of them fail: the
+  feature's reason, and the end-to-end carry.
+- **The evidence stands.** M9's fixture on both versions makes only Sun and Aux new. Neither has the copy word, so
+  `copy_of` returns each unchanged, and `why_new_of` returns the same dictionary as before for them. The planets are
+  reused and give no reason. Every body those runs met, on 2026 tonight and in the 2024 demonstration running from
+  `5aca9c1`, therefore takes the same path and gets the same words.

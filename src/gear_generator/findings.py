@@ -1844,10 +1844,14 @@ WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2024 = False
 #   the assembly forward by hand) was not run; how long it stays past 60 s, and closing the documents with it up, were
 #   not run; a press stopping before any rebuild with the user's own work in error was not run; "Display What's Wrong
 #   during rebuild" was on, as found.
-# - 2026: False. No box: in run 11's M3 (w9c-demo-sw2026-20261117-11-final-remake-step2-assembly-flag.log, 34.0.0) the
-#   script's read after step 1 and step 2's press ran under the any-dialog STOP (log 11:7) and no window came (log
-#   11:307-361). Caveat: there the press was the second activation since step 1, so this rests on run 11's log alone
-#   until a 2026 run measures the press as the first activation (remake-m3's second pass on 2026).
+# - 2026: False. No box: remake-m3 on 34.1.1 from 23107c2 (26-12: probe/results/w9c-demo-sw2026-20261118-12-remake-m3.log
+#   with w9c-demo-20261118-054420.json), every job under the any-dialog STOP (26-12:7). In its second pass the app's
+#   press again was the first activation since step 1 left the ring in error, and What's Wrong did not come (26-12:476;
+#   no DIALOG line from the press's start to its end, 26-12:428-478; the JSON's first_press.whats_wrong came and stayed
+#   empty, no whats_wrong_lifetimes, no stops); neither did it at the script's own read before step 2 in the first pass,
+#   also a first activation (26-12:119-121), nor in steps 2, 2b and 3. Run 11's M3 on 34.0.0 read the same (log 11:7,
+#   307-361), where the press was the second activation. Caveat: the box itself never came on 2026, so "stays" is said
+#   of a box that does not show; the finding keeps the sentences off there either way.
 WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2026 = False
 WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2024 = True
 
@@ -1969,6 +1973,9 @@ ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2024 = True
 # read right but marked RangeBox.SLDASM, so no route (w9c24:282-285); the read-only open when not open, already open
 # reading as on 2026 (w9c24:289, 292-294); the sub-assembly insert (w9c24:322-323); the missing part's Silent open
 # and insert, errors 2, the child suppressed with no document, no dialog (w9c24:325-327).
+# COMPONENT_STATE_PER_CONFIGURATION_ROUTE was since set on both versions from W9d's probes, a different candidate
+# (IConfiguration.GetComponentSuppressionState) that marked nothing: on 2026 (34.0.0) and on 2024 (32.5.0); see the
+# W9d probe blocks below.
 PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES_ON_2026 = (
     "GetPersistReference3 on the part-level feature, through the component's GetModelDoc2")
 PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES_ON_2024 = PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES_ON_2026
@@ -1976,7 +1983,7 @@ MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE_ON_2026 = (
     "AddMate5 from IMate2 Type, Alignment, Flipped and the definition's values")
 MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE_ON_2024 = MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE_ON_2026
 COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026 = "IConfiguration.GetComponentSuppressionState(Name2)"
-COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2024 = None
+COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2024 = COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026   # W9d's 2024 probe
 OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN_ON_2026 = "OpenDoc6(path, assembly, Silent | ReadOnly)"
 OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN_ON_2024 = "OpenDoc6(path, assembly, Silent | ReadOnly)"
 OPEN_READ_ONLY_DIALOG_ON_2026 = False
@@ -2155,28 +2162,28 @@ UPDATE_SUPPRESSES_THE_RELIEF_ON_2024 = None
 # - CARRY_GEAR_MATE_ON_AN_APP_GEAR (True): a user gear mate on an app gear's Gear Axis, ratio and sense read back (M9).
 # - CARRY_REMAKES_ON_A_LEAF (True): a mate on a leaf of a user sub-assembly (nothing in W9d).
 OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026 = True
-OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2024 = None
+OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2024 = OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026
 OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2026 = True
-OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2024 = None
+OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2024 = OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2026
 FILE_VERSION_READ_ON_2026 = "ISldWorks.VersionHistory(path), its last entry against GetLatestSupportedFileVersion"
-FILE_VERSION_READ_ON_2024 = None
+FILE_VERSION_READ_ON_2024 = FILE_VERSION_READ_ON_2026
 DEPENDENCIES_READ_ON_2026 = "ISldWorks.GetDocumentDependencies2(path, False, False, False), each one's VersionHistory"
-DEPENDENCIES_READ_ON_2024 = None
+DEPENDENCIES_READ_ON_2024 = DEPENDENCIES_READ_ON_2026
 COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED_ON_2026 = True
-COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED_ON_2024 = None
+COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED_ON_2024 = COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED_ON_2026
 PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026 = (
     "each face (or edge) of the component's part carried into the assembly by IComponent2.GetCorresponding, the one "
     "ISldWorks.IsSame as the mate's entity (exactly one), then the part's GetPersistReference3, resolved by its "
     "GetObjectByPersistReference3")
-PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2024 = None
+PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2024 = PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026
 PERSIST_REFERENCE_ROUTE_FOR_EDGES_ON_2026 = PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026
-PERSIST_REFERENCE_ROUTE_FOR_EDGES_ON_2024 = None
+PERSIST_REFERENCE_ROUTE_FOR_EDGES_ON_2024 = PERSIST_REFERENCE_ROUTE_FOR_EDGES_ON_2026
 PERSIST_REFERENCE_ROUTE_FOR_VERTICES_ON_2026 = None
 PERSIST_REFERENCE_ROUTE_FOR_VERTICES_ON_2024 = None
 PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026 = True
-PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2024 = None
+PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2024 = PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026
 COAXIAL_FACE_READ_ON_2026 = True
-COAXIAL_FACE_READ_ON_2024 = None
+COAXIAL_FACE_READ_ON_2024 = COAXIAL_FACE_READ_ON_2026
 REFERENCED_CONFIGURATION_READ_ON_2026 = True
 REFERENCED_CONFIGURATION_READ_ON_2024 = None
 VIRTUAL_READ_ON_2026 = None
@@ -2186,13 +2193,13 @@ PATTERN_INSTANCE_READ_ON_2024 = None
 ORIGIN_ENTITY_READ_ON_2026 = None
 ORIGIN_ENTITY_READ_ON_2024 = None
 SUBASSEMBLY_OPEN_MARKS_ON_2026 = False
-SUBASSEMBLY_OPEN_MARKS_ON_2024 = None
+SUBASSEMBLY_OPEN_MARKS_ON_2024 = SUBASSEMBLY_OPEN_MARKS_ON_2026
 SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED_ON_2026 = False
-SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED_ON_2024 = None
+SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED_ON_2024 = SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED_ON_2026
 SUBASSEMBLY_READ_ONLY_INSERT_ON_2026 = True
-SUBASSEMBLY_READ_ONLY_INSERT_ON_2024 = None
+SUBASSEMBLY_READ_ONLY_INSERT_ON_2024 = SUBASSEMBLY_READ_ONLY_INSERT_ON_2026
 CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2026 = False
-CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2024 = None
+CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2024 = CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2026
 CARRY_INSERTS_ON_2026 = True
 CARRY_INSERTS_ON_2024 = None
 CARRY_INSERTS_IN_A_CONFIGURATION_ON_2026 = True
@@ -2214,7 +2221,7 @@ CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2024 = None
 #
 # W9d's probes on SolidWorks 2026 (34.0.0), set as W9D-PROBES-REVIEW.md (94fbebf) and W9D-INTERFACES §8.1 give them.
 # -1.log is probe/results/w9d-probes-sw2026-20261117-1-face-routes-none.log (snapshot 23ed8c5), -2.log is
-# …-2-faces-r3-clean.log (snapshot c86ad54). _ON_2024 stays None for every one until the 2024 run is reviewed; the
+# …-2-faces-r3-clean.log (snapshot c86ad54). Each _ON_2024 twin is set in the 2024 block after this one; the
 # reads M9 sets (REFERENCED_CONFIGURATION_READ, VIRTUAL_READ, PATTERN_INSTANCE_READ) and every CARRY_* write stayed None
 # here, and are set or kept None by M9's own block below.
 # - COMPONENT_STATE_PER_CONFIGURATION_ROUTE (set above, in W9c's block): agreed with the shown truth on 3 components x
@@ -2248,7 +2255,9 @@ CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2024 = None
 #   planes, a Sun end plane) and one circular edge (482 edges walked in 8.2 s). r1 (GetCorrespondingEntity2) gives
 #   nothing for a mate's entity and r2 resolves swPersistReferencedObject_Invalid (-1.log). The walk's cost grew
 #   through the session (0.26 s to 8.1 s for the same 163 faces), so the app walks once per component, prefiltered,
-#   capped (W9D-INTERFACES §10; swbuild.CARRY_WALK_CANDIDATES, CARRY_WALK_SECONDS).
+#   capped (W9D-INTERFACES §10; swbuild.CARRY_WALK_CANDIDATES, CARRY_WALK_SECONDS). On 2024 the walks did not grow
+#   (the 2024 block below), so whether 2026's growth was per call or a slower session is not known: the 2026 rerun of
+#   faces (b) has not been made.
 # - PERSIST_REFERENCE_SURVIVES_RELOAD: 6 references (5 faces, 1 edge) resolved Ok in their parts reopened alone and
 #   unchanged on disk, kind, place and area as read, nothing marked (-2.log:103-104). A part edited and saved since may
 #   resolve otherwise: any code but Ok is WHY_NOT_FOUND; a resolve to another kind stops the carry (§4.1, §0.3).
@@ -2259,13 +2268,76 @@ CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2024 = None
 #   unchanged, opened and inserted into a second assembly, marking none of them (-2.log:101-102). A user part open in
 #   its own window with unsaved edits is not measured.
 #
+# W9d's probes on SolidWorks 2024 (32.5.0), from 891a707, set as W9D-PROBES-REVIEW.md's last section ("The 2024 run
+# (32.5.0, from 891a707), reviewed", 23107c2) gives them: each _ON_2024 is its _ON_2026 twin, written as that twin (the
+# two route strings must equal swcom.PERSIST_ROUTE_R3 exactly, since entity_references compares them). p24 is
+# probe/results/sw2024/w9d-probes-sw2024-20261118.log (JSON w9d-probes-20261118-051605.json, revision [32, 5, 0],
+# snapshot 891a707), all three sections in one fresh session, 0 failed (p24:172). The JSON's proposal is {}, as in the
+# 2026 probe runs, so the pins are these lines and the JSON's sections.
+# - PERSIST_REFERENCE_ROUTE_FOR_FACES: r3, as 2026 (p24:86). r1 and r2 dead on every entity, r3 clean on all five
+#   faces (p24:53-85): one bore, three sprocket end planes, one Sun end plane on two files; each walk 1 match of 163 (or
+#   235), resolved _Ok to a face, IsSame both ways, unmarked at its start and after. Differs from 2026: the walks did
+#   not grow through the session (every 163-face walk 2.26-2.36 s, p24:80-85; five repeats 1.68-2.07 s, p24:93;
+#   component_frame x100 1.20 s before and 1.33 s after, private memory flat at 3.064 GB, p24:95). Nothing in src
+#   changes for it: the cap (CARRY_WALK_CANDIDATES, CARRY_WALK_SECONDS) stays the answer on both versions.
+# - PERSIST_REFERENCE_ROUTE_FOR_EDGES: r3, as 2026 (p24:87): one circular edge, 482 walked in 6.75 s (p24:68, 83).
+#   Differs from 2026: on 2024 the edge prefilter costs more than the walk: ("circle", 0.005) kept 82 of 482 in 8.05 s
+#   and its walk took 0.83 s, against 5.07 s for the full walk (p24:94); the prefilter lost no match (p24:97). The cost
+#   is time, never a wrong answer (IsSame decides), but swcom.entity_references reads each candidate's key again for
+#   each item and runs the filter before the clock is checked, so the 20 s cap does not bound it (the review's
+#   should-fix; M9's fixture has no edge mate).
+# - PERSIST_REFERENCE_SURVIVES_RELOAD True: 6 references (5 faces, 1 edge) resolved _Ok in parts reopened alone and
+#   unchanged on disk, kind, place and area as read, nothing marked (p24:105-106). A part edited and saved since may
+#   resolve otherwise.
+# - COAXIAL_FACE_READ True: cylinders only (p24:53, 58-77, 89-90). Positives the bore and Sun's 29 cylinders at
+#   19.375 mm and 29 at 16.375 mm; negatives the 58 fillets at 0.475 mm, the keyway at 1.5 mm, every plane: 2026's
+#   counts exactly.
+# - CARRY_INSERT_MARKS_USER_DOCUMENTS False: one case, user parts loaded as components of the open assembly,
+#   unchanged, inserted into a second assembly, which marked none of them; all four mates remade equal, every component
+#   at 0.0 (p24:98-104). A user part open with unsaved edits is not measured.
+# - COMPONENT_STATE_PER_CONFIGURATION_ROUTE (set in W9c's block): agreed with the shown truth on 3 components x 3
+#   modes, suppressed in the mode showing (Housing-1 in H) and in another (Sprocket-4 in L), from an unmarked start,
+#   marking nothing (p24:132-134, 137); a lightweight component reads not suppressed (p24:140); top-level Name2 only.
+#   GetRootComponent3(True) marked nothing here (p24:136) where W9c's 2024 probe saw it mark (w9c-probes-sw2024-
+#   20261117.log:283-285, another candidate, hence that run's None): marking can differ by state, so R.6's check after
+#   the read stays the guard.
+# - COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED True: one component suppressed in one mode, unsaved, read right
+#   (p24:138-139).
+# - FILE_VERSION_READ, 2026's route: this version's copy read ['17000[2024/282]'] against GetLatestSupportedFileVersion
+#   17000; the control, a file 2026 (34.1.1) saved, read ['19000[2026/13]'] closed (p24:143-144). Differs from 2026:
+#   2024 reads a 2026-saved file's version history closed, with no dialog and nothing left open (p24:168-169); one file
+#   read. swcom.file_version takes the last entry's number and _not_open_refusal requires equality, so the year label
+#   never matters; an older version's file is refused by the same equality, though none was read.
+# - DEPENDENCIES_READ, 2026's route (Traverse False, Searchflag False): all nine named, each under the copy, on disk and
+#   last saved by 2024 (p24:145, 147), which confirms on 2024 what was an inference on 2026: the stored paths are the
+#   copy's own once the copy is saved. A plain copy of the folder SolidWorks never opened gives the stored, original
+#   paths, none on disk, so the app refuses all nine (p24:142), the copied-folder ruling as built. Top level only: a
+#   sub-assembly dependency still refuses (Traverse True lists its parts on 2024, p24:165, a fact only).
+# - OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS True: the unchanged Housing and the changed Sprocket (its global kept) open
+#   beside the read-only open, each the same after it (p24:148-149). The read-only RangeBox.SLDASM read marked straight
+#   after its open (warning 32; the JSON's state.read_only, flag True and read-only True), as on 2026: R.6 judges the
+#   job's own read-only document from that read.
+# - OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN True: shown mode by mode, closed by QuitDoc with its flag True and no dialog,
+#   every document it loaded gone, no file time changed, the open parts as they were (p24:150-151). Files saved by
+#   this version only.
+# - SUBASSEMBLY_OPEN_MARKS False: a healthy one-part sub-assembly opened Silent, not loaded (warning 0), its flag False
+#   straight after and after the settle (p24:158-159).
+# - SUBASSEMBLY_READ_ONLY_INSERT True: inserted with its child; it read flag False and read-only after, the host (the
+#   job's own) modified (p24:160-161).
+# - SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED False: loaded as a component of an open host, OpenDoc6 warning 128, the flag
+#   False before, after the open and after the insert (p24:163-164).
+# Stay None on 2024, as on 2026: REFERENCED_CONFIGURATION_READ (every component here references its file's only
+# configuration, p24:91; the 2024 demonstration's SprocketConf-1 sets it, as M9 did on 2026); VIRTUAL_READ and
+# PATTERN_INSTANCE_READ (read negative only, p24:92); ORIGIN_ENTITY_READ and PERSIST_REFERENCE_ROUTE_FOR_VERTICES
+# (nothing in W9d). Every CARRY_* write and the lightweight fact wait for the 2024 demonstration.
+#
 # W9d's demonstration M9 on SolidWorks 2026 (34.1.1), set as the last section of W9D-DEMONSTRATION-REVIEW.md
 # ("The second run on SolidWorks 2026 (34.1.1), and 41afa37", §4, 7996089) gives them. "Log 1" is
 # probe/results/w9d-demo-sw2026-20261118-1-whole-closed-read-mode-fault.log (snapshot f7c2f0d, JSON
 # w9d-demo-20261118-031226.json), "log 2" …-2-carry-closed-clean.log (snapshot 41afa37, carry-closed alone, JSON
 # …-042519.json). The five writes were patched True together in that run's process for the measurement only (log
-# 1:794-798, log 2:80-84); the probes' reads were committed. _ON_2024 stays None for every one: W9d's probes and
-# demonstration have not run on 2024.
+# 1:794-798, log 2:80-84); the probes' reads were committed. _ON_2024 stays None for every one here: W9d's
+# demonstration has not run on 2024 (its probes have, and set their own reads in the block before this one).
 # Every value here carries these caveats (the review's "All"):
 # - measured on 34.1.1 at f7c2f0d, whose src differs from the commit that set these only in W9c's _ON_2024 values and
 #   the review's two wording must-fixes; carry-closed rerun at 41afa37, whose fix is the script's alone;

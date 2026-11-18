@@ -2064,9 +2064,11 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), **kwargs)
     said = still_in_error_sentence(still, assembly_holding(update, still),
                                    record=_record_of(finished, kwargs.get("record")),
                                    own=getattr(update, "assembly", "") or "")
-    if whats_wrong_stays(kwargs.get("revision") or ()):
+    if whats_wrong_stays(kwargs.get("revision") or ()) and _stopped_before_the_assembly(result):
         # The review of 1dc9350 (§3): this press brings the assembly forward with the part in error, and the box it
-        # raises does not go by itself; said once, after the sentence, and NEXT not beside it.
+        # raises does not go by itself when nothing rebuilds after it; said once, after the sentence, and NEXT not
+        # beside it. Only for a press that stopped before rebuilding the assembly (the re-check of 7d96316, 1f8540f):
+        # every box measured in a press that went on and rebuilt went by itself.
         said += " " + whats_wrong_stays_sentence(len(still))
         for sentence in (whats_wrong_next_sentence(1), whats_wrong_next_sentence(2)):
             text = text.replace(" " + sentence, "")
@@ -2083,6 +2085,12 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), **kwargs)
         # stays (the second reading of the fixes review, N4).
         return said + text[len(ALREADY_MATCHES):], False
     return f"{text} {said}", False
+
+
+def _stopped_before_the_assembly(result) -> bool:
+    """Whether a press stopped before it rebuilt the assembly: a failure, and the assembly among what its result says
+    it did not get to (``skipped``, as every Update stop that leaves the assembly undone words it)."""
+    return bool(getattr(result, "failures", None)) and "the assembly" in str(getattr(result, "skipped", "") or "")
 
 
 def _record_of(finished, record=None):
@@ -6130,10 +6138,10 @@ def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[
     work = done.work
     path = (work.assembly if work is not None and work.assembly else "") or old_path
     old = _file(path) if path else "the old assembly"
+    from .workbook.update import StaysBehind, why_new_of
     if stays is None:
-        from .workbook.update import StaysBehind
         stays = StaysBehind(None, path)
-    why_new = {b.old: b.why_new for b in (getattr(carry, "bodies", ()) or ()) if b.why_new}
+    why_new = why_new_of(getattr(carry, "bodies", ()) or ())
     stop, after = _split_stop(done)
     if work is None:
         reason = stop.rstrip(".") or f"SolidWorks did not answer the read of {old}"

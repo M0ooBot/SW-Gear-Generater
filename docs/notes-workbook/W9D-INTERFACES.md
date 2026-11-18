@@ -88,7 +88,13 @@ class Carry:
 B fills `Carry` from the record and the `GearboxPlan` it is about to build (`workbook.update.carry_for(record, again,
 old)`, beside W9a's `old_assembly`): planet copy *k* to copy *k*; a body the new plan has no handle for gets `handle
 ""`; `same_file` from `again.reuse` (a `PartReuse` whose path is the old component's part); `why_new` from the update
-plan's structural reasons and `again.made_new` (`MadeNew.why`). The window passes it as `kwargs["carry"]` in
+plan's structural reasons and `again.made_new` (`MadeNew.why`). A part made new is found in `again.build` and
+`again.made_new` by its Gears row: a planet copy's id (*Planet copy 2*) is never in a job's or a `MadeNew`'s
+`gear_ids`, which hold the row (*Planet*), so the lookup takes `planetary.copy_of(id)[0]`, for `names` and
+`why_new` alike; and the reasons the sentences read (`update.why_new_of`) are keyed by each copy and by its row too,
+the id W9a's features left in a part are recorded by (W9D-DEMONSTRATION-REVIEW.md, *A planet copy made new*,
+`7f91037`: before, a copy made new got no names and *its values changed*, and a feature in a planet's part was said
+to stay in a part the new revision *does not use*). The window passes it as `kwargs["carry"]` in
 `_start_build` beside `before`, and only for a Build again… (W9a's `old_assembly` already decides that).
 
 ### 2.2 What A reads (crosses to B on the result)
@@ -768,31 +774,32 @@ the W9d probe's reviewed logs; writes from M9's, patched in that run's process f
 (`coincident`, `concentric`, `parallel`, `perpendicular`, `tangent`, `distance`, `angle`, `limit distance`,
 `limit angle`, `lock`, `gear`), and set to the words whose mates M9 remade clean. `REFERENCED_CONFIGURATION_READ`, a
 read with no positive case in the probe, is patched True in M9's process and set from M9's reading of Sprocket-11
-(the re-check's R2).
+(the re-check's R2). In the table `p24` is the 2024 probe run's log, `probe/results/sw2024/w9d-probes-sw2024-20261118.log`
+(§8.3).
 
 | Finding (`_ON_<year>`) | Kind | Settled when | What it gates | Set by |
 |---|---|---|---|---|
 | `OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN` | read (set, both) | its route string | the not-open read's open | W9c probes s5 (d) |
-| `OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN` (new) | read | True | the not-open read at all (its close), and its per-mode show | W9d probe `state` (h): 2026 `w9d…-1.log:128-129`; 2024 its run |
-| `OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS` (new) | read | True | the not-open read with app documents open (one changed) | W9d probe `state` (g): 2026 `w9d…-1.log:126-127`; 2024 its run |
-| `FILE_VERSION_READ` (new) | read | its route string | the not-open read at all: unset, a closed old assembly is never opened (R1) | W9d probe `state` (v), only with its negative control: a file the other version saved, read closed (S-b): 2026 `w9d…-1.log:122-123` (a 2024-saved control); 2024 its run (a 2026-saved control) |
-| `DEPENDENCIES_READ` (new) | read | its route string | the not-open read at all: every referenced file read closed, each last saved by the running version (S-f); top level only, so a sub-assembly dependency, a path not on disk or a history that does not read refuses (§3 R.2) | W9d probe `state` (v): 2026 `w9d…-1.log:124-125`; 2024 its run, with each path's place logged |
-| `COMPONENT_STATE_PER_CONFIGURATION_ROUTE` (exists, None) | read | its route string | per-mode states read unshown | W9d probe `state` (b)–(d): 2026 `w9d…-1.log:114-118`; 2024 its run |
-| `COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED` (new) | read | True | that route on an open old assembly with unsaved changes | W9d probe `state` (e): 2026 `w9d…-1.log:119-120`; 2024 its run |
+| `OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN` (new) | read | True | the not-open read at all (its close), and its per-mode show | W9d probe `state` (h): 2026 `w9d…-1.log:128-129`; 2024 `p24:150-151` |
+| `OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS` (new) | read | True | the not-open read with app documents open (one changed) | W9d probe `state` (g): 2026 `w9d…-1.log:126-127`; 2024 `p24:148-149` |
+| `FILE_VERSION_READ` (new) | read | its route string | the not-open read at all: unset, a closed old assembly is never opened (R1) | W9d probe `state` (v), only with its negative control: a file the other version saved, read closed (S-b): 2026 `w9d…-1.log:122-123` (a 2024-saved control); 2024 `p24:143-144` (a control 2026 saved, read closed with no dialog) |
+| `DEPENDENCIES_READ` (new) | read | its route string | the not-open read at all: every referenced file read closed, each last saved by the running version (S-f); top level only, so a sub-assembly dependency, a path not on disk or a history that does not read refuses (§3 R.2) | W9d probe `state` (v): 2026 `w9d…-1.log:124-125`; 2024 `p24:145, 147`, each path under the copy (a plain copy of the folder refused, `p24:142`) |
+| `COMPONENT_STATE_PER_CONFIGURATION_ROUTE` (exists, None) | read | its route string | per-mode states read unshown | W9d probe `state` (b)–(d): 2026 `w9d…-1.log:114-118`; 2024 `p24:132-134, 137` |
+| `COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED` (new) | read | True | that route on an open old assembly with unsaved changes | W9d probe `state` (e): 2026 `w9d…-1.log:119-120`; 2024 `p24:138-139` |
 | `PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES` | read (set, both) | its route string | tier 1 on axes and planes | W9c probes s5 (b) |
-| `PERSIST_REFERENCE_ROUTE_FOR_FACES`, `_FOR_EDGES` (new) | read | a route string | tier 1 on faces, edges, by §10's walk (grouped, prefiltered, counted, capped) | W9d probe `faces` (b), **r3**: 2026 `w9d…-2.log:83-90` (r1 and r2 read nothing, `w9d…-1.log`); 2024 its run |
+| `PERSIST_REFERENCE_ROUTE_FOR_FACES`, `_FOR_EDGES` (new) | read | a route string | tier 1 on faces, edges, by §10's walk (grouped, prefiltered, counted, capped) | W9d probe `faces` (b), **r3**: 2026 `w9d…-2.log:83-90` (r1 and r2 read nothing, `w9d…-1.log`); 2024 `p24:53-87` (the walks did not grow; the edge prefilter slower than the walk, `p24:94`) |
 | `PERSIST_REFERENCE_ROUTE_FOR_VERTICES` (new) | read | a route string | tier 1 on vertices | nothing in W9d: None (2026: `…-1.log:1571`) |
-| `PERSIST_REFERENCE_SURVIVES_RELOAD` (new) | read | True | tier 1 on the not-open path | W9d probe `faces` (d), r3's references: the kind, the place in the part (a plane's offset, a cylinder's or circle's axis) and a face's area, the part unmarked by the resolve (S-c): 2026 `w9d…-2.log:103-104`; 2024 its run |
-| `COAXIAL_FACE_READ` (new) | read | True | `OldEntity.coaxial` and `radius_mm` on a cylindrical face: §4.4's "bore" (with the radius) and §4.3's gear-mate rule on a face | W9d probe `faces` (b), r3's part-level face: the bore True, every plane False, **Sun's User Keyway (off-axis) False** (S-d), Sun's root fillets False: 2026 `w9d…-2.log:92-93`; 2024 its run |
+| `PERSIST_REFERENCE_SURVIVES_RELOAD` (new) | read | True | tier 1 on the not-open path | W9d probe `faces` (d), r3's references: the kind, the place in the part (a plane's offset, a cylinder's or circle's axis) and a face's area, the part unmarked by the resolve (S-c): 2026 `w9d…-2.log:103-104`; 2024 `p24:105-106` |
+| `COAXIAL_FACE_READ` (new) | read | True | `OldEntity.coaxial` and `radius_mm` on a cylindrical face: §4.4's "bore" (with the radius) and §4.3's gear-mate rule on a face | W9d probe `faces` (b), r3's part-level face: the bore True, every plane False, **Sun's User Keyway (off-axis) False** (S-d), Sun's root fillets False: 2026 `w9d…-2.log:92-93`; 2024 `p24:89-90`, the same counts |
 | `REFERENCED_CONFIGURATION_READ` (new) | read | True | the referenced configuration read on a file of several configurations; unset, such a component is named | **M9** (the re-check's R2; the probe logs the read as a fact and proposes nothing): 2026 **True**, M9's second run on 34.1.1, SprocketConf-1 in Z20 (`w9d-demo…-1.log:823, 1438, 1516`, proposal 1555; read-only, `…-2.log:738`); 2024 its run |
-| `VIRTUAL_READ` (new) | read | True | `IsVirtual` instead of the `^` rule | probe reads it negative only: None until a run meets a virtual component (2026: M9's fixture has none, `w9d-demo…-1.log:1568`) |
-| `PATTERN_INSTANCE_READ` (new) | read | True | `IsPatternInstance`: the per-instance sentence (D12) | probe reads it negative only: None until a run meets a pattern (2026: M9's fixture has none, `…-1.log:1569`) |
+| `VIRTUAL_READ` (new) | read | True | `IsVirtual` instead of the `^` rule | probe reads it negative only: None until a run meets a virtual component (2026: M9's fixture has none, `w9d-demo…-1.log:1568`; 2024 negative only, `p24:92`) |
+| `PATTERN_INSTANCE_READ` (new) | read | True | `IsPatternInstance`: the per-instance sentence (D12) | probe reads it negative only: None until a run meets a pattern (2026: M9's fixture has none, `…-1.log:1569`; 2024 negative only, `p24:92`) |
 | `ORIGIN_ENTITY_READ` (new) | read | True | an origin as a mate entity | nothing in W9d: None (2026: `…-1.log:1570`) |
-| `SUBASSEMBLY_OPEN_MARKS` (new) | read | **False** | a sub-assembly not loaded, opened to insert it | W9d probe `sub` (a): 2026 `w9d…-1.log:135-136`; 2024 its run |
-| `SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED` (new) | read | **False** | a sub-assembly loaded as a component, opened to insert it | W9d probe `sub` (c): 2026 `w9d…-1.log:141-142`; 2024 its run |
-| `SUBASSEMBLY_READ_ONLY_INSERT` (new) | read | True | a sub-assembly opened read-only, then inserted | W9d probe `sub` (b): 2026 `w9d…-1.log:138-139`; 2024 its run |
+| `SUBASSEMBLY_OPEN_MARKS` (new) | read | **False** | a sub-assembly not loaded, opened to insert it | W9d probe `sub` (a): 2026 `w9d…-1.log:135-136`; 2024 `p24:158-159` |
+| `SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED` (new) | read | **False** | a sub-assembly loaded as a component, opened to insert it | W9d probe `sub` (c): 2026 `w9d…-1.log:141-142`; 2024 `p24:163-164` |
+| `SUBASSEMBLY_READ_ONLY_INSERT` (new) | read | True | a sub-assembly opened read-only, then inserted | W9d probe `sub` (b): 2026 `w9d…-1.log:138-139`; 2024 `p24:160-161` |
 | `SUBASSEMBLY_INSERT_ROUTE` | read (set, both) | its route string | the insert itself | W9c probes p2 |
-| `CARRY_INSERT_MARKS_USER_DOCUMENTS` (new) | a fact | — (True or False) | nothing: True adds a sentence (§9.2) | W9d probe `faces` (c): 2026 `w9d…-2.log:101-102`; 2024 its run |
+| `CARRY_INSERT_MARKS_USER_DOCUMENTS` (new) | a fact | — (True or False) | nothing: True adds a sentence (§9.2) | W9d probe `faces` (c): 2026 `w9d…-2.log:101-102`; 2024 `p24:98-104` |
 | `CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY` (new) | a fact | — (True or False) | nothing: the worker reads the old instance before and after whatever it holds, and the result says what it read (D10 †); nothing in `src` reads the finding | M9 `carry` (SprocketLight-1), as read: 2026 **True** (`w9d-demo…-1.log:1402, 1408, 1410`; the result's sentence 1397), added to `findings.py` as a pair by the coordinator's ruling; 2024 its run |
 | `CARRY_INSERTS` (new) | write | True | user parts inserted, placed, fixed, their states set in every mode and read back | M9: 2026 **True** (`w9d-demo…-1.log:1477-1518`, proposal 1553; closed, `…-2.log:777-834`); 2024 its run |
 | `CARRY_INSERTS_IN_A_CONFIGURATION` (new) | write | True | an insert in a referenced configuration other than the document's active one | M9: 2026 **True** (`…-1.log:859-860, 1515`, proposal 1554); 2024 its run |
@@ -821,7 +828,7 @@ what is open at the press, so the worker's `unread` sentence says it.
 Measured by the W9d probes' two runs on **34.0.0** and set as the probes' review gives them (`W9D-PROBES-REVIEW.md`,
 *The findings, one by one*). Package A's fix round copies each into `findings.py` as `<NAME>_ON_2026`, its comment
 carrying the caveat and naming the revision; W9c's S5 ran on 34.1.1, and one reading differs between the two (the
-marking route, first row). `_ON_2024` stays None for every one until the 2024 run is reviewed. `-1.log` and `-2.log`
+marking route, first row). Each `_ON_2024` is set since from the 2024 run, to its 2026 twin (§8.3). `-1.log` and `-2.log`
 are `w9d…-1.log` and `w9d…-2.log` of §4.1.
 
 | Finding | Set `_ON_2026` to | Caveat the comment must carry |
@@ -858,7 +865,7 @@ run on SolidWorks 2026 (34.1.1), and `41afa37`*, §4, `7996089`). "Log 1" is
 `carry-gates`, `carry`, `carry-closed`), "log 2" `…-2-carry-closed-clean.log` (snapshot `41afa37`, `carry-closed`
 alone). The five writes were patched True together in that run's process (log 1:794-798, log 2:80-84), the kinds as
 all eleven. `findings.py`'s M9 block carries each caveat in full; `tests/test_findings.py` pins the values to the logs.
-`_ON_2024` stays None for every one until W9d's probes and demonstration run on 2024 and are reviewed.
+`_ON_2024` stays None for every one until W9d's demonstration runs on 2024 and is reviewed (its probes have run there, §8.3).
 
 | Finding | `_ON_2026` | Rests on (log 1 unless said) | Its main caveat |
 |---|---|---|---|
@@ -871,9 +878,56 @@ all eleven. `findings.py`'s M9 block carries each caveat in full; `tests/test_fi
 | `CARRY_INSERTS_A_SUBASSEMBLY`, `CARRY_REMAKES_ON_A_LEAF`, `VIRTUAL_READ`, `PATTERN_INSTANCE_READ`, `ORIGIN_ENTITY_READ`, `PERSIST_REFERENCE_ROUTE_FOR_VERTICES` | stay **None** | proposals 1566-1571 | none is in the fixture; each item is named with its finding and left in the old assembly |
 
 What this leaves settled, by version: on **2026** every gate of §8 but the six of the last row, the probes' reads on
-34.0.0 (§8.1) and M9's writes on 34.1.1 (this table); on **2024** only the three W9c routes marked *set, both* in
-§8's table (`OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN`, `PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES`,
-`SUBASSEMBLY_INSERT_ROUTE`), so a carry on 2024 names every component with `CARRY_INSERTS_ON_2024`.
+34.0.0 (§8.1) and M9's writes on 34.1.1 (this table); on **2024** the three W9c routes marked *set, both* in §8's table
+and the probes' fourteen reads on 32.5.0 (§8.3), and no write, so a carry on 2024 names every component with
+`CARRY_INSERTS_ON_2024` until the 2024 demonstration is run and reviewed.
+
+### 8.3 The values for SolidWorks 2024 (32.5.0)
+
+Measured by W9d's probes in one fresh session on **32.5.0** from `891a707` (`4623701`; `faces`, `state` and `sub`,
+0 failed) and set as their review gives them (`W9D-PROBES-REVIEW.md`, *The 2024 run (32.5.0, from `891a707`),
+reviewed*, `23107c2`). `p24` is `probe/results/sw2024/w9d-probes-sw2024-20261118.log`, its JSON
+`w9d-probes-20261118-051605.json`; the JSON's `proposal` is `{}`, as in the 2026 probe runs, so the pins in
+`tests/test_findings.py` are the log's lines and the JSON's `sections`. Every one of the fourteen is set to **its
+2026 twin's value**, written in `findings.py` as that twin (the two r3 route strings must equal
+`swcom.PERSIST_ROUTE_R3`, which `entity_references` compares); `findings.py`'s 2024 block carries each caveat.
+
+| Finding | `_ON_2024` | Rests on (`p24`) |
+|---|---|---|
+| `PERSIST_REFERENCE_ROUTE_FOR_FACES` | r3, as 2026 | 53-85 (r1 and r2 dead on every entity, r3 clean on all five faces), 86 |
+| `PERSIST_REFERENCE_ROUTE_FOR_EDGES` | r3, as 2026 | 68, 83, 87 |
+| `PERSIST_REFERENCE_SURVIVES_RELOAD` | `True` | 105-106 |
+| `COAXIAL_FACE_READ` | `True` | 53, 58-77, 89-90 (2026's counts exactly) |
+| `CARRY_INSERT_MARKS_USER_DOCUMENTS` | `False` | 98-104 |
+| `COMPONENT_STATE_PER_CONFIGURATION_ROUTE` | `"IConfiguration.GetComponentSuppressionState(Name2)"` | 132-134, 137 (W9c's 2024 candidate, `GetRootComponent3(True)`, had marked; this one marked nothing, 136) |
+| `COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED` | `True` | 138-139 |
+| `FILE_VERSION_READ` | 2026's route | 143-144 |
+| `DEPENDENCIES_READ` | 2026's route | 145, 147; a plain copy refused, 142 |
+| `OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS` | `True` | 148-149 (the read-only assembly marked straight after its open, warning 32, as on 2026) |
+| `OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN` | `True` | 150-151 |
+| `SUBASSEMBLY_OPEN_MARKS` | `False` | 158-159 |
+| `SUBASSEMBLY_READ_ONLY_INSERT` | `True` | 160-161 |
+| `SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED` | `False` | 163-164 |
+
+Stay None on 2024, as on 2026: `REFERENCED_CONFIGURATION_READ` (every component references its file's only
+configuration, `p24:91`; the 2024 demonstration's SprocketConf-1 sets it, as M9 did on 2026), `VIRTUAL_READ` and
+`PATTERN_INSTANCE_READ` (negative only, `p24:92`), `ORIGIN_ENTITY_READ` and `PERSIST_REFERENCE_ROUTE_FOR_VERTICES`
+(nothing in W9d). Every `CARRY_*` write and the lightweight fact wait for the 2024 demonstration.
+
+**Measured differing from 2026** (facts; nothing in `src` changed for them):
+- r3's walks did not grow on 2024: every 163-face walk took 2.26-2.36 s through the session, five repeats 1.68-2.07 s,
+  private memory flat (`p24:80-85, 93, 95`). Whether 2026's growth (§8.1) was per call or a slower session is not
+  known; 2026's `faces` (b) has not been rerun. The cap stays the answer on both versions.
+- The edge prefilter costs more than the walk on 2024: `("circle", 0.005)` kept 82 of 482 edges in 8.05 s, its walk
+  0.83 s, against 5.07 s for the full walk (`p24:94`); it lost no match (`p24:97`). The cost is time, never a wrong
+  answer, but `swcom.entity_references` reads each candidate's key again per item and filters before it checks the
+  clock, so §10's 20 s cap does not bound the filter: the review's should-fix (a key read once per component, the clock
+  inside the filter, and for edges on 2024 no circle filter or a per-kind rule 2). M9's fixture has no edge mate.
+- 2024 read a 2026-saved file's version history closed, with no dialog and no window left (`p24:143, 168-169`): what
+  `FILE_VERSION_READ` needs on 2024. One file read.
+- Searchflag, Traverse True and each dependency's place were read for the first time, on 2024 only (`p24:141-142,
+  145-146, 165`): Searchflag False (the app's) gives the stored paths, so a plainly copied folder is refused, as ruled;
+  Traverse True lists a sub-assembly's parts, a 2024 fact only, so R.2 keeps refusing a sub-assembly dependency.
 
 ## 9. What the user sees (`ui_text`)
 

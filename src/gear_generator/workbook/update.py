@@ -3238,21 +3238,32 @@ def _changed_columns(built: Mapping[str, Any], wanted: Mapping[str, Any]) -> Lis
 def _why_part_new(entry: Optional[PartEntry], gear: str, again: Any) -> str:
     """B's phrase for why ``gear``'s part in the new revision is a new file (``CarryBody.why_new``): a part that would
     have been reused but for Update's unsaved changes or a live check (``again.made_new``), else the Gears columns that
-    changed (*its Flank changed*, *its Teeth and Face width changed*), else *its values changed*."""
-    # F1: a planet's copy ("Planet copy 2") is made from its row's part, so its row ("Planet") finds the job; before,
-    # a copy found none and said *its values changed* whatever had changed.
+    changed (*its Flank changed*, *its Teeth and Face width changed*), else *its values changed*. A planet copy
+    (*Planet copy 2*) is looked up by its Gears row (*Planet*), which ``made_new`` and the build jobs hold."""
     row = planetary.copy_of(gear)[0]
     for made in getattr(again, "made_new", ()) or ():
-        if (gear in made.gear_ids or row in made.gear_ids) and made.why == gearbox.UNSAVED:
+        if row in made.gear_ids and made.why == gearbox.UNSAVED:
             return WHY_NEW_UNSAVED
-        if (gear in made.gear_ids or row in made.gear_ids) and made.why == gearbox.MISMATCHED:
+        if row in made.gear_ids and made.why == gearbox.MISMATCHED:
             return WHY_NEW_MISMATCHED
-    job = next((j for j in getattr(again, "build", ()) or () if gear in j.gear_ids or row in j.gear_ids), None)
+    job = next((j for j in getattr(again, "build", ()) or () if row in j.gear_ids), None)
     if entry is not None and entry.spec and job is not None:
         columns = _changed_columns(entry.spec, job.spec.to_dict())
         if columns:
             return f"its {_names(columns)} changed"
     return WHY_NEW_VALUES
+
+
+def why_new_of(bodies: Sequence[swbuild.CarryBody]) -> Dict[str, str]:
+    """Body -> why its part is new (``CarryBody.why_new``, those made new only), each planet copy's also under its Gears
+    row (*Planet*), the id W9a's features left in a part are recorded by (``StaysBehind.left``), so a feature in a
+    planet's part is said with the reason its new part replaces it (W9D-DEMONSTRATION-REVIEW.md, a planet copy made
+    new, 7f91037)."""
+    out = {b.old: b.why_new for b in bodies if b.why_new}
+    for b in bodies:
+        if b.why_new:
+            out.setdefault(planetary.copy_of(b.old)[0], b.why_new)
+    return out
 
 
 def _old_carrier_names(entry: store.CarrierEntry) -> Tuple[str, ...]:
@@ -3322,7 +3333,8 @@ def carry_for(record: Optional[LinkRecord], again: Any, old: Optional[swbuild.Ol
         if same:
             names = tuple(reused.features) or old_names
         else:
-            job = next((j for j in again.build if c.gear in j.gear_ids), None)
+            # A planet copy's job by its Gears row (W9D-DEMONSTRATION-REVIEW.md, a planet copy made new, 7f91037).
+            job = next((j for j in again.build if planetary.copy_of(c.gear)[0] in j.gear_ids), None)
             names = swbuild.plan_features(job.plan) if job is not None and job.plan is not None else ()
         bodies.append(swbuild.CarryBody(
             old=c.gear, old_name=c.name, handle=handle, same_file=same,
@@ -3523,7 +3535,7 @@ def carry_foresight(record: Optional[LinkRecord], again: Any, *, plan_carry: Opt
     new_modes = tuple(carry.modes) if carry is not None else ()
     gone = tuple(m for m in box.modes if not any(m.casefold() == n.casefold() for n in new_modes))
     added = tuple(m for m in new_modes if not any(m.casefold() == o.casefold() for o in box.modes))
-    why_new = {b.old: b.why_new for b in (carry.bodies if carry is not None else ()) if b.why_new}
+    why_new = why_new_of(carry.bodies if carry is not None else ())
     made = {g: m.why for m in getattr(again, "made_new", ()) or () for g in m.gear_ids}
     values: Dict[str, store.ValueEditEntry] = {}
     for problem in (entry.problems if entry is not None else []):
