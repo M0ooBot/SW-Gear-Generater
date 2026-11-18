@@ -938,3 +938,63 @@ are disjoint in `src` and in `tests`, with three exceptions:
 **F1-0 may start once `printed` is cut, with those three settled in the plan first.** Each is a sentence or two.
 After F1-0, A can start once §2.3 is rewritten, and B and C can start as they are, with §2's three should-fixes
 going to C.
+
+
+---
+
+# Last check, of the revision to the third check (2026-11-18)
+
+**Read at `5e5d5c1`**, against the code at `67ee901`. No new calculation was run; the figures are the third check's
+sweep. Nothing was run on SolidWorks or in the suite.
+
+## 1. The third check's points
+
+**Each is taken.**
+
+- **The schema pins.** The plan lists ten lines, and `git grep` at `67ee901` finds the same ten: `test_store` 227
+  and 1123, `test_workbook_bands` 353 and 367, `test_workbook_carry` 51, 75, 79 and 1057, `test_workbook_user_record`
+  56, and `test_workbook_window` 312. F1-0 moves every literal that grep finds at the cut, which is the right rule.
+  `probe/w9d_demonstration.py:1007` is rightly noted, not moved.
+- **The Box settings.** The two `Setting`s, `to_sheets`' two keys and the pin at `test_workbook_model.py:24-27`
+  go into F1-0 together.
+- **The pair-check signature** is withdrawn with the check.
+- **C's three should-fixes are all in:** `_assess` resolves the blank for both its callers (`:692` included), it
+  passes no record when the record is another workbook's, and `read`'s Box is resolved too, held by a test.
+
+## 2. No pair warning in F1
+
+**Sound on the sweep, and stated honestly**, with one omission.
+
+- **What §2.3 says, and the figures are the sweep's:** at the printed default every swept pair clears; with no
+  backlash the overlap is 0.005 to 0.067 mm, against the radial measure's 0.11 to 0.62.
+- **The limits are named:** what was swept (recipe A, unshifted spur outlines, five rings, five outside pairs, Sun
+  and Planet) and what was not (helical, shifted and bevel pairs, recipe B, a tip's radial growth).
+- **What F1 does with the rest:** it leaves those cases unchecked rather than checking them by a measure shown to
+  overstate.
+- **The bevel caveat:** dropping the bevel pair check is by analogy, not by sweep. §2.3's "not modelled" list
+  makes that plain enough.
+
+**The omission (should-fix, wording only).** The plan does not say what a user who **types a small backlash**
+meets. The overlap appears below about 0.04 mm of backlash a gear for the rings swept, and below about 0.08 mm for
+the 6 / 30 outside pair. Under those values the drawn parts can overlap by up to about 0.03 mm (rings) and 0.07 mm
+(6 / 30) with no warning, and a printer's fat walls add to that. One sentence in §2.3 should say so, and that the
+single gear's "turn the pair in SolidWorks" is then the only guard.
+
+**The single gear's undercut warning stands.** For a machined gear the generated undercut it describes is real,
+and its words are unchanged. The printed sentence is true of what the app makes: made as drawn, no undercut, the
+mate not checked, turn the pair in SolidWorks.
+
+**For the user, on D6** (it departs from the decision "warn, and check each printed pair"):
+
+> We had planned that the app would warn whenever one printed gear's teeth might run into the bottom of the
+> other's. Checked against the gears as the app actually draws them, that warning would have fired on almost every
+> printed planetary for a clash the parts do not have. With the printed default backlash none of the pairs checked
+> touch, and even with no backlash the most is 0.07 mm. So F1 adds no pair warning: a small gear still says it is
+> printed exactly as drawn and that you should turn the pair in SolidWorks, and a proper check is planned after your
+> test prints. Helical, shifted and bevel pairs were not checked this way, and if you type a backlash under about
+> 0.1 mm the parts may touch slightly without a warning.
+
+## 3. Readiness
+
+**Ready.** F1-0 may start once `printed` is cut, and then A, B and C together. The small-backlash sentence can go
+into the plan or into F1-0's interface note; it changes no interface.
