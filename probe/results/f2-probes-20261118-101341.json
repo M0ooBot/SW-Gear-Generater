@@ -1,0 +1,318 @@
+{
+ "sections": {
+  "export": {
+   "built": {
+    "spur": {
+     "outer_radius": 16.5,
+     "face": 8.0
+    },
+    "helical": {
+     "outer_radius": 22.70552360820166,
+     "face": 10.0
+    }
+   },
+   "constants": {
+    "silent": 1,
+    "copy": 2
+   },
+   "spur": {
+    "reach": "active",
+    "before": {
+     "active": "Gear_m1.5_N20_P.SLDPRT",
+     "folder": {
+      "Gear_m1.5_N20_P.SLDPRT": false,
+      "Helical_m2_N20_15R_P.SLDPRT": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-export\\Gear_m1.5_N20_P.SLDPRT",
+      "title": "Gear_m1.5_N20_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "read": {
+     "options": 3,
+     "seconds": 0.402,
+     "form": "plain",
+     "returned": true,
+     "errors": 0,
+     "warnings": 0,
+     "on_disk": true,
+     "size": 909834,
+     "mtime": 1795014857.2552545,
+     "error_names": [],
+     "warning_names": []
+    },
+    "after": {
+     "active": "Gear_m1.5_N20_P.SLDPRT",
+     "folder": {
+      "Gear_m1.5_N20_P.SLDPRT": false,
+      "Helical_m2_N20_15R_P.SLDPRT": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-export\\Gear_m1.5_N20_P.SLDPRT",
+      "title": "Gear_m1.5_N20_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "dialogs": [],
+    "facts": {
+     "frame": true,
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "ap": "AP203",
+     "solids": 1,
+     "closed_shells": 1,
+     "open_shells": 0,
+     "surface_models": 0,
+     "unit": "MILLI.METRE",
+     "mm_per_unit": 1.0,
+     "vertices": 340,
+     "max_radius_mm": 16.5011849074409,
+     "axial_extent_mm": 8.000030745716968,
+     "instances": 9096
+    },
+    "extent_holds": true
+   },
+   "helical": {
+    "reach": "active",
+    "before": {
+     "active": "Helical_m2_N20_15R_P.SLDPRT",
+     "folder": {
+      "Gear_m1.5_N20_P.SLDPRT": false,
+      "Helical_m2_N20_15R_P.SLDPRT": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-export\\Helical_m2_N20_15R_P.SLDPRT",
+      "title": "Helical_m2_N20_15R_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "read": {
+     "options": 3,
+     "seconds": 0.434,
+     "form": "plain",
+     "returned": true,
+     "errors": 0,
+     "warnings": 0,
+     "on_disk": true,
+     "size": 1888147,
+     "mtime": 1795014858.24018,
+     "error_names": [],
+     "warning_names": []
+    },
+    "after": {
+     "active": "Helical_m2_N20_15R_P.SLDPRT",
+     "folder": {
+      "Gear_m1.5_N20_P.SLDPRT": false,
+      "Helical_m2_N20_15R_P.SLDPRT": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-export\\Helical_m2_N20_15R_P.SLDPRT",
+      "title": "Helical_m2_N20_15R_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "dialogs": [],
+    "facts": {
+     "frame": true,
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "ap": "AP203",
+     "solids": 1,
+     "closed_shells": 1,
+     "open_shells": 0,
+     "surface_models": 0,
+     "unit": "MILLI.METRE",
+     "mm_per_unit": 1.0,
+     "vertices": 322,
+     "max_radius_mm": 22.70552360820167,
+     "axial_extent_mm": 10.000000000000002,
+     "instances": 13659
+    },
+    "extent_holds": true
+   },
+   "again": {
+    "reach": "active",
+    "before": {
+     "active": "Gear_m1.5_N20_P.SLDPRT",
+     "folder": {
+      "Gear_m1.5_N20_P.SLDPRT": false,
+      "Helical_m2_N20_15R_P.SLDPRT": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-export\\Gear_m1.5_N20_P.SLDPRT",
+      "title": "Gear_m1.5_N20_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "read": {
+     "options": 3,
+     "seconds": 0.421,
+     "form": "plain",
+     "returned": true,
+     "errors": 0,
+     "warnings": 0,
+     "on_disk": true,
+     "size": 909848,
+     "mtime": 1795014859.5695884,
+     "error_names": [],
+     "warning_names": []
+    },
+    "after": {
+     "active": "Gear_m1.5_N20_P.SLDPRT",
+     "folder": {
+      "Gear_m1.5_N20_P.SLDPRT": false,
+      "Helical_m2_N20_15R_P.SLDPRT": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-export\\Gear_m1.5_N20_P.SLDPRT",
+      "title": "Gear_m1.5_N20_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "dialogs": [],
+    "overwrote": true,
+    "control": false
+   },
+   "inactive": {
+    "reach": "object",
+    "before": {
+     "active": "Helical_m2_N20_15R_P.SLDPRT",
+     "folder": {
+      "Gear_m1.5_N20_P.SLDPRT": false,
+      "Helical_m2_N20_15R_P.SLDPRT": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-export\\Gear_m1.5_N20_P.SLDPRT",
+      "title": "Gear_m1.5_N20_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "read": {
+     "options": 3,
+     "seconds": 0.46,
+     "form": "plain",
+     "returned": true,
+     "errors": 0,
+     "warnings": 0,
+     "on_disk": true,
+     "size": 909905,
+     "mtime": 1795014861.1044574,
+     "error_names": [],
+     "warning_names": []
+    },
+    "after": {
+     "active": "Helical_m2_N20_15R_P.SLDPRT",
+     "folder": {
+      "Gear_m1.5_N20_P.SLDPRT": false,
+      "Helical_m2_N20_15R_P.SLDPRT": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-export\\Gear_m1.5_N20_P.SLDPRT",
+      "title": "Gear_m1.5_N20_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "dialogs": [],
+    "right": [
+     null,
+     "two exports of one document differ beyond FILE_NAME, so a file cannot be told by its text"
+    ]
+   },
+   "modified": {
+    "reach": "active",
+    "before": {
+     "active": "Gear_m1.5_N20_P.SLDPRT",
+     "folder": {
+      "Gear_m1.5_N20_P.SLDPRT": true,
+      "Helical_m2_N20_15R_P.SLDPRT": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-export\\Gear_m1.5_N20_P.SLDPRT",
+      "title": "Gear_m1.5_N20_P.SLDPRT",
+      "flag": true
+     }
+    },
+    "read": {
+     "options": 3,
+     "seconds": 0.496,
+     "form": "plain",
+     "returned": true,
+     "errors": 0,
+     "warnings": 0,
+     "on_disk": true,
+     "size": 909890,
+     "mtime": 1795014863.2595134,
+     "error_names": [],
+     "warning_names": []
+    },
+    "after": {
+     "active": "Gear_m1.5_N20_P.SLDPRT",
+     "folder": {
+      "Gear_m1.5_N20_P.SLDPRT": true,
+      "Helical_m2_N20_15R_P.SLDPRT": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-export\\Gear_m1.5_N20_P.SLDPRT",
+      "title": "Gear_m1.5_N20_P.SLDPRT",
+      "flag": true
+     }
+    },
+    "dialogs": [],
+    "facts": {
+     "frame": true,
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "ap": "AP203",
+     "solids": 1,
+     "closed_shells": 1,
+     "open_shells": 0,
+     "surface_models": 0,
+     "unit": "MILLI.METRE",
+     "mm_per_unit": 1.0,
+     "vertices": 340,
+     "max_radius_mm": 16.5011849074409,
+     "axial_extent_mm": 9.000030745716966,
+     "instances": 9096
+    },
+    "held": {
+     "flag_stays_on": true,
+     "path_unchanged": true,
+     "differs_from_saved": true,
+     "axial_extent_mm": 9.000030745716966
+    }
+   },
+   "seconds": 43,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {
+  "SAVE_AS_COPY": 2,
+  "SAVE_AS_COPY_evidence": "swSaveAsOptions_e.swSaveAsOptions_Copy from swconst.tlb, Silent read 1 against findings.SAVE_AS_SILENT 1",
+  "STEP_EXPORT_ON_2026": true,
+  "STEP_EXPORT_ON_2026_evidence": "steps 2-4: both exports clean and both files whole",
+  "STEP_EXPORT_NEEDS_ACTIVE_ON_2026": null,
+  "STEP_EXPORT_NEEDS_ACTIVE_ON_2026_evidence": "step 6: two exports of one document differ beyond FILE_NAME, so a file cannot be told by its text"
+ },
+ "revision": [
+  34,
+  1,
+  1
+ ],
+ "snapshot": "e3dc598",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": false,
+  "allowance_seconds": 60.0
+ },
+ "fails": [],
+ "notes": []
+}

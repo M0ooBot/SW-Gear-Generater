@@ -6,7 +6,7 @@ It writes a file, and could raise a dialog or rename a document, so by the house
 versions. It proposes findings in the log (`propose NAME = value  # evidence`) and in the JSON, and sets none; each is
 set per version (`_ON_2026`, `_ON_2024`; `SAVE_AS_COPY` once) from the reviewed log, in a commit of its own that is
 reviewed too (`F2-INTERFACES.md` §7). Written by F2-0 against the plan revised to F2's review and its re-check (the last
-two sections of `docs/PLAN-PRINTED-REVIEW.md`); **not yet run anywhere**: only `--self-check` and `--help` have run.
+two sections of `docs/PLAN-PRINTED-REVIEW.md`); first run on SolidWorks 2026 and 2024 on 2026-11-18 (the run sections at the end).
 
 **How it runs.** As W9c's and W9d's probes do: it runs W9a's script's `main` with its own two sections, through
 `probe/w9c_probes.py` (imported for the watch, `swconst`, `in_build` and `part`). So the attach and PID check, the dialog
@@ -171,3 +171,183 @@ use, unverified here:
 - **S3** (an inch file's two length units) is not changed here: the app writes millimetres, so the probe will not meet
   it; the coordinator's list for F2-0 did not include it, and the point stands for B's `check_step`.
 - The command lines and times are unchanged.
+
+
+## The run on SolidWorks 2026 (2026-11-18, from c764130; `export` again from e3dc598)
+
+**Setup.**
+- Run folder `<probe folder>\f2-probes-sw2026-20261118-100922`, on this laptop. `snap` a `git archive` of c764130 with
+  `SNAPSHOT_COMMIT` beside `src`, its `--self-check` 0 failed and `import gear_generator` taken from `snap\src` before
+  the run; `snap2` the same of e3dc598 (step 8's fix, below), checked the same way.
+- SolidWorks 2026 revision **34.1.1**, PID 20700, a fresh session started for the run in the background, with no other
+  SolidWorks, Excel or Python running; exited after (`taskkill` without `/F`, nothing open).
+- Run 1: the command line above, both sections. Run 2: `--sections export --redo` from `snap2` in the same session, into
+  the same `out` (run 1's folder set aside as `f2-export.prev-20261118-101341`), log `f2-probes-sw2026-2.log`.
+- Logs `probe/results/f2-probes-sw2026-20261118-1-step8-fail-text-control-differs.log` (`r26:`) with
+  `f2-probes-20261118-101100.json`, and `f2-probes-sw2026-20261118-2-export-step8-clean.log` (`r26b:`) with
+  `f2-probes-20261118-101341.json`.
+
+**Result.** Run 1: export 42 s, 1 failed (step 8, the script's own fault, below); component 59 s, 0 failed; no STOP.
+Run 2: export 43 s, 0 failed, no STOP. About two minutes each from the attach to the close, against the 10 estimated.
+SolidWorks stayed near 1.0 GB private; free memory above 9.2 GB. **Windows:** the *Simplified Interface* balloon tip at
+the start (r26:9) and *The sketch is no longer over defined* balloon during the pair's build (r26:48), both exempt, and
+the *Calculating Interference Detection* progress box once in the pair's build (r26:49); the watch logged no other
+window (r26:80, r26b:51), and no export, open, close or lightweight step saw one.
+
+**Each step, and what SolidWorks answered.**
+- **built.** The spur and the helical built and saved by `swbuild.build`, both unmarked (r26:15-17); the pair built by
+  `swbuild.build_pair` and closed (r26:50-51).
+- **1.** `swSaveAsOptions_e`: Silent 1, Copy 2, 13 members; `swFileSaveError_e` 15 members, `swFileSaveWarning_e` 12
+  (r26:18). W9c's enumerations' positive control agreed.
+- **2.** The spur, active: `SaveAs` answered **True, plainly** (no tuple), errors 0, warnings 0, options 3, 0.495 s, the
+  file on disk (909855 bytes); its path, title and flag, the active document and the folder's flags unchanged
+  (r26:20-22). **3.** Its file: the frame whole; FILE_SCHEMA `CONFIG_CONTROL_DESIGN` (AP203); one
+  MANIFOLD_SOLID_BREP, one CLOSED_SHELL, no OPEN_SHELL, no SHELL_BASED_SURFACE_MODEL; MILLI METRE; 340 vertices;
+  largest radius 16.501185 mm against d_a / 2 = 16.5, axial extent 8.000031 against 8: the extent check holds at 0.01
+  mm (r26:23).
+- **4.** The helical, the same: True, 0, 0, 0.466 s, 1888148 bytes, everything unchanged; AP203, one solid, one closed
+  shell, millimetres, 322 vertices, 22.705524 against 22.705524 and 10.000000 against 10 (r26:25-29).
+- **5.** The spur again onto its file: True, 0, 0; the file **overwritten** (its time moved). **The control failed: the two
+  exports of one document differ in 9092 of their statements**, FILE_NAME aside (r26:31-34; run 2: 9087, r26b:34).
+- **6.** The helical activated; **the active-document label step 6 logs is `Helical_m2_N20_15R_P.SLDPRT`** at the window
+  read (r26:35) and in the export's bracket before and after (r26:37-38), so the activation took and the spur's window
+  read is a real reading of a part in its own window, not active: `Visible` True, `ActiveView` True. The spur, reached by
+  `use_open_document` with no activation, exported by its own object: True, 0, 0, 0.405 s; the active document, every
+  title and flag held (r26:36-38). Its file judged None, since step 5's control failed (r26:39).
+- **8.** Run 1 FAILed before the export (r26:41): the change was made with the helical still active, and the Face Width
+  equation's put read back unchanged, `'"Face Width"= 8' after being set to '"Face Width"= 9'`. The script did not
+  activate the spur, which F2-0's decision 16 says it does: a fault of the script's (below). Run 2, with the spur
+  activated first (r26b:41): the flag on after the change; exported, True, 0, 0; the flag stays on, the path unchanged,
+  the file differs from the saved spur's and its axial extent is 9.000031 mm, the changed solid (r26b:42-45).
+- **9.** Everything closed unsaved with no window; no user document was open (r26:42-43, 75-76; r26b:46-47).
+- **loaded.** The assembly opened alone, unmarked, both components state 2 (resolved); **the document walk reaches both
+  component-only parts**; window reads: the assembly `Visible` True, `ActiveView` True; both parts False, False
+  (r26:52-53). `GetOpenDocumentByName` by full path gives each part (its path, title, flag False, window False/False),
+  None for the file that does not exist, and **None for the gear by file name only** (r26:54).
+- **7a.** The gear, reached by `GetOpenDocumentByName` with no activation, exported: True, 0, 0, 0.885 s; the assembly
+  active, unmarked and its title unchanged, the gear unmarked, its component state 2 to 2 (r26:56-59). Its file judged
+  None (the control, r26:67); the read's controls held (None for no such file and for the gear closed; the gear's own
+  path open alone).
+- **7b.** The fallback: `open_document` gave the gear active in its own window (`Visible`/`ActiveView` True; the
+  assembly beside it True/True); exported True, 0, 0; after `CloseDoc` the assembly open and active, unmarked, the
+  component 2 to 2, the gear still loaded (walk True, window False/False, `GetOpenDocumentByName` gives it); the assembly
+  activated again (r26:60-63). Its file judged None (r26:68).
+- **7d.** The gear alone exported twice: **the two differ beyond FILE_NAME** (the control failed); the pinion's differs;
+  the gear's file AP203, one solid, 852 vertices, radius 39.000237 against 39, extent 8.000031 against 8, holds; with
+  the pinion opened and active, the gear's window read `Visible` True, `ActiveView` True, the label logged
+  `Pinion_m1.5_N25_P.SLDPRT` (r26:65-66, 69).
+- **7c.** The assembly opened again unmarked; the gear's component set lightweight reads 1; **the assembly's flag read
+  False after the set** (the log's words "marked by the set itself, a fact" are the script's expectation; the read says
+  otherwise); **the walk does not reach the lightweight part, and `GetOpenDocumentByName` gives None**, so no export by
+  object; the not-open path opened the gear, exported it (True, 0, 0, 0.809 s), closed it with the assembly still open;
+  **the component then read 2, resolved, before the script resolved it** (opening the part beside resolved it) (r26:71).
+  The assembly's flag after the close was not read. No window.
+
+**The proposals** (none set):
+
+| Finding | Proposed | Line |
+|---|---|---|
+| `SAVE_AS_COPY` | 2 | r26:19, r26b:19 |
+| `STEP_EXPORT_ON_2026` | True | r26:30, r26b:30 |
+| `STEP_EXPORT_NEEDS_ACTIVE_ON_2026` | None: step 5's control failed | r26:40, r26b:40 |
+| `PART_WINDOW_READ_ON_2026` | `IModelDoc2.Visible` (`ActiveView` read the same everywhere; `Visible` is the first) | r26:70 |
+| `STEP_EXPORT_FROM_COMPONENT_ON_2026` | None: 7d's control failed; the lightweight part not reached | r26:72 |
+| `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_2026` | None: 7d's control failed | r26:74 |
+
+## The run on SolidWorks 2024 (2026-11-18, from e3dc598)
+
+**Setup.**
+- Run folder `<probe folder>\f2-probes-sw2024-20261118-101515`, `snap` a `git archive` of e3dc598 with
+  `SNAPSHOT_COMMIT`; its `--self-check` 0 failed and `import gear_generator` from `snap\src` before the run.
+- SolidWorks 2024 revision **32.5.0**, PID 7268, a fresh session started in the background after 2026 had exited, no
+  other SolidWorks, Excel or Python running; exited after.
+- The 2024 command line above, both sections, `--close-outlived-whats-wrong` in force (the log's rule lines 8-9).
+- Log `probe/results/sw2024/f2-probes-sw2024-20261118-1-clean-text-control-differs.log` (`r24:`) with
+  `f2-probes-20261118-101657.json`.
+
+**Result.** export 45 s, component 67 s, 0 failed, no STOP; about two minutes against the 15 estimated. SolidWorks
+2024 grew to 2.85 GB private; free memory above 9 GB. **Windows:** one untitled box as the assembly opened again in 7c
+(*Opened 2 Components*, *Post load updating*, *Elapsed time: 0s*, a Close button; r24:73), the open-progress box F1's 2024
+runs saw, gone by itself; the watch counted no other window (r24:83), and 7c's own job logged none. **No What's Wrong
+came**, so the close path did nothing.
+
+**Each step reads as on 2026**, but for what the next section lists: SaveAs True plainly with errors 0 and warnings 0
+on every export (r24:20, 25, 31, 36, 42, 58, 62; 7c in r24:74); everything held in every bracket; AP203
+`CONFIG_CONTROL_DESIGN`, one solid, one closed shell, millimetres in every file read; the extent check holds on the
+spur (16.500000 against 16.5, 8.000009 against 8, r24:23), the helical (r24:28) and the 50-tooth gear (39.000000,
+8.000009, r24:67); step 5 overwrote the file and **its control failed, 9037 statements differing** (r24:34); **step 6's
+active-document label is `Helical_m2_N20_15R_P.SLDPRT`** (r24:35, 37-38), the spur's window True/True, its export clean
+(r24:36-38); step 8 with the spur active (r24:41) kept the flag on, the path, and wrote the changed solid, extent
+9.000009 (r24:42-45); the walk reaches component-only parts, `GetOpenDocumentByName` reaches them by full path, None by
+file name and for no such file (r24:54-56); 7a and 7b clean, the assembly unmarked, the component 2 to 2, the gear still
+loaded after `CloseDoc` (r24:58-65); 7d's control failed, the gear's window True/True with the pinion active (r24:68,
+71); 7c the same as 2026: lightweight reads 1, the assembly's flag False, neither the walk nor `GetOpenDocumentByName`
+reaches the part, the beside path clean and the component resolved (2) after it (r24:74).
+
+| Finding | Proposed | Line |
+|---|---|---|
+| `SAVE_AS_COPY` | 2 | r24:19 |
+| `STEP_EXPORT_ON_2024` | True | r24:30 |
+| `STEP_EXPORT_NEEDS_ACTIVE_ON_2024` | None: step 5's control failed | r24:40 |
+| `PART_WINDOW_READ_ON_2024` | `IModelDoc2.Visible` | r24:72 |
+| `STEP_EXPORT_FROM_COMPONENT_ON_2024` | None: 7d's control failed; the lightweight part not reached | r24:75 |
+| `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_2024` | None: 7d's control failed | r24:77 |
+
+## What differs between the versions
+
+- `swSaveAsOptions_e` has 13 members on 2026 and 12 on 2024; Silent 1 and Copy 2 on both.
+- The spur's file: 2026 writes 340 vertices with the largest radius 16.501185 mm and the extent 8.000031 (the 50-tooth
+  gear 39.000237, 8.000031); 2024 writes 342 vertices on 16.500000 and 8.000009 (39.000000, 8.000009). Both within the
+  0.01 mm tolerance. The helical reads the same on both. File sizes differ (the spur 909855 bytes against 887836).
+- 2024 shows its open-progress box at the assembly's second open; 2026 does not.
+- SolidWorks 2024 grows to 2.85 GB private in the run, 2026 stays near 1.0 GB.
+- Nothing else: every answer, flag, window read, reach and judgement is the same.
+
+## What the runs found that the probe did not foresee
+
+- **SolidWorks' STEP exports of one document are not the same text twice.** On both versions, two exports of an
+  unchanged document differ in nearly every DATA statement: the instances are numbered in another order each time (the
+  first lines of the DATA section hold other entities at the same numbers), and the header's FILE_NAME time differs as
+  expected. So the plan's definition of "the file is right" (§3.1.2 step 6: the text equal to step 2's but for
+  FILE_NAME, F2's review) cannot hold for any export, the probe's controls in steps 5 and 7d fail as designed, and
+  `STEP_EXPORT_NEEDS_ACTIVE`, `STEP_EXPORT_FROM_COMPONENT` and `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN` are proposed None on
+  both versions.
+- **A hand diagnostic after the runs (not the probe's run; `geom_diag.py` in each run folder)** ran the probe's own
+  pure `geometry_of` (instances counted by entity name, vertices in millimetres to 1e-6 mm) and `same_file` on the
+  STEP files left in the run folders (the spur's step 2 file is step 5's, which overwrote it). On both versions:
+  - step 5's file and step 6's have the same geometry, and step 6's differs from the helical's: **by geometry, step 6
+    wrote the spur's own file** with the helical active, so the rule would read `STEP_EXPORT_NEEDS_ACTIVE` False;
+  - step 8's file differs in geometry from the saved spur's (its vertices; its counts the same);
+  - 7d's two exports of the gear have the same geometry and the pinion's differs; 7a's, 7b's and 7c's beside files each
+    have the gear's geometry, not the pinion's. By geometry, the rule would read `STEP_EXPORT_FROM_COMPONENT` with 7a
+    right and 7c's lightweight case not reached, and `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN` with 7b and 7c right.
+  This is evidence, not a proposal: the judgement the plan and F2-0's review fixed is textual, and changing it is the
+  coordinator's to rule.
+- **Setting a global by `set_global_variable` on a part reached by `use_open_document` while another part is active did
+  not take** on 2026 34.1.1: the put read back unchanged (r26:41); with the part activated first it took (r26b:41,
+  r24:41). Measured once, on one route; the app's own calls of `set_global_variable` were not examined here.
+- **A lightweight component is reached by neither the walk nor `GetOpenDocumentByName`**, on both versions, and
+  **opening its part beside the assembly resolves it** (state 1 before, 2 after the close), with no window and the
+  assembly still open. The assembly's flag was not read after that close.
+- **Setting a component lightweight did not mark the assembly** on either version (its flag read False after the set),
+  where the note's table expected it to.
+
+## Changes to the script in these runs
+
+- **e3dc598, step 8 only.** The spur is activated (`Session.activate`) before its Face Width is changed, as F2-0's
+  decision 16 says, and the active document at the change is logged. Evidence: r26:41 (the put read back unchanged with
+  the helical active). No judgement and no check was changed; `--self-check` 0 failed. Run 1's component section ran
+  from c764130 and stands, the change touching step 8 alone.
+
+## For the coordinator to rule
+
+- **"The file is right"**: the textual definition cannot hold on either version (above). Options: judge by geometry
+  (`geometry_of`: instance counts by entity name and vertices to 1e-6 mm, the controls in 5 and 7d then two exports of
+  one document geometrically equal, the other part geometrically different), which the hand diagnostic says would
+  propose `STEP_EXPORT_NEEDS_ACTIVE` False and the two component findings from 7a, 7b and 7c on both versions; or
+  another definition. Either needs the script changed, reviewed, and `export` and `component` run again on both
+  versions (about 2 minutes each run here).
+- Whether `set_global_variable` on a non-active part not taking matters to any of the app's routes.
+- Whether the open-beside fallback resolving a lightweight component, a change of the user's assembly state, is
+  acceptable for the job (F2-INTERFACES' lightweight rule), and whether the assembly's flag after that close needs
+  reading.
