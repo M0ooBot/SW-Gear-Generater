@@ -1,0 +1,221 @@
+{
+ "sections": {
+  "remake": {
+   "refusal": {
+    "findings": {
+     "UPDATE_MAKES_MATES_WITH_MODES_ON_2024": null
+    },
+    "refusal": [
+     "Update SolidWorks would make a gear mate of a gearbox with modes again and set its flag in each mode, which has not been measured on this SolidWorks (findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2024 is None), so nothing is changed; build the gearbox again instead."
+    ]
+   },
+   "press": {
+    "ok": true,
+    "failures": [],
+    "user_in_error": [],
+    "user_features_in_error": [],
+    "in_error_before": [],
+    "sentence": "Updated SolidWorks: made Sun meshes Planet copy 1, Sun meshes Planet copy 2, Sun meshes Planet copy 3 and Planet copy 1 meshes Ring again, with their flags set in every mode, changed 1 variable in Gear_m1.25_N29 (it now has 28 teeth; its file keeps its name), changed 1 variable in Gear_m1.25_N13 (it now has 14 teeth; its file keeps its name), changed 1 variable in Ring_m1.25_N55 (it now has 56 teeth; its file keeps its name), set the gear mates Sun meshes Planet copy 1 to 28 : 14, Sun meshes Planet copy 2 to 28 : 14, Sun meshes Planet copy 3 to 28 : 14 and Planet copy 1 meshes Ring to 14 : 56, re-placed Ring, Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your Sprocket-1 went with Sun in every mode, which your locks hold it to. Your Sprocket-3 went with Sun in every mode, which your locks hold it to. Your Sprocket-2 went with RangeSlv in every mode, which your locks hold it to. Save Gear_m1.25_N29, Gear_m1.25_N13, Ring_m1.25_N55 and RangeBox in SolidWorks to keep them."
+   },
+   "in_place": {
+    "inserted": [],
+    "deleted": [],
+    "mates_deleted": [],
+    "mates_made": [],
+    "remade_in_modes": [
+     "Sun meshes Planet copy 1",
+     "Sun meshes Planet copy 2",
+     "Sun meshes Planet copy 3",
+     "Planet copy 1 meshes Ring"
+    ],
+    "bands_added": [],
+    "bands_removed": [],
+    "modes_added": [],
+    "modes_removed": [],
+    "took_active_state": [],
+    "flags_lost": [],
+    "not_resolved": [],
+    "ratios": [
+     "Sun meshes Planet copy 1",
+     "Sun meshes Planet copy 2",
+     "Sun meshes Planet copy 3",
+     "Planet copy 1 meshes Ring"
+    ],
+    "senses_unread": [],
+    "turned_round": [],
+    "failures": [],
+    "skipped": "",
+    "clashes_by_mode": {
+     "N": [],
+     "L": [],
+     "H": []
+    }
+   },
+   "judged": {
+    "modes": {
+     "H": {
+      "slide_read": 34.5,
+      "slide_recorded": -34.5,
+      "origin_z": -34.5,
+      "frame_gap": 6.580016531643196e-10,
+      "bands": {
+       "whole": [
+        -34.5,
+        -24.5
+       ]
+      },
+      "dogs": {
+       "HighDog": [
+        -34.5,
+        -29.5
+       ],
+       "LowDog": [
+        -19.5,
+        -14.5
+       ]
+      },
+      "hub": null,
+      "interferences": [],
+      "errors": {},
+      "not_free": {},
+      "engaged": [
+       "HighDog"
+      ],
+      "least": 5.0
+     },
+     "N": {
+      "slide_read": 29.5,
+      "slide_recorded": -29.5,
+      "origin_z": -29.5,
+      "frame_gap": 6.580016531643196e-10,
+      "bands": {
+       "whole": [
+        -29.5,
+        -19.5
+       ]
+      },
+      "dogs": {
+       "HighDog": [
+        -34.5,
+        -29.5
+       ],
+       "LowDog": [
+        -19.5,
+        -14.5
+       ]
+      },
+      "hub": null,
+      "interferences": [],
+      "errors": {},
+      "not_free": {},
+      "engaged": [],
+      "least": 0.0
+     },
+     "L": {
+      "slide_read": 24.5,
+      "slide_recorded": -24.5,
+      "origin_z": -24.5,
+      "frame_gap": 6.580016531643196e-10,
+      "bands": {
+       "whole": [
+        -24.5,
+        -14.5
+       ]
+      },
+      "dogs": {
+       "HighDog": [
+        -34.5,
+        -29.5
+       ],
+       "LowDog": [
+        -19.5,
+        -14.5
+       ]
+      },
+      "hub": null,
+      "interferences": [],
+      "errors": {},
+      "not_free": {},
+      "engaged": [
+       "LowDog"
+      ],
+      "least": 5.0
+     }
+    },
+    "interference": {
+     "app_app": {},
+     "unnamed": {},
+     "unseen": {},
+     "unchecked": {},
+     "volumes": {
+      "H": {},
+      "N": {},
+      "L": {}
+     },
+     "app": {
+      "N": [],
+      "L": [],
+      "H": []
+     }
+    }
+   },
+   "again": {
+    "first": {
+     "status": "Update SolidWorks stopped. Ring_m1.25_N55.SLDPRT: SolidWorks reported an error rebuilding Ring_m1.25_N55. It had already changed Gear_m1.25_N29, Gear_m1.25_N13 and Ring_m1.25_N55, not saved, and Ring_m1.25_N55 is left in error: close them all and RangeBox in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on disk are as before this Update), then press Update SolidWorks again.",
+     "failures": [
+      [
+       "Ring_m1.25_N55.SLDPRT",
+       "SolidWorks reported an error rebuilding Ring_m1.25_N55."
+      ]
+     ],
+     "marked": [
+      "C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-confirm-sw2024-20261117-171854\\out\\remake-again\\Ring_m1.25_N55.SLDPRT"
+     ]
+    }
+   },
+   "cut": "DemoStop: read remake, M3: before step 2: at the job's end What's Wrong is still up after 60 s (1), or SolidWorks' frame is disabled (True), or a What's Wrong was not owned by the frame (0): the ruling allows only the frame's box, going by itself",
+   "seconds": 1542,
+   "failed": [
+    "read remake, M3: before step 2: at the job's end What's Wrong is still up after 60 s (1), or SolidWorks' frame is disabled (True), or a What's Wrong was not owned by the frame (0): the ruling allows only the frame's box, going by itself",
+    "cut: DemoStop: read remake, M3: before step 2: at the job's end What's Wrong is still up after 60 s (1), or SolidWorks' frame is disabled (True), or a What's Wrong was not owned by the frame (0): the ruling allows only the frame's box, going by itself"
+   ]
+  }
+ },
+ "stops": [
+  "read remake, M3: before step 2: at the job's end What's Wrong is still up after 60 s (1), or SolidWorks' frame is disabled (True), or a What's Wrong was not owned by the frame (0): the ruling allows only the frame's box, going by itself"
+ ],
+ "proposal": {
+  "UPDATE_MAKES_MATES_WITH_MODES_ON_2024": true,
+  "UPDATE_MAKES_MATES_WITH_MODES_ON_2024_evidence": "remake: gear mates of a gearbox with modes remade, flags and senses read in every mode: True"
+ },
+ "revision": [
+  32,
+  5,
+  0
+ ],
+ "snapshot": "4315774",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": true,
+  "allowance_seconds": 60.0
+ },
+ "whats_wrong_lifetimes": [
+  {
+   "job": "read remake, M3: before step 2",
+   "kind": "script",
+   "came": [
+    0.47
+   ],
+   "stayed": [],
+   "still_up": 1
+  }
+ ],
+ "fails": [
+  "read remake, M3: before step 2: at the job's end What's Wrong is still up after 60 s (1), or SolidWorks' frame is disabled (True), or a What's Wrong was not owned by the frame (0): the ruling allows only the frame's box, going by itself"
+ ],
+ "notes": [
+  "SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)",
+  "SolidWorks' notification box came up while GetNextFeature was in progress (exempt by the coordinator's ruling; nothing answers it)",
+  "a SolidWorks window \"What's Wrong\" ['Show &errors', 'Show &warnings', \"&Display What's Wrong during rebuild\", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    '] came up while ArrayData was in progress, before this run made any configuration"
+ ]
+}

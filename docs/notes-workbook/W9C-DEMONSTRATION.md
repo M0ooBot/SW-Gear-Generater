@@ -527,6 +527,61 @@ At this commit it passes, 0 failed. `--help` imports nothing of SolidWorks.
 - **On 2024,** the What's Wrong box may come in `fixed` (a user feature rebuilt after the relief), and is handled by
   W9a's rule. Nothing here is version-specific beyond the `_ON_<year>` names.
 
+## The confirming run on SolidWorks 2024 (2026-11-17, from 4315774, SolidWorks 2024 32.5.0)
+
+**Setup.**
+- Run folder `<probe folder>\w9c-confirm-sw2024-20261117-171854`, one `git archive` of 4315774.
+- Every section but `w9b-part`, `remake` last (the re-check's advice).
+- No 2024 masters were on this host, so the run built its own into `out\`: `rangebox.master` (in `landing`),
+  `setup.master` and `fixed-updated.master` (in `fixed`) and `reducer.master` (in `remove`). Nothing writes to them
+  after; W9d's 2024 work takes them from there.
+- Four sessions of SolidWorks 2024, each started for its part and exited after:
+  - PID 27368: `landing`, `fixed`, `modes`;
+  - PID 64480: `remove`;
+  - PID 75080: `bands-off`, `m4`;
+  - PID 66428: `remake`.
+- Logs `probe/results/sw2024/w9c-demo-sw2024-20261117-1-…` to `-4-…`, with their JSON.
+
+| Section | Time | ok | FAIL | SolidWorks private after |
+|---|---|---|---|---|
+| landing | 987 s | 107 | 0 | 4.68 GB |
+| fixed | 2541 s | 122 | 0 | 6.75 GB |
+| modes | 3886 s | 80 | 0 | 9.98 GB (14.69 GB at its peak) |
+| remove | 1033 s | 58 | 0 | 3.76 GB |
+| bands-off | 405 s | 13 | 0 | 2.61 GB |
+| m4 | 35 s | 7 | 0 | 2.82 GB |
+| remake | 1542 s, cut | 46 | 1 | 6.38 GB |
+
+**Memory, a measured difference.** SolidWorks 2024 grew to 14.2 GB private during `modes`, with free memory 1.90 GB.
+The run's guard then stopped the run after that section, which had finished, 0 failed. 2026's whole run never went
+past about 1.9 GB.
+- The remaining sections were split over fresh sessions, as ruled.
+- In `remake`, 2024 reached 7.3 GB after its first press and fell back to 2.0 GB once that copy was closed.
+
+**What matches 2026:**
+- `landing` "the fix is shown": every foreseen change routed clean, every unforeseen one set straight clean, the
+  leftover clean.
+- `fixed`, `modes`, `remove`, `bands-off` and `m4` 0 failed with every proposal as on 2026.
+- `remake`'s first part (28/14/56) passed and proposed its gate True. M3's step 1 stopped in the ring and marked it,
+  its stop naming RangeBox and saying to answer No.
+- The step faces: `GetArea` 114.303 and 114.295 against 114.558342 integrated, as on 2026.
+
+**What differs:**
+- **`landing`.** Set straight, the ring 55 → 54 and 56 → 55 still fail, but read code 51 twice
+  (`swSketchErrorExtRefFail`) where 2026 read 72 and 1.
+- **The interference volumes.** Summed from SolidWorks' interferences, they read 1408.381 for Hub and Sprocket-4,
+  where 2026 read 1408.364. RangeSlv and Sprocket-4 read 392.129 in N against the app's 374.463, and 160.748 in H2
+  against 152.629: SolidWorks' own sums differ from the app's by more than 0.001, said as facts. On 2026 they agreed.
+- **Time.** Each section took 2.5 to 3.5 times as long as on 2026.
+- **`remake` M3, a STOP before step 2.** The script's own read before step 2 (W9a's `read_now` of the assembly,
+  just after step 1 left the ring in error) brought up What's Wrong 0.47 s into the job, the worker in
+  `ActivateDoc3`, owned by SolidWorks' frame.
+  - The box went by itself after 60.11 s, against the ruling's 60 s.
+  - The harness took that as §0.3's STOP and left the session alone. It was then killed, since it would not close
+    with the copy's changed parts open.
+  - So steps 2, 2b and 3 did not run on 2024; step 2b's facts are not measured there.
+  - 2026 showed no box at that read.
+
 ## The tenth and eleventh runs on 2026: the final run (2026-11-17, `src` at 3a9e592, SolidWorks 2026 34.0.0)
 
 **Setup.**
