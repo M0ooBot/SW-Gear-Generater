@@ -79,7 +79,7 @@ record with no version on it was fixed by ruling (`06d818f`). A fault in W9d's p
 printed-gears work, was assessed (`7f91037`), fixed (`d496cfd`) and re-checked (`12cf15d`). W9c's remake-m3 ran on
 SolidWorks 2026 (`5aca9c1`) with its finding re-based (`ea4efec`) and the notes (`7f110f1`). The whole suite at
 `06d818f`, run by the coordinator: 4134 passed, 1 skipped, 1 failed (the known font-width test). **The coordinator
-merges `w9d` into `workbook` after this commit. GitHub issue #1 is left open for the user to close.**
+merges `w9d` into `workbook` after this commit (done: `4d72c36`). GitHub issue #1 is left open for the user to close.**
 - *What W9 leaves open* (the lists are in items 8, 10 and 11, from the last sections of `W9C-RUNS-REVIEW.md` and
   `W9D-DEMONSTRATION-REVIEW.md`):
   - **gates still None, and what the app says.** W9a's: route (c1) on a held gear, a fixed gear, a sub-assembly, a
@@ -102,15 +102,36 @@ merges `w9d` into `workbook` after this commit. GitHub issue #1 is left open for
     10); the edge prefilter's cost outside the cap, a should-fix (item 11);
   - **for the user:** the questions under *Questions waiting for the user*, among them the rulings of 2026-11-18 (10
     to 14, 17, 18), and the person's steps of W8 (question 5).
-- *Printed gears* (the phase table's last row): **stage F1 is written on branch `printed`**, in the worktree
-  `~/SW-Gear-Generater-printed`: F1-0 and packages A, B and C, reviewed (`docs/notes-printed/F1-0-REVIEW.md`,
-  `F1-REVIEW.md` on that branch), `w9d` merged into it (`91f6a6f`), and its SolidWorks demonstration script
-  (`probe/f1_demonstration.py`, note `docs/notes-printed/F1-DEMONSTRATION.md`) written and reviewed
-  (`F1-DEMONSTRATION-REVIEW.md`, `cf40e4a`; its should-fixes taken in `c1c9046`). The record of that work is in
-  `docs/notes-printed/` on branch `printed`, not here.
-  - **[PLACEHOLDER, for the coordinator to fill in: F1's demonstration runs on SolidWorks 2026 and 2024.]** They were
-    in progress when this was written; say here their commits, their result and their review, or point to where
-    `docs/notes-printed/` on `printed` says them.
+- *Printed gears* (the phase table's last row; updated after the merge of `w9d` into `workbook` at `4d72c36`): **stage
+  F1 of `docs/PLAN-PRINTED.md` is closed on branch `printed`** (worktree `~/SW-Gear-Generater-printed`), **and not
+  merged into `workbook`**: that merge changes what the app does for the user, so it waits for the user's word. F1-0,
+  packages A, B and C, their review and its should-fixes; `w9d` and then `workbook` merged into `printed` (`91f6a6f`,
+  `138d646`); the SolidWorks demonstration `probe/f1_demonstration.py` written, reviewed (`cf40e4a`) and run clean on
+  SolidWorks 2026 34.1.1 and 2024 32.5.0 from one snapshot of `c1c9046` each (`5e2f386`: 2026 110 ok, 2024 56 and 53
+  ok, 0 failed, no STOP, no What's Wrong box), the runs reviewed (`0e7000d`): F1 is done by its Done-when. The suite
+  on `printed` at `138d646`: 4747 passed, 1 skipped, 1 failed (the known font-width test). The record of that work is
+  `docs/notes-printed/` on branch `printed` (read with `git show printed:<path>`):
+  - `F1-0.md`: F1-0's hand-over (the pins of §2.7, the interface step, what each package must keep) and the
+    coordinator's twelve rulings on its review;
+  - `F1-0-REVIEW.md`: the review of F1-0;
+  - `F1-INTERFACES.md`: the interface as F1-0 built it, every name with its signature and the words of every new
+    sentence;
+  - `F1-PACKAGE-A.md`, `F1-PACKAGE-B.md`, `F1-PACKAGE-C.md`: each package's hand-back (A the printed gear maths, B the
+    records and the workbook, C what the user sees), with its choices and the rulings on them;
+  - `F1-REVIEW.md`: the independent review of packages A, B and C (`be5ae7a`);
+  - `F1-DEMONSTRATION.md`: the SolidWorks demonstration's sections, masters, commands and STOPs, with the runs'
+    write-up;
+  - `F1-DEMONSTRATION-REVIEW.md`: the review of the script before its first run; `F1-DEMONSTRATION-RUNS-REVIEW.md`:
+    the review of the two runs.
+  - *What F1 leaves open:* the design boards' PNG renders are not redone (the renderer runs the Mac's Chrome; they
+    have been stale since W9a); the span over k teeth is moved to F2's first step; nothing of F1 is merged into
+    `workbook`; the runs review's should-fixes are to documents only; and the user's word on the rulings of question
+    19.
+  - *Next by the plan, F2* (`docs/PLAN-PRINTED.md` §3): the span over k teeth on Linux (§3.0); a probe of saving a
+    part as STEP, a call the app has never made, on both versions (§3.1); Export STEP on the form and in the Workbook
+    window; then the user prints and measures (§3.2), which only the user can do. The coordinator was having F2 made
+    ready to execute when this was written.
+  - GitHub issue #1 is still open, for the user to close.
 
 **2026-11-18, small hours to morning, on this laptop (superseded by the morning paragraph above where they differ;
 the paragraph "W9c at the session's close, 2026-11-17 midday" after it is superseded by this one and kept as
@@ -519,7 +540,7 @@ their masters.
 | W7 planetary | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; the spike on SolidWorks 2026 (`W7-SPIKE.md`); packages A to E written and each reviewed; the demonstration run on SolidWorks 2026 — its first run found one app fault (a turned planetary's put did not hold), the probe `planetary_put_back` measured the route that does, the fix `9f21d99` was reviewed, and every section then passed, the planetary sections and the W5/W6 Update sections once more on the final code; the confirming build on 2024 passed; the run's evidence reviewed. Left for the user: drag Sun in the built planetary. Details below. |
 | W8 sleeves and modes | **closed 2026-11-16, but for three things: the built footer on a screen shorter than the window asks (cut off; open as K12 of W9), the person's step `s6`, and the two hand drags of W6 and W7**: planned, reviewed and revised to the spike (`W8-PLAN.md`, `W8-PLAN-REVIEW.md`, `W8-SPIKE.md`); the interface commit with its rulings (`W8-INTERFACES.md` §9); the findings set and reviewed (`ea7a46f`); packages A to D written and each reviewed; probe tier 11, and the one app fault the first build found, fixed and reviewed; package E's demonstration run on SolidWorks 2026 (34.0.0 on the second host, 34.1.1 here); the closing run from one snapshot of the final source (`c583f48`, 34.1.1): `s0` to `s5` and `s7` and the W5 to W7 sections r1, r2, r3, m5, m8, p1 and p3, every check passing (`c351b1f` to `aff9bfe`), and the full window check 1 failed, the built footer's height (`fb85bcc`); the confirming build on 2024 (32.5.0): `s0`, `s1`, `s2`, `s3`, `s7` 0 failed, its window stage the same one failure (`c3ed9b6`); each run reviewed (`W8-REVIEW-SW2024-CONFIRM.md`, `W8-REVIEW-CLOSING-RUN.md`). The ruling on the footer, the steps for the user and what is left are under *How W8 closed* below. |
 | W9 the user's work in a built assembly, and dog-clutch sleeves (issue #1) | **Closed 2026-11-18 on SolidWorks 2026 and 2024; merged into `workbook` by the coordinator after the handoff commit that says so; GitHub issue #1 left open for the user to close.** W9a closed 2026-11-17: the user's work is kept by Update or refused by name before any write; shown on SolidWorks 2026 and confirmed on 2024 under the coordinator's ruling that its What's Wrong box is left alone. W9b (sleeve checks, bands with a relief, the hub) closed on both the same morning. W9c (Update adds, removes and re-mates, and adds and removes modes) closed on both on 2026-11-18: its five gates True on both versions, remake's M3 shown to step 3 on both, the What's Wrong sentences said as measured. W9d (Build again… carries the user's work) closed on both on 2026-11-18: M9 on 2026 twice and confirmed on 2024 (`69b6354`, reviewed `e51de95`), its findings set alike on both. Whole suite at `06d818f`: 4134 passed, 1 skipped, 1 failed (the known font-width test). What W9 leaves open is in the morning paragraph of 2026-11-18 and items 8, 10 and 11 of *Where W9 stands*. Planned, reviewed, approved by the user (2026-11-16). The plan is `notes-workbook/ISSUE-1-PLAN.md` (stages W9a to W9d), reviewed in `ISSUE-1-PLAN-REVIEW.md` and revised to its second review (`ISSUE-1-PLAN-REVIEW-2.md`). |
-| Printed gears (FDM, PLA): stages F1 to F4 | **Stage F1 written and reviewed on branch `printed` (worktree `~/SW-Gear-Generater-printed`); its SolidWorks runs on 2026 and 2024 in progress at this row's last update.** Taken up on 2026-11-18 at the user's word to carry on past W9. The plan `docs/PLAN-PRINTED.md` was revised against W9's code and checked three times more in `docs/PLAN-PRINTED-REVIEW.md` (`158b06f`, `d2e34a6`, `6dc7359`). `printed` was cut from `w9d` at `f3c4873`, earlier than the plan said; `w9d` was merged into it at `91f6a6f`. On that branch: F1-0 (the pins `fe89e56`, the interface `7991634`, reviewed in `docs/notes-printed/F1-0-REVIEW.md`), packages A, B and C (reviewed in `docs/notes-printed/F1-REVIEW.md`, `be5ae7a`, with the coordinator's rulings), and the demonstration `probe/f1_demonstration.py` (`docs/notes-printed/F1-DEMONSTRATION.md`, reviewed in `F1-DEMONSTRATION-REVIEW.md`, `cf40e4a`). D11 is ruled (B) and D6 is no pair warning in F1 (questions 13, 14); the span over k teeth moved to F2's first step and printed crossed pairs are judged by the form as by the workbook (question 18); D3 and D7 stand as assumed. **[PLACEHOLDER, for the coordinator: F1's runs on SolidWorks 2026 and 2024, their result and review.]** The record of this work is `docs/notes-printed/` on branch `printed`. |
+| Printed gears (FDM, PLA): stages F1 to F4 | **Stage F1 closed on branch `printed` (worktree `~/SW-Gear-Generater-printed`) on 2026-11-18, by its Done-when, on SolidWorks 2026 34.1.1 and 2024 32.5.0; not merged into `workbook`, which waits for the user's word.** Taken up on 2026-11-18 at the user's word to carry on past W9. The plan `docs/PLAN-PRINTED.md` was revised against W9's code and checked three times more in `docs/PLAN-PRINTED-REVIEW.md` (`158b06f`, `d2e34a6`, `6dc7359`). `printed` was cut from `w9d` at `f3c4873`; `w9d` and then `workbook` were merged into it (`91f6a6f`, `138d646`). On that branch: F1-0 (the pins `fe89e56`, the interface `7991634`, reviewed in `docs/notes-printed/F1-0-REVIEW.md`), packages A, B and C (reviewed in `F1-REVIEW.md`, `be5ae7a`, its should-fixes taken), and the demonstration `probe/f1_demonstration.py` (`F1-DEMONSTRATION.md`, reviewed `cf40e4a`), run clean on both versions (`5e2f386`) and the runs reviewed (`0e7000d`). Suite on `printed` at `138d646`: 4747 passed, 1 skipped, 1 failed (the known font-width test). Left open: the boards' PNG renders, the span over k teeth (F2's first step), the merge, and the user's word on question 19's rulings. Next: F2 (§3), the span over k teeth, a STEP save probe on both versions, Export STEP, then the user's prints. The record of this work is `docs/notes-printed/` on branch `printed`; the morning paragraph of 2026-11-18 above names each note. |
 | How the user's absence is handled | the user said on 2026-11-14 to carry on, in order, until W8 is done. Judgement calls are taken at each plan's recommended reading and listed for the user as readings to overrule. On 2026-11-18, going to sleep, the user said to carry on past W9 down the plans with Opus subagents and a review of each step; the rulings taken since are questions 10 to 14, 17 and 18 below. |
 | The small-pinion tip cap | `fix/small-pinion-cap` merged at `0f5a121` (the user's instruction): 6- and 7-tooth pinions build with an arc on the tip cap, version 0.3.2. Built on SolidWorks 2024 by the branch; the 2026 build and the merge's review are in hand. |
 
@@ -1334,7 +1355,7 @@ longer than the gap (J22, `length > gap`, *under issue #1*).
 Questions 1 to 5 of 2026-11-14 are answered (`notes-workbook/W5-DECISIONS.md`; PLAN-WORKBOOK §4.5, *Readings chosen
 (W5)*), and so is the one after them on a profile-shifted pinion inside a ring (**yes**, 2026-11-14: `d3f4dcf`,
 `9efde87`). The issue #1 plan's questions were answered on 2026-11-16 (`notes-workbook/ISSUE-1-PLAN.md`, *Changes
-after the user's answers*). Still open (updated 2026-11-16; item 7 brought up to date and items 10 to 18 added on 2026-11-18):
+after the user's answers*). Still open (updated 2026-11-16; item 7 brought up to date and items 10 to 19 added on 2026-11-18):
 
 1. **A journaled file on a disconnected drive is treated as gone** — keep that, or hold such entries until the drive
    is back?
@@ -1445,11 +1466,8 @@ after the user's answers*). Still open (updated 2026-11-16; item 7 brought up to
     `CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2026` (True) and `_ON_2024` (set from the 2024
     run), which nothing in the app reads. The other way, which you may choose, is that such a component is named and
     not carried, so the old assembly is never changed at all.
-13. **Printed gears, D11: a gearbox built before F1** (ruled (B) 2026-11-18). It opens exactly as it does today,
-    nothing reads as changed and nothing is written, until you type Printed for it; a blank Process means *as built*.
-    The other answer, (A), would read it as Printed and changed; `docs/PLAN-PRINTED.md` §1 says where the one switch
-    is.
-14. **Printed gears, D6: no pair interference warning in F1** (ruled 2026-11-18; it departs from the assumed D6,
+13. **Printed gears, D11:** now item 1 of question 19.
+14. **Printed gears, D6: no pair interference warning in F1** (item 2 of question 19; ruled 2026-11-18; it departs from the assumed D6,
     "warn, and check each printed pair"). The words for you are the last section of `docs/PLAN-PRINTED-REVIEW.md`:
     *"We had planned that the app would warn whenever one printed gear's teeth might run into the bottom of the
     other's. Checked against the gears as the app actually draws them, that warning would have fired on almost every
@@ -1472,11 +1490,29 @@ after the user's answers*). Still open (updated 2026-11-16; item 7 brought up to
     took SolidWorks to about 11 GB and about 25 minutes (W9D-DEMONSTRATION-REVIEW's last section). For now this is
     recorded as a known limit, here and in the notes, and the app adds no sentence about it; the other way is for the
     question to say so on 2024, for example that you save other work first.
-18. **Printed gears, two changes to the plan** (ruled 2026-11-18 on F1's review, `docs/notes-printed/F1-REVIEW.md` on
-    branch `printed`). The span over k teeth (what calipers read across k teeth of a printed gear, to measure a print
-    by) was not built in F1 and is moved to F2's first step, before any print is measured (`docs/PLAN-PRINTED.md`
-    §3.0). And the gear form now judges a printed crossed helical pair's tip clearance as the Workbook window does, so the two
-    never disagree (`368db90`).
+18. **Printed gears, two changes to the plan:** now items 5 and 6 of question 19.
+19. **Printed gears: the coordinating session's rulings of 2026-11-18 on `docs/PLAN-PRINTED.md`, gathered** (each
+    yours to overrule; the details are in `docs/notes-printed/F1-0.md` and the three package notes on branch
+    `printed`, and in `docs/PLAN-PRINTED.md`'s decision table and *Changes after* sections there). How cheaply each is
+    changed is the coordinator's reading of those notes:
+    1. **D11 answered (B).** A gearbox built before F1 opens exactly as it does today, a blank Process meaning *as
+       built*, and nothing reads as changed or is written until you type Printed. Cheap to change: (A) is one switch,
+       the body of `assess.blank_process` (§1).
+    2. **No pair interference warning in F1**, against the assumed D6 ("warn, and check each printed pair"); the words
+       for you are question 14's. A small gear still says it is printed exactly as drawn and to turn the pair in
+       SolidWorks. Not cheap to change: the radial check was withdrawn because it reports overlaps the drawn parts do
+       not have, so a warning wants the sweep of the drawn outlines the plan lists as later work.
+    3. **A printed pair's assembly carries `_P`**, as its parts do; a machined pair's names stay exactly as they are.
+       Cheap: one function, `pair_stems`, and its pins.
+    4. **A bad Process word or a printed gear's bad Nozzle is an error at its field** (the form's field, or the Box
+       sheet's cell), and only checked Box values go into the gears, so one bad cell is said once. Cheap to word otherwise.
+    5. **The form judges a printed crossed helical pair's tip clearance as the Workbook window does** (`368db90`), so
+       the two never disagree. Cheap: one call in the form.
+    6. **The span over k teeth moved to F2's first step** (§3.0), before any print is measured, since nothing in F1
+       needed it. Only the order of work; it is still built before you measure a print.
+    7. **D3 and D7 stand as assumed.** D3: a printed gear's blank Backlash is the smaller of 0.3 mm and 0.3 × module,
+       to be replaced by your own measurement (§3.2). D7: PLA's allowable tooth stress 17 MPa, provisional, for F4
+       only, nothing built on it. D3 is one formula (the Backlash IIF) and its pins; D7 is not yet in the code.
 
 Answered ahead of its phase (the user, 2026-11-14), for W7's sub-plan:
 
