@@ -942,3 +942,125 @@ None of them changes what a sentence already claims, so keeping them in the log 
 I regenerated states 2, 3 and 7 with my own script on A's worker. The question and the result, times aside, appear
 word for word in `W9D-PACKAGE-B.md`, so *"the seven printed states are unchanged"* holds for those I could rebuild.
 States 4–6 are hand-made on the real carry, and their sentence forms are unchanged by these two commits.
+
+---
+
+## Review of package B's `e4082a2` and `9cbfc08` (after the merge `7ce641e`), the last app changes before the run
+
+*Independent, 2026-11-17, at `9cbfc08`.* I read both diffs and printed the close advice in each state from
+`ui_text`'s own functions. **Suite on the merged tree: 2 failed (tkinter), 3981 passed, 10 skipped.**
+
+### Verdict
+
+**Head is fit for the run.**
+- The close advice and the carry's save line never stand side by side, and the save line is withheld only where a
+  close advice says what closing costs.
+- `e4082a2`'s limit *may* is true in both outcomes, and only where the gate treats the plain and limit kinds
+  differently.
+
+Two should-fixes, both wording, neither for the run:
+- the cost parenthesis stumbles on *"that"*;
+- *"still holds"* is as of the carry.
+
+**One fact for the record:** once a carry is lost this way, **the app has no route to carry it again**. The user redoes
+it by hand from RangeBox.SLDASM (below).
+
+### The close advice beside an unsaved carry (`9cbfc08`), state by state
+
+Printed from `still_in_error_sentence` and `_unsaved_line` on a record whose `CarryEntry.unsaved_at` stands:
+
+- **A part in error with its assembly** (the part named, the assembly added):
+  > *"…close it and R_r2 in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on
+  > disk are as before that Update; that also loses anything else not saved in R_r2 and what Build again… carried into
+  > it, which R.SLDASM still holds), then press Update SolidWorks again."*
+- **Several parts:** the same parenthesis, *"close them and R_r2"*.
+- **The assembly itself among the documents** (*"Gear_m1.5_N17 and R_r2 have changes … close them all in SolidWorks
+  without saving…"*): the assembly is not named twice, and the cost names R_r2.
+- **The carry saved since** (the planning read's `clear_saved`, or the finish's `_follow_carry`): only *"; that also
+  loses anything else not saved in R_r2"*.
+- **A part only, no assembly holding it:** no cost clause. True: closing that part loses nothing of the assembly.
+
+Withholding the save line:
+- **The footer's state lines:** the carry line is withheld exactly when `_unsaved_line` carries `CLOSE_LOSES_CARRY`.
+  An Update's unsaved changes not in error still say *"save them … to keep them"*, and the carry line stands beside
+  them. Both ask a save, which is consistent.
+- **After a job's sentence:** withheld when the note asks the carry's save or says `CLOSE_LOSES_CARRY`.
+- **The job's own sentence** judges the carry by `Finished.record`, what the finish wrote. So a carry `_follow_carry`
+  found lost or saved is not costed there: the lost line is said in its place.
+- **A stop with nothing in error** gives no close advice, so the carry line stands as before.
+- **A copy's window** shows the other's record, so it would cost that record's carry, as W9c's lines already do
+  (house behaviour, noted).
+
+The save line is never said beside a close advice that costs the carry, and never withheld without one.
+
+**The wording.** *"the files on disk are as before that Update; that also loses …"*: the *that* has to reach back past
+the first clause to *close … without saving*. Read fast, it can seem to point at the files. And *"anything else not
+saved … and what Build again… carried"* counts the carry twice, since the carried items are themselves "not saved in
+R_r2".
+
+**Should-fix (wording):**
+
+> *(the files on disk are as before that Update; closing R_r2 so also discards whatever else is unsaved in it,
+> including what Build again… carried into it, which R.SLDASM still holds)*
+
+*Discards whatever else is unsaved in it* says it is the open, unsaved work that goes, not files.
+
+**"which RangeBox.SLDASM still holds".**
+- True as far as the app is concerned: the carry never writes the old assembly, which package A enforces and the fake
+  pins.
+- If the user changed or deleted RangeBox.SLDASM since, it is not. The app cannot see that, and the lost-carry line
+  (*"…; RangeBox.SLDASM still does"*) already says the same.
+- *"which RangeBox.SLDASM held when it was carried"* would be exact, if the coordinator wants it. Note only.
+
+### What can the user do once a carry is lost this way?
+
+Traced in the code:
+- After the build, `record.gearbox.assembly` is RangeBox_r2, and `rec.earlier` holds RangeBox.SLDASM only as an
+  earlier revision's files.
+- A later Update that finds RangeBox_r2 loaded from its file runs `_follow_carry` (`workbook/update.py`). That clears
+  `unsaved_at` and says the lost line. The Update's own live read replaces the inventory with what RangeBox_r2 really
+  holds, which is nothing of the carried work.
+- A later Build again… needs an edit that wants a new revision. It takes its old assembly from
+  `update.old_assembly(record, again)`, which uses `record.gearbox.assembly`, so RangeBox_r2. `carry_for` builds its
+  bodies from the same gearbox block. Nothing reads `rec.earlier` for a carry.
+- No control, and no path, carries from an earlier revision (D11, *"nothing offers to carry again"*).
+
+**So there is no route in the app.** The user's work stays in RangeBox.SLDASM, and getting it into the current
+revision is by hand in SolidWorks: open RangeBox.SLDASM and RangeBox_r2, insert the components into RangeBox_r2, make
+the mates again. Or open RangeBox_r2 before the next press, if they had not yet closed it.
+
+The sentence is right not to promise more. Record it as open.
+
+### The pins and the contract (`9cbfc08`)
+
+- **`tests/test_workbook_in_place_round_trip.py`.** Five strings take the new parenthesis, and nothing else changed in
+  them. Each is a W9c case where the assembly is among what is closed. Right and minimal.
+- **`W9C-INTERFACES.md` §11 and `W9D-INTERFACES.md` §9.4.** They now say the same rule:
+  - the first cost is said always, never as a fact;
+  - the carry's cost while its mark stands;
+  - the save line withheld beside the advice;
+  - no promise of a new carry.
+- **`workbook_gui.py`** passes `record=job.record` to `gearbox_update_status`. It is used only where `finished` is
+  None (the finish raised), and is then the record as planned. Right.
+- **`probe/w9c_demonstration.py:1226-1242`'s self-check examples** still show the old parenthesis. They feed the
+  matchers (`says_close_with_assembly`, `:668-680`), which match only *"in SolidWorks without saving, answering No when
+  SolidWorks asks to "*, the stem and the assembly. So they pass and nothing in a run compares them. Harmless for the
+  run. A should-fix for that script's next edit, so a reader is not shown a sentence the app no longer says.
+
+### `e4082a2`
+
+**The limit *may*.**
+- It is said only while `CARRY_REMAKE_KINDS` holds one of `distance`/`limit distance` (or `angle`/`limit angle`) and
+  not the other.
+- **Plain allowed** (the plan foresees the mate made again): *"Your UserLimit10 is made again if the press reads it as
+  a plain distance mate; a limit distance mate is not made again."* True either way, as the worker decides by the type
+  name it reads.
+- **Limit allowed** (the plan names it unmeasured for `distance`): *"… only if the press reads it as a limit distance
+  mate; a plain distance mate is not made again."* True either way.
+- Such a mate is taken out of the lead's count and out of the definite reasons (`may_items`). So it is never said
+  beside a definite sentence for the same mate.
+- With every kind patched, as in the run, nothing changes.
+
+**The renamed mate in error:** *"Your Dist9 was in error in RangeBox.SLDASM and, as Mate14, is in RangeBox_r2 too, as
+it was."* Each name sits beside its assembly. *"1 of your 3 mates, Mate12 (was Lock1), on in the modes it was on in"*
+drops the stray *each*. Both are right.
