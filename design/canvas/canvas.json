@@ -265,6 +265,20 @@
       "x": 36960,
       "y": 0,
       "w": 1080
+    },
+    {
+      "file": "PrintedSpan.dc.html",
+      "title": "Single gear · printed coupon: its span, a reading typed in Measured",
+      "x": 38120,
+      "y": 0,
+      "w": 484
+    },
+    {
+      "file": "WorkbookPrintRefused.dc.html",
+      "title": "Workbook · Print files pressed before STEP export is measured",
+      "x": 38684,
+      "y": 0,
+      "w": 1080
     }
   ],
   "annotations": [

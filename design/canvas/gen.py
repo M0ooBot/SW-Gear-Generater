@@ -16,7 +16,8 @@ sys.path.insert(0, os.path.join(HERE, "..", "..", "src"))             # the app'
 from ui import *
 from gear_generator.gears import KINDS, kind_for, spur, pair as pairs
 from gear_generator.spec import GearSpec, PairSpec, pair_stems
-from gear_generator import findings, preview as layout_of, ui_text
+from gear_generator import findings, preview as layout_of, printout, ui_text
+from gear_generator.gears import span as spans
 HEADER_TEXT, READOUT = "#505050", "#8f8f8f"
 CARD_BG, CARD_BORDER = "#fafafa", "#cfcfcf"
 
@@ -248,19 +249,38 @@ def value_row(label_text, values, widths=(104, 96)):
     return f'<div style="display: flex; align-items: center; gap: 8px; height: 18px;">{cells}</div>'
 
 
-def derived_table(deriveds, tags):
+def rows_with_span(d, reading):
+    """GearApp._rows_with_span: the Derived rows, with the span row after Tooth at pitch when it has a figure (F2)."""
+    rows = list(ui_text.derived_rows(d))
+    if reading is None or reading.kind != spans.KIND_SPAN:
+        return rows
+    at = next((i + 1 for i, (label, _) in enumerate(rows) if label == "Tooth at pitch"), len(rows))
+    return rows[:at] + [ui_text.span_rows(reading, None, 0.0, 0.0)[0]] + rows[at:]
+
+
+def derived_table(deriveds, tags, readings=None, measured=None, focused=False):
     """Every label once, in the order it first appears, and a dash where a gear has none — as the window does.
 
-    A grid, as Tk's is: a column widens to its longest value and the others keep in line.
+    A grid, as Tk's is: a column widens to its longest value and the others keep in line. F2: each gear's span row
+    (``readings``, A's gears.span per gear), and a Measured entry under the rows in the column of each gear with a
+    figure, holding ``measured`` (the text typed, per gear) and the caret when ``focused``.
     """
-    columns = [dict(ui_text.derived_rows(d)) for d in deriveds]
-    labels = list(dict.fromkeys(label for d in deriveds for label, _ in ui_text.derived_rows(d)))
+    readings = readings or [None] * len(deriveds)
+    rows_of = [rows_with_span(d, r) for d, r in zip(deriveds, readings)]
+    columns = [dict(rows) for rows in rows_of]
+    labels = list(dict.fromkeys(label for rows in rows_of for label, _ in rows))
     cells = ['<span></span>'] + [f'<span style="font-size: 11px; color: {READOUT}; line-height: 16px;">{tag}</span>'
                                  for tag in tags]
     for label_text in labels:
         cells.append(f'<span style="font-size: 12px; color: {LABEL}; line-height: 18px;">{label_text}</span>')
         cells += [f'<span style="font-family: {MONO}; font-size: 11.5px; color: {INK}; line-height: 18px; '
                   f'white-space: nowrap;">{c.get(label_text, "—")}</span>' for c in columns]
+    if any(r is not None and r.kind == spans.KIND_SPAN for r in readings):
+        cells.append(f'<span style="font-size: 12px; color: {LABEL}; line-height: 30px;">{ui_text.MEASURED_LABEL}</span>')
+        for i, r in enumerate(readings):
+            typed = (measured or [""] * len(readings))[i]
+            cells.append(gfield(typed, unit="mm", focused=focused and bool(typed))
+                         if r is not None and r.kind == spans.KIND_SPAN else '<span></span>')
     template = "104px " + " ".join(["minmax(96px, max-content)"] * len(deriveds))
     return (f'<div style="display: grid; grid-template-columns: {template}; column-gap: 8px; justify-content: start;">'
             + "".join(cells) + '</div>')
@@ -273,7 +293,11 @@ def warning(text, error=False):
 # ------------------------------------------------------- the field explainer
 
 def explainer(key, d, side_stem, pair=None):
-    title, symbol, what, comes_to = ui_text.explainer(key, d, side_stem, pair, FOLDER_TEXT)
+    if key == "span":                     # F2: the Measured entry's card, the span's, with the Teeth diagram (gui)
+        title, symbol, what, comes_to = ui_text.span_explainer(spans.span(d, "A"))
+        key = "teeth"
+    else:
+        title, symbol, what, comes_to = ui_text.explainer(key, d, side_stem, pair, FOLDER_TEXT)
     sym = f'<span style="font-family: {MONO}; font-weight: 400; color: {MUTED};"> · {symbol}</span>' if symbol else ""
     return (f'<div style="display: flex; align-items: flex-start; gap: 10px; box-sizing: border-box; border: 1px solid {CARD_BORDER}; '
             f'border-radius: 2px; background: {CARD_BG}; padding: 8px 10px;">{DIAGRAMS[key]}'
@@ -415,12 +439,32 @@ def side_panel(title, spec, d, stem, focused="", card=None, pair=None, side="a")
     return panel(title, ui_text.gear_readout(spec), rows)
 
 
-def derived_panel(gears, tags, diagnostics, readout, pair_rows=None, note=""):
+def measured_lines(deriveds, readings, measured, tags):
+    """GearApp._measured_lines: why a printed gear shows no span, and what a reading typed tells (F2)."""
+    out = []
+    for i, (d, r) in enumerate(zip(deriveds, readings)):
+        prefix = f"{tags[i]}: " if len(deriveds) > 1 else ""
+        withheld = ui_text.span_withheld(r) if r is not None else ""
+        if withheld:
+            out.append(f"{prefix}{ui_text.SPAN_LABEL_ANY}: {withheld}")
+        elif r is not None and r.kind == spans.KIND_SPAN and (measured or [""] * len(deriveds))[i]:
+            alpha = getattr(d, "normal_pressure_angle_deg", d.pressure_angle_deg)
+            out.append(prefix + ui_text.span_rows(r, float(measured[i]), alpha, d.module)[-1][1])
+    return out
+
+
+def derived_panel(gears, tags, diagnostics, readout, pair_rows=None, note="", readings=None, measured=None,
+                  focused=False):
     body = [picture(gears, labels=tags, note=note)]
     if pair_rows:
         body.append('<div style="display: flex; flex-direction: column;">' + "".join(value_row(k, [v]) for k, v in pair_rows) + '</div>')
         body.append(rule("0 0 2px 0"))
-    body.append(derived_table([d for d, _ in gears], [f"{t} · mm" for t in tags] if len(gears) > 1 else ["mm"]))
+    deriveds = [d for d, _ in gears]
+    readings = readings or [spans.span(d, "A") for d in deriveds]
+    body.append(derived_table(deriveds, [f"{t} · mm" for t in tags] if len(gears) > 1 else ["mm"], readings,
+                              measured, focused))
+    for text in measured_lines(deriveds, readings, measured, tags):
+        body.append(f'<div style="font-size: 12px; color: {INK}; line-height: 1.35;">{text}</div>')
     for text, error in diagnostics:
         body.append(warning(text, error))
     return panel("Derived", readout, body)
@@ -437,17 +481,19 @@ def output_panel(pair_mode):
     return panel("Output", FOLDER_TEXT, rows)
 
 
-def sw_bar(note, manual):
+def sw_bar(note, manual, printing=""):
     header = (f'<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: {READOUT};">'
               f'{dot(OK)}SolidWorks 2026 — no document open</span>')
     rows = [row(INFO_ICON, f'<span style="font-size: 12px; color: {INK}; line-height: 1.35;">{note}</span>', gap=8, align="flex-start")]
+    if printing:                                                        # F2: which file Print files would write
+        rows.append(row('<span style="width: 15px; flex-shrink: 0;"></span>', f'<span style="font-size: 12px; color: {INK}; line-height: 1.35;">{printing}</span>', gap=8, align="flex-start"))
     if manual:
         rows.append(row('<span style="width: 15px; flex-shrink: 0;"></span>', f'<span style="font-size: 12px; color: {MUTED}; line-height: 1.35;">{manual}</span>', gap=8, align="flex-start"))
     return panel("SolidWorks", "", rows, gap=4, extra_header=header)
 
 
 def footer(status, update=False):
-    buttons = (button("Update values", h=32) if update else "") + button("Build", primary=True, h=32)
+    buttons = (button("Update values", h=32) if update else "") + button("Print files", h=32) + button("Build", primary=True, h=32)
     return (f'<div style="margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 12px;">'
             f'<div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: {OK}; min-width: 0;">{dot(OK, 8)}'
             f'<span style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">{status}</span></div>'
@@ -546,23 +592,31 @@ def pair_board(title_kind, pair, chosen=None, focus=("a", "module"), card=None, 
         side_panel("Gear B", spec_b, d_b, stem_b, focused=focus[1] if focus[0] == "b" else "", card=panel_card["b"],
                    pair=pair, side="b"),
         derived_panel([(d_a, o_a), (d_b, o_b)], ("A", "B"), diagnostics,
-                      ui_text.pair_derived_readout(centre, ratio, eps, symbol), pair_rows=rows, note=note),
+                      ui_text.pair_derived_readout(centre, ratio, eps, symbol), pair_rows=rows, note=note,
+                      readings=[spans.span(d_a, kind_for(spec_a).recipe_for(spec_a)),
+                                spans.span(d_b, kind_for(spec_b).recipe_for(spec_b))]),
         output_panel(True),
         sw_bar(ui_text.mode_note("pair", [stem_a, stem_b, stem_pair]), manual),
         footer(status or "Both gears now carry the chosen module and teeth."),
     ]))
 
 
-def single_board(spec, focus="module", status="Type a gear, or switch to Gear pair to solve one."):
+def single_board(spec, focus="module", status="Type a gear, or switch to Gear pair to solve one.", measured="",
+                 printing=""):
+    """F2: ``measured`` is what is typed in Measured (with the caret, and the span's card, when ``focus`` is
+    "span"); ``printing`` the SolidWorks bar's Print files line."""
     spec, d, o, diagnostics = worked(spec)
-    stem = spec.default_stem()
+    stem = spec.stem()
+    kind = kind_for(spec)
+    reading = spans.span(d, kind.recipe_for(spec))
     return page("\n".join([
         gear_kind_panel(spec.kind, "Single gear", spec),
         side_panel("Gear", spec, d, stem, focused=focus, card=focus),
-        derived_panel([(d, o)], ("",), diagnostics_of([("", diagnostics)]), ui_text.derived_line(d)),
+        derived_panel([(d, o)], ("",), diagnostics_of([("", diagnostics)]), ui_text.derived_line(d),
+                      readings=[reading], measured=[measured], focused=focus == "span"),
         output_panel(False),
         sw_bar(ui_text.mode_note("single", [stem]),
-               ui_text.manual_steps_line([f"Assign a material to {stem}; the build leaves it unset."])),
+               ui_text.manual_steps_line([f"Assign a material to {stem}; the build leaves it unset."]), printing),
         footer(status),
     ]))
 
@@ -1034,13 +1088,14 @@ def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, c
     colour = OK if footer.ok else ERR
     exporting = building is None                                        # Export waits while a job runs
     buttons = [foot_button("Export", enabled=exporting), foot_button("Export as…", enabled=exporting),
+               foot_button("Print files", enabled=exporting),                # F2: held only while a job runs
                foot_button(footer.build_label, footer.build_primary, footer.build_enabled)]
     if footer.update_shown:
         buttons.append(foot_button("Update SolidWorks", footer.update_primary, footer.update_enabled))
     # The sentence wraps as WorkbookWindow._wrap_status wraps it: in the room the dot (8 px and 8 px after it) and
     # the buttons (12 px before Export, 8 px before each of the others) leave in the window's width less its body
     # padding, 2 px short of that, and never narrower than STATUS_MIN_WRAP. So the window keeps its width with all
-    # four buttons, and a board whose buttons leave too little room is pushed wider, as the window would be.
+    # five buttons, and a board whose buttons leave too little room is pushed wider, as the window would be.
     foot = (f'<div style="display: flex; align-items: center; gap: 12px;">'
             f'<div style="flex: 1 1 0; display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; color: {colour}; '
             f'min-width: {8 + 8 + wb_gui.STATUS_MIN_WRAP + 2}px; box-sizing: border-box; padding-right: 2px;">'
@@ -1387,6 +1442,21 @@ boards["WorkbookBeforeF1"] = ("Workbook · built before printed gears, opened: M
 boards["WorkbookPrinted"] = ("Workbook · the same gearbox with Printed typed beside Process",
                              workbook_board(_with_process(reducer, "printed"), before=before_f1, desk=f1_desk),
                              WINDOW_WIDTH)
+
+# F2 (PLAN-PRINTED §3.0, §3.1.3). The first calibration coupon on the form, printed: its span over 3 teeth after Tooth
+# at pitch, a reading typed in Measured with the caret in it and the span's card, and the SolidWorks bar's Print files
+# line as it reads once writing a STEP file is measured (until then B's plan refuses and the bar shows no line).
+coupon_spec = GearSpec(module="1.5", teeth="20", face_width="8", bore="8", process="printed", name="Coupon_A")
+coupon_plan = printout.PrintPlan(None, (printout.PrintPart(path="C:\\Gears\\Coupon_A.SLDPRT", stem="Coupon_A"),),
+                                 folder="C:\\Gears\\print\\2026-11-19 10.05.12")
+boards["PrintedSpan"] = ("Single gear · printed coupon: its span, a reading typed in Measured", single_board(
+    coupon_spec, "span", measured="11.291", printing=ui_text.print_bar_line(coupon_plan)))
+# The built reducer with Print files pressed while every F2 finding is unset: refused by name, nothing written, the
+# footer's five buttons at 1080 px.
+boards["WorkbookPrintRefused"] = ("Workbook · Print files pressed before STEP export is measured",
+                                  workbook_board(reducer, desk=built_desk, note=ui_text.Note(
+                                      ui_text.print_refusal(printout.Refusal(printout.GATE_COPY)), False,
+                                      ui_text.NOTE_STANDING)), WINDOW_WIDTH)
 
 layout = []
 x = 0
