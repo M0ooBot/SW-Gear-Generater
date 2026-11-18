@@ -2443,7 +2443,8 @@ W9C_TWINS = ("COMPONENT_DELETE_ROUTE", "COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGUR
 
 def test_w9c_probes_on_2024_read_as_on_2026_and_set_every_twin():
     """findings.py, every W9c _ON_2024 (the probes' review addendum): the 2024 run reads as 2026's, so each is set as
-    its _ON_2026 twin at the same scope, COMPONENT_STATE_PER_CONFIGURATION_ROUTE None on both."""
+    its _ON_2026 twin at the same scope; COMPONENT_STATE_PER_CONFIGURATION_ROUTE, which this run proposed None, was set
+    since on both versions from W9d's probes, as 2026's."""
     data, w9c24 = _w9a_run(W9C_PROBES_2024, W9C_PROBES_2024_LOG, "529f939", (32, 5, 0))
     assert data["stops"] == [] and data["fails"] == ["s5 (f): the unshown state reads marked no document: "
                                                      "['RangeBox.SLDASM']"]
@@ -2488,7 +2489,10 @@ def test_w9c_probes_on_2024_read_as_on_2026_and_set_every_twin():
     assert not [line for line in w9c24 if "What's Wrong" in line and line.startswith(("fact", "DIALOG"))]
     for name in W9C_TWINS:
         assert getattr(findings, f"{name}_ON_2024") == getattr(findings, f"{name}_ON_2026"), name
-    assert findings.COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2024 is None
+    # W9c's candidate (GetRootComponent3(True)) marked on 2024, so this run proposed None (285); W9d's 2024 probe set
+    # the route since, from another candidate that marked nothing (test_w9d_2024_findings_rest_on_the_probes_2024_run).
+    assert findings.COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2024 == \
+        "IConfiguration.GetComponentSuppressionState(Name2)" == findings.COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026
     assert findings.ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2024 is True
 
 
@@ -2798,10 +2802,16 @@ W9D_LIGHTWEIGHT_FACT = "CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMB
 def test_w9d_findings_are_not_measured_until_a_reviewed_log_sets_them():
     """W9D-INTERFACES.md §8: every name W9d reads is in findings.py, None on both versions until a reviewed run sets
     it: on 2026 the probes' two runs set §8.1's and M9's second run the five of W9D-DEMONSTRATION-REVIEW.md's last
-    section, §4 (each pinned below); every one on 2024, and on 2026 the six M9's fixture does not reach, stay None."""
+    section, §4; on 2024 the probes' run set the same fourteen reads, each to its 2026 twin (W9D-PROBES-REVIEW.md's
+    last section, 23107c2; each pinned below). Every other one stays None: on 2026 the six M9's fixture does not reach,
+    on 2024 those and every write M9 sets, its demonstration not yet run there."""
     for name in W9D_FINDINGS + ("COMPONENT_STATE_PER_CONFIGURATION_ROUTE",):
         for year in (2026, 2024):
             if year == 2026 and name in W9D_SET_ON_2026 + W9D_SET_BY_M9_ON_2026:
+                continue
+            if year == 2024 and name in W9D_SET_ON_2026:
+                assert getattr(findings, f"{name}_ON_2024") == getattr(findings, f"{name}_ON_2026"), name
+                assert getattr(findings, f"{name}_ON_2024") is not None, name
                 continue
             assert hasattr(findings, f"{name}_ON_{year}") and getattr(findings, f"{name}_ON_{year}") is None, name
 
@@ -2839,10 +2849,90 @@ def test_w9d_2026_findings_rest_on_the_probes_two_runs():
     assert "(0.475, False): 58" in two[92] and "(19.375, True): 29" in two[92]   # the fillets off-axis, tips coaxial
     assert proposed(two, 102, "CARRY_INSERT_MARKS_USER_DOCUMENTS") == repr(findings.CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2026)
     assert proposed(two, 104, "PERSIST_REFERENCE_SURVIVES_RELOAD") == repr(findings.PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026)
-    for name in W9D_SET_ON_2026:
-        assert getattr(findings, f"{name}_ON_2024") is None, name
+    for name in W9D_SET_ON_2026:                       # each 2024 twin set from the 2024 run, pinned below
+        assert getattr(findings, f"{name}_ON_2024") == getattr(findings, f"{name}_ON_2026") is not None, name
     for name in W9D_KEPT_NONE_BY_M9:                   # what M9 sets is pinned to its own runs below
         assert getattr(findings, f"{name}_ON_2026") is None, name
+
+
+
+W9D_PROBES_2024 = (LATEST.parent / "sw2024" / "w9d-probes-20261118-051605.json",
+                   LATEST.parent / "sw2024" / "w9d-probes-sw2024-20261118.log")
+
+
+def test_w9d_2024_findings_rest_on_the_probes_2024_run():
+    """W9D-PROBES-REVIEW.md's last section (23107c2): W9d's probes on 32.5.0 from 891a707 propose each of the fourteen
+    as its 2026 twin, and the lines the 2024 comments cite hold, the measured differences from 2026 among them."""
+    data, p24 = _w9a_run(*W9D_PROBES_2024, "891a707", (32, 5, 0))
+    assert data["stops"] == [] and data["fails"] == [] and data["proposal"] == {}
+    assert p24[172] == "done    0 failed: []; 0 noted; 0 STOP(s), a hung worker included: []"
+
+    def proposed(number, name):
+        line = p24[number]
+        assert line.startswith(f"propose {name} = "), (number, line)
+        return ast.literal_eval(line[len(f"propose {name} = "):].split("  #")[0])
+    fourteen = ((86, "PERSIST_REFERENCE_ROUTE_FOR_FACES"), (87, "PERSIST_REFERENCE_ROUTE_FOR_EDGES"),
+                         (90, "COAXIAL_FACE_READ"), (104, "CARRY_INSERT_MARKS_USER_DOCUMENTS"),
+                         (106, "PERSIST_REFERENCE_SURVIVES_RELOAD"), (137, "COMPONENT_STATE_PER_CONFIGURATION_ROUTE"),
+                         (139, "COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED"), (144, "FILE_VERSION_READ"),
+                         (147, "DEPENDENCIES_READ"), (149, "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS"),
+                         (151, "OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN"), (159, "SUBASSEMBLY_OPEN_MARKS"),
+                         (161, "SUBASSEMBLY_READ_ONLY_INSERT"), (164, "SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED"))
+    assert {name for _, name in fourteen} == set(W9D_SET_ON_2026) and len(fourteen) == 14
+    for number, name in fourteen:
+        value = getattr(findings, f"{name}_ON_2024")
+        assert proposed(number, name) == value == getattr(findings, f"{name}_ON_2026"), name
+        assert type(value) is type(getattr(findings, f"{name}_ON_2026")), name
+    assert findings.PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2024 == findings.PERSIST_REFERENCE_ROUTE_FOR_EDGES_ON_2024 \
+        == swcom.PERSIST_ROUTE_R3                                           # entity_references compares them
+    # r3 on every entity, r1 and r2 dead; the walks did not grow on 2024 (each 163-face walk under 2.4 s).
+    for number in (53, 58, 62, 68, 73, 77):
+        assert p24[number].strip().startswith("r3: True (IsSame 1 both ways): ") and "'matches': 1" in p24[number]
+        assert p24[number - 2].strip().startswith("r1: False") and p24[number - 1].strip().startswith("r2: False")
+    walks = {n: float(p24[n].split("found in ", 1)[1].split(" s", 1)[0]) for n in range(80, 86)}
+    assert all(f"walked 163 faces, matched 1, found in {walks[n]} s" in p24[n] for n in (80, 81, 82, 85))
+    assert all(2.2 < walks[n] < 2.4 for n in (80, 81, 82, 85)), walks
+    assert "walked 482 edges, matched 1, found in 6.75 s" in p24[83]
+    assert "resolved swPersistReferencedObject_Ok to a edge" in p24[83]
+    assert p24[93].startswith("fact    faces (b) growth face UserFaceCoin:0 on 'Sprocket-5': walked 163; full walks "
+                              "[1.685, 1.676, 1.692, 1.692, 2.067] s")
+    assert p24[94] == ("fact    faces (b) growth edge UserEdgeConc:1 on 'Sprocket-6': walked 482; full walks "
+                       "[5.071] s, matches [1]; prefilter ('circle', 0.005) kept 82 in 8.054 s, its walk 0.831 s, "
+                       "matches 1, IsSame the full walk's match True")      # the edge prefilter slower than the walk
+    assert p24[95].startswith("fact    faces (b) growth: component_frame x100 1.195 s before the walks, 1.334 s after; "
+                              "SolidWorks 3.064 GB private before, 3.064 GB after")
+    assert p24[97].startswith("ok      faces (b) growth: the prefiltered walk found the full walk's one match")
+    assert p24[89] == ("fact    faces (b): Sun's cylindrical faces, (radius mm, coaxial): count {(19.375, True): 29, "
+                       "(0.475, False): 58, (16.375, True): 29, (1.5, False): 1}")
+    assert p24[102] == ("fact    faces (c): each component against where it stood: {'RangeBox_Layout-1': 0.0, "
+                        "'Gear_m1.25_N29-1': 0.0, 'Sprocket-5': 0.0, 'Sprocket-6': 0.0, 'Sprocket-7': 0.0}")
+    assert p24[106] == ("propose PERSIST_REFERENCE_SURVIVES_RELOAD = True  # faces (d): 6 face and edge references; "
+                        "not resolved none")
+    state = data["sections"]["state"]
+    assert state["chosen"] == "GetComponentSuppressionState"
+    assert "against the truth {'agrees': True, 'differ': {}}" in p24[134]
+    assert p24[143] == ("fact    state (v): VersionHistory ['17000[2024/282]'], last (17000, 2024); "
+                        "GetLatestSupportedFileVersion 17000; the other version's file (RangeBox_r2.SLDASM) "
+                        "['19000[2026/13]'], last (19000, 2026)")
+    assert (state["version"]["history"], state["version"]["latest"], state["version"]["other"]) == (
+        ["17000[2024/282]"], 17000, ["19000[2026/13]"])
+    deps = state["version"]["dependencies"]
+    assert len(deps) == 9 and all(d["under_copy"] and d["on_disk"] and d["history"] == ["17000[2024/282]"]
+                                  for d in deps.values())
+    moved = state["version"]["searched"]["moved"]["False"]
+    assert len(moved["refused"]) == 9 and not any(moved["paths"].values())   # a plain copy: every one refused
+    assert state["read_only"]["opened"]["warnings"] == 32
+    assert state["read_only"]["after_open"]["RangeBox.SLDASM"] == {"open": True, "flag": True, "read_only": True}
+    assert state["read_only"]["global_kept"] is True
+    assert p24[169] == ("dialogs progress boxes seen {'Calculating Interference Detection': 0, 'Updating...': 0, "
+                        "'Opening': 3, 'Loading...': 0}; other windows the watch logged: 0")   # 2026's file, no dialog
+    # Stay None on 2024: one configuration each, IsVirtual and IsPatternInstance negative only, nothing for the rest.
+    assert "'Sprocket-1': ('Default', 'Default', ['Default'])" in p24[91]
+    assert "'Sprocket-1': (False, False)" in p24[92]
+    for name in W9D_KEPT_NONE_BY_M9 + ("REFERENCED_CONFIGURATION_READ",):
+        assert getattr(findings, f"{name}_ON_2024") is None, name
+    for name in W9D_SET_BY_M9_ON_2026 + (W9D_LIGHTWEIGHT_FACT,):          # the 2024 demonstration has not run
+        assert getattr(findings, f"{name}_ON_2024") is None, name
 
 
 W9D_DEMO_1 = (LATEST.parent / "w9d-demo-20261118-031226.json",
