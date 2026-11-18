@@ -185,3 +185,54 @@ measurements (§3.2). The boards' PNG renders are not redone.
   (`derived_rows` untouched; `test_printed_rule.py` green).
 - Each sentence true in every state that reaches it, chiefly WORKBOOK_ERROR, LIGHTWEIGHT and the COMPONENT_ONLY plural.
 - `print_list_text` against a STEP set B actually writes (facts keyed by file name or path).
+
+
+## The coordinator's rulings on the F2 review (`F2-REVIEW.md`, `40c1697`; 2026-11-18, each the user's to overrule)
+
+- **Every choice above (C's 1 to 12) is accepted** as the review recommends: Measured per gear with A:/B: lines, a
+  withheld span as a line, the line's wording (with M2's trigger), the span's card, the buttons' places, Print files
+  enabled whenever no job runs, a print's finish as a standing note, WORKBOOK_ERROR reworded, COMPONENT_ONLY's plural,
+  the list's layout, the README's numbers (with M2 and S6), the footer wrap.
+- **The interface's two short places** are B's now: `workbook_print(…, foreign_record=)` takes the window's verdict
+  (S8), and NO_FOLDER is a planning code (S4, B's fallbacks rejected); C's own folder checks and its FOREIGN_RECORD
+  override are gone.
+- **M2**: the Measured line flags a backlash above the gear's printed default (A's `Measured.default_mm`, the smaller
+  of 0.3 mm and 0.3 × module), as PLAN-PRINTED §3.2 has it.
+
+## After the review (`2cc34d9`, `843d794`, `2d6d288`)
+
+Every sentence changed, old then new:
+
+- Measured line's flag. Old: *That is more than 0.3 × module (0.45 mm), the most a gear of this module is given today:
+  whether it should take more is yours to decide (README: Calibrating your printer, step 6).* New: *That is more than
+  the 0.3 mm a printed gear of this module is given today: whether it should take more is yours to decide (README:
+  Calibrating your printer, step 6).* (the figure is `default_mm`: *0.24 mm* at module 0.8). It now fires above the
+  printed default, so 0.309 at 25° on the module 1.5 coupon is flagged.
+- NEW_REVISION (new, M1): *Print files wrote nothing: the workbook's changes to Gear_m1.5_N20_P and Gear_m1.5_N40_P
+  need a new revision, which Update SolidWorks cannot make; press Build again…, then print the new revision.*
+- NO_FOLDER (new, S4): *Print files wrote nothing: the output folder C:\Gears\Out does not exist; make it, or choose
+  another, then print.*; none given: *Print files wrote nothing: choose an output folder; it writes into a print folder
+  there.* These replace the form's *Print files wrote nothing: choose an output folder that exists; it writes into a
+  print folder there.* and the window's *Print files wrote nothing: the output folder … does not exist; make it, or
+  change it on the Box sheet.*, both removed.
+- NO_RECORD, unreadable (new, S5): *Print files prints a part Gear Generator built: the .gear.json beside Part1.SLDPRT
+  does not read, so nothing was written.* (missing: unchanged).
+- The result (S2). Old: *Print files wrote Coupon_A.step and its print list in … . Its print list could not be written
+  (OSError: …), so nothing in that folder says what each file is or whether to print it: press Print files again for a
+  set with its list.* New, the list written: unchanged (*Print files wrote Coupon_A.step and its print list in …*);
+  not written: *Print files wrote Coupon_A.step in …, but the print list could not be written (the disk is full), so
+  nothing in that folder says what each file is: press Print files again for a set with its list.*; no list asked:
+  *Print files wrote Coupon_A.step in … .* After a stop, the list not written: *What was written is in …, but its print
+  list could not be written (…), so nothing there says not to print it: do not print this set.* (written: unchanged).
+- The print list: *size not checked (a herringbone, not yet measured)* (new, S3).
+- README step 6: titled *Type the mean, and keep the numbers*; the trigger is the printed default; *send the session
+  that set this up* is gone, the numbers written into §3.2's table, now in the README.
+
+**Found on the way:** the form read the active part's `.gear.json` for planning with `store.load`, which moves a record
+that does not read aside (`.bad-…`), on every derive. It now reads with `store.read_sidecar`, which never moves a file;
+`test_a_gear_json_that_does_not_read_is_said_as_such` holds the record where it was.
+
+**Tests:** the three that meant the findings unset take `f2_unmeasured`; the end-to-end tests patch nothing (the findings
+are set); new end-to-end pins for NEW_REVISION in the window, NO_FOLDER on both, NO_RECORD unreadable on the form, the
+foreign verdict handed to B. The list-unwritten pin and the Measured line pins changed for M2 and S2 as ruled, none
+dropped. Suite at `2cc34d9`: 5118 passed, 1 skipped, 1 failed (the known Tk font test).
