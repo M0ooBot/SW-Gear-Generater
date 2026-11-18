@@ -3,8 +3,9 @@
 The script is `probe/f2_demonstration.py`. It is the SolidWorks part of PLAN-PRINTED §3.3's *Done when* ("the
 demonstration has run on 2026 and on 2024, every section clean, and been reviewed"), and it takes in the six things
 F2-PROBES-REVIEW §4 says the probe did not show. **It has not run yet.** It was written on Linux against branch
-`printed` at `ac83420` (the findings set in `ae42722`; B's review fixes `dcefc9d`, `4b34f59`; C's `2cc34d9`), every
-sentence held to the app's own code there; its self-check passes there (31 checks, 0 failed). Expect script faults on
+`printed` at `ac83420` (the findings set in `ae42722`; B's review fixes `dcefc9d`, `4b34f59`; C's `2cc34d9`) and brought
+to its review (`F2-DEMONSTRATION-REVIEW.md`, `0d1dfee`) and to the app's answers to it (B's `888035a`, C's `567773c` and
+`5e45718`), every sentence held to the app's own code at `5e45718`; its self-check passes there (35 checks, 0 failed). Expect script faults on
 its first live run, as every demonstration had.
 
 **How it works.** It runs W9a's `main` with its own five sections, as F1's script does, and changes no other script. From
@@ -20,7 +21,8 @@ close path, put in only when the flag is given. Two things are its own:
   `_folder` themselves. Only the worker each hands its job to is the script's (`Strand`): the job runs on this run's
   worker under W9a's watch, as an app job under the What's Wrong rule, and its answer is handed back for the app's own
   finish. The self-check holds DeskP to the window's source: every attribute those seven methods read on the window or
-  its strip is one DeskP has.
+  its strip is one that DeskP, W9a's Desk9 or W8's Desk gives, each read from its own source (DeskP is not importable
+  off Windows), and it shows the check failing without DeskP's body.
 - **Every SolidWorks call a press's job makes is counted by member** (a wrapper over W9a's counted `swcom.call`, on
   only while a press's job runs). That is how "nothing opened or activated" is read, not assumed.
 
@@ -61,11 +63,11 @@ first Update 2.7 min on 2026 and 5 on 2024).
 |---|---|---|---|
 | `gates` | The findings as they stand; a coupon and the 12 : 1's workbook; Print files on both as they stand, then with each gate patched shut in this process; the job's own gate. | 2 min | 3 min |
 | `form` | Coupon_A built by the form and pressed twice; a printed helical and a printed herringbone, each built and pressed. | 4 min | 6 min |
-| `workbook` | The printed 12 : 1 (built here first if no master: 1.5 min more); five presses from the window and the changes between them. | 6 min | 9 min |
-| `refusals` | The form's refusals on Coupon_R; the window's on a copy of the printed 12 : 1, with a quiet Update and a value Update; the user's pair built. | 9 min | 14 min |
-| `userwork` | RangeBox copied; a press as built; Printed typed, one Update; a press before and one after the save; the user's work read before and after. | 8 min | 14 min |
+| `workbook` | The printed 12 : 1 (built here first if no master: 1.5 min more); six presses from the window and the changes between them. | 7 min | 10 min |
+| `refusals` | The form's refusals on Coupon_R and its Update values; the window's on a copy of the printed 12 : 1, with a quiet Update and a value Update; the user's pair built. | 10 min | 15 min |
+| `userwork` | RangeBox copied; a press as built; Printed typed, a press, one Update; a press before and one after the save; the user's work read before and after. | 8 min | 14 min |
 
-About 30 minutes on 2026 and 45 on 2024, more than the plan's 15 and 25: the plan's two sections are here five, and the
+About 31 minutes on 2026 and 48 on 2024, more than the plan's 15 and 25: the plan's two sections are here five, and the
 probe review's six points, the refusals word for word and the user's work are each made and read.
 
 ### gates: what each line bears out
@@ -114,10 +116,11 @@ with the user's Housing open behind:
   - **the calls**: one SaveAs and nothing that opens, activates, closes or saves.
 - **A second press of the coupon** makes a second folder, the first untouched, and its file is the same part as the
   first's by its vertices (one to one within 1e-4 mm, the probe's tolerance).
-- **The herringbone**: its file is judged structurally by the script and its size reading is a **fact** for the
-  reviewer (radius and extent against d_a / 2 and the face). Since `ae42722` the app skips its size check
-  (*size not checked (a herringbone, not yet measured)*), which the list must say; if the app ever checks it, the
-  script holds the app's verdict to its own reading.
+- **The herringbone**: its file is judged structurally by the script, and its size reading gets a **verdict**, logged as
+  a NOTE and kept in the JSON (*holds* or *does not hold* against d_a / 2 and the face to 0.01 mm), for the ruling on
+  `"herringbone"` in `printout.EXTENT_SKIPPED`. Since `ae42722` the app skips its size check (*size not checked (a
+  herringbone, not yet measured)*), which the list must say; if the app ever checks it, the script holds the app's
+  verdict to its own reading.
 
 ### workbook: what each line bears out
 
@@ -137,7 +140,9 @@ user's Housing active:
     Visible False): **GLOBALS_DIFFER**, C's words with *"Face Width" is 16 where its record says 15*. The positive
     reading is the clean press before (the same reads finding nothing). Put back, saved, closed.
   - G1 open in its own window behind the user's part, Face Width 16, not saved (read: Visible True, flag on, not
-    active): **MODIFIED**; then saved: **GLOBALS_DIFFER** on a part in its own window but not active. Put back.
+    active): **MODIFIED**; then saved: **GLOBALS_DIFFER** on a part in its own window but not active. Put back, saved,
+    its window left open: a clean press writes the set with G1 open behind the user's part, by its object, nothing
+    activated (four SaveAs alone; the review's nit on point 3). G1's window closed after.
   - Each refusal: nothing written, SolidWorks' documents as they were (G1's flag stays on), and the job called
     nothing that opens, activates, saves or writes.
   - The feature-error read off a part not active is in `refusals` (FEATURE_IN_ERROR on G1, not active); its positive
@@ -146,6 +151,8 @@ user's Housing active:
   documents closed, the user's part alone open: four written, the calls four OpenDoc6, four CloseDoc and four SaveAs
   (ActivateDoc3 any number: each open activates, the end puts the user's back); after, nothing of the copy open and
   the user's part active, its flag as it was.
+- **Every component resolved** is read on the assembly's own components by name (the four gears and the layout): a
+  read of none, or of others, fails.
 - **The open-beside fallback, where the job takes it.** With the findings as set the job never takes it for a found
   component (`STEP_EXPORT_FROM_COMPONENT` True). So `STEP_EXPORT_FROM_COMPONENT_ON_<year>` is patched False **in this
   process only**, said, put back after, and the press made with the assembly open: each component opened beside it
@@ -158,23 +165,28 @@ Each refusal is a state made as a person makes it, then the press: **C's words e
 SolidWorks file changed, SolidWorks' documents as they were with the user's document active (where it is), and for a
 refusal in the job, no call that opens, activates, saves or writes; for one at planning, nothing submitted.
 
-- **The form, on Coupon_R**: Face Width 9, not saved: **MODIFIED**; saved: **GLOBALS_DIFFER**; put back. The user's
-  keyway cut in the coupon (W9a's `keyway`) and saved: the press **writes**, the size fact *skipped: user features*
-  from the job's own live read of the part (no record lists it), the list saying *size not checked (your features in
-  it)*. If the list does not name the keyway, a NOTE: a form part has no inventory, so the list names none. An Output
+- **The form, on Coupon_R**: Face Width 9, not saved: **MODIFIED**; saved: **GLOBALS_DIFFER**; then the form's own
+  **Update values** (its record loaded by the build's finish) sets it back and rebuilds, the person saves, and a press
+  **writes** a folder of its own (§3.3's "after Update values"). The user's keyway cut in the coupon (W9a's `keyway`)
+  and saved: the press **writes**, the size fact *skipped: user features* from the job's own live read (no record lists
+  it), the list saying *size not checked (your features in it)* and naming the user's features as the script reads them
+  in the part (*Your features left in it: User Keyway.*; the keyway's sketch beside it where SolidWorks keeps it
+  top-level), since `5e45718` names a written part's features from the job's live read. An Output
   folder that does not exist: **NO_FOLDER** (the folder as the app shortens it), nothing made. The user's Sprocket
   (no `.gear.json`) active: **NO_RECORD**.
 - **The window, on a copy of the printed 12 : 1**, the assembly open, the user's part active:
-  - G4's component set lightweight (W9a's `set_state` route): **LIGHTWEIGHT**, *with Reducer_12to1 open, OutputGear may
-    be a lightweight component of it …* — true here; after the press the component still reads lightweight and the
+  - G4's component set lightweight (W9a's `set_state` route): **LIGHTWEIGHT**, *OutputGear is not open where Print
+    files can reach it while Reducer_12to1 is open: it may be a lightweight or suppressed component of it, or simply
+    closed; …* (C's words since `567773c`); after the press the component still reads lightweight and the
     assembly's flag is unchanged. Resolved again.
   - **G4's component suppressed: a fact, not pinned.** If SolidWorks drops the part, the app meets it with the same
-    LIGHTWEIGHT words, which are untrue of a suppressed component, and the words are held exact; if SolidWorks keeps the
+    LIGHTWEIGHT words, which name that case, held exact; if SolidWorks keeps the
     part loaded, the app writes the set, judged whole. The log says which. Resolved; the copy closed unsaved and opened
     again.
   - The user's keyway in G1's part, saved, a **quiet Update** records it (W9a's k3 route): the press **writes** the
-    set, G1's size *skipped: user features*, its list block *Your features left in it: User Keyway.*, the others
-    checked.
+    set, G1's size *skipped: user features*, its list block naming the user's features the script reads in G1's part
+    (the record's inventory is checked to hold the User Keyway; the review's M1: the sketch may be listed beside it),
+    the others checked.
   - G4's Flank typed *arcs* in Excel (a change Update cannot carry: G4's part made new, as W9d's Sun): **NEW_REVISION**
     naming OutputGear; the cell cleared, Update plans nothing again.
   - G1's Bore typed 14 in Excel: **CHANGES_ON_UPDATE** naming G1's part.
@@ -183,13 +195,13 @@ refusal in the job, no call that opens, activates, saves or writes; for one at p
   - Saved as the person saves: G1's features read without activating it (User Keyway in error):
     **FEATURE_IN_ERROR**, the features named as the script read them, G1 not active.
   - The copy closed, the user's own pair (25 / 50 at module 1.5, machined, built by the app's pair route into
-    `refusals-pair`) open and active: **LIGHTWEIGHT** naming all four parts *with Pair_m1.5_25T_50T open …* — untrue:
-    they are closed and in no assembly. Then the form pressed with that assembly active: **NOT_A_PART**, without the
-    assembly's name (the form hands the planner no path for a document that is not a part).
-- **The LIGHTWEIGHT sentence** says the parts *may be* lightweight components of the open assembly. The job does not
-  read component states (F2-PROBES-REVIEW §3.3): it refuses every part not found while any assembly is open. So the
-  sentence is untrue for a closed part with an unrelated assembly open, and for a suppressed component; the section
-  shows the first always and the second as SolidWorks has it.
+    `refusals-pair`) open and active: **LIGHTWEIGHT** naming all four parts *… while Pair_m1.5_25T_50T is open: they may
+    be lightweight or suppressed components of it, or simply closed …*: they are simply closed. Then the form pressed
+    with that assembly active: **NOT_A_PART** naming it (*… and Pair_m1.5_25T_50T.SLDASM is not a part …*, since
+    `567773c`).
+- **The LIGHTWEIGHT sentence.** The job does not read component states (F2-PROBES-REVIEW §3.3): it refuses every part
+  not found while any assembly is open. Since `567773c` the sentence names all three cases it stands for (lightweight,
+  suppressed, simply closed); the section shows the first and third always and the second as SolidWorks has it.
 
 ### userwork: what each line bears out
 
@@ -201,12 +213,15 @@ On a copy of W9a's setup.master, RangeBox opened (the user's own document, activ
   Dog_m1.25_N17, Sleeve_m1.25_N17), the list *Process: Machined*, each block *Machined: … no span.*, the counts from
   the workbook's Copies (Planet 3, the dogs 2), Sun's size skipped for the user's feature, the ring's, dog's and
   sleeve's skipped by kind, the Planet's checked (radius 9.375, face 10).
-- **Printed typed** on the Box sheet in Excel (F1's way: a row labelled Process), Update plans the five parts in place,
-  one Update SolidWorks (W9a's `press`), ok, nothing of the user's in error.
+- **Printed typed** on the Box sheet in Excel (F1's way: a row labelled Process), Update plans the five parts in place;
+  **Print files: CHANGES_ON_UPDATE** naming the five, nothing submitted (the review's S4: the plan's whole sequence,
+  edited, refused, updated unsaved, refused, saved, written, on one gearbox); one Update SolidWorks (W9a's `press`), ok,
+  nothing of the user's in error.
 - **Before the save**: the record marks the five parts unsaved: **UNSAVED_MARK** naming all five.
 - **Saved as the person saves; the press**: the five written and nothing else in the folder (no Sprocket or Housing
   file); the list printed, Sun's and the Planet's spans (k 4, 13.1414; k 2, 5.4809), the ring's and sleeve's *over
-  pins*, Sun's block *Your features left in it: User Keyway.* with *size not checked (your features in it)*; nothing
+  pins*, Sun's block naming the user's features the script reads in Sun's part (the User Keyway; the as-built press
+  likewise) with *size not checked (your features in it)*, and no such line in the other four; nothing
   saved (every SolidWorks file of the copy by sha256), the record file unchanged, the user's part files unchanged,
   every document, flag and window as before with RangeBox active; after, the user's components, the eight mates'
   entities and the keyway's code as before.
@@ -241,8 +256,8 @@ A What's Wrong is expected only in `refusals` on 2024: the Update that rebuilds 
 
 ## Without SolidWorks
 
-`python probe/f2_demonstration.py --self-check` (from the worktree, `PYTHONPATH=src`): **31 checks, 0 failed** at
-`ac83420`. Each judgement the live sections make is a plain function, held on the app's own figures and failed each way
+`python probe/f2_demonstration.py --self-check` (from the worktree, `PYTHONPATH=src`): **35 checks, 0 failed** at
+`5e45718`. Each judgement the live sections make is a plain function, held on the app's own figures and failed each way
 it can fail:
 
 - **C's words**: the script's copy of each refusal it expects (22, singular and plural, NEW_REVISION and NO_FOLDER
@@ -258,18 +273,21 @@ it can fail:
 - **The vertices**, **the press folder** (its name and time; one new folder, none, two, an earlier one changed or
   removed), **SolidWorks' documents** (the active one, a flag, one opened, closed or renamed, a window, an empty read,
   the user's gone), **the calls**, **the list** (a part missing, a count, the span 0.002 off, the size said otherwise, a
-  feature not named, DO NOT PRINT, another name, nothing expected, the settings twice), **the findings** (each of the six
+  feature not named, a feature named where none is expected, DO NOT PRINT, another name, nothing expected, the settings
+  twice; and C's machined and ring blocks as userwork expects them, a machined list read as printed failing), **the
+  herringbone's verdict** (radius off, face off, no vertex), **the components resolved** (none read, others read, one
+  lightweight, nothing expected), **the findings** (each of the six
   unset, 1 for True, the probe's prose for Visible) and **the gate** (the script's reading equal to `printout.gate`'s
   code, detail and words in four states, connected and not).
 - **The planners on the app's own fixtures**: W9's 12 : 1 with Printed plans the four parts named, printed; on W9's
   record of RangeBox (as built) the window's planner gives the five parts with the rows and counts the script works
   from the Copies, and the size check skipped as the script expects.
 - **The window**, read as source: every attribute `press_print` and the methods it reaches read on the window or its
-  strip is one DeskP gives.
+  strip is one DeskP, Desk9 or W8's Desk gives, read from their sources; without DeskP's body the check fails.
 - **The strip's own form** (Tk): Coupon_A's span row drawn; its record written by the form's `_write_sidecar`; pressed
   with SAVE_AS_COPY None (GATE_COPY, nothing submitted, no bar line), STEP_EXPORT_ON_2026 None (GATE by year), the gate
   open (the bar names the file, one job submitted, its answer finished by the form's own `_collect_build`: C's status
-  and the list written into the folder), no `.gear.json` (NO_RECORD) and an assembly active (NOT_A_PART).
+  and the list written into the folder), no `.gear.json` (NO_RECORD) and an assembly active (NOT_A_PART, naming it).
 
 **Rehearsed offline, not committed**: the live part imported on Linux with pywin32, PIL and the rest stood in (every
 name it takes from W9a and W8 found), and DeskP pressed on the printed 12 : 1's workbook written by the app into a
@@ -310,7 +328,7 @@ the snapshot first, start SolidWorks for the run and give its PID. One `RUN\out`
 log.
 
 ```
-rem SolidWorks 2026: all five in one invocation (about 30 min)
+rem SolidWorks 2026: all five in one invocation (about 31 min)
 python.exe RUN\snap\probe\f2_demonstration.py RUN\snap\src RUN\out --pid PID --log RUN\f2-demo-sw2026-1.log ^
     --sections gates,form,workbook,refusals,userwork ^
     --user-master <probe folder>\w9a-final-sw2026-20261117-023433\out\setup.master
@@ -320,7 +338,7 @@ python.exe RUN24\snap\probe\f2_demonstration.py RUN24\snap\src RUN24\out --pid P
     --sections userwork --close-outlived-whats-wrong ^
     --user-master <probe folder>\w9a-confirm-sw2024-20261117-002313\out\setup.master
 
-rem then the rest, in a fresh session (SolidWorks 2024 grows by 3 to 7 GB over a RangeBox Update; about 32 min)
+rem then the rest, in a fresh session (SolidWorks 2024 grows by 3 to 7 GB over a RangeBox Update; about 34 min)
 python.exe RUN24\snap\probe\f2_demonstration.py RUN24\snap\src RUN24\out --pid PID --log RUN24\f2-demo-sw2024-2.log ^
     --sections gates,form,workbook,refusals --close-outlived-whats-wrong
 ```
@@ -338,6 +356,8 @@ userwork), what the suppressed component met (refusals).
 
 ## For the reviewer
 
-The points to look at hardest are in the coordinator's report for this commit; in short: DeskP's restatements (none
-but the worker), `refused` and `written` as the only judges of a press, the calls expected per way, the suppressed
-component left a fact, and NEW_REVISION's G4 Flank edit (expected to name OutputGear alone, as W9d's Sun was).
+Taken from `F2-DEMONSTRATION-REVIEW.md`: M1, S1 to S6 and the nit, in `2e5f7f5` and the commit after it. The points to
+look at hardest: DeskP's restatements (none but the worker), `refused` and `written` as the only judges of a press,
+the calls expected per way, the suppressed component left a fact, NEW_REVISION's G4 Flank edit (expected to name
+OutputGear alone, as W9d's Sun was), and the user's features in a written part's list read by the script as the
+features named User… (every feature of the user's here is W9a's keyway).

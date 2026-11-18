@@ -555,10 +555,10 @@ def list_judged(text, name, expected, process="Process: Printed, 0.4 mm nozzle")
         checked = next((x for x in got if x.startswith("  Checked: one closed solid")), None)
         if checked is None or not checked.endswith(tail):
             out.append(f"{file_}: its check line is {checked!r}, not ending {tail!r}")
-        if want.get("features"):
-            line = f"  Your features left in it: {names(want['features'])}."
-            if line not in got:
-                out.append(f"{file_}: no line {line!r}")
+        said = [x for x in got if x.startswith("  Your features left in it:")]
+        line = f"  Your features left in it: {names(want.get('features') or ())}."
+        if (said != [line]) if want.get("features") else said:
+            out.append(f"{file_}: the user's features said {said}, not {[line] if want.get('features') else 'none'}")
     return out
 
 
@@ -1050,7 +1050,12 @@ def _self_check(ok, scratch):
        and list_judged(text, "Coupon_A", {"Coupon_A.step": dict(want["Coupon_A.step"], features=("User Keyway",))}) != []
        and list_judged(ui_text.print_list_text(plan, failed, "0.9"), "Coupon_A", want) != []
        and list_judged(text, "Coupon_B", want) != [] and list_judged(text, "Coupon_A", {}) != []
-       and list_judged(text + "\n" + text, "Coupon_A", want) != [],
+       and list_judged(text + "\n" + text, "Coupon_A", want) != []
+       and list_judged(ui_text.print_list_text(plan, dataclasses.replace(result, live_features=(
+           (coupon_part.path, ("User Keyway",)),)), "0.9"), "Coupon_A", want) != []
+       and list_judged(ui_text.print_list_text(plan, dataclasses.replace(result, live_features=(
+           (coupon_part.path, ("User Keyway",)),)), "0.9"), "Coupon_A",
+           {"Coupon_A.step": dict(want["Coupon_A.step"], features=("User Keyway",), size="checked")}) == [],
        "list: a part missing, a count off, the span 0.002 off, the size check said otherwise, a feature not named, a "
        "set headed DO NOT PRINT, another name, nothing expected and the settings twice each fail")
 
@@ -1070,7 +1075,8 @@ def _self_check(ok, scratch):
     mplan = po.PrintPlan(None, (po.print_part("C:\\a\\Gear_m1.25_N29.SLDPRT", sun.to_dict(), rows=("Sun",),
                                               user_features=("User Keyway",)),), folder="F", name="RangeBox", pressed=now)
     mres = po.PrintResult(written=(("C:\\a\\Gear_m1.25_N29.SLDPRT", "F\\Gear_m1.25_N29.step"),), folder="F",
-                          facts={"Gear_m1.25_N29.step|extent": "skipped: user features"}, active_restored=True)
+                          facts={"Gear_m1.25_N29.step|extent": "skipped: user features"}, active_restored=True,
+                          live_features=(("C:\\a\\Gear_m1.25_N29.SLDPRT", ("User Keyway",)),))
     mwant = {"Gear_m1.25_N29.step": {"rows": ("Sun",), "count": 1, "span": MACHINED_SPAN, "size": "skipped: user features",
                                      "features": ("User Keyway",)}}
     rplan2 = po.PrintPlan(None, (po.print_part("C:\\a\\Ring.SLDPRT", ring.to_dict(), rows=("Ring",)),), folder="F",
@@ -1506,6 +1512,14 @@ def features_of(label, path):
             return None
         return [(f.name, f.code, f.warning) for f in s.feature_states()]
     return run(label, work)
+
+
+def user_features_read(label, path):
+    """The user's features in a part as this script reads them: the top-level features named User… (every feature of
+    the user's here is W9a's keyway, "User Keyway", and its sketch where SolidWorks keeps it top-level; no app feature
+    is so named), in tree order, read without activation. () when the part is not open."""
+    found = features_of(label, path) or []
+    return tuple(n for n, _, _ in found if str(n).startswith("User "))
 
 
 def read_text(path):
@@ -2221,15 +2235,12 @@ def section_refusals(out):
             "the job's own read of the part")
         A.keyway("refusals, the form: the user's keyway in Coupon_R", coupon)
         save_one("refusals, the form: Coupon_R saved with the keyway", coupon)
-        k, w = span_expected(1.5, 20)[:2]
-        got = judged_written("refusals, the form: the user's keyway", form("keyway"), folders,
-                             {stem: {"radius": None, "face": 8.0, "extent": "skipped: user features", "rows": (),
-                                     "count": 1, "span": ("span", k, w, False)}}, None,
-                             {"SaveAs": 1, "GetOpenDocumentByName": None}, stem)
-        if got is not None and "User Keyway" not in got["list"]:
-            note("refusals: the print list of a part holding a feature of the user's that is not on any record (the "
-                 "form's) does not name it; the size check is skipped and said, the feature is not (the list names "
-                 "only a record's inventory)")
+        theirs = user_features_read("refusals, the form: Coupon_R's features", coupon)
+        check("User Keyway" in theirs, f"refusals, the form: the script reads the user's keyway in Coupon_R: {theirs}")
+        judged_written("refusals, the form: the user's keyway", form("keyway"), folders,
+                       {stem: {"radius": None, "face": 8.0, "extent": "skipped: user features", "rows": (), "count": 1,
+                               "span": ("span", k, w, False), "features": theirs}}, None,
+                       {"SaveAs": 1, "GetOpenDocumentByName": None}, stem)
         say("-- refusals  the form: an Output folder that does not exist")
         missing = os.path.join(folder, "no such folder")
         app.out_folder.set(missing)
@@ -2309,8 +2320,9 @@ def section_refusals(out):
         listed = [(f.name, file_of(f.path)) for f in (work.features if work else [])]
         check(quiet is not None and ("User Keyway", file_of(g1)) in listed,
               f"refusals: the record lists the User Keyway in G1's part: {listed}")
-        # The names the list gives are the record's (W9a allows its inventory the keyway's sketch beside the keyway).
-        g1_features = tuple(dict.fromkeys(n for n, f in listed if f == file_of(g1)))
+        # The names the list gives are those the job reads live in the part written (5e45718), which may hold the
+        # keyway's sketch beside it, as W9a allows the inventory: this script reads them itself.
+        g1_features = user_features_read("refusals: G1's features as written", g1)
         activate("refusals", user)
         judged_written("refusals, the window: the set with the user's keyway", window("keyway on record"), folders,
                        reducer_expect(desk, sizes={"G1": "skipped: user features"}, features={"G1": g1_features}),
@@ -2387,7 +2399,7 @@ def box_process_row(book):
     return found, empty
 
 
-def rangebox_expect(desk, process):
+def rangebox_expect(desk, process, live=None):
     """RangeBox's five parts as a press writes them, worked here: rows and counts from the workbook's Gears and Shafts
     (Copies), the size check as ruled, the span (§3.0's rows for Sun and Planet, pins for the ring and the sleeve,
     none for a machined part), the user's features from the record's inventory."""
@@ -2413,8 +2425,9 @@ def rangebox_expect(desk, process):
         planet = stem == "Gear_m1.25_N13"
         out[stem] = {"path": e.path, "radius": outer_radius(1.25, 13) if planet else None, "face": 10.0,
                      "extent": size, "rows": rows, "count": sum(copies_of(spec, r) for r in rows), "span": span,
-                     "features": tuple(dict.fromkeys(f.name for f in (work.features if work else [])
-                                                     if store.same_path(f.path, e.path)))}
+                     "features": (live.get(stem, ()) if live is not None else
+                                  tuple(dict.fromkeys(f.name for f in (work.features if work else [])
+                                                      if store.same_path(f.path, e.path))))}
     return out
 
 
@@ -2460,8 +2473,13 @@ def section_userwork(out):
         def window(tag):
             return lambda: window_press(desk, f"userwork: {tag}")
         say("-- userwork  Print files as built: every part Machined (E4), exported")
-        judged_written("userwork: as built, Machined", window("as built"), folders, rangebox_expect(desk, "machined"),
-                       uk, calls, name, process="Process: Machined")
+        live = {stem_of(e.path): user_features_read(f"userwork: {stem_of(e.path)}'s features", e.path)
+                for e in desk.record.current_parts()}
+        check("User Keyway" in live.get("Gear_m1.25_N29", ()) and not any(v for s, v in live.items()
+                                                                          if s != "Gear_m1.25_N29"),
+              f"userwork: the script reads the user's features in the five parts, the User Keyway in Sun's alone: {live}")
+        judged_written("userwork: as built, Machined", window("as built"), folders,
+                       rangebox_expect(desk, "machined", live), uk, calls, name, process="Process: Machined")
 
         say("-- userwork  Printed typed on the Box sheet in Excel, in a row labelled Process; one Update SolidWorks")
         found, empty = box_process_row(book)
@@ -2496,11 +2514,10 @@ def section_userwork(out):
         activate("userwork", asm)
         record_file = store.link_record_path(path)
         record_before = sha(record_file)
-        expect = rangebox_expect(desk, "printed")
-        check(expect["Gear_m1.25_N29"]["extent"] == "skipped: user features"
-              and "User Keyway" in expect["Gear_m1.25_N29"]["features"],
-              f"userwork: the record's inventory holds the User Keyway in Sun's part: "
-              f"{expect['Gear_m1.25_N29']['features']}")
+        expect = rangebox_expect(desk, "printed", live)
+        listed = rangebox_expect(desk, "printed")["Gear_m1.25_N29"]["features"]
+        check(expect["Gear_m1.25_N29"]["extent"] == "skipped: user features" and "User Keyway" in listed,
+              f"userwork: the record's inventory holds the User Keyway in Sun's part: {listed}")
         user_files = {u: sha(os.path.join(copy, u)) for u in ("Sprocket.SLDPRT", "Housing.SLDPRT")
                       if os.path.isfile(os.path.join(copy, u))}
         got = judged_written("userwork: Printed, saved", window("saved"), folders, expect, uk, calls, name)
