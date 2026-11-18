@@ -1371,3 +1371,44 @@ changes no setting and refuses for none; the sentences tell the user to close it
 7. The handoff: the 2024 memory advice and the interference-volume caveat (addendum §4); the stale "W9c at the
    session's close" bullet with runs 10, 11, the 2024 run and this one as the evidence; item 10 and the phase table.
 8. The whole suite at the commit that closes W9c, with the known font-width failure only.
+
+### Re-check of `5de0290`, `7d96316`, `746595a`, `67ee901` and `f3c4873` (2026-11-18)
+
+*At `f3c4873`. I started no SolidWorks, changed no code and did not run the whole suite. Targeted tests (`test_ui_text`,
+`test_workbook_user_record`, `test_workbook_in_place_round_trip`, `test_findings`; 105 selected, all passed), the
+W9c and W9d self-checks (0 failed each) and the mutations below were run in a scratch copy, deleted after.*
+
+**Verdict: fit, no must-fix.** Three should-fixes follow.
+
+- **The sentences are where they should be:**
+  - `WHATS_WRONG_AHEAD` is now said only where `whats_wrong_stays` (shows and stays) is True. That is right, since
+    the sentence now says the box stays if the Update stops before a rebuild. On a version where the box shows but
+    staying is unmeasured, nothing is said, which is the honest default.
+  - `WHATS_WRONG_NEXT` comes only in a stop that leaves a part in error, and `WHATS_WRONG_AFTER` is then withheld.
+  - `WHATS_WRONG_STAYS` follows the still-in-error sentence, and `NEXT` is then removed in either number.
+  - The plurals ("those parts", "the parts left in error") change only the noun.
+- **Should-fix 1, my own over-reach (`ui_text.py:1894-1899`).** I asked for `STAYS` in all three forms of
+  `gearbox_update_status`, and the code does that. It is measured only for the held-in-error stop alone (24-5:433-443),
+  and it is likely in the "already matches" form, a press that rebuilt nothing. In the form where the press went on
+  and changed things (`f"{text} {said}"` after a rebuild), every box measured went while SolidWorks rebuilt. "It does
+  not close by itself" is then unsupported. Say `STAYS` only where the press stopped before rebuilding the assembly,
+  or reword it there to "if it is still showing, close it with its Close button".
+- **The pins pin, but one does not.**
+  - These mutations each failed the tests: the finding set None on 2024 (7 failed) or True on 2026, the `STAYS` words,
+    `AHEAD` gated on `shows` again, `AFTER` allowed beside `NEXT`, and the plural turned off.
+  - *Should-fix 2 (`tests/test_ui_text.py:3861`):* deleting the removal of `NEXT` (`ui_text.py:1898-1899`) leaves
+    every test passing. The test checks only the singular `WHATS_WRONG_NEXT`, while that stop names two parts and
+    says the plural. Assert that neither `whats_wrong_next_sentence(1)` nor `(2)` is in the text.
+- **The fact-not-fail rule is as narrow as ruled** (`marked_at_first_activation`):
+  - it requires the record's assembly to go False to True, as the only save flag that changed, with no changing call
+    traced and every file time equal;
+  - the rest of the result is still judged with that flag set aside;
+  - the self-check covers each way it is not the mark.
+  - *Should-fix 3 (low, `probe/w9c_demonstration.py`, the fact line in `remake_first_press`):* the rule takes no
+    version, as ruled, but its line says "a fact of SolidWorks 2024". If the 2026 `remake-m3` run now in progress
+    meets the same flip, the line will name the wrong version. Say the attached version. `beyond_step_1`'s docstring
+    still gives run 11's premise.
+- **W9d is unchanged without the flag:** `close_path_asked(A.ARGS)` is False, and nothing else in `main` moved.
+  - With the flag it calls W9c's own `close_outlived_on`: the same hook, the same refusals and the same two presses.
+  - Its jobs (builds, Build again, its reads, W8's helpers) are all ruled jobs W9c's path already met by kind. So it
+    can do nothing W9c's could not, beyond meeting boxes in W9d's own jobs, which the extended ruling allows.
