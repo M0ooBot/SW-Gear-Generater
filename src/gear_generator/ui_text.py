@@ -6725,16 +6725,20 @@ def print_refusal(refusal: "Refusal") -> str:
                 ways.append("make it active, or close it" if len(stems) == 1 else "close them")
         return f"Print files wrote nothing: {'; '.join(said)}; {' or '.join(dict.fromkeys(ways))}, then print."
     if code == getattr(po, "LIGHTWEIGHT", "LIGHTWEIGHT"):
-        # B's job cannot tell a lightweight component from a part not loaded while an assembly is open, so the
-        # sentence is true of both: it "may be" lightweight, and opening the part itself clears either.
+        # B's job cannot tell a lightweight or suppressed component from a part simply closed while an assembly is open
+        # (F2-DEMONSTRATION-REVIEW §6.3), so the sentence says only what holds in every case: the part is not open where
+        # Print files can reach it, and it may be any of the three; opening the part itself clears each.
         inside = {}
         for stem in parts:
             inside.setdefault(_stem(str(detail.get(stem, ""))), []).append(stem)
         said = []
         for assembly, stems in inside.items():
-            opened = f"with {assembly} open" if assembly else "with an assembly open"
-            what = "a lightweight component" if len(stems) == 1 else "lightweight components"
-            said.append(f"{opened}, {_and(stems)} may be {what} of it")
+            opened = f"{assembly} is open" if assembly else "an assembly is open"
+            one = len(stems) == 1
+            what = "a lightweight or suppressed component" if one else "lightweight or suppressed components"
+            said.append(f"{_and(stems)} {'is' if one else 'are'} not open where Print files can reach "
+                        f"{'it' if one else 'them'} while {opened}: {'it' if one else 'they'} may be {what} of it, "
+                        "or simply closed")
         every = [s for stems in inside.values() for s in stems]
         itself = "the part itself" if len(every) == 1 else "the parts themselves"
         return (f"Print files wrote nothing: {'; '.join(said)}; resolve {_pr_them(every)} there, or open {itself}, "

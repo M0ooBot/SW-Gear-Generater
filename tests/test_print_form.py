@@ -195,6 +195,23 @@ def test_while_the_findings_are_unset_a_press_is_refused_by_name_and_nothing_is_
     assert app.print_line.get() == "" and not shown(app.print_label)
 
 
+def test_an_active_assembly_is_named_when_print_files_refuses_it(app, desk, tmp_path):
+    """F2-DEMONSTRATION-REVIEW §6.2: the form hands B's planner whatever is active, so NOT_A_PART names an assembly;
+    its record is read only for a part."""
+    app._worker = desk.worker
+    app.out_folder.set(str(tmp_path))
+    app._snapshot = {"key": (1, "Pair.SLDASM", str(tmp_path / "Pair.SLDASM")), "path": str(tmp_path / "Pair.SLDASM"),
+                     "is_part": False, "title": "Pair.SLDASM", "revision": (34, 1, 1)}
+    app._print_files()
+    assert app.status.get() == ("Print files prints the part active in SolidWorks, and Pair.SLDASM is not a part: make "
+                                "a gear part active there; nothing was written.")
+    app._snapshot = {"key": (1, "", ""), "path": "", "is_part": False, "title": "", "revision": (34, 1, 1)}
+    app._print_files()
+    assert app.status.get() == ("Print files prints the part active in SolidWorks: make a gear part active there; "
+                                "nothing was written.")
+    assert desk.worker.calls == []
+
+
 def test_the_snapshot_carries_the_revision_for_the_gate():
     from gear_generator import gui
 

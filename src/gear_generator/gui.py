@@ -1382,8 +1382,11 @@ class GearApp(ttk.Frame):
         bar's snapshot names it, with its .gear.json, into the Output folder's print folder, for the version the
         snapshot gives (B's gate)."""
         snapshot = self._snapshot or {}
-        path = snapshot.get("path", "") if snapshot.get("is_part") else ""
-        return printout.form_print(self._active_sidecar(path), path, self.out_folder.get().strip(),
+        # Whatever is active, so B's NOT_A_PART can name an active assembly (F2-DEMONSTRATION-REVIEW §6.2); its
+        # record is read only for a part.
+        path = snapshot.get("path", "") or ""
+        sidecar = self._active_sidecar(path) if snapshot.get("is_part") else None
+        return printout.form_print(sidecar, path, self.out_folder.get().strip(),
                                    tuple(snapshot.get("revision", ()) or ()))
 
     def _refresh_print_line(self) -> None:

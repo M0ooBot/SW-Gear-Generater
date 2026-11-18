@@ -4263,11 +4263,13 @@ REFUSALS = [
      "Print files wrote nothing: Gear_m1.25_N29_P is open in SolidWorks but not as the active document; make it "
      "active, or close it, then print."),
     (po.Refusal(po.LIGHTWEIGHT, ("Gear_m1.25_N29_P",), {"Gear_m1.25_N29_P": "C:\\Box\\RangeBox.SLDASM"}),
-     "Print files wrote nothing: with RangeBox open, Gear_m1.25_N29_P may be a lightweight component of it; resolve "
-     "it there, or open the part itself, then print again."),
+     "Print files wrote nothing: Gear_m1.25_N29_P is not open where Print files can reach it while RangeBox is open: "
+     "it may be a lightweight or suppressed component of it, or simply closed; resolve it there, or open the part "
+     "itself, then print again."),
     (po.Refusal(po.LIGHTWEIGHT, ("A", "B"), {"A": "", "B": ""}),
-     "Print files wrote nothing: with an assembly open, A and B may be lightweight components of it; resolve them "
-     "there, or open the parts themselves, then print again."),
+     "Print files wrote nothing: A and B are not open where Print files can reach them while an assembly is open: "
+     "they may be lightweight or suppressed components of it, or simply closed; resolve them there, or open the parts "
+     "themselves, then print again."),
     (po.Refusal(po.SOLIDWORKS_REFUSED, ("Gear_m1.5_N20_P",),
                 {"file": "C:\\Out\\print\\x\\Gear_m1.5_N20_P.step", "errors": "1", "warnings": "0"}),
      "Print files stopped: SolidWorks would not write Gear_m1.5_N20_P.step (errors 1, warnings 0)."),
