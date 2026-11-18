@@ -23,11 +23,9 @@ Two things are its own, both said in the log:
   form's own `_derive_now`, `_gear_spec` / `_pair_spec`, `_plan_single` / `_plan_pair` and `_finish_single` /
   `_finish_pair` do the rest. Only `_build_gear`'s two lines are restated: the context's job is run on this run's
   worker, and the existing-file check is a check here. The Recent list the form writes goes into the run's APPDATA.
-- **`DeskF1`** is W9a's Desk9 with the Workbook window's own `_assess`, `_blank_process`, `_folder` and
-  `_template`. W8's Desk, which Desk9 inherits, calls `assess` without the window's `blank_process` keyword, so a
-  blank Process reads Printed there. On a W9 master that is every part changed (shown offline: Desk9 reads the W9
-  snapshot Printed with all five parts changing; DeskF1 reads it Machined with nothing to do). See *Found while
-  writing it*.
+- **The Desk reads a blank Process as the window does.** The rangebox section reads the workbook through W9a's
+  Desk9. Its W8 Desk resolves a blank Process by the Workbook window's own `_blank_process` since `e3705a1`. See
+  *Found while writing it*.
 
 The tooth and the turn are measured by the scripts that already measure them, imported and not changed:
 small_pinion_check's `readings`, `expected_volume` and `judge_part` (its `say` and `check` rebound to this run's,
@@ -110,7 +108,7 @@ each part's Backlash global and the interference at two angles.
 - **The Workbook panel's Process line** is *Machined, as built: type Printed beside Process on the Box sheet to print
   it (add a row labelled Process)*.
 - **Nothing is written by the open.** Every `.xlsx`, `.json`, `.SLDPRT` and `.SLDASM` of the copy has the same size,
-  time and sha256 before `DeskF1` reads and after its planning (Excel's lock file aside).
+  time and sha256 before the Desk reads and after its planning (Excel's lock file aside).
 
 **The user's work, before.** W9a's go reads it: the user's components in the copy (`users_in_copy`) and the inventory
 on record. Every mode is shown and read (`read_every`): the eight user mates on as set up, Sprocket-4's distance, and
@@ -247,7 +245,7 @@ figures and failing each way it can fail:
   worker; each of the four spur cases and both pairs plans the names above, with the backlashes above.
 
 **Rehearsed offline, not committed.** Both masters' `RangeBox.xlsx` and records were copied (read-only on the
-masters) into a scratch folder, their paths moved onto it, and read through `DeskF1` with pywin32 stood in. On each
+masters) into a scratch folder, their paths moved onto it, and read through a Desk with the window's `_blank_process` (as W8's Desk now has it), pywin32 stood in. On each
 master:
 
 - *as built* holds; the footer is W9's; the line says to add the row; the read writes nothing;
@@ -258,19 +256,29 @@ master:
 The scratch folder was deleted. A Linux import of the live part with pywin32 stood in found every name it uses in
 W9a's, W8's and the two gear scripts.
 
-## Found while writing it, not changed
+## Found while writing it, and fixed
 
-**W8's `Desk._after_read` assesses without the window's `blank_process`**, so W9a's Desk9 (and W9b's, W9c's and
-W9d's sections through it) reads a workbook with a blank Process as Printed.
+**W8's `Desk._after_read` assessed without the window's `blank_process`.** So W9a's Desk9 read a workbook with a
+blank Process as Printed, and W9b's, W9c's and W9d's sections read it so through Desk9.
 
-- PLAN-PRINTED §2.7 says a W9 demonstration run again with an app at or after F1 needs nothing written into W9's
-  masters. Through the harness that is not so. Any W9 section that copies a master built before F1 (setup, rangebox,
-  reducer, fixed-updated) would plan every part changed to the printed Backlash, and its first press would write
-  them.
-- Fixtures the harness writes itself (`write_fixture`) are built in code and say *machined* on their Box, so they are
-  not affected.
-- This script works round it with `DeskF1`. Fixing `workbook_assembly_check.Desk` is not this package's file. **It is
-  for the coordinator to rule:** fix W8's Desk to call the window's `_assess`, or note it beside the W9 scripts.
+- Through the harness, the claim of PLAN-PRINTED §2.7 did not hold. That section says a W9 demonstration run again
+  with an app at or after F1 needs nothing written into W9's masters.
+- Any W9 section that copies a master built before F1 (setup, rangebox, reducer, fixed-updated) would have planned
+  every part changed to the printed Backlash, and its first press would have written them.
+- Fixtures the harness writes itself (`write_fixture`) are built in code and say *machined* on their Box, so they
+  were not affected.
+
+**The fix.** By the coordinator's ruling, W8's Desk now passes the window's own `_blank_process` (with its
+`_settled`) to `assess` (`e3705a1`).
+
+**Its check.** `probe/workbook_assembly_check.py --self-check`, the script's first self-check, shows it on W9's
+snapshot:
+
+- blank, Machined with no part changed (before the fix it read Printed with all five parts changed);
+- Printed typed, printed;
+- no record, Printed.
+
+This script's own work-round Desk was then removed: Desk9 serves.
 
 ## What the script does not measure
 

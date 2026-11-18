@@ -49,9 +49,9 @@ Everything W9a's script does for a run is done here by running its ``main`` with
 do): the attach by PID and its check, the dialog watch with the What's Wrong rule per version, keep-awake, the JSON
 after every section, APPDATA in the run folder, the guarded close, ``--sections`` and ``--redo``. W9c's
 ``--close-outlived-whats-wrong`` (the coordinator's ruling of 2026-11-18, SolidWorks 2024 only) is W9c's own path,
-put in when the flag is given. The rangebox section reads the workbook through ``DeskF1``: W9a's Desk9 with the
-Workbook window's own ``_assess`` and ``_blank_process`` (W8's Desk assesses without the window's resolution of a blank
-Process, which would read a W9 master Printed). No document title but the run's own is logged.
+put in when the flag is given. The rangebox section reads the workbook through W9a's Desk9, whose W8 Desk resolves a
+blank Process by the Workbook window's own ``_blank_process`` since e3705a1 (before it, a W9 master read Printed). No
+document title but the run's own is logged.
 
 SolidWorks calls: none new to the repo. The parts are built by ``swbuild.build`` and ``build_pair`` and the gearbox
 updated by ``update_gearbox`` as the app does; the reads are W9a's, W9b's (``Session.equations``), small_pinion_check's
@@ -878,50 +878,11 @@ def section_pair(out):
 # -- rangebox -----------------------------------------------------------------------------------------------------------
 
 
-class _Var:
-    def __init__(self, value=""):
-        self.value = value
-
-    def get(self):
-        return self.value
-
-
-_WINDOW = A._WINDOW  # noqa: SLF001
-
-
-class DeskF1(A.Desk9):
-    """W9a's Desk9, reading as the Workbook window reads since F1: its own ``_assess``, which resolves a blank Process
-    by ``_blank_process`` (the record beside the workbook, D11's (B)), in place of W8's Desk's bare ``assess``, whose
-    default reads a blank Printed. ``_folder`` and ``_template`` are the window's too, the strip's Output folder the
-    copy's, as W8's Desk has it."""
-
-    _assess = _WINDOW._assess
-    _blank_process = _WINDOW._blank_process
-    _folder = _WINDOW._folder
-    _template = _WINDOW._template
-
-    def __init__(self, path, worker, strip=""):
-        super().__init__(path, worker, strip)
-        self.app.out_folder = _Var(strip)
-        self.app.part_template = _Var("")
-        self.app.assembly_template = _Var("")
-        self.process_record = ""
-
-    def _after_read(self):
-        """W8's ``Desk._after_read``, the assessment the window's own."""
-        r = self.reading
-        check(r.ok, f"read {os.path.basename(self.path)}: {r.error or 'ok'}")
-        spec = r.spec
-        self.a = self._assess(spec, r.diagnostics)
-        for d in self.a.diagnostics:
-            say(f"        {d.level:7} {d.message}")
-        say(f"        {len(spec.shafts)} shafts · {len(spec.gears)} gears · {len(spec.meshes)} meshes; "
-            f"gate {self.a.lay_out_refusal()!r}; Process as read {spec.box.process!r} at {spec.box.process_cell!r}, "
-            f"resolved {self.a.spec.box.process!r}")
-        self.plan_solidworks()
-
-    def process_line(self):
-        return ui_text.workbook_process_line(self.reading.spec.box, self.a.spec.box, record=self.process_record)
+def process_line(desk):
+    """The Workbook panel's Process line as the window paints it: the Box as read, the Box as assessed, and what the
+    Desk's read of the record (the window's own ``_blank_process``, W8's Desk since e3705a1) found."""
+    return ui_text.workbook_process_line(desk.reading.spec.box, desk.a.spec.box,
+                                         record=getattr(desk, "process_record", ""))
 
 
 def raw_record(workbook):
@@ -992,7 +953,7 @@ def _rangebox(out, folder, path):
     users = A.rb_users()
     say("-- rangebox  the workbook opened as built: read and planned through the window's own path")
     files_open = snapshot(folder)
-    desk = DeskF1(path, CTX["worker"], strip=folder)
+    desk = A.Desk9(path, CTX["worker"], strip=folder)
     desk.read()
     box = desk.record.gearbox if desk.record is not None else None
     check(W.turning(desk) and box is not None and W.under(box.assembly, folder)
@@ -1011,7 +972,7 @@ def _rangebox(out, folder, path):
     wrong = footer_as_built_judged(f.text)
     check(not wrong, f"rangebox, as built: the footer is W9's for a built gearbox with nothing changed, and says "
                      f"nothing of Process: {wrong or 'holds'}")
-    line = desk.process_line()
+    line = process_line(desk)
     say(f"panel   Process: {line}")
     check(line == LINE_AS_BUILT, f"rangebox, as built: the Workbook panel's Process line says to add the row: {line!r}")
     changed = files_changed(files_open, snapshot(folder))
@@ -1049,7 +1010,7 @@ def _rangebox(out, folder, path):
     check(read_box.process == "printed" and read_box.process_cell == f"Box!B{row}" and a.spec.box.process == "printed"
           and not errors, f"rangebox, Printed: the Box reads {read_box.process!r} at {read_box.process_cell!r}, "
                           f"resolved {a.spec.box.process!r}, no error {errors or ''}")
-    line = desk.process_line()
+    line = process_line(desk)
     say(f"panel   Process: {line}")
     check(line == LINE_PRINTED, f"rangebox, Printed: the Process line reads {line!r}")
     entries = desk.record.current_parts()
