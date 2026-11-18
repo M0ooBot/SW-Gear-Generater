@@ -704,8 +704,10 @@ def status_alone(text):
 def beyond_step_1(states, step_1_files):
     """The documents reading modified that step 1 did not change. A fact since run 11 on 34.0.0 (W9C-RUNS-REVIEW.md's
     addendum on the final runs, §2): SolidWorks marks the open assembly modified when a part of it is changed and
-    rebuilt in its own window, so RangeBox.SLDASM reads modified after step 1 though nothing wrote to it. The strict
-    check is the before/after comparison across the press (:func:`wrote_in_press`)."""
+    rebuilt in its own window, so RangeBox.SLDASM reads modified after step 1 though nothing wrote to it. That premise
+    is run 11's: there every read of the flag came after an activation; on 2024 remake-m3's second pass read RangeBox
+    unmarked after step 1 and marked at its first open-and-activate since (W9C-RUNS-REVIEW.md, the review of 1dc9350,
+    §2). The strict check is the before/after comparison across the press (:func:`wrote_in_press`)."""
     return sorted(n for n, f in (states.get("flags") or {}).items() if f and n not in step_1_files)
 
 
@@ -4079,8 +4081,8 @@ def remake_first_press(out):
             if marked_first:
                 say(f"fact    remake-m3, the second pass: SolidWorks marked {asm_file} at the press's first activation "
                     f"since step 1 (False before, True after, the only save flag that changed, no changing call "
-                    f"traced, no file written; the coordinator's ruling of 2026-11-18: a fact of SolidWorks 2024, "
-                    "not a write)")
+                    f"traced, no file written; the coordinator's ruling of 2026-11-18: a fact of SolidWorks {year()} "
+                    f"({W.TAG.get('version')}), not a write)")
             came = [(e.get("seconds"), e.get("call_in_progress")) for e in ww.get("seen", [])]
             gone = [g.get("stayed") for g in ww.get("gone", [])]
             out.update(status=text, result=summary, stopped_again=stopped, wrote=wrote,
