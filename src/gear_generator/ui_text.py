@@ -17,8 +17,8 @@ from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 from .gears import pair as pairs, standards
 from .gears.base import Diagnostic
 from .gears.equations import literal
-from .spec import (MODE_PAIR, NOZZLE_DEFAULT, PROCESS_MACHINED, PROCESS_PRINTED, RECIPE_ARCS, RECIPE_INVOLUTE, GearSpec,
-                   InputError, PairSpec, pair_stems)
+from .spec import (MODE_PAIR, NOZZLE_DEFAULT, PRINTED_STEM_MARK, PROCESS_MACHINED, PROCESS_PRINTED, RECIPE_ARCS,
+                   RECIPE_INVOLUTE, GearSpec, InputError, PairSpec, pair_stems)
 
 RECIPE_WORDS = {RECIPE_INVOLUTE: "involute curve", RECIPE_ARCS: "arc flanks"}
 RECIPE_LABELS = {RECIPE_INVOLUTE: "Involute", RECIPE_ARCS: "Arcs"}
@@ -1943,6 +1943,9 @@ def _kept_name(path: str, spec) -> str:
     except Exception:  # noqa: BLE001 - a spec that does not work out has no name to compare
         return ""
     held = re.sub(r"_r\d+$", "", _stem(path))
+    # F1 (D10): the _P a part built printed is named with is never added or taken away by an Update; said once for the
+    # gearbox (_process_names_kept), not here for each part, so only what else its name says is compared.
+    held, wanted = (s[:-len(PRINTED_STEM_MARK)] if s.endswith(PRINTED_STEM_MARK) else s for s in (held, wanted))
     if held == wanted:
         return ""
     for mark, word in (("N", "{} teeth"), ("m", "module {}")):
@@ -1951,6 +1954,41 @@ def _kept_name(path: str, spec) -> str:
             now_ = "now has" if mark == "N" else "is now"
             return f" (it {now_} {word.format(new.group(1))}; its file keeps its name)"
     return " (its file keeps its name, which no longer says what it holds)"
+
+
+def _process_names_kept(update, result) -> str:
+    """F1 (PLAN-PRINTED D10): once for the gearbox, when this Update changed the Process of default-named parts, so
+    that their file names no longer carry, or still carry, the _P a part built printed is named with. An Update never
+    renames a file, and Build again… makes parts named for their Process. ``""`` when there are none."""
+    import re
+    now: Dict[bool, List[str]] = {True: [], False: []}
+    for index, part in enumerate(getattr(result, "parts", ()) or ()):
+        planned = update.parts[index] if index < len(update.parts) else None
+        spec = getattr(planned, "spec", None)
+        if not part.changed or planned is None or spec is None or str(getattr(spec, "name", "")).strip():
+            continue
+        named = re.sub(r"_r\d+$", "", _stem(planned.path)).endswith(PRINTED_STEM_MARK)
+        if spec.is_printed() != named:
+            now[spec.is_printed()].append(_stem(planned.path))
+    out = []
+    for printed, names in now.items():
+        if not names:
+            continue
+        what = "printed" if printed else "machined"
+        if len(names) == 1:
+            subject = f"{names[0]}, now {what}, keeps its file name"
+            parts = "a new part"
+        else:
+            subject = f"The {len(names)} parts now {what} keep their file names"
+            parts = "new parts"
+        if printed:
+            out.append(f"{subject}, without the _P a part built printed is named with: Update SolidWorks never renames "
+                       f"a file, and Build again… makes {parts} named with _P if you want the mark.")
+        else:
+            out.append(f"{subject}, with the _P {'it was' if len(names) == 1 else 'they were'} built printed with: "
+                       f"Update SolidWorks never renames a file, and Build again… makes {parts} named without it if "
+                       "you want.")
+    return " ".join(out)
 
 
 def _layout_shafts(names: Sequence[str]) -> List[str]:
@@ -2211,6 +2249,8 @@ def _gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshe
     # W9a: what it did with and found of the user's work, after the assembly's rebuild laid to that work alone.
     after = after + _rebuild_from_user(update, result) + _user_after(update, result)
     after = after + in_place_after(update, result)                   # W9c: the modes' consequences for the user
+    if _process_names_kept(update, result):
+        after = after + [_process_names_kept(update, result)]       # F1 (D10): once for the gearbox
     if leftovers_sentence(update):
         after = after + [leftovers_sentence(update)]                 # W9c: the app's leftovers, said as its own
 

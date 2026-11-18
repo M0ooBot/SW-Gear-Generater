@@ -3959,3 +3959,49 @@ def _boxes(typed, resolved=None, cell="Box!B9", nozzle=""):
 ])
 def test_the_workbook_panels_process_line(typed, resolved, cell, nozzle, line):
     assert ui_text.workbook_process_line(*_boxes(typed, resolved, cell, nozzle)) == line
+
+
+def _backlash_part(stem, **fields):
+    return PartUpdate(_path(stem), ("G1",), GearSpec(**fields), None, (GlobalVariable("Backlash", "x"),), changed=True)
+
+
+def _backlash_result(*stems):
+    return _updated(parts=[swbuild.UpdateResult(document=f"{s}.SLDPRT", changed=["Backlash"], rebuilt=True)
+                           for s in stems], layout=None, placed=[], changed=[_path(s) for s in stems])
+
+
+def test_parts_made_printed_by_an_update_keep_their_names_said_once_for_the_gearbox():
+    """D10: an Update never renames a file, so parts built machined and made printed keep names without _P. Said once
+    for the gearbox, with what to do for the mark, never once a part as a name that no longer says what it holds."""
+    update = _update(parts=(_backlash_part("Gear_m1.5_N17", teeth="17", process="printed"),
+                            _backlash_part("Gear_m1.5_N68", teeth="68", process="printed")),
+                     moved_shafts=(), replaced=())
+    assert ui_text.gearbox_update_status(update, _backlash_result("Gear_m1.5_N17", "Gear_m1.5_N68")) == (
+        "Updated SolidWorks: changed 1 variable in Gear_m1.5_N17, changed 1 variable in Gear_m1.5_N68; no "
+        "interference between the gears. The 2 parts now printed keep their file names, without the _P a part built "
+        "printed is named with: Update SolidWorks never renames a file, and Build again… makes new parts named with _P "
+        "if you want the mark. Save Gear_m1.5_N17 and Gear_m1.5_N68 in SolidWorks to keep them.", True)
+    one = _update(parts=(_backlash_part("Gear_m1.5_N17", teeth="17", process="printed"),), moved_shafts=(),
+                  replaced=())
+    assert ui_text.gearbox_update_status(one, _backlash_result("Gear_m1.5_N17"))[0] == (
+        "Updated SolidWorks: changed 1 variable in Gear_m1.5_N17; no interference between the gears. Gear_m1.5_N17, "
+        "now printed, keeps its file name, without the _P a part built printed is named with: Update SolidWorks never "
+        "renames a file, and Build again… makes a new part named with _P if you want the mark. Save Gear_m1.5_N17 in "
+        "SolidWorks to keep it.")
+
+
+def test_a_printed_part_made_machined_keeps_its_p_and_a_printed_parts_teeth_are_said_as_before():
+    back = _update(parts=(_backlash_part("Gear_m1.5_N17_P", teeth="18"),), moved_shafts=(), replaced=())
+    assert ui_text.gearbox_update_status(back, _backlash_result("Gear_m1.5_N17_P"))[0] == (
+        "Updated SolidWorks: changed 1 variable in Gear_m1.5_N17_P (it now has 18 teeth; its file keeps its name); no "
+        "interference between the gears. Gear_m1.5_N17_P, now machined, keeps its file name, with the _P it was built "
+        "printed with: Update SolidWorks never renames a file, and Build again… makes a new part named without it if "
+        "you want. Save Gear_m1.5_N17_P in SolidWorks to keep it.")
+    printed = _update(parts=(_backlash_part("Gear_m1.5_N17_P_r2", teeth="18", process="printed"),), moved_shafts=(),
+                      replaced=())
+    assert ui_text.gearbox_update_status(printed, _backlash_result("Gear_m1.5_N17_P_r2"))[0] == (
+        "Updated SolidWorks: changed 1 variable in Gear_m1.5_N17_P_r2 (it now has 18 teeth; its file keeps its name); "
+        "no interference between the gears. Save Gear_m1.5_N17_P_r2 in SolidWorks to keep it.")
+    named = _update(parts=(_backlash_part("Pinion", teeth="17", process="printed", name="Pinion"),), moved_shafts=(),
+                    replaced=())
+    assert "keeps its file name" not in ui_text.gearbox_update_status(named, _backlash_result("Pinion"))[0]
