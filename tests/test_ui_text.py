@@ -3916,6 +3916,17 @@ def test_the_backlash_card_takes_the_forms_process_when_the_gear_does_not_work_o
             assert ui_text.explainer(field, g, "x")[2] == ui_text.explainer(field, m, "x")[2], field
 
 
+def test_a_printed_solves_row_too_thin_for_the_nozzle_says_so_and_a_machined_row_never_does():
+    """§2.5: package A marks a printed row whose module or tips are thin for the nozzle; the candidate list says it."""
+    printed = PairSpec(centre_distance="30", ratio="3", series="1+2+fine", gear_a=GearSpec(process="printed"),
+                       gear_b=GearSpec(process="printed"))
+    rows = {ui_text.candidate_row(c)[:3]: c.mark for c in pair.solve_spec(printed)}
+    assert rows[("0.6", "25 : 75", "thin for a 0.4 nozzle")] == "thin for a 0.4 nozzle"
+    assert rows[("1", "15 : 45", "undercut · thin for a 0.4 nozzle")]
+    machined = pair.solve_spec(PairSpec(centre_distance="30", ratio="3", series="1+2+fine"))
+    assert not any("nozzle" in ui_text.candidate_row(c)[2] for c in machined)
+
+
 def test_the_forms_process_row_and_what_it_does_to_the_backlash_field():
     assert ui_text.PROCESS_LABELS == {PROCESS_PRINTED: "Printed", PROCESS_MACHINED: "Machined"}
     assert (ui_text.NOZZLE_PLACEHOLDER, ui_text.NOZZLE_HINT) == ("0.4", "the printer's line width")

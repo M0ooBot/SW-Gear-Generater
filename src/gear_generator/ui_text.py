@@ -249,6 +249,8 @@ def candidate_row(candidate: "pairs.Candidate") -> Tuple[str, str, str, str]:
         errors.append("undercut")
     if candidate.clashes:
         errors.append(f"clash {_n(candidate.clash, 2)} mm")
+    if getattr(candidate, "mark", ""):
+        errors.append(candidate.mark)          # F1 (PLAN-PRINTED §2.5): a printed row too thin for the nozzle
     text = " · ".join(errors) if errors else "exact"
     if candidate.shifted:
         text = f"x {shift_text(candidate.shift_1)}/{shift_text(candidate.shift_2)} · {text}"

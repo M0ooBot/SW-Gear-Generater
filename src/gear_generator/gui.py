@@ -1481,6 +1481,7 @@ class GearApp(ttk.Frame):
             f"{symbol} {ui_text._n(centre)} mm · i {ui_text._n(ratio, 4)} · contact ratio "
             f"{ui_text.contact_ratio_text(epsilon)}" + (" · non-standard module" if not candidate.standard else "")
             + (" · undercut" if candidate.undercut else "")
+            + (f" · {candidate.mark}" if candidate.mark else "")
             + (f" · profile shift {ui_text.shift_text(candidate.shift_1)} and {ui_text.shift_text(candidate.shift_2)}"
                if candidate.shifted else "")
         )

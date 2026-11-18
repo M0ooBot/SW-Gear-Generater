@@ -77,6 +77,15 @@ def test_one_process_covers_both_gears_of_a_pair_and_a_solve_applied_keeps_it(ap
         spec = app._gear_spec(side)
         assert spec.is_printed() and spec.nozzle == "0.6", side
     assert app._pair_spec().gear_a.process == app._pair_spec().gear_b.process == PROCESS_PRINTED
+    app.nozzle.set("")                                            # §2.5: a row too thin for the nozzle says so
+    app.centre_distance.set("30")
+    app.series.set("1+2+fine")
+    app._solve()
+    thin = next(i for i, c in enumerate(app._candidates) if c.mark)
+    app.candidate_tree.selection_set(str(thin))
+    app._on_candidate_selected()
+    assert app.card_detail.get().endswith(" · thin for a 0.4 nozzle")
+    assert app.candidate_tree.item(str(thin), "values")[2].endswith("thin for a 0.4 nozzle")
 
 
 def test_machined_hides_the_nozzle_sends_it_blank_and_says_the_machined_backlash(app):
