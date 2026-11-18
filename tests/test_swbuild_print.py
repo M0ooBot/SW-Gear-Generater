@@ -80,6 +80,8 @@ def part(path=PART, **kw):
 
 
 def plan_for(tmp_path, *parts, revision=(34, 0, 0)):
+    """A plan into tmp_path/out (made: the Output folder is on disk), its press's folder not made yet."""
+    os.makedirs(os.path.join(str(tmp_path), "out"), exist_ok=True)
     folder = os.path.join(str(tmp_path), "out", "print", "2026-11-18 14.32.05")
     return PrintPlan(None, tuple(parts) or (part(),), folder, revision, "Reducer", 0.0)
 
@@ -103,7 +105,7 @@ def test_with_every_finding_unmeasured_the_job_refuses_gate_copy_and_touches_not
     sw = fake_with()
     result = swbuild.print_parts(sw, plan_for(tmp_path))
     assert result.refusal == Refusal(printout.GATE_COPY) and result.active_restored is True
-    assert sw.calls == [] and not (tmp_path / "out").exists()
+    assert sw.calls == [] and not (tmp_path / "out" / "print").exists()
 
 
 def test_the_plans_own_refusal_is_answered_as_it_is(tmp_path, findings_on):
@@ -167,6 +169,22 @@ def test_the_press_folder_takes_the_next_counter_when_its_name_has_come_to_exist
     os.makedirs(plan.folder)
     result = swbuild.print_parts(fake_with(), plan)
     assert result.folder == plan.folder + " (2)" and os.listdir(plan.folder) == []
+
+
+def test_the_job_never_makes_the_output_folder_and_refuses_no_folder_when_it_has_gone(tmp_path, findings_on):
+    plan = plan_for(tmp_path)
+    os.rmdir(os.path.join(str(tmp_path), "out"))
+    sw = fake_with()
+    result = swbuild.print_parts(sw, plan)
+    assert result.refusal == Refusal(printout.NO_FOLDER, (), {"folder": os.path.join(str(tmp_path), "out")})
+    assert not (tmp_path / "out").exists() and "export_step" not in names(sw) and result.folder == ""
+    assert [d.path for d in sw.open_docs] == [USERS] and result.active_restored is True
+
+
+def test_the_job_makes_the_print_folder_inside_the_output_folder_when_it_is_not_there_yet(tmp_path, findings_on):
+    plan = plan_for(tmp_path)
+    assert not (tmp_path / "out" / "print").exists()
+    assert swbuild.print_parts(fake_with(), plan).folder == plan.folder and os.path.isdir(plan.folder)
 
 
 def test_a_part_r2_is_written_as_r2(tmp_path, findings_on):
@@ -243,7 +261,7 @@ def test_a_part_open_in_its_window_and_not_active_is_refused_while_its_window_is
     sw = fake_with(windows=[PART])
     result = swbuild.print_parts(sw, plan_for(tmp_path))
     assert result.refusal == Refusal(printout.COMPONENT_ONLY, ("Gear_m1.5_N20_P",), {"Gear_m1.5_N20_P": ""})
-    assert opened_and_closed(sw) == [] and "export_step" not in names(sw) and not (tmp_path / "out").exists()
+    assert opened_and_closed(sw) == [] and "export_step" not in names(sw) and not (tmp_path / "out" / "print").exists()
     assert result.active_restored is True
 
 
@@ -313,7 +331,7 @@ def test_a_component_only_part_is_refused_by_name_with_its_assembly_when_neither
     result = swbuild.print_parts(sw, plan_for(tmp_path))
     assert result.refusal == Refusal(printout.COMPONENT_ONLY, ("Gear_m1.5_N20_P",),
                                      {"Gear_m1.5_N20_P": "Reducer.SLDASM"})
-    assert opened_and_closed(sw) == [] and not (tmp_path / "out").exists()
+    assert opened_and_closed(sw) == [] and not (tmp_path / "out" / "print").exists()
 
 
 def test_a_lightweight_component_is_refused_by_name_even_with_the_fallback_measured(tmp_path, findings_on):
@@ -351,7 +369,7 @@ def test_a_part_changed_in_solidworks_and_not_saved_is_modified_and_nothing_is_w
     sw = fake_with(windows=[PART], modified=[PART])
     result = swbuild.print_parts(sw, plan_for(tmp_path))
     assert result.refusal == Refusal(printout.MODIFIED, ("Gear_m1.5_N20_P",))
-    assert "export_step" not in names(sw) and result.folder == "" and not (tmp_path / "out").exists()
+    assert "export_step" not in names(sw) and result.folder == "" and not (tmp_path / "out" / "print").exists()
     assert result.active_restored is True and sw.active.path == USERS
 
 

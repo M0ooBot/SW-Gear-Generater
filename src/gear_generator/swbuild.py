@@ -10307,15 +10307,22 @@ def _read_text(path: str) -> str:
         return ""
 
 
-def _make_press_folder(planned: str) -> str:
-    """Make the press's folder (and the print folder it is in): the plan's, or the next counter when that name has come
-    to exist since the plan (M3; never a folder that is there)."""
-    os.makedirs(os.path.dirname(planned), exist_ok=True)
+def _make_press_folder(planned: str) -> Optional[str]:
+    """Make the press's folder: the print folder in the Output folder if it is not there, then the plan's folder, or the
+    next counter when that name has come to exist since the plan (M3; never a folder that is there). Never the Output
+    folder itself (F2-REVIEW S4): None when it is not a folder on disk any more, and the job refuses NO_FOLDER."""
+    print_folder = os.path.dirname(planned)
+    if not os.path.isdir(os.path.dirname(print_folder)):
+        return None
+    try:
+        os.mkdir(print_folder)
+    except FileExistsError:
+        pass
     folder = planned
     while True:
         folder = printout.free_folder(folder)
         try:
-            os.makedirs(folder)
+            os.mkdir(folder)
             return folder
         except FileExistsError:
             continue
@@ -10339,7 +10346,8 @@ def print_parts(sw: SolidWorks, plan: PrintPlan) -> PrintResult:
        error is FEATURE_IN_ERROR, a warning is named in ``warnings`` and does not refuse; a code SolidWorks would not
        give is neither). The first failing code (:func:`_job_refusal`) refuses the set; nothing is written. A
        SolidWorksError while reaching or reading is SOLIDWORKS_REFUSED with swcom's sentence (``said``).
-    5. **The export**: the press's folder made (the next counter if its name has come to exist), each part made the
+    5. **The export**: the press's folder made (the next counter if its name has come to exist; NO_FOLDER, nothing
+       written, if the Output folder is no longer there: the job never makes it), each part made the
        build document again and written by ``export_step`` to its stem plus .step, each file read back as text and
        checked (:func:`printout.read_step`; the user's features read live from ``feature_states`` against the record's
        ``made`` join the record's, so the size check is skipped for a part that holds one), its schema, unit and extent
@@ -10449,7 +10457,11 @@ def _run_print_job(sw: SolidWorks, plan: PrintPlan, year: int, job: _PrintJob) -
         return
 
     # 5. The export, into the press's own new folder.
-    job.folder = _make_press_folder(plan.folder)
+    made = _make_press_folder(plan.folder)
+    if made is None:
+        job.refusal = Refusal(printout.NO_FOLDER, (), {"folder": os.path.dirname(os.path.dirname(plan.folder))})
+        return
+    job.folder = made
     for r in job.reached:
         part = r.part
         name = printout.step_name(part)

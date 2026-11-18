@@ -11,8 +11,8 @@ import pytest
 from gear_generator import findings, printout, store, swbuild
 from gear_generator.gears.base import Diagnostic
 from gear_generator.printout import (CHANGES_ON_UPDATE, FOREIGN_RECORD, GATE, GATE_COPY, MISMATCHED_MARK,
-                                     NEW_REVISION, NO_PART, NO_RECORD, NOT_A_PART, UNSAVED_MARK, WORKBOOK_ERROR,
-                                     PrintResult, Refusal)
+                                     NEW_REVISION, NO_FOLDER, NO_PART, NO_RECORD, NOT_A_PART, UNSAVED_MARK,
+                                     WORKBOOK_ERROR, PrintResult, Refusal)
 from gear_generator.spec import GearSpec
 from gear_generator.workbook.assess import Assessment
 from gear_generator.workbook.model import Box, Gear, GearboxSpec, Shaft
@@ -34,6 +34,11 @@ def gate_open(monkeypatch):
 
 def nothing_exists(_path):
     return False
+
+
+def is_dir(path):
+    """Every Output folder a test names (under /) is a folder on disk."""
+    return path.startswith("/")
 
 
 # -- the gate ------------------------------------------------------------------------------------------------------------
@@ -81,14 +86,21 @@ def test_the_form_refuses_not_a_part_when_nothing_or_no_part_is_active(gate_open
     assert plan.refusal == Refusal(NOT_A_PART, parts) and plan.folder == "" and plan.parts == ()
 
 
-def test_the_form_refuses_no_record_for_a_part_without_a_readable_gear_json(gate_open):
+def test_the_form_refuses_no_record_for_a_part_without_a_gear_json(gate_open):
     plan = printout.form_print(None, r"C:\G\Part1.SLDPRT", r"C:\Out", V2026, now=NOW, exists=nothing_exists)
-    assert plan.refusal == Refusal(NO_RECORD, ("Part1.SLDPRT",))
+    assert plan.refusal == Refusal(NO_RECORD, ("Part1.SLDPRT",), {"record": "missing"})
+
+
+def test_the_form_refuses_no_record_telling_a_gear_json_that_does_not_read_from_one_missing(gate_open):
+    """F2-REVIEW S5: the form hands None for both; the planner tells them apart by the file beside the part."""
+    beside = {r"C:\G\Part1.gear.json"}
+    plan = printout.form_print(None, r"C:\G\Part1.SLDPRT", r"C:\Out", V2026, now=NOW, exists=beside.__contains__)
+    assert plan.refusal == Refusal(NO_RECORD, ("Part1.SLDPRT",), {"record": "unreadable"})
 
 
 def test_the_forms_plan_is_the_active_part_into_a_folder_named_by_the_press(gate_open):
     path = r"C:\G\Gear_m1.5_N20_P.SLDPRT"
-    plan = printout.form_print(sidecar_for(path), path, "/out", V2026, now=NOW, exists=nothing_exists)
+    plan = printout.form_print(sidecar_for(path), path, "/out", V2026, now=NOW, exists=nothing_exists, isdir=is_dir)
     assert plan.refusal is None
     assert plan.folder == os.path.join("/out", "print", STAMP)
     assert (plan.revision, plan.name, plan.pressed) == (V2026, "Gear_m1.5_N20_P", NOW)
@@ -108,14 +120,14 @@ def test_each_parts_span_is_package_as_span_of_its_derived_gear_and_recipe(gate_
 
     monkeypatch.setattr(printout, "span", fake_span)
     path = r"C:\G\Gear_m1.5_N20_P.SLDPRT"
-    (part,) = printout.form_print(sidecar_for(path), path, "/out", V2026, now=NOW, exists=nothing_exists).parts
+    (part,) = printout.form_print(sidecar_for(path), path, "/out", V2026, now=NOW, exists=nothing_exists, isdir=is_dir).parts
     assert seen == [("SpurDerived", "A")] and part.span.k == 3
 
 
 def test_a_parts_r2_revision_prints_as_r2_and_nothing_else_gains_r2(gate_open):
     path = r"C:\G\Gear_m1.5_N20_P_r2.SLDPRT"
     taken = {os.path.join("/out", "print", STAMP)}
-    plan = printout.form_print(sidecar_for(path), path, "/out", V2026, now=NOW, exists=taken.__contains__)
+    plan = printout.form_print(sidecar_for(path), path, "/out", V2026, now=NOW, exists=taken.__contains__, isdir=is_dir)
     assert printout.step_name(plan.parts[0]) == "Gear_m1.5_N20_P_r2.step"
     assert plan.folder == os.path.join("/out", "print", STAMP + " (2)")        # the folder counts, the file does not
     assert "_r2" not in plan.folder
@@ -129,10 +141,18 @@ def test_the_folder_counts_on_past_every_name_taken():
     assert printout.free_folder(base + " (9)", taken.__contains__) == base + " (9)"
 
 
-def test_an_empty_output_folder_on_the_form_falls_back_to_the_parts_own_folder(gate_open):
+@pytest.mark.parametrize("folder", ["", r"C:\Gone"])
+def test_the_form_refuses_no_folder_for_an_output_folder_empty_or_not_on_disk(gate_open, folder):
+    """F2-REVIEW S4 (B's fallback to the part's own folder rejected): NO_FOLDER, naming the folder."""
     path = "/g/Gear_m1.5_N20_P.SLDPRT"
-    plan = printout.form_print(sidecar_for(path), path, "", V2026, now=NOW, exists=nothing_exists)
-    assert plan.folder == os.path.join("/g", "print", STAMP)
+    plan = printout.form_print(sidecar_for(path), path, folder, V2026, now=NOW, exists=nothing_exists, isdir=is_dir)
+    assert plan.refusal == Refusal(NO_FOLDER, (), {"folder": folder}) and plan.folder == "" and plan.parts == ()
+
+
+def test_the_form_checks_the_output_folder_on_disk_by_default(gate_open, tmp_path):
+    path = str(tmp_path / "Gear_m1.5_N20_P.SLDPRT")
+    assert printout.form_print(sidecar_for(path), path, str(tmp_path), V2026, now=NOW).refusal is None
+    assert printout.form_print(sidecar_for(path), path, str(tmp_path / "gone"), V2026, now=NOW).refusal.code == NO_FOLDER
 
 
 # -- the Workbook window --------------------------------------------------------------------------------------------------
@@ -174,10 +194,10 @@ def on_disk(path):
     return not path.startswith("/")
 
 
-def plan_window(rec, a=None, update=None, *, exists=on_disk, version=V2026, folder="/out"):
+def plan_window(rec, a=None, update=None, *, exists=on_disk, version=V2026, folder="/out", **kw):
     a = a if a is not None else assessment()
     update = update if update is not None else update_for(rec)
-    return printout.workbook_print(rec, a, update, folder, version, now=NOW, exists=exists)
+    return printout.workbook_print(rec, a, update, folder, version, now=NOW, exists=exists, isdir=is_dir, **kw)
 
 
 def test_the_window_plans_every_current_part_once_with_its_rows_and_counts(gate_open):
@@ -329,11 +349,22 @@ def test_a_part_whose_rows_have_all_gone_from_the_workbook_is_left_out_not_refus
     assert plan.refusal is None and [p.stem for p in plan.parts] == ["Gear_m1.5_N20_P"]
 
 
-def test_the_windows_empty_output_folder_falls_back_to_the_assessments_then_the_workbooks(gate_open):
+@pytest.mark.parametrize("folder", ["", r"C:\Gone"])
+def test_the_window_refuses_no_folder_last_for_an_output_folder_empty_or_not_on_disk(gate_open, folder):
+    """F2-REVIEW S4 (B's fallbacks to the assessment's and the workbook's folders rejected)."""
     rec = record()
-    assert plan_window(rec, assessment(folder="/box"), folder="").folder == os.path.join("/box", "print", STAMP)
-    rec.workbook = "/books/Reducer.xlsx"
-    assert plan_window(rec, folder="").folder == os.path.join("/books", "print", STAMP)
+    assert plan_window(rec, assessment(folder="/box"), folder=folder).refusal == Refusal(NO_FOLDER, (),
+                                                                                          {"folder": folder})
+    assert plan_window(rec, update=update_for(rec, changed=(PART_A,)), folder=folder).refusal.code == \
+        CHANGES_ON_UPDATE                                                       # every other refusal first
+
+
+def test_foreign_record_from_what_the_window_knows(gate_open):
+    """F2-REVIEW S8: the window makes no Update plan for another workbook's record and passes the other workbook."""
+    plan = plan_window(record(), update=update_for(record()), foreign_record=r"C:\Other\Box.xlsx")
+    assert plan.refusal == Refusal(FOREIGN_RECORD)
+    assert printout.workbook_print(None, None, None, "/out", V2026, foreign_record=r"C:\Other\Box.xlsx",
+                                   isdir=is_dir).refusal == Refusal(FOREIGN_RECORD)
 
 
 # -- the file read back as text (§3.1.4) ----------------------------------------------------------------------------------
@@ -513,8 +544,9 @@ def test_the_extent_is_checked_on_a_machined_gear_too(monkeypatch):
     assert printout.read_step(step(), part).extent == "checked"
 
 
-def test_new_revision_is_a_planning_code():
+def test_new_revision_and_no_folder_are_planning_codes():
     assert printout.NEW_REVISION == "NEW_REVISION" and printout.NEW_REVISION in printout.PLANNING_CODES
+    assert printout.NO_FOLDER == "NO_FOLDER" and printout.NO_FOLDER in printout.PLANNING_CODES
 
 
 def test_the_codes_and_reasons_are_the_interfaces():
@@ -542,6 +574,21 @@ def test_the_list_is_written_utf8_into_the_press_folder_and_never_over_a_file(tm
     with pytest.raises(FileExistsError):
         printout.write_list(result, "something else")
     assert open(path, encoding="utf-8").read() == "Reducer — span over 3 teeth 11.209\n"
+
+
+def test_with_list_says_truly_whether_the_list_was_written(tmp_path):
+    """F2-REVIEW S2: the result after the write says the list's path, or why it could not be written; never both."""
+    result = PrintResult(folder=str(tmp_path), active_restored=True)
+    assert (result.list_path, result.list_error) == ("", "")
+    done = printout.with_list(result, "the list")
+    assert done.list_path == os.path.join(str(tmp_path), "print list.txt") and done.list_error == ""
+    again = printout.with_list(result, "another list")                         # a file there already: never over it
+    assert again.list_path == "" and again.list_error and "exists" in again.list_error.lower()
+    gone = printout.with_list(PrintResult(folder=str(tmp_path / "gone"), active_restored=True), "the list")
+    assert gone.list_path == "" and gone.list_error
+    assert open(done.list_path, encoding="utf-8").read() == "the list"
+    alone = PrintResult(active_restored=True)
+    assert printout.with_list(alone, "the list") is alone
 
 
 def test_the_list_is_not_written_without_a_folder(tmp_path):

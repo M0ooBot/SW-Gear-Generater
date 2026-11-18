@@ -22,14 +22,14 @@ import math
 import os
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from . import findings
 from .gears import kind_for
 from .gears.span import NONE as NO_SPAN, SpanReading, span
 from .spec import GearSpec
-from .store import same_path
+from .store import SIDECAR_SUFFIX, same_path
 from .swcom import release_year
 
 if TYPE_CHECKING:                                   # annotations only: workbook.update imports swbuild, which imports
@@ -58,8 +58,12 @@ NOT_A_PART = "NOT_A_PART"          # the form: nothing is active in SolidWorks, 
 # offers Build again…). Detail as CHANGES_ON_UPDATE's, {stem: "values" or "new part"}; the user is told to use Build
 # again…, never Update SolidWorks.
 NEW_REVISION = "NEW_REVISION"
+# F2-REVIEW's should-fix S4 (the coordinator's ruling, B's choice 11 rejected): the Output folder is empty or not a folder
+# on disk. Detail {"folder": the Output folder as given, "" when empty}. From both planners, and from the job if the
+# folder has gone since the plan (the job makes only the print folder and the press's folder, never the Output folder).
+NO_FOLDER = "NO_FOLDER"
 PLANNING_CODES = (GATE, GATE_COPY, UNSAVED_MARK, MISMATCHED_MARK, CHANGES_ON_UPDATE, NO_PART, WORKBOOK_ERROR,
-                  FOREIGN_RECORD, NO_RECORD, NOT_A_PART, NEW_REVISION)
+                  FOREIGN_RECORD, NO_RECORD, NOT_A_PART, NEW_REVISION, NO_FOLDER)
 # The job (swbuild.print_parts), per part, after every part's reads and before any file is written; then the export.
 MODIFIED = "MODIFIED"              # the part's own GetSaveFlag is on
 GLOBALS_DIFFER = "GLOBALS_DIFFER"  # a live global is not what its record says (spaces aside, swbuild._squash)
@@ -121,6 +125,9 @@ FACT_CLOSE, FACT_FLAGS, FACT_JOB = "close", "flags", "job"
 CHANGE_VALUES, CHANGE_NEW_PART = "values", "new part"
 # NO_PART's detail values.
 NO_PART_YET, NOT_ON_DISK = "no part", "not on disk"
+# NO_RECORD's detail (F2-REVIEW S5): {"record": "missing"} when no .gear.json is beside the part, {"record":
+# "unreadable"} when one is there and does not read.
+RECORD_MISSING, RECORD_UNREADABLE = "missing", "unreadable"
 
 
 @dataclass(frozen=True)
@@ -194,6 +201,11 @@ class PrintResult:
     active_restored: bool = field(kw_only=True)
     flags_turned_on: Tuple[str, ...] = ()
     warnings: Tuple[Tuple[str, Tuple[str, ...]], ...] = ()
+    # F2-REVIEW S2 (package B's addition): what became of the print list, set by :func:`with_list` after the job:
+    # ``list_path`` the list written, ``list_error`` why it could not be (the OSError's text); both "" until then, so a
+    # status composed from a result never says a list was written when it was not.
+    list_path: str = ""
+    list_error: str = ""
 
 
 # -- the gate (§3 of the interface; checked here at planning and again by swbuild.print_parts) --------------------------
@@ -313,15 +325,17 @@ def _refused(refusal: Refusal, version: SolidWorksVersion) -> PrintPlan:
 
 
 def form_print(sidecar: Optional["Sidecar"], part_path: str, output_folder: str, version: SolidWorksVersion, *,
-               now: Optional[float] = None, exists: Callable[[str], bool] = os.path.exists) -> PrintPlan:
+               now: Optional[float] = None, exists: Callable[[str], bool] = os.path.exists,
+               isdir: Callable[[str], bool] = os.path.isdir) -> PrintPlan:
     """The form's press: the part active in SolidWorks (``part_path``, "" when none) with its ``.gear.json`` read
     (``sidecar``, None when there is none or it does not read), into ``output_folder``'s print folder. ``now`` (seconds
     since the epoch, the press's time) and ``exists`` are for tests; None is the clock.
 
     The refusals in order: the gate (:func:`gate`); NOT_A_PART when nothing is active or what is active is not a part
     (``part_path`` not a .SLDPRT; its file name in ``parts`` when there is one); NO_RECORD when it has no readable
-    ``.gear.json`` (its file name). Otherwise one part, the plan's ``name`` its stem. An empty ``output_folder`` (the
-    strip's) falls back to the part's own folder (B's choice, the coordinator's to rule)."""
+    ``.gear.json`` (its file name; detail ``record`` "missing", or "unreadable" when the file is there, by ``exists``);
+    NO_FOLDER when ``output_folder`` (the strip's) is empty or not a folder (``isdir``). Otherwise one part, the plan's
+    ``name`` its stem."""
     refusal = gate(version)
     if refusal is not None:
         return _refused(refusal, version)
@@ -329,11 +343,14 @@ def form_print(sidecar: Optional["Sidecar"], part_path: str, output_folder: str,
     if not part_path or not str(part_path).lower().endswith(".sldprt"):
         return _refused(Refusal(NOT_A_PART, (name,) if name else ()), version)
     if sidecar is None:
-        return _refused(Refusal(NO_RECORD, (name,)), version)
+        why = RECORD_UNREADABLE if exists(os.path.splitext(part_path)[0] + SIDECAR_SUFFIX) else RECORD_MISSING
+        return _refused(Refusal(NO_RECORD, (name,), {"record": why}), version)
+    if not output_folder or not isdir(output_folder):
+        return _refused(Refusal(NO_FOLDER, (), {"folder": output_folder or ""}), version)
     record = sidecar.record
     part = print_part(part_path, record.spec, variables=record.variables, made=record.features)
     pressed = time.time() if now is None else float(now)
-    folder = press_folder(output_folder or os.path.dirname(part_path), pressed, exists)
+    folder = press_folder(output_folder, pressed, exists)
     return PrintPlan(None, (part,), folder, tuple(version), part.stem, pressed)
 
 
@@ -349,7 +366,8 @@ def _copies(spec, row: str) -> int:
 
 def workbook_print(record: Optional["LinkRecord"], assessment: Optional["Assessment"],
                    update_plan: Optional["UpdatePlan"], output_folder: str, version: SolidWorksVersion, *,
-                   now: Optional[float] = None, exists: Callable[[str], bool] = os.path.exists) -> PrintPlan:
+                   now: Optional[float] = None, exists: Callable[[str], bool] = os.path.exists,
+                   isdir: Callable[[str], bool] = os.path.isdir, foreign_record: str = "") -> PrintPlan:
     """The Workbook window's press: every part of the record's current revision (``LinkRecord.current_parts``) that a
     Gears row of the workbook still uses, each once, from the window's planning read (``assessment``, and ``update_plan``
     as ``workbook.update.classify`` gives it), into ``output_folder`` (the Box's, else the strip's) print folder.
@@ -357,7 +375,9 @@ def workbook_print(record: Optional["LinkRecord"], assessment: Optional["Assessm
     The refusals in order (F2-INTERFACES.md §2.2), each naming every part it applies to:
 
     - the gate (:func:`gate`);
-    - FOREIGN_RECORD: the record beside the workbook is another's (``update_plan.foreign_record``);
+    - FOREIGN_RECORD: the record beside the workbook is another's: ``foreign_record``, the other workbook as the window
+      knows it (F2-REVIEW S8: the window makes no Update plan for another's record, so it passes what it knows), or
+      ``update_plan.foreign_record``;
     - WORKBOOK_ERROR: no assessment, or it has an error, is provisional (Excel to recalculate an Export), or holds fixes
       chosen and not exported;
     - NO_PART: a Gears row no part on record serves and no Update would add in place (detail "no part"), or a part on
@@ -371,14 +391,15 @@ def workbook_print(record: Optional["LinkRecord"], assessment: Optional["Assessm
       never run, Build again… is the way): the same parts and detail, a part that needs a part of its own or building
       again among them ("new part").
 
+    - NO_FOLDER: ``output_folder`` empty or not a folder (``isdir``), last, since the folder is chosen last.
+
     A change Update would make only to the layout or the assembly does not refuse (E3), and neither does a part whose
-    every row has gone from the workbook: it is left out of the set (B's choice, the coordinator's to rule). Each part's
-    rows are the Gears rows it serves, in the workbook's order, and its count one per row times the row's shaft's Copies.
-    An empty ``output_folder`` falls back to the assessment's folder, then the workbook's own."""
+    every row has gone from the workbook: it is left out of the set. Each part's rows are the Gears rows it serves, in
+    the workbook's order, and its count one per row times the row's shaft's Copies."""
     refusal = gate(version)
     if refusal is not None:
         return _refused(refusal, version)
-    if update_plan is not None and getattr(update_plan, "foreign_record", ""):
+    if foreign_record or (update_plan is not None and getattr(update_plan, "foreign_record", "")):
         return _refused(Refusal(FOREIGN_RECORD), version)
     if assessment is None or assessment.errors or assessment.provisional or assessment.chosen:
         return _refused(Refusal(WORKBOOK_ERROR), version)
@@ -433,9 +454,10 @@ def workbook_print(record: Optional["LinkRecord"], assessment: Optional["Assessm
             e.path, e.spec, variables=e.variables, made=tuple(getattr(update, "made", ()) or ()), rows=served_rows,
             count=sum(_copies(spec, r) for r in served_rows),
             user_features=tuple(dict.fromkeys(f.name for f in features if same_path(f.path, e.path)))))
+    if not output_folder or not isdir(output_folder):
+        return _refused(Refusal(NO_FOLDER, (), {"folder": output_folder or ""}), version)
     pressed = time.time() if now is None else float(now)
-    base = output_folder or getattr(assessment, "folder", "") or os.path.dirname(record.workbook or "")
-    folder = press_folder(base, pressed, exists)
+    folder = press_folder(output_folder, pressed, exists)
     name = getattr(spec.box, "name", "") or (box.name if box is not None else "") or _stem(record.workbook or "")
     return PrintPlan(None, tuple(parts), folder, tuple(version), name, pressed)
 
@@ -699,6 +721,20 @@ def check_step(text: str, part: PrintPart) -> Optional[str]:
     :data:`REASONS` (in that order). EXTENT is never a refusal for a part with user features or a kind in
     :data:`EXTENT_SKIPPED`, nor while ``findings.EXTENT_MEASURED`` is not True; it is then a fact (:func:`read_step`)."""
     return read_step(text, part).reason
+
+
+def with_list(result: PrintResult, text: str) -> PrintResult:
+    """F2-REVIEW S2: write the print list (:func:`write_list`) and answer the result saying truly what became of it:
+    ``list_path`` the file written, or ``list_error`` why it could not be (a file already there, the folder gone, the disk
+    full: the OSError's text). A result with no folder is answered as it is. C composes the status from what this
+    answers, after the write, never before."""
+    if not result.folder:
+        return result
+    try:
+        path = write_list(result, text)
+    except OSError as exc:
+        return replace(result, list_path="", list_error=str(exc) or type(exc).__name__)
+    return replace(result, list_path=path, list_error="")
 
 
 def write_list(result: PrintResult, text: str) -> str:
