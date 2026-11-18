@@ -1206,6 +1206,21 @@ files** will write), press **Print files**. Do the same three more times, changi
 | Coupon_C | shaft + 0.2 |
 | Coupon_D | shaft + 0.3 |
 
+**Which table to follow depends on whether F3 has landed (must-fix M3 of F3's review).** The app shows a **Bore
+allowance** row under Bore once F3 is in. If your form has no such row, follow the table above: the offset goes in
+Bore. If it has one, type the shaft itself in Bore and the offset in Bore allowance, and never both. Otherwise the
+app's printed default (0.2 mm) would go on top of the offset, and the figure you find would come out 0.2 too large:
+
+| Name | Bore | Bore allowance |
+|---|---|---|
+| Coupon_A | shaft | **0** (typed, not left blank) |
+| Coupon_B | shaft | 0.1 |
+| Coupon_C | shaft | 0.2 |
+| Coupon_D | shaft | 0.3 |
+
+Either way, the coupon that fits is read as **the allowance itself**. Coupons already built before F3 stay valid as
+built: their offset in Bore is the allowance.
+
 - Each name has to be typed, because a gear's default name does not include its bore.
 - Keep the Derived panel's **Span over 3 teeth** figure. With the printed default it should read 11.209.
 - If your shaft is over 18 mm, use Module 2 and Teeth 30 for all four instead. The panel then gives its own span
@@ -1524,226 +1539,361 @@ them, since each is something they will see.
 
 ## 4. Stage F3 — the bore (existing ops only)
 
-Read against the code at `f28cb75` on `printed` (F1 closed, F2 closed short of §3.2). Lines below are as of that
-commit. §4.1 to §4.5 say what F3 builds and why; §4.6 makes it ready to execute.
+Read against the code at `f28cb75` on `printed` (F1 closed, F2 closed short of §3.2); `src` is unchanged at `fec1cfe`.
+Lines below are as of that commit. §4.1 to §4.5 say what F3 builds and why; §4.6 makes it ready to execute. Revised
+to F3's review (the last section of `docs/PLAN-PRINTED-REVIEW.md`, `fec1cfe`) and the coordinating session's two
+rulings on it.
 
 ### 4.1 Bore allowance
 
-A printed bore is cut at `"Bore Diameter" + "Bore Allowance"`, so `"Bore Diameter"` stays the shaft's size.
+A printed bore is cut at `"Bore Diameter" + "Bore Allowance"`, so `"Bore Diameter"` stays the shaft's size. The
+allowance is on the diameter: the wall moves by half of it.
 
 **What it builds.** Today's bore (`spur._bore_ops`, `gears/spur.py:1447-1457`) is one sketch on the Front plane:
 
-- `OpenSketch`, `Circle` centred by `Relation("coincident", (centre, origin))`, `Dimension("Bore")`, `CloseSketch`;
+- `OpenSketch`, `Circle` centred by `Relation("coincident", (centre, origin))`, `Dimension("Bore")` (a circle's,
+  so a diameter: `findings.CIRCLE_DIMENSION`), `CloseSketch`;
 - `Cut` through all;
 - `LinkDimension("Bore@Bore Sketch", "Bore Diameter")`.
 
 With an allowance, two things change. The part gains a global `AddGlobal("Bore Allowance", <literal>)`, and the link
-becomes `LinkDimension("Bore@Bore Sketch", '"Bore Diameter" + "Bore Allowance"')`. Nothing else in the sketch or
-the cut changes.
+becomes `'"Bore Diameter" + "Bore Allowance"'`.
 
-- **Every SolidWorks call here is one the app already makes**, on both versions:
+- **Every SolidWorks call is one the app already makes**, on both versions:
   - `CreateCircleByRadius` (`swcom.py:1737`), `SketchAddConstraints` (`:1875`), `AddDimension2` (`:1902`),
     `FeatureCut4` (`:1966`);
-  - the Equation Manager's `Add2` (`:1425`) for the global and for the link.
-  - A dimension linked to an expression of two globals is made today: W9b's relief planes, `"Face Width" - "End
-    Band"` (`gears/clutch.py:82`), and the bevel's blank (`bevel.py:881-893`).
-  - **No probe.** The full build comes first, by the house rule, and F3's first SolidWorks run is its measurement.
-- **The global exists only when the allowance is not zero**, as `"Profile Shift"` does. So going between none and
-  some is structural (`swbuild.structural_change` gains `has_allowance` beside `has_shift`, `swbuild.py:1333`). A
-  change of size is a value, which Update carries in place.
-- **A helical or herringbone gear** takes it through the same ops (`helical._bore_ops` calls `spur._bore_ops`,
-  `helical.py:417-418`), and so do a dog and a hub (`clutch._as_spur`).
-- **A bevel gear's bore** is not a cut. It is the inner edge of the revolved blank, its two lines driven by
-  expressions in `"Bore Diameter" / 2` (`bevel.py:881-893`). There the allowance replaces `"Bore Diameter"` with
-  `( "Bore Diameter" + "Bore Allowance" )` in those expressions, a text change and no new op.
-- **A ring and a sleeve** have no bore (`internal.py:972`, `:1026`) and take none.
-- **Checks.** The bore check (`spur.py:913-916`), the one-module rim (`:963-972`) and F1's printed rim
-  (`:1025-1028`) are made on the bore as cut, `Bore + allowance`.
+  - the Equation Manager's `Add2` (`:1425`).
+  - A link to an expression of two globals is made today, in W9b's relief planes (`gears/clutch.py:82`) and the
+    bevel's blank (`bevel.py:881-893`).
+- **The global exists only when the allowance is not zero**, as `"Profile Shift"` does. None to some is structural,
+  and a change of size is a value. *Some* and *none* are judged from what the part holds, not from the spec's text
+  (below).
+- **Where the global goes:**
+  - the variables of a spur gear (`spur.py:841`);
+  - those of a helical or herringbone gear (`helical.py:492`, the globals list; `:426` is the custom properties);
+  - those of a bevel gear (`bevel.py:716`);
+  - a dog's and a hub's, through `clutch._as_spur` (`clutch.py:109-112`, a `dataclasses.replace` that keeps every
+    other field).
+  - The bevel's bore is its revolved blank's inner edge. There the allowance replaces `"Bore Diameter"` with
+    `( "Bore Diameter" + "Bore Allowance" )` in its two link expressions (`bevel.py:881-893`).
+- **A ring or a sleeve row** has no shaft bore (`internal.py:972`, `:1026`; a sleeve's banded relief is not one). A
+  typed Bore allowance, Drive flat or Flat on such a row is an **error at the cell**: *a ring has no bore to give an
+  allowance or a flat*.
+- **Checks on the bore as cut**, `Bore + allowance`: the bore check (`spur.py:913-916`), the one-module rim
+  (`:963-972`), F1's printed rim (`:1025-1028`), and the herringbone's groove floor (`g.bore >= g.groove_d`,
+  `helical.py:462-465`).
+- **A negative allowance** (a press fit) is allowed. Every check is made on the hole as cut, so it cannot pass a hole
+  the checks would refuse; §4.2's bounds hold for a D.
 
 **Which gears take it, and the default.**
 
-- **Printed, a blank Bore allowance is the default.** That is **0.2 mm on the diameter**, a placeholder until §3.2's
-  coupon gives the user's figure (U4).
+- **Printed, a blank Bore allowance on a part not yet built is the default:** 0.2 mm on the diameter, a placeholder
+  until §3.2's coupons give the user's figure (V1). That is a starting point and no more. Fit guides put a running fit
+  at about 0.2 to 0.4 mm on the diameter, and holes print under size, so on a stock profile 0.2 may run snug.
 - **Machined, a blank is 0**, so a machined part builds and records exactly as today, by the rule.
-- **A typed allowance is honoured on either**: it is the user's explicit choice, and it moves no machined default.
+- **A typed allowance is honoured on either.**
 
-**The placeholder replaced without rebuilding anything the user did not ask for: a blank allowance is *as built*.**
-This is the same principle as D11's (B).
+#### 4.1.1 A blank allowance on record is *as built*: one home, every caller through it (must-fix M1)
 
-- For a part **not yet built**, a blank Bore allowance is the current default.
-- For a part **on record**, a blank is the figure the part was built with, read from its recorded globals
-  (`"Bore Allowance"`'s literal in the record's `variables`, or 0 when the part has no such global, as every part
-  built before F3 has none).
-- So when the default later moves from 0.2 to the user's figure, nothing already built reads as changed, and
-  neither Update nor Build again… writes to it. A part takes the new figure when it is new, or when the user types
-  the figure in its cell.
-- The rule lives in one function, `gearbox.as_built_allowance(entry) -> Optional[float]`, used where planning turns
-  a row into a spec for a part on record (the workbook's `gearbox` planning; the strip's `_update_target` for an
-  opened record).
-- **The figure itself** is one constant, `spur.BORE_ALLOWANCE_DEFAULT = 0.2`. Changing it is a one-line change and
-  its pins, as the review of F2's runs says (`F2-DEMONSTRATION-RUNS-REVIEW.md` §5).
+**The rule.** For a part on record, a blank Bore allowance is the figure the part holds: the literal of
+`"Bore Allowance"` in the record's `variables`, or 0 when the part has no such global, as every part built before F3
+has none. For a row with no part on record, a blank is the current default.
 
-**Parts built before F3** have no allowance and no key for it. They read as allowance 0 by §1.1's rule, and as built
-by the rule above, so each stays a true record of what it is. That includes §3.2's coupons, whose bores the user
-typed in full. Giving such a part an allowance is a new part (none to some): Build again… in a workbook, or a new
-name on the strip.
+The rule is D11's (B) for a number. When the default later moves from 0.2 to the user's figure, nothing already built
+reads as changed, and neither Update nor Build again… writes to it.
+
+**Its one home is `spec.as_built(spec: GearSpec, variables: Optional[Sequence[Sequence[str]]]) -> GearSpec`**,
+pure, written whole in F3-0, as `assess.blank_process` is the one home of D11's answer.
+
+- It returns the spec with a new field, **`built_allowance`**, set:
+  - to the recorded literal or `"0"` when `variables` is given and the spec's Bore allowance is blank;
+  - to `""` otherwise, meaning not on record.
+- **`built_allowance` is never written by `to_dict`**, never read by `from_dict`, and never compared by
+  `_changed_columns`. So a record's bytes never hold it, and *its Bore allowance changed* is never said for a hole that
+  did not change.
+- **`GearSpec.bore_allowance_mm()`** is the one reader the gears call, in this order:
+  - a typed figure;
+  - else `built_allowance` when set;
+  - else the printed default for a printed gear;
+  - else 0.
+- So every `derive` and every plan sees the as-built figure without an entry in hand, as long as its spec came
+  through `as_built`.
+
+**Every place a blank allowance on record is read, and its owner.** Each goes through `spec.as_built` with the
+recorded `variables` it holds; the review listed six, and the threading adds three it could not check.
+
+| Where | What it does with the rule | Owner |
+|---|---|---|
+| **Reuse**, `gearbox._Parts.find` and `_matches` (`gearbox.py:418-449`, `:579-615`) | The match is tried **per candidate entry**: the row's job is replanned with `as_built(job.spec, entry.variables)` before `same_part` and `_variables_match`. So a part built before F3 is reused by Build again…, not made new. | B |
+| **Update**, `update._part` (`update.py:294-337`), `_ignored_fields_as_built` (`:244-266`) | The built spec is `as_built(from_dict(entry.spec), entry.variables)`, and the wanted spec the same with the same entry's variables. Both plan the same bore, so nothing is said or written for a bore that did not change. | B |
+| **`swbuild.structural_change`** (`swbuild.py:1308`) | It gains `built_variables`. *Has the allowance* is read on the built side from those globals, and on the wanted side from the resolved figure. *Has a flat* is the same with `"Bore Flat"`. Then `has_allowance` and `has_flat` sit beside `has_shift` (`:1333`). | B |
+| **Build again…, a part made new** (ruling 1, below) | A row whose part is on record and is made new for another reason takes `as_built(row, old_entry.variables)`. Only a row with no part takes the default. | B |
+| **Print files**, `printout.workbook_print` and `print_part` (`printout.py:292-330`) | It plans through `classify`, which is threaded above, so a printed gearbox with a bore built before F3 is not refused. The list's bore line is taken from the as-built spec: *bore 8* for a part cut at 8, *bore 8 + 0.2 allowance* for one cut at 8.2. | B |
+| **W9d's carry**, `update._bore_mm` (`:3275`, `CarryBody.bore_mm`) and `carry_for` | `_bore_mm` gives the hole as cut, Bore plus the as-built allowance. `carry_for`'s jobs, `gearbox`'s `occupant` and `free_name` are checked in B's tests to see only as-built jobs. | B |
+| **K11**, `swbuild._blank_meaning` (`swbuild.py:5474`) and `_wanted_words` (`:5507`) | For a blank allowance the sentence says *0.2 (from its blank cell, the allowance as built)*. The set-back is the literal. | B |
+| **K3**, `ui_text._expression_words` and `_value_under` (`ui_text.py:5003-5038`) | For a blank cell it says *the allowance as built (from its blank cell)*, never *type 0.2 in Gears!X2 again*. | C |
+| **The strip**, `gui._load_record` (`gui.py:1703`), the form's derive, `_update_target` (`gui.py:1745-1764`) and the Update values path (`:1870`, `:1945`) | When a record is open, the form's spec passes `as_built(spec, sidecar.record.variables)` before `derive`. So *Bore as cut* says 8 for a part cut at 8, and no Update values is offered for a bore that did not change. | C |
+
+**A pin that every printed part F1 and F2 built reads unchanged** (F3-0, in `tests/test_printed_rule.py`, beside the
+machined pins):
+
+- A printed spur with the default Bore 10, a printed helical and herringbone, and printed RangeBox's dogs and hub
+  are each built by the F2 code, at the commit F3-0 starts from, against the fake.
+- Their records are kept as fixtures.
+- After F3 each must read: no change in `update.classify`; reuse in `_Parts.find`; `gui._update_target` counting 0;
+  `workbook_print` not refused; `_changed_columns` `[]`; and the print list's line *bore 10*.
+- It passes at F3-0's interface commit only once the stubs route through `as_built`. That is why `as_built` is written
+  whole in F3-0 and not left to B.
+
+**Two cases said for the user** (the explainer, and the Gears column's note):
+
+- A part whose **Process changes** keeps its as-built figure, either way. The column's *0 machined* is for a part not
+  yet built.
+- **Clearing a typed allowance** on a built part leaves the figure as built, since blank is as built. To take the
+  default, type it. *Bore as cut* shows which.
+
+**Ruling 1 (the coordinating session, 2026-11-18, the user's to overrule):** a part made new by Build again… keeps its
+as-built allowance. Only a row with no part on record takes the current default. Otherwise a Teeth change carried by
+Update would keep 0.2 while the same change through Build again… gave the new default. The user's printed hole does
+not change as a side effect.
 
 ### 4.2 D-flat
 
-`Drive` is `round` (the default) or `flat`. `Flat` is the shaft's size across its flat, measured from the flat to
-the opposite round side.
+`Drive` is `round` (the default) or `flat`. `Flat` is the shaft's size across its flat, from the flat to the opposite
+round side. With an allowance `a` and the shaft's diameter `D`, the hole is:
 
-**What it builds.** With Drive flat, the bore sketch is a D: a **major arc** and a **chord**, cut through all, where
-today it is a circle.
+    R = (D + a) / 2                 (its round's radius)
+    h = F − D / 2 + a / 2           (its flat's distance from the axis)
+
+So the hole is `F + a` across its flat, and the flat takes the same `a / 2` on its wall as the round does. For D 8,
+F 7 and a 0.2: h 3.1000, R 4.1000, chord 5.3666 and arc sweep 278.24°. The D's area is 49.1350 mm² against the
+circle's 52.8102 (the review's figures, checked here).
+
+**Where the flat sits: one fixed angle, the same in every gear (ruling 2 of the coordinating session, 2026-11-18,
+the user's to overrule).**
+
+- **The flat is on +X**, square to the part's X axis, so its middle faces **the middle of a tooth space**.
+- In every part the app builds, one tooth space is centred on +X (`spur.py:4`, `:1394`). So this angle says the same
+  thing about every gear whatever its tooth count, where +Y would fall on a space, a tooth or a quarter pitch between,
+  with the count modulo 4.
+- On a helical gear the teeth turn along the face, so this holds at the Front plane.
+- **What the app does not model, said plainly in the README and the explainer:** two gears fixed by D-flats to one
+  shaft are phased to each other by their flats in the real machine, and by their meshes in the app's assembly, where
+  the layout turns each gear on its own. F3 does not try to reconcile the two. It matters only where the meshes close
+  a loop between gears on D-fixed shafts. A planet on its pin, or a gear free on its shaft until a dog engages, is not
+  fixed.
+- **Whether the app should later phase gears by their flats** is put to the user as an open question (V3).
+
+**The sketch, exactly (must-fix M4).** Every point in mm, in the sketch on the Front plane, the chord vertical at
+x = h:
 
 - `OpenSketch("bore", 1)`.
-- `Arc("bore_arc", origin, start, end)`: the major arc, its ends at the chord's ends.
-- `Line("bore_flat", start, end)`: the chord, horizontal, on the +Y side.
-- Relations:
-  - `Relation("coincident", ("bore_arc.centre", ORIGIN))`;
-  - the arc's two ends coincident with the line's;
-  - `Relation("horizontal", ("bore_flat",))`.
+- `Arc("bore_arc", centre (0, 0), start (h, +c/2), end (h, −c/2), direction +1)`, where `c = 2 √(R² − h²)`.
+  - Counter-clockwise from the chord's **+Y end**, it sweeps through +Y, −X and −Y to the −Y end: the **major** arc,
+    over 180° (278.24° above).
+  - The review's statement of this order, *start at the chord's −X end*, was for a flat on +Y. With the flat on +X
+    by ruling 2 it is the same branch turned a quarter: start at the end the counter-clockwise sweep leaves first.
+  - The other order draws the 81.76° minor arc, whose cut is a sliver; A's tests forbid it by its sweep.
+- `Line("bore_flat", start (h, −c/2), end (h, +c/2))`. It is drawn starting on the arc's end, so it shares that point
+  (`GOTCHAS.md` §35). It ends on the arc's start, where `Session.relation` adds the coincident, since it skips one
+  between a point and itself only (`swcom.py:1860-1875`).
+- Relations: `Relation("coincident", ("bore_arc.centre", ORIGIN))`, the two ends' coincidents as above, and
+  `Relation("vertical", ("bore_flat",))` (`findings.RELATIONS["vertical"]`, `findings.py:82`, used today).
 - Dimensions:
-  - `Dimension("Bore", ("bore_arc",))`: an arc's radius, linked to `( "Bore Diameter" + "Bore Allowance" ) / 2`;
-  - `Dimension("Flat", ("bore_flat",))`: the chord's length, linked to `2 * sqr ( R * R - h * h )`, where
-    `R = ( "Bore Diameter" + "Bore Allowance" ) / 2` and `h = "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance"
-    / 2`. `h` is the flat's distance from the axis: the shaft's `Flat − D/2`, plus half the allowance, so the flat
-    takes half the allowance on its wall, as the round does.
+  - `Dimension("Bore", ("bore_arc",))`: an arc's, a radius (`findings.ARC_DIMENSION = "radius"`,
+    `findings.py:85-88`), linked to `( "Bore Diameter" + "Bore Allowance" ) / 2`;
+  - `Dimension("Flat", ("bore_flat",))`: the chord's length, linked to
+    `2 * ( abs ( R * R - h * h ) ) ^ 0.5`, with R and h written out in the globals:
+    `R = ( "Bore Diameter" + "Bore Allowance" ) / 2`, `h = "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" /
+    2`.
+  - **Never `sqr`.** The first revision cited `spur.py:1158` as "the app's guarded sqr". That comment says the
+    opposite: SolidWorks 2026 refuses `sqr ( 0 )`, `IIF` does not guard it, and the app writes a square root as
+    `( abs ( … ) ) ^ 0.5` (`spur.py:1157-1162`; `GOTCHAS.md` §27). No equation the app writes holds `sqr`.
 - `CloseSketch`, `Cut` through all, and the global `"Bore Flat"`.
 
-The sketch is fully defined by these, the arc centred, the chord horizontal, its length fixing its height. The
-build reads it with the sketch status it reads today (`GetConstrainedStatus`, `swcom.py:1726`).
+By the review's count the sketch is fully defined (nine degrees of freedom, nine taken), up to its branch, and the
+start-and-direction above fixes the branch at build. The build reads the sketch's status as it does today
+(`GetConstrainedStatus`, `swcom.py:1726`).
 
-- **Every op is one the app has**, and so is every call: `CreateArc` (`:1747`), `CreateLine` (`:1756`),
-  `SketchAddConstraints` for coincident and horizontal, `AddDimension2` on an arc (a radius, as the fillet's,
-  `spur.py:1368`) and on a line (a length, as the bevel's `Back` and `Front`, `bevel.py:911-912`), `FeatureCut4`, and
-  links with `sqr` (the app's guarded `sqr` beside its comment that SolidWorks 2026 refuses `sqr ( 0 )`,
-  `spur.py:1158`). Here `R * R - h * h` is never 0: the Flat check below keeps `h < R`.
-- **Two things in it are new in kind though not in call:**
-  - a **major** arc (every arc the app has drawn is under a half turn, by its sketches' shapes);
-  - an arc's ends meeting a line's ends where the line is drawn starting on the arc's end. The macro database's
-    `GOTCHAS.md` §35 says such a point is shared, and the coincident is then skipped, as the app's tooth sketches
-    already do.
-- Neither is a call that could hang, raise a dialog or damage a file, so by the house rule **the full build is the
-  measurement** and no probe comes first. If F3's first build shows either wrong, that is what gets probed, step by
-  step.
-- **Changing Drive is structural** (`drive` joins `swbuild.STRUCTURAL`, `swbuild.py:1305`, a missing key read as
-  `round`). A change of Flat is a value.
-- **Checks**, errors at the Flat cell:
-  - Flat not more than half the bore (the flat would pass the axis);
-  - Flat not less than the bore (no flat);
-  - Drive flat with no Bore;
-  - Drive flat on a **bevel gear**, whose bore is the revolved blank's edge and cannot take a flat with existing ops
-    (G5). Its sentence says to use a round bore or a hub row.
+**The checks, on the hole as cut, so that no value can be typed that lets an Update solve to the far side.** These
+are errors at the Flat cell, with `R` and `h` as above.
 
-  The rim check is unchanged: the thinnest wall is at the round part, never at the flat.
-- **The flat's place** is on +Y in the part's own frame, square to the Front plane's Y. No angle to a tooth is set
-  (G6).
+- **`h ≥ 0.25 R`.** The flat stays well clear of the axis, and the reflected solution, 2h away, is far. This is the
+  condition the review asks (`h > 0`) with a margin, and with it a negative allowance is safe.
+- **`R − h ≥ 0.3 mm`.** The flat is at least 0.3 mm deep, about a printed line. The chord is then at least
+  `2 √(0.6 R − 0.09)`, 3.08 mm at R 4.1. That keeps out the near-zero chord W9c measured failing (its ring line solved
+  to the far side after a one-tooth change), 1.277 mm at F 7.95 and 0.572 at 7.99.
+- Drive flat with no Bore.
+- Drive flat on a **bevel gear**, whose bore is the revolved blank's edge: *use a round bore, or a hub row* (G5).
+- Drive flat, Flat or an allowance on a ring or sleeve row (§4.1).
+
+The rim check is unchanged: the thinnest wall is at the round, never at the flat.
+
+The other cases A's tests owe:
+
+| Case | h | R | chord | sweep |
+|---|---|---|---|---|
+| a 0 | 3.0000 | 4.0000 | 5.2915 | 277.18° |
+| a 0.3 | 3.1500 | 4.1500 | 5.4037 | 278.76° |
+| F 7.2 | 3.3000 | 4.1000 | 4.8662 | 287.20° |
+| D 5, F 4.5 | 2.1000 | 2.6000 | 3.0659 | 287.74° |
+| D 3, F 2.5 | 1.1000 | 1.6000 | 2.3238 | 266.87° |
+
+**Every call is one the app makes**, and so is every expression form:
+
+- `CreateArc` (`:1747`, direction +1 counter-clockwise, `API-LEDGER.md:385`), `CreateLine` (`:1756`),
+  `SketchAddConstraints` (coincident, vertical), `AddDimension2` on an arc and on a line, `FeatureCut4`, and
+  `Add2`;
+- `( abs ( … ) ) ^ 0.5` as the app writes it.
+
+What is new is in kind, not in call: a **major** arc, and whether its dimension reads a radius as the minor arcs'
+did. A diameter would give half a hole, which the volume read catches at once.
+
+**The D's Updates are measured first, by the demonstration (§4.6).** Its first section changes the D's values across
+their range through Update and checks each by volume against the same D built from scratch, as W9c's landing section
+did. With that, by the house rule, **no probe comes before the full build**. If that section shows a far-side solve,
+it gets one follow-up round, as W9c's did.
+
+**Changing Drive is structural** (`drive` joins `swbuild.STRUCTURAL`, `swbuild.py:1305`, a missing key read as
+`round`). A change of Flat is a value.
 
 ### 4.3 The record: link schema 12, sidecar 4
 
-- **The link record goes to 12, whatever its parts**, as F1's 11 was: one policy, the number set by the app that
-  writes it (`store.LINK_SCHEMA_VERSION`, `store.py:426-432`, with `_F1_LINK_SCHEMA = 11` kept beside it).
-- **A `.gear.json` goes to sidecar 4** (`BORE_SCHEMA`) when its part has the allowance global or a flat. Every other
-  part keeps its number: 1, 2 or 3 by `store.sidecar_schema` (`:91`). A machined part with a blank allowance and a
-  round bore is byte for byte what F2 writes.
+- **The link record goes to 12, whatever its parts**, as F1's 11 was (`store.LINK_SCHEMA_VERSION`,
+  `store.py:426-432`, with `_F1_LINK_SCHEMA = 11` kept beside it).
+- **A `.gear.json`'s schema is decided from what the part holds, not from the spec's keys (must-fix M2).**
+  - `store.sidecar_schema(spec, variables)` (`store.py:91`) gives **4** (`BORE_SCHEMA`) when the part's globals hold
+    `"Bore Allowance"` or `"Bore Flat"`, else 3, 2 or 1 as today.
+  - `built_sidecar` (`:346`) and `updated_sidecar` (`:391`) pass the variables they already write.
+  - So a printed part with a **blank** allowance, which has the global, is written at 4.
+  - An F2-era strip refuses it (`UnknownSchema`, the file left byte-identical, `store.py:220`, `:1473`), and cannot
+    open it and write its record back without `"Bore Allowance"`, as it could at 3 (`gui.py:1945`,
+    `updated_sidecar(…, variables)` with F2's planned globals).
 - **The spec's three keys**, `bore_allowance`, `drive` and `flat`, are left out of `GearSpec.to_dict` at their
-  defaults (blank, `round`, blank), as the bands and F1's keys are. So a missing key is the default, as
-  `from_dict` reads it.
-- **The derived gear's new fields** (the allowance and the flat, in mm) are left out of the derived `to_dict`s while
-  they are 0 and None. This is F1's lesson (§1.1): a derived field in `asdict` goes into every `.gear.json`.
-- **An older app.** An F2-era app refuses a link 12 record and a sidecar 4 `.gear.json`, as `store` refuses any
-  newer one (§1.2), so it never writes a flat part back as round.
-- **Every literal 11 that `git grep` finds at F3-0's base moves to 12**, in F3-0. At `f28cb75` that is fifteen lines
-  in seven files:
-  - `tests/test_store.py:227`, `:1123`;
-  - `tests/test_workbook_bands.py:354`, `:368`;
-  - `tests/test_workbook_carry.py:52`, `:76`, `:80`, `:1119`;
-  - `tests/test_workbook_user_record.py:56`;
-  - `tests/test_workbook_window.py:312`;
-  - `tests/test_printed_workbook.py:379`, `:394`, `:440`, `:526`;
-  - `tests/test_printed_rule.py:550`.
+  defaults, and `built_allowance` always (§4.1.1).
+- **The derived gear's new fields** (the allowance as cut and the flat, in mm) are left out of the derived
+  `to_dict`s while 0 and None. This is F1's lesson (§1.1).
+- **An F2-era app** refuses a link 12 record and a sidecar 4 `.gear.json`, as `store` refuses any newer one.
 
-  `test_store.py:833` parametrises a literal 12 as "newer"; it becomes 13.
+**The pinned lines that move, found by what they pin, not by grepping for 11.** At `fec1cfe`:
+
+| File and lines | What it pins | Becomes |
+|---|---|---|
+| `test_store.py:227`, `:1123` | the link schema written, 11 | 12 |
+| `test_store.py:833` | a literal 12 as "newer" | 13 |
+| `test_store.py:1419-1426` | a raw 12 refused, *"schema 12, this one reads 11"* | a raw 13, *"… reads 12"* |
+| `test_store.py:1600-1610` | `GearSpec(process="printed")` (bore 10) at sidecar 3 | two cases: no global (built before F3) 3; with `"Bore Allowance"` 4 |
+| `test_workbook_bands.py:354`, `:368` | 11 written and read forward | 12 |
+| `test_workbook_bands.py:378` | *"schema 11, this one reads 8"* | 12 |
+| `test_workbook_carry.py:52`, `:76`, `:80`, `:1119` | 11 | 12 |
+| `test_workbook_carry.py:96` | *"schema 11, this one reads 9"* | 12 |
+| `test_workbook_user_record.py:56` | 11 | 12 |
+| `test_workbook_user_record.py:85-91` | a raw 12 refused, *"reads 11"* | a raw 13, *"reads 12"* |
+| `test_workbook_window.py:312` | 11 | 12 |
+| `test_printed_workbook.py:367`, `:379`, `:394`, `:440`, `:526` | 11 | 12 |
+| `test_printed_rule.py:456` | `(LINK_SCHEMA_VERSION, _W9D_LINK_SCHEMA) == (11, 10)` | `(12, 11)` against `_F1_LINK_SCHEMA` |
+| `test_printed_rule.py:457` | `(SCHEMA_VERSION, PRINTED_SCHEMA, …) == (3, 3, 2, 1)` | `(4, 3, 2, 1)` with `BORE_SCHEMA` |
+| `test_printed_rule.py:458` | a printed spec (bore 10) at sidecar 3 | the same two cases as `test_store.py:1600-1610` |
+| `test_printed_rule.py:550` | 11 | 12 |
+
+- **Why none of this is a loosening.** Each line pins *the current schema*, or *one past it refused*, or *a printed
+  part at the schema its contents need*. F3 moves the current schema by one and adds one content case. What each test
+  holds stays the same: the newest written, a newer refused byte-identical, an older read forward. The two sidecar
+  lines gain a case and lose none.
+- **So `tests/test_printed_rule.py` cannot stay whole.** Its lines 456, 457, 458 and 550 move, as above, and each
+  printed *new-build* case with a bore gains the global, since the default Bore is 10 (`spec.py:153`). Its machined
+  cases and its printed parts on record do not move, and F3-0's new pins (§4.1.1) hold the second.
+- **F3-0 finds the rest by a run of the suite at its interface commit**, with the default stubbed in, and lists each
+  moved line in its note with its reason. The review names where the printed new-build ones are:
+  `test_printed_gears.py`, `test_printed_workbook.py` (e.g. `:385`), `test_printed_window.py`, `test_print_form.py`,
+  `test_ui_text.py` and `test_printout.py`.
 
 ### 4.4 What W9 asks of F3
 
 - **K11.** `"Bore Allowance"` → `bore_allowance` and `"Bore Flat"` → `flat` join `update._GLOBAL_COLUMN`
-  (`workbook/update.py:670`), so that K11's sentence names their cells, as it names Bore's.
-  - A blank allowance's value in that sentence is said as *0.2 (from its blank cell, the allowance as built)*.
-  - The set-back is the literal, since the global holds one.
-  - K11 reads every planned global already (`swbuild._value_edits`), so no new read.
-- **W9d's carry, why a part is new.** `update._SPEC_COLUMNS` (`:3196`) gains *Bore allowance*, *Drive* and *Flat*, so
-  a part made new by them says *its Drive changed*.
-- **W9d's "bore".** `update._bore_mm` (`:3275`, `CarryBody.bore_mm`) gives **the hole as cut, Bore plus the
-  allowance as built**, read from the old part's recorded `"Bore Allowance"`.
-  - W9d's word "bore" needs a coaxial cylinder of exactly the recorded radius (to 1e-4 mm, `W9D-INTERFACES.md` §4.4).
-    Without this it would never name a printed bore, and a mate on it would be said as on *a face of Sun on its
-    axis*.
-  - A D-flat's arc face is that cylinder, so it is still "bore". Its flat face is a plane, said as *a face of Sun*.
-- **Mates on faces.** A mate of the user's on the bore face of a part made new by its allowance or drive is named,
-  not found again, by K5's ruling (no finding by geometric role).
-- **The hub (W9b)** is built as a dog's toothed ring with the row's Bore, its fixing left to the user. A hub row
-  takes Bore allowance, Drive and Flat as any gear, through `clutch._as_spur` and `spur._bore_ops`: that is its
-  fixing. W9b's rule that a hub's teeth, module and pressure angle are its sleeve's is untouched.
-- **Update in place (W9c).** No new kind of write. An allowance's or a flat's size is a global set by the Update
-  that sets every global. None to some, and a Drive change, are a new part, as a Flank change is.
+  (`workbook/update.py:670`), so that K11's sentence names their cells.
+  - K11 reads every planned global already (`swbuild._value_edits`, `:5437`).
+  - The blank allowance's words are §4.1.1's (B).
+  - A user's edit of the Bore Sketch's own dimension, rather than the global, is not K11's, as today.
+- **K3.** A feature of the user's in the bore (a keyway) that goes into error after an allowance changes is named,
+  with §4.1.1's blank-cell words (C).
+- **W9d's carry.** `update._SPEC_COLUMNS` (`:3196`) gains *Bore allowance*, *Drive* and *Flat*, so a part made new by
+  them says *its Drive changed*.
+  - `_bore_mm` gives the hole as cut, as built (§4.1.1), so W9d's word "bore", a coaxial cylinder of exactly that
+    radius (to 1e-4 mm, `W9D-INTERFACES.md` §4.4; `swbuild.py:7168`, `:7537-7538`), still names a printed bore.
+  - A D's arc face is a partial cylinder, still "bore"; its flat is a plane, *a face of Sun*.
+  - `COAXIAL_FACE_READ` was verified on full cylinders only (`W9D-INTERFACES.md:793`, `:848`). A partial one is very
+    likely the same, and is shown against the fake only: a caveat.
+- **Mates on faces.** A user's mate on the bore of a part made new by its allowance or drive is named, not found
+  again, by K5's ruling.
+- **Update after the user types an allowance** on a built gearbox:
+  - **a part without the global** (built before F3, machined, or printed at a typed 0): none to some is structural,
+    refused by Update with its sentence, made new by Build again…. Its features and mates are covered by W9a's and
+    W9d's rules, as a Flank change is;
+  - **a part with the global:** a value, set in place by W9c's Update, with K11 and K3 as for any value;
+  - some to none (typing 0) is refused as structural, as Profile shift is.
+- **The hub (W9b)** takes Bore allowance, Drive and Flat as any gear, through `clutch._as_spur` and
+  `spur._bore_ops`: that is its fixing. Its flat's checks run in the delegate's `validate`. W9b's rule that a hub's
+  teeth, module and pressure angle are its sleeve's is untouched.
+- **Update in place (W9c).** No new kind of write.
 
 ### 4.5 The edge chamfer is not here (D9)
 
 The first draft put a chamfer on both end faces by selecting each face. The review found the app has never selected
-a face or an edge (every selection is a feature, plane or sketch entity by name), so that is new traversal code for
-four kinds of end face, not one call. It also found that a chamfer of 0 cannot be a value, and that at module 1 a
-0.3 mm chamfer leaves 0.06 to 0.14 mm of tooth near the tip on the bed face. A chamfered blank made by the existing
-`Revolve` needs no new call but relieves the tips only, and the squish that binds a mesh is on the flanks. Every
-slicer has the setting that deals with it. If the prints of §3.2 show that is not enough, the chamfer gets a plan of
-its own.
+a face or an edge, so that is new traversal code for four kinds of end face. It also found that a chamfer of 0
+cannot be a value, and that at module 1 a 0.3 mm chamfer leaves 0.06 to 0.14 mm of tooth near the tip. Every slicer
+has the setting that deals with it. If §3.2's prints show that is not enough, the chamfer gets a plan of its own.
 
 ### 4.6 F3, ready to execute
 
-**F3-0, the interface and the pins** (one agent, first, alone; reviewed before A, B and C start). The note is
-`docs/notes-printed/F3-INTERFACES.md`, with every name, signature, sentence and constant below. Everything is
-importable from its commit, with stubs that return neutral values, and the whole suite passes there.
+**F3-0, the pins and the interface** (one agent, first, alone; reviewed before A, B and C start). The note is
+`docs/notes-printed/F3-INTERFACES.md`. Everything below is importable from its commit, with stubs that return neutral
+values, and the whole suite passes there but for the known font-width test.
 
-1. **The machined pins first, in their own commit.** Pin in `tests/test_printed_rule.py` a new set, at the commit
-   F3-0 starts from:
-   - a machined part's plan and `.gear.json` with a bore, for a spur, helical, herringbone and bevel gear, a dog and
-     a hub;
-   - the same for a printed part built before F3 read back by the as-built rule.
+1. **Pins first, in their own commit**, at the commit F3-0 starts from, in `tests/test_printed_rule.py`:
+   - the machined plans and `.gear.json`s with a bore (a spur, helical, herringbone and bevel gear, a dog, a hub);
+   - **the printed parts F1 and F2 built**, with their records as fixtures, read as §4.1.1 says.
 
-   Both must be identical after F3, as F1's pins were.
+   Both must hold at every later commit.
 2. **`spec.py`:**
-   - fields `bore_allowance = ""`, `drive = "round"`, `flat = ""` after F1's;
-   - readers `bore_allowance_mm(printed: bool, as_built: Optional[float]) -> float`, `drive_value()` and
-     `flat_mm()`;
-   - `to_dict` leaving each out at its default.
+   - the fields `bore_allowance = ""`, `drive = "round"`, `flat = ""` and `built_allowance = ""`;
+   - `bore_allowance_mm()` in §4.1.1's order, `drive_value()` and `flat_mm()`;
+   - `to_dict` leaving the first three out at their defaults and `built_allowance` always;
+   - **`as_built(spec, variables)` written whole.** It is the rule's one home, and §4.1.1's pin cannot pass without
+     it.
 3. **The gears' names:**
-   - `spur.BORE_ALLOWANCE = "Bore Allowance"`, `spur.BORE_FLAT = "Bore Flat"` and `spur.BORE_ALLOWANCE_DEFAULT = 0.2`;
-   - the derived gear's `bore_allowance: float = 0.0` and `flat: Optional[float] = None` on `SpurDerived` and the
-     bevel's `RackSection`, left out of each `to_dict` (four, as §1.1) while 0 and None;
-   - `spur._bore_ops`'s signature unchanged.
-4. **The workbook's columns.** In `schema.GEARS`, after End band and before Part name, as W9b placed its bands, so no
-   earlier column's letter moves:
-   - **Bore allowance** (mm; blank *0.2 printed, as built once built; 0 machined*);
-   - **Drive** (words `round` and `flat`, blank `round`);
-   - **Flat** (mm, blank *none*).
+   - `spur.BORE_ALLOWANCE = "Bore Allowance"`, `spur.BORE_FLAT = "Bore Flat"`, `spur.BORE_ALLOWANCE_DEFAULT = 0.2`;
+   - the bounds `FLAT_LEAST_H = 0.25` (× R) and `FLAT_LEAST_DEPTH = 0.3` (mm);
+   - the derived fields on `SpurDerived` and `RackSection`, left out of the four `to_dict`s at their defaults.
+4. **The columns.** In `schema.GEARS`, after End band and before Part name, as W9b placed its bands:
+   - **Bore allowance** (mm; note *blank: 0.2 printed for a new part, as built for a part on record, 0 machined*);
+   - **Drive** (`round`, `flat`; blank `round`);
+   - **Flat** (mm).
 
-   Also `model.Gear`'s three fields after `end_band` and before `row`, and `Gear.spec_values` passing them. The
-   pin of the Gears titles, `tests/test_workbook_model.py:19-23`, moves with them in this commit (F1-0's lesson,
-   the Box's titles).
-5. **The form's fields.** `gui.GEAR_VARS` (`gui.py:73-90`) gains the three, so `test_gui_spec.py`'s field test stays
-   green. Package C gives them their rows.
+   Also `model.Gear`'s fields and `Gear.spec_values` (`built_allowance` `""` there, before any record is read). The
+   pin `tests/test_workbook_model.py:19-23` moves with them.
+5. **The form's fields:**
+   - `gui.GEAR_VARS` gains the three;
+   - a new `GEAR_RECORD_ONLY = ("built_allowance",)` beside `GEAR_WORKBOOK_ONLY`;
+   - `tests/test_gui_spec.py:49-52`'s union gains it.
 6. **The record:**
-   - `store.LINK_SCHEMA_VERSION = 12` with `_F1_LINK_SCHEMA = 11`;
-   - `store.BORE_SCHEMA = 4` and `SCHEMA_VERSION = 4`;
-   - `sidecar_schema` giving 4 for a spec with an allowance or a flat;
-   - the fifteen literal 11s of §4.3, and any more grep finds, moved; `test_store.py:833`'s 12 to 13.
-7. **The as-built rule:** `gearbox.as_built_allowance(entry: Optional[PartEntry]) -> Optional[float]`. The stub
-   returns None, read as "the current default".
-8. **The words:** every new diagnostic, the structural sentences (*Drive changed from round to flat, which its
-   values cannot carry; build it again as a new part.*, and the allowance's none and some), K11's blank allowance,
-   the explainers for the three fields, the print list's lines (*bore 8 + 0.2 allowance, D-flat 7.5*), and the
-   Derived row *Bore as cut*.
+   - `LINK_SCHEMA_VERSION = 12` with `_F1_LINK_SCHEMA = 11`;
+   - `BORE_SCHEMA = 4` and `SCHEMA_VERSION = 4`;
+   - `sidecar_schema(spec, variables)` with `built_sidecar` and `updated_sidecar` passing them (M2);
+   - every line of §4.3's table, and those the suite run finds.
+7. **Stubs:**
+   - `structural_change(built, wanted, built_variables=None)`;
+   - the per-candidate reuse match's signature in `gearbox`;
+   - `printout`'s as-built bore figures.
+8. **The words:**
+   - every new diagnostic (the flat's two bounds, a ring's or sleeve's bore, the bevel);
+   - the structural sentences (*Drive changed from round to flat, which its values cannot carry; build it again as a
+     new part.*, and the allowance's none and some);
+   - K11's and K3's blank words;
+   - the explainers (with *as built*, and *clearing keeps the figure as built*);
+   - the Derived row *Bore as cut*;
+   - the print list's bore line;
+   - the README's flat paragraph.
 
 F3-0's files:
 
@@ -1751,132 +1901,154 @@ F3-0's files:
 - `src/gear_generator/spec.py`, `store.py`;
 - the names' lines in `gears/spur.py` and `bevel.py`;
 - `workbook/schema.py`, `workbook/model.py`;
-- `gui.py` (`GEAR_VARS` only);
-- `workbook/gearbox.py` (the stub);
-- tests: `tests/test_printed_rule.py`, `tests/test_workbook_model.py`, and the seven files of §4.3's literals
+- `gui.py` (the two tuples only);
+- `workbook/gearbox.py`, `swbuild.py`, `printout.py` (stubs only);
+- tests: `tests/test_printed_rule.py`, `test_workbook_model.py`, `test_gui_spec.py`, every file of §4.3's table
   (`test_store`, `test_workbook_bands`, `test_workbook_carry`, `test_workbook_user_record`, `test_workbook_window`,
-  `test_printed_workbook`, `test_printed_rule`).
+  `test_printed_workbook`), and each file the suite run finds moving by design, listed in the note.
 
-**Then three packages, each owning its files outright, disjoint in `src` and in `tests`.** All three start as soon
-as F3-0's interface is reviewed. None needs SolidWorks or the user.
+**Then three packages, each owning its files outright, disjoint in `src` and in `tests`.** All start once F3-0 is
+reviewed. None needs SolidWorks or the user.
 
 - **A, the geometry and the checks.**
-  - Files: `gears/spur.py` (`_bore_ops` with the allowance and the D, the globals, the checks of §4.1 and §4.2, the
-    derived fields), `gears/helical.py` (the bore's globals list, `:426`), `gears/bevel.py` (the allowance in the
-    blank's expressions, `:881-893`; Drive flat refused), `gears/clutch.py` (if anything).
-  - Tests: `tests/test_gears_spur.py`, `_helical`, `_bevel`, `_clutch`, and a new `tests/test_bore.py`. Each kind's
-    plan with an allowance and with a flat, op by op. The D sketch's figures: the chord length for an 8 mm shaft
-    with a 7 mm flat and 0.2 allowance, h = 3.1, R = 4.1, chord = 5.367 mm. Each check's sentence; the volume of the
-    part against the maths (circle area less the D's); and machined plans unchanged.
-- **B, the record, the workbook and Update.**
-  - Files: `swbuild.py` (`structural_change`: `drive` in `STRUCTURAL`, `has_allowance` and `has_flat` beside
-    `has_shift`; K11's words for a blank allowance), `workbook/update.py` (`_GLOBAL_COLUMN`, `_SPEC_COLUMNS`,
-    `_bore_mm` as cut), `workbook/gearbox.py` (`as_built_allowance` and its use in planning), and `printout.py` (the
-    block's bore figures handed to C as structure).
+  - Files:
+    - `gears/spur.py` (`_bore_ops` with the allowance and §4.2's D exactly, the globals at `:841`, the checks, the
+      derived fields);
+    - `gears/helical.py` (globals at `:492`, the groove floor on the bore as cut at `:462`);
+    - `gears/bevel.py` (the allowance in the blank's expressions `:881-893` and globals `:716`; Drive flat refused);
+    - `gears/internal.py` and `gears/clutch.py` (a ring's or sleeve's bore fields refused).
+  - Tests: `tests/test_gears_spur.py`, `_helical`, `_bevel`, `_internal`, `_clutch`, and a new `tests/test_bore.py`:
+    - each kind's plan, op by op, with an allowance and with a flat;
+    - §4.2's tables;
+    - the arc's start, end, direction and its sweep over 180°;
+    - that the drawn points satisfy every relation;
+    - each bound at its edge, with a negative allowance;
+    - each check's sentence;
+    - the chord's link text holding `abs` and `^ 0.5` and no `sqr`.
+- **B, the record's comparisons, the workbook and Update** (the largest package, M1's threading).
+  - Files: `workbook/gearbox.py` (the per-candidate reuse match; Build again…'s as-built rows), `workbook/update.py`
+    (`_part`, `_ignored_fields_as_built`, `_GLOBAL_COLUMN`, `_SPEC_COLUMNS`, `_bore_mm`), `swbuild.py`
+    (`structural_change` with `built_variables`, `drive` in `STRUCTURAL`, `has_allowance` and `has_flat`; K11's
+    words), `printout.py` (as-built bore figures).
   - Tests: a new `tests/test_bore_workbook.py`:
-    - the as-built rule (a part built before F3 unchanged; a part built at 0.2 unchanged after the default moves to
-      0.25; a new row at 0.25);
-    - each structural and value case through `update.classify`;
-    - K11's sentence;
-    - W9d's `_bore_mm` and `_changed_columns`;
+    - every row of §4.1.1's table that is B's, through the code path the review names;
+    - a pre-F3 printed part reused by Build again…, unchanged by Update, not refused by Print files;
+    - ruling 1;
+    - a Process change keeping the figure;
+    - M2's sidecar for a blank allowance, and an F2-era reader refusing it byte-identical;
+    - K11's words;
     - a hub row with all three;
-    - machined bytes.
-    `tests/test_workbook_update.py` and `tests/test_workbook_carry.py` are F3-0's (literals) and A's neither; B adds
-    its cases to its new file only.
+    - `occupant`, `free_name` and `carry_for` seeing as-built jobs.
 - **C, what the user sees.**
-  - Files: `gui.py` (the three rows under Bore, Flat shown while Drive is Flat), `ui_text.py` (the explainers, the
-    Derived row *Bore as cut*, the print list's bore line), `design/` (the form with a D-flat typed; the board
-    first), `design/UI-DESIGN.md`, `README.md`.
-  - Tests: `tests/test_ui_text.py`, and a new `tests/test_bore_form.py`.
+  - Files:
+    - `gui.py` (the three rows under Bore, Flat shown while Drive is Flat; `_load_record`, the derive,
+      `_update_target` and Update values through `as_built`);
+    - `ui_text.py` (K3's blank words, the explainers, *Bore as cut*, the print list's bore line);
+    - `design/` (the form with a D-flat; the board first), `design/UI-DESIGN.md`;
+    - **`README.md`**: the coupon instructions before and after F3, as in §3.2 (M3); hole compensation kept at 0
+      for parts printed with the calibrated allowance; the flat's fixed angle and that gears on one D-shaft are
+      phased by their flats in the machine and by their meshes in the assembly (ruling 2).
+  - Tests: `tests/test_ui_text.py` and a new `tests/test_bore_form.py`:
+    - the strip on an open pre-F3 record: *Bore as cut* 8, no Update values;
+    - K3's sentence;
+    - the README's coupon table read from the file.
 
-A's diagnostics and B's structural and K11 sentences stay in their own files, as the house has them; C words the
-form and the list. Each meets the others through F3-0's names.
+B's sentences (structural, K11) and A's diagnostics stay in their files, as the house has them; C words the form, K3
+and the list. Each meets the others through F3-0's names.
 
 **What must not move.**
 
 - **W9's pins:** `BEFORE_W7`, `BEFORE_W8`, the W8 and W9 fixtures' counts, every W9 test against the fake.
-- **F1's:** `tests/test_printed_rule.py` whole, with F3-0's new machined pins.
-- **F2's:** `tests/test_span.py`, `test_printout.py`, `test_swbuild_print.py`, the findings and their pins.
-  - **One exception, by design, listed in F3-0's note:** a printed plan *with a bore* built new after F3 carries the
-    allowance. Any F1 or F2 test that pins such a plan, or a print list line naming its bore, is re-taken in F3-0 by
-    name, each said why.
-  - A machined plan, and a printed part on record, never move.
+- **F1's:** every machined pin. `tests/test_printed_rule.py` moves only at §4.3's four lines and its printed
+  new-build cases, each listed.
+- **F2's:** `test_span.py`, the findings and their pins. `test_printout.py` moves only where a printed new-build part
+  with a bore is pinned.
 - **No SolidWorks call** is added or changed.
+- **A printed part on record never moves** (§4.1.1's pin).
 
-**The SolidWorks demonstration**, `probe/f3_demonstration.py`, on W9a's harness as F1's and F2's were.
+**The SolidWorks demonstration**, `probe/f3_demonstration.py`, on W9a's harness.
 
-- `bore`: from the strip's own form, printed spur gears with an 8 mm bore:
-  - blank allowance (the global 0.2, the link's text);
-  - typed 0.3;
-  - D-flat with a 7 mm flat.
-
-  Each built, and read by:
-  - the sketch status *fully defined* (`GetConstrainedStatus`);
-  - its volume against the maths (small_pinion_check's `judge_part`, its expected volume less the D);
-  - **the hole measured by F2's own route.** **Print files** is pressed, and its STEP file's `VERTEX_POINT`s give
-    the bore's least radius, `(8 + allowance) / 2`, and on the D the flat's distance from the axis, `h`, to 0.01 mm.
-- `kinds`: a helical, a herringbone and a bevel gear with an allowance, the bevel's bore read the same way; a D-flat
-  on the bevel refused.
-- `update`:
-  - Update values carries an allowance 0.2 → 0.3 and a Flat 7 → 7.2, each read back in SolidWorks;
-  - it refuses Drive round → flat and an allowance going to 0, each with its sentence, and nothing is written.
+- `dshape`, **first** (S6), on a printed spur, m 1.5, z 20, D 8, a 0.2, F 7:
+  - through Update values: Flat 7 → 5 → 7.6 and back to 7; Bore 8 → 10 with Flat 7 → 9; the allowance 0.2 → 0.4;
+    and each bound of §4.2 at its edge;
+  - **each judged by volume against the same D built from scratch**, small_pinion_check's 0.1 %, and by the sketch's
+    status, as W9c's landing section did;
+  - a far-side solve is the run's finding, with one follow-up round if it shows.
+- `bore`, from the strip's own form: printed spurs with a blank allowance (the global 0.2, the link's text), typed 0.3,
+  and a D-flat.
+  - Each is read by its sketch status, its volume (0.1 %), and the hole by F2's own route.
+  - **Print files** writes the STEP file, whose `VERTEX_POINT`s give the round's least radius `(D + a) / 2`, and on
+    the D the flat's corners' X in the part's frame, which is `h`, each to 0.01 mm. `h` is not a radius: the corners
+    lie at radius R.
+- `kinds`: a helical, a herringbone and a bevel gear with an allowance; a D-flat on the bevel refused.
+- `update`: Drive round → flat and an allowance going to 0 refused with their sentences, nothing written.
 - `workbook`:
-  - RangeBox_Fixed printed, its Hub row with an allowance and a D-flat, built, turned through every mode, with no
+  - RangeBox_Fixed printed, its Hub row with an allowance and a D-flat, built, turned through every mode, no
     interference read;
-  - then a W9a `setup.master` copy, Printed typed: its parts built before F3 read *unchanged* in Bore (the as-built
-    rule), nothing written by it.
-  - W9d's "bore" on a mate on a printed bore is shown against the fake only. No master holds such a mate, and
-    building one is not worth a run. Said as such.
-- **Times.** F2's demonstration took about twice its estimate, so these are doubled from F2's measured sections:
-  about 35 minutes on 2026 and 55 on 2024, the confirming build, each in a fresh session, and one rerun round of
-  about 30 minutes in all.
+  - a copy of W9a's `setup.master` with Printed typed: **nothing written for the bore**. Typing Printed changes the
+    Backlash, which Update writes, as F1 showed.
+- W9d's "bore" on a mate on a printed bore is shown against the fake only, since no master holds one: said as such.
+- **Times.** The first revision said F2's demonstration took twice its estimate. That was wrong: its runs took 11.6
+  minutes on 2026 and 15.5 on 2024, against the script's estimates of 31 and 48 (`F2-DEMONSTRATION.md:388-389`,
+  `:550-551`); what doubled was the plan's 15 and 25 into the script's estimate. F3's runs, with `dshape`'s builds,
+  are estimated at about 25 minutes on 2026 and 40 on 2024 as the confirming build, each in a fresh session, and a
+  follow-up round of about 20. These are generous.
 
 **Done when:**
 
-- F3-0's interface is reviewed, and F3-0's machined pins are taken and hold.
-- Packages A, B and C are in, each with its tests, the suite passing but for the known font-width test.
-- On SolidWorks 2026, and again on 2024 as the confirming build, every section of the demonstration is clean. Every
-  sketch is fully defined; volumes and the STEP-measured bore agree with the maths to 0.01 mm; Update carries the
-  values and refuses the structural changes with their sentences; the workbook gearbox with its hub turns with no
-  interference; and a gearbox built before F3 reads unchanged.
-- The boards, `design/UI-DESIGN.md` and the README are updated.
-- The stage is reviewed by a subagent and its should-fixes are done, the demonstration's runs reviewed too.
-- **Not in F3's *Done when*:** the allowance's default from the user's coupon (a one-line change and its pins when
-  §3.2's numbers come), and a D-flat coupon's fit (G7).
+- F3-0's pins hold (machined, and printed parts on record) and its interface is reviewed.
+- Packages A, B and C are in with their tests, the suite passing but for the known font-width test.
+- On SolidWorks 2026, and on 2024 as the confirming build, every demonstration section is clean:
+  - `dshape`'s every value within 0.1 % by volume of its from-scratch twin;
+  - every sketch fully defined;
+  - the STEP-read hole to 0.01 mm;
+  - the structural refusals with their sentences;
+  - the hub gearbox turning with no interference;
+  - a gearbox built before F3 unchanged in its bore.
+- The README, the boards and `design/UI-DESIGN.md` are updated.
+- The stage and the runs are reviewed, and their should-fixes done.
+- **Not in it:** the allowance's default from the user's coupon (a one-constant change and its pins when §3.2's
+  numbers come, V1).
 
-**Cost**, honest after F2 (which took about twice its first estimate). About **sixteen to twenty agent runs**:
+**Cost.** About **seventeen to twenty-one agent runs**, B the largest:
 
-- F3-0 and the interface review (2);
+- F3-0 and its review (2);
 - the three packages (3);
-- the stage review, its should-fix round and the re-check (3);
-- the demonstration's script, its review, a fix round, the runs and the runs' review (5 to 7);
-- the coordinator's hand-over notes and plan records (1 to 2);
-- one spare for a probe if the first build shows the major arc or the shared point wrong (0 to 2).
+- the stage review, its fix round and re-check (3 to 4);
+- the demonstration script, its review and fix round, the runs, and the runs' review (5 to 7);
+- hand-over notes and plan records (1 to 2);
+- a follow-up round if `dshape` shows a far-side solve (0 to 2).
 
-**About 120 SolidWorks minutes** in four or five fresh sessions: 35 on 2026 and 55 on 2024, a rerun round of about
-30, more if a probe is needed.
+**About 85 SolidWorks minutes**: 25 on 2026, 40 on 2024, a follow-up round of 20, in four or five fresh sessions.
 
 **The decisions F3 needs.**
 
+*Ruled by the coordinating session, the user's to overrule:*
+
+- **Ruling 1:** a part made new by Build again… keeps its as-built allowance.
+- **Ruling 2:** the flat at one fixed angle, on +X facing the middle of a tooth space, the same in every gear; gears
+  on one D-shaft are phased by flats in the machine and by meshes in the assembly, said in the README and not
+  reconciled.
+
 *Standing on an assumed answer, so the code can go ahead:*
 
-- **G1.** The placeholder default: 0.2 mm on the diameter for a printed bore; 0 for machined; a typed figure
-  honoured on either.
-- **G2.** A blank allowance is *as built* for a part on record (§4.1), so moving the default rebuilds nothing.
-- **G3.** The new Gears columns go after End band and before Part name; the form's rows go under Bore.
-- **G4.** None to some allowance, and a Drive change, are a new part. Sizes are values.
-- **G5.** A bevel gear takes the allowance but no D-flat in F3.
-- **G6.** The flat on +Y in the part's own frame, at no set angle to a tooth; it takes half the allowance on its
-  wall.
-- **G7.** No D-flat coupon in F3's code. If the user wants one, the form builds it with Drive flat, and its fit is
-  graded as §3.2's bores are, as a short follow-on to their step.
-- **G8.** The global names `"Bore Allowance"` and `"Bore Flat"`, and a link schema of 12 whatever the parts.
+- **G1.** The placeholder 0.2 mm on the diameter, printed, for a part not yet built; 0 machined; typed honoured;
+  negative allowed (a press fit), checked on the hole as cut.
+- **G2.** A blank allowance on record is as built, through `spec.as_built` (§4.1.1); kept across a Process change;
+  clearing a typed figure keeps it.
+- **G3.** The new Gears columns after End band; the form's rows under Bore.
+- **G4.** None to some allowance, some to none, and a Drive change, are a new part; sizes are values.
+- **G5.** A bevel gear takes the allowance but no D-flat.
+- **G6.** The flat's bounds: `h ≥ 0.25 R` and a depth of at least 0.3 mm.
+- **G7.** No D-flat coupon in code. If the user wants one, the form builds it and its fit is graded as §3.2's are.
+- **G8.** The global names `"Bore Allowance"` and `"Bore Flat"`, and link schema 12 whatever the parts.
+- **G9.** A ring or sleeve row with a bore field typed is an error at the cell.
 
 *Needing the user, but not before code:*
 
-- **V1.** The allowance figure from their coupons (U4), replacing 0.2 by one constant and its pins.
-- **V2.** Whether their shafts carry a D-flat, and its across-flat size. This is typed per row and needs nothing
-  from code.
+- **V1.** The allowance figure from their coupons, replacing 0.2 by one constant and its pins.
+- **V2.** Whether their shafts carry a D-flat, and its size, typed per row.
+- **V3 (open question).** Whether the app should later phase gears by their flats where they share a D-shaft.
 
 *Needing the user before code:* **none.**
 
@@ -2479,4 +2651,81 @@ and made ready to execute, as §2.8 made F1 and §3.3 made F2. Each change is by
   - Done when;
   - a cost doubled from F2's experience: sixteen to twenty agent runs, about 120 SolidWorks minutes;
   - decisions G1 to G8 on assumed answers, V1 and V2 for the user later, none before code.
+
+
+## Changes after F3's review
+
+2026-11-18, evening. To F3's review (the last section of `docs/PLAN-PRINTED-REVIEW.md`, `fec1cfe`) and the coordinating
+session's two rulings on it. Each change is by section, with why.
+
+**The four must-fixes:**
+
+- **M1, the as-built rule (§4.1.1).**
+  - The rule has one home, `spec.as_built(spec, variables)`, written whole in F3-0. It sets a field,
+    `built_allowance`, that `to_dict` never writes. `bore_allowance_mm()` reads it after a typed figure and before
+    the default, so every `derive` sees the as-built figure without an entry in hand.
+  - Every place a recorded blank allowance is read goes through it, each with its owner: reuse per candidate entry
+    (B), `update._part` and `_ignored_fields_as_built` (B), `structural_change` with the built side's variables
+    (B), Build again…'s made-new rows (B, ruling 1), Print files (B), W9d's `_bore_mm` and `carry_for` (B), K11 (B),
+    K3 (C) and the strip (C).
+  - A pin in `test_printed_rule.py` holds every printed part F1 and F2 built reading unchanged.
+- **M2, sidecar 4 from what the part holds (§4.3).** `sidecar_schema(spec, variables)` gives 4 when the part's
+  globals hold `"Bore Allowance"` or `"Bore Flat"`. So a printed part with a blank allowance is written at 4, and
+  an F2-era strip cannot write it back without the global. `test_store.py:1600-1610` and `test_printed_rule.py:458`
+  become two cases each.
+- **M3, the coupons (§3.2, §4.6 package C).**
+  - Before F3 lands, the offset goes in Bore, as written.
+  - After, the shaft goes in Bore and 0 (typed), 0.1, 0.2 and 0.3 in Bore allowance, never both. The coupon that fits
+    is the allowance itself, and coupons built before F3 stay valid.
+  - Package C changes the README's *Calibrating your printer* to say both.
+- **M4, the D sketch exactly (§4.2).**
+  - The arc starts at the chord's end that its counter-clockwise sweep leaves first, direction +1, a major arc over
+    180°. With the flat on +X (ruling 2) that is the chord's +Y end; the review's *−X end* was the same branch for a
+    flat on +Y.
+  - The chord's link is `2 * ( abs ( R * R - h * h ) ) ^ 0.5`, never `sqr`. The first revision's citation of
+    `spur.py:1158` said the opposite of that comment.
+  - The checks are on the hole as cut: `h ≥ 0.25 R`, which settles that a negative allowance is allowed, and a
+    flat depth of at least 0.3 mm, which keeps the chord at least 3.08 mm at R 4.1, against W9c's near-zero line.
+  - The demonstration's first section, `dshape`, changes the D's values across their range through Update and checks
+    each by volume against the same D built from scratch. With it, no probe comes before the full build.
+
+**The review's corrections:**
+
+- **The pinned schema lines (§4.3).** They are found by what they pin, not by grepping for 11, and listed in full:
+  - `test_store.py:227`, `:833`, `:1123`, `:1419-1426`, `:1600-1610`;
+  - `test_workbook_bands.py:354`, `:368`, `:378`;
+  - `test_workbook_carry.py:52`, `:76`, `:80`, `:96`, `:1119`;
+  - `test_workbook_user_record.py:56`, `:85-91`;
+  - `test_workbook_window.py:312`;
+  - `test_printed_workbook.py:367`, `:379`, `:394`, `:440`, `:526`;
+  - `test_printed_rule.py:456`, `:457`, `:458`, `:550`.
+
+  Plus those a suite run at F3-0's interface commit finds. `test_printed_rule.py` is said not to stay whole, with
+  why each line's move is not a loosening.
+- **The time sentence.** "F2's demonstration took twice its estimate" was false. Its runs took 11.6 and 15.5
+  minutes against 31 and 48. The times and the cost are restated: seventeen to twenty-one agent runs, about 85
+  SolidWorks minutes.
+- **The helical's globals** are at `helical.py:492`, not `:426`. The bevel's globals (`:716`) are named.
+- **Should-fixes taken:**
+  - the herringbone's groove floor on the bore as cut;
+  - K3's blank words;
+  - ruling 1 on a part made new;
+  - the D's Update section first;
+  - a ring's or sleeve's bore fields an error;
+  - the flat's place;
+  - hole compensation kept 0 (README);
+  - the strip's callers given to C by name;
+  - a Process change and a cleared figure said;
+  - the demonstration's *h* as the corners' X, not a radius;
+  - the volume tolerance as small_pinion_check's 0.1 %;
+  - *nothing written for the bore* on the master copy.
+
+**The rulings:**
+
+- **Ruling 1** (§4.1.1): a part made new by Build again… keeps its as-built allowance.
+- **Ruling 2** (§4.2): the flat on +X, facing the middle of a tooth space, the same in every gear. A tooth space is
+  centred on +X in every part the app builds, so this angle says the same thing about every gear whatever its tooth
+  count; +Y would not. The README says plainly that gears on one D-shaft are phased by their flats in the machine and
+  by their meshes in the assembly, which F3 does not reconcile. Whether the app should phase by flats later is V3, an
+  open question for the user.
 
