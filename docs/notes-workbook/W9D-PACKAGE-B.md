@@ -25,7 +25,11 @@ All in `tests/test_workbook_carry.py` unless named.
 
 - `carry_for`: every body mapped, planet copy *k* to copy *k*, the layout and the carrier, `same_file` from `reuse`,
   `why_new` from the Gears columns (Flank; Face width and Bore; Part name and Flank), `UNSAVED`, `MISMATCHED`, a gear
-  with no handle, `names` from `plan_features` and the sidecars, `written_on`, `app_files`: three tests.
+  with no handle, `names` from `plan_features` and the sidecars, `written_on`, `app_files`: three tests. *After
+  7f91037:* a planet copy made new is looked up by its Gears row (`planetary.copy_of`) in `again.build` and
+  `again.made_new`, and `update.why_new_of` keys each reason by the copy and its row; three more tests (a planet
+  copy's names and why, a feature in a planet's part with its reason and how to keep it, and a carry end to end with
+  the user's mates on two copies' Gear Axes).
 - The question: W9a's clause led by `CARRY_INSERTS`; the mixed form; carried and named with the time; a kind not in
   `CARRY_REMAKE_KINDS` grouped with its finding; the configuration *may*; each reason and a group (hand-made plan);
   the `MISMATCHED` advice with the cell and value and without, the `UNSAVED` advice; a schema 9 inventory's *may*; a

@@ -5962,10 +5962,10 @@ def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[
     work = done.work
     path = (work.assembly if work is not None and work.assembly else "") or old_path
     old = _file(path) if path else "the old assembly"
+    from .workbook.update import StaysBehind, why_new_of
     if stays is None:
-        from .workbook.update import StaysBehind
         stays = StaysBehind(None, path)
-    why_new = {b.old: b.why_new for b in (getattr(carry, "bodies", ()) or ()) if b.why_new}
+    why_new = why_new_of(getattr(carry, "bodies", ()) or ())
     stop, after = _split_stop(done)
     if work is None:
         reason = stop.rstrip(".") or f"SolidWorks did not answer the read of {old}"

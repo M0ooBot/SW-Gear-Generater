@@ -88,7 +88,13 @@ class Carry:
 B fills `Carry` from the record and the `GearboxPlan` it is about to build (`workbook.update.carry_for(record, again,
 old)`, beside W9a's `old_assembly`): planet copy *k* to copy *k*; a body the new plan has no handle for gets `handle
 ""`; `same_file` from `again.reuse` (a `PartReuse` whose path is the old component's part); `why_new` from the update
-plan's structural reasons and `again.made_new` (`MadeNew.why`). The window passes it as `kwargs["carry"]` in
+plan's structural reasons and `again.made_new` (`MadeNew.why`). A part made new is found in `again.build` and
+`again.made_new` by its Gears row: a planet copy's id (*Planet copy 2*) is never in a job's or a `MadeNew`'s
+`gear_ids`, which hold the row (*Planet*), so the lookup takes `planetary.copy_of(id)[0]`, for `names` and
+`why_new` alike; and the reasons the sentences read (`update.why_new_of`) are keyed by each copy and by its row too,
+the id W9a's features left in a part are recorded by (W9D-DEMONSTRATION-REVIEW.md, *A planet copy made new*,
+`7f91037`: before, a copy made new got no names and *its values changed*, and a feature in a planet's part was said
+to stay in a part the new revision *does not use*). The window passes it as `kwargs["carry"]` in
 `_start_build` beside `before`, and only for a Build again… (W9a's `old_assembly` already decides that).
 
 ### 2.2 What A reads (crosses to B on the result)
