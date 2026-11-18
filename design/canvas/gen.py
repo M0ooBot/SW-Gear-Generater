@@ -529,6 +529,9 @@ def pair_board(title_kind, pair, chosen=None, focus=("a", "module"), card=None, 
     diagnostics = diagnostics_of([("A", diag_a), ("B", diag_b)])
     if not crossed and ((not bevel and not ring) or d_a.printed or d_b.printed):     # GearApp._show_derived
         diagnostics += [(message, "cannot be built" in message) for message in pairs.mesh_warnings(d_a, d_b)]
+    if crossed and (d_a.printed or d_b.printed):                                     # … and its crossed pair (F1)
+        said = pairs.printed_clearance_sentence(pairs.tip_clearance(d_a.module, d_a.teeth, d_b.teeth, alpha), False)
+        diagnostics += [(said, False)] if said else []
     panel_card = {"a": card if focus[0] == "a" else None, "b": card if focus[0] == "b" else None,
                   "pair": card if focus[0] == "pair" else None}
     readout = ui_text.pair_readout(pair.cone_distance if bevel else pair.centre_distance, pair.ratio, chosen,

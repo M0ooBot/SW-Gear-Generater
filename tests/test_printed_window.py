@@ -171,6 +171,29 @@ def test_a_printed_ring_pair_and_bevel_pair_are_told_their_clearance_on_the_form
     assert not any("tip clearance" in w for w in warnings_shown(app))
 
 
+def test_a_printed_crossed_pair_is_told_its_clearance_on_the_form_as_in_a_workbook(app):
+    """The coordinator's ruling 2 on the F1 review: the form judges a printed crossed pair as the workbook does
+    (unshifted, the depth less two addenda), in the same sentence; machined, as before, nothing."""
+    app.mode.set("pair")
+    app._on_mode_changed()
+    app.kind.set("helical")
+    app.shafts.set("crossed")
+    app.pair_shaft_angle.set("90")
+    app.hands.set("same")
+    app._on_kind_changed()
+    for side, teeth in (("a", "20"), ("b", "40")):
+        for field, value in (("module", "0.5"), ("teeth", teeth), ("helix_angle", "45"), ("bore", "")):
+            app.gear_vars[side][field].set(value)
+    app._show_helix_rows()
+    app._derive_now()
+    assert app._crossed() and app._derived["a"] is not None and app._derived["b"] is not None
+    assert RING_SAID in warnings_shown(app)                       # 0.2 mm at module 0.5, the same words
+    app.process.set(PROCESS_MACHINED)
+    app._on_process_changed()
+    app._derive_now()
+    assert not any("tip clearance" in w for w in warnings_shown(app))
+
+
 def _record(tmp_path, spec, stem):
     part = str(tmp_path / f"{stem}.SLDPRT")
     store.save(store.sidecar_path(part), store.Sidecar(part_path=part, record=store.GearRecord(kind=spec.kind,

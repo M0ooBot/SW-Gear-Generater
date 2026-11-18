@@ -1350,12 +1350,25 @@ class GearApp(ttk.Frame):
             for diagnostic in self._diagnostics[side]:
                 lines.append((prefix + diagnostic.message, diagnostic.level))
         # A machined pair's clearance is said for outside pairs alone, as before F1; a printed pair's for a pinion in
-        # a ring and a bevel pair too (PLAN-PRINTED §2.2, package A's mesh_warnings). Crossed pairs are not judged.
+        # a ring and a bevel pair too (PLAN-PRINTED §2.2, package A's mesh_warnings).
+        printed = pair is not None and any(getattr(self._derived[s], "printed", False) for s in SIDES)
         if pair is not None and not self._crossed() and (
-                (symbol == "C" and not ui_text.is_ring(self._derived["b"]))
-                or any(getattr(self._derived[s], "printed", False) for s in SIDES)):
+                (symbol == "C" and not ui_text.is_ring(self._derived["b"])) or printed):
             for message in pairs.mesh_warnings(self._derived["a"], self._derived["b"]):
                 lines.append((message, "error" if "cannot be built" in message else "warning"))
+        if printed and self._crossed():
+            # The coordinator's ruling 2 on the F1 review: a printed crossed pair is judged as the workbook judges it
+            # (workbook.checks, crossed helical gears): unshifted, each tip stands the depth less two addenda from the
+            # other's root whatever the helix angles, so the outside pair's figure, in the same sentence.
+            a, b = self._derived["a"], self._derived["b"]
+            try:
+                said = pairs.printed_clearance_sentence(
+                    pairs.tip_clearance(a.module, a.teeth, b.teeth,
+                                        getattr(a, "normal_pressure_angle_deg", a.pressure_angle_deg)), False)
+            except (ValueError, ArithmeticError):
+                said = None
+            if said:
+                lines.append((said, "warning"))
         for row, (text, level) in enumerate(dict.fromkeys(lines)):
             label = tk.Label(self.warning_frame, text=text, bg=theme.WHITE,
                              fg=theme.ERROR if level == "error" else theme.MUTED,
