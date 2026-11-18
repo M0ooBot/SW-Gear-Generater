@@ -3,7 +3,8 @@
 **Drafted on 2026-11-16 and revised the same day to its first review (`docs/PLAN-PRINTED-REVIEW.md`) and to the
 user's answers; revised on 2026-11-18 against the code as W9 leaves it, read at `c2d95cc` on branch `w9d`
 (`51870ca`); and revised again the same day to its second review (the last section of
-`docs/PLAN-PRINTED-REVIEW.md`, `158b06f`, which read the code at `51870ca`, the same as `c2d95cc` in `src`).**
+`docs/PLAN-PRINTED-REVIEW.md`, `158b06f`, which read the code at `51870ca`, the same as `c2d95cc` in `src`); and once more to its third check (`d2e34a6`)
+and the coordinating session's ruling on the ring pair check.**
 
 W9's code is written and shown on SolidWorks 2026; its confirmation on SolidWorks 2024 was still running. On
 2026-11-16 the user said *"w9 first, dont actually build anything yet"*. On 2026-11-18 the user told the
@@ -44,8 +45,9 @@ none of the following:
 - **Undercut is warned about and not drawn** (`spur.py:870-880`). A hob would remove that material; a printer
   prints the flank as drawn. Unshifted at 20°, a 13-tooth pinion clears an outside mate of up to 16 teeth, 14 up to
   26, 15 up to 45, 16 up to 101. No pair with a gear of 12 teeth or fewer clears both ways: 12 clears a mate of up to
-  10 teeth, 11 up to 7, 10 up to 4, and none of those mates clears it back. Inside a ring, an unshifted pinion of 17
-  teeth or fewer clears no ring at all (§2.3).
+  10 teeth, 11 up to 7, 10 up to 4, and none of those mates clears it back. That is the condition for a *generated* gear.
+  The app draws a radial flank below the base circle instead, and §2.3 finds the drawn parts clear where this
+  condition reports a clash.
 - **No feature a printed gear wants:** the bore is a plain hole at its nominal size, no drive flat, no
   file a slicer reads. W9b's hub is built "with the row's Bore", its fixing to the shaft left to the user.
 - **No strength check.** The workbook works out each shaft's torque and compares it with nothing.
@@ -83,7 +85,7 @@ Each row has the answer this plan assumes; say where it is wrong.
 | D3 | Printed backlash when the cell is blank | **The smaller of 0.3 mm and 0.3 × module**, per gear: 0.3 mm from module 1 up (0.14 mm off each flank, measured square to it), and today's value below module 1. Never more than today's, so nothing that builds today is refused. To be replaced by the user's own measurement (§3.2). F1 can go ahead on it (§2.8). |
 | D4 | Which shaft drive first? | **Answered 2026-11-16: D-flat.** Hex and a keyway are the same kind of sketch and can follow; a boss with a setscrew or a heat-set insert is not in this plan. |
 | D5 | The file for the slicer, and which slicer | **Answered 2026-11-16: the user's slicer is Bambu Studio, so STEP.** Bambu Studio is said to open STEP; F2's own step, the user opening an exported gear there, is what shows it. No STL export. |
-| D6 | Undercut | **Warn, and check each printed pair for it** (§2.3); drawing the true undercut root is another sketch topology and not in this plan. F1 can go ahead on it (§2.8). |
+| D6 | Undercut | **Warn on the single gear, and build no pair check in F1** (§2.3, the coordinating session's ruling of 2026-11-18, the user's to overrule). The radial test planned before reports overlaps the drawn parts do not have; a sweep of the drawn outlines is later work (§7). Drawing the true undercut root is another sketch topology and not in this plan. F1 can go ahead on it (§2.8). |
 | D7 | PLA's allowable tooth stress | **Provisional: 17 MPa**, a third of the roughly 50 MPa a PLA datasheet gives, against a stress that includes the fillet's concentration (§5). No standard gives a figure for printed PLA, so this is the writer's judgement, typed on the Box sheet and replaced by the user's own tests. F4's only; F1 does not touch it. |
 | D8 | Where this sits beside W9 | **Answered 2026-11-16: W9 first; on 2026-11-18 the user said to carry on past W9.** This plan starts once W9 is merged into `workbook`, on a branch `printed` cut from it. What it takes on from W9 is in §6. |
 | D9 | The edge chamfer against first-layer squish | **Answered 2026-11-16: left to the slicer for now.** Not built in F1 to F4; the export's print list asks for the slicer's first-layer compensation. The review found the chamfer is the costliest piece here (§4.3). It gets a plan of its own only if the test prints show the slicer's setting is not enough. |
@@ -161,10 +163,17 @@ as machined.
   - Any write moves it to 11: Build, Update, Apply fix and Export (`_record_own_write`,
     `workbook_gui.py:1195-1215`). After that a W9-era app waits on the gearbox, even an all-machined one. That is
     the cost every W9 stage's bump had.
-  - The literal `10` is pinned at eight lines in five test files, all moved in F1-0 (§2.8): `test_store.py:227`
-    and `:1123`, `test_workbook_bands.py:353` and `:367`, `test_workbook_carry.py:51` and `:75`,
-    `test_workbook_user_record.py:56`, and `test_workbook_window.py:312`. The second review counted six; the two
-    read-forward lines, `bands:367` and `carry:75`, assert the current schema as a literal too.
+  - The literal `10` is pinned at **ten lines in five test files** (`git grep` at `ffe8812`, again at `d2e34a6`):
+    - `test_store.py:227` and `:1123`;
+    - `test_workbook_bands.py:353` and `:367`;
+    - `test_workbook_carry.py:51`, `:75`, `:79` and `:1057`;
+    - `test_workbook_user_record.py:56`;
+    - `test_workbook_window.py:312`.
+  - All of them move in F1-0 (§2.8). **F1-0 does not work from this list**: it moves every literal 10 that
+    `git grep` finds at the commit `printed` is cut from, since the W9 work still landing may add more.
+  - Outside the suite, `probe/w9d_demonstration.py:1007` checks a written record's schema is 10. That is W9d's
+    demonstration script and is left alone; it runs from W9's own commit, and a rerun with an app at or after F1
+    would read 11 there.
 - **The `.gear.json` goes to sidecar schema 3 for a printed part** (`PRINTED_SCHEMA`). `store.sidecar_schema`
   (`store.py:88-92`) gives 3 for a printed part, else 2 for a banded part or 1 as now, and `store.SCHEMA_VERSION`
   (`store.py:35`) becomes 3. A machined part stays at 1 or 2.
@@ -225,11 +234,18 @@ user's blank; it does not resolve it. The rest of the Box:
 (`LinkRecord.current_parts`, `store.py:1015`) and none of them was built printed (no part entry's `spec` holds
 `"process": "printed"`). Otherwise, with no record, no parts, or any part built printed, it answers `printed`.
 
-- `assess.assess` (`assess.py:148`) gains a keyword `blank_process`, `printed` by default, and puts it into
-  the Box when the Box's Process is `""`. The window passes `assess.blank_process(record)` from
-  `WorkbookWindow._assess` (`workbook_gui.py:825-830`), its one pipeline. To do so, `_plan`
-  (`workbook_gui.py:699-706`) reads the record before it assesses, where today `_plan_solidworks_pass` reads it
-  after.
+- `assess.assess` (`assess.py:148`) gains a keyword `blank_process`, `printed` by default. When the Box's Process
+  is `""`, it puts that word into the Box of **both** the assessment's `read` and its `spec`, so no `Assessment`
+  holds a blank Process. A blank left in `read` would become `GearSpec`'s machined default, without a word, in
+  anything that later builds a spec from `a.read.box`.
+- The window resolves inside `WorkbookWindow._assess` (`workbook_gui.py:825-830`), its one pipeline. That way both
+  of its callers get the same answer: `_plan` (`:699-706`), and the raw assessment at `:692` that feeds
+  `wb_link.consequence`.
+  - `_assess` reads the record itself, without moving anything, as `_plan_solidworks_pass` does (`:717`), and
+    passes `assess.blank_process(record)`.
+  - When the record beside the workbook is another workbook's, a copy not yet settled (`store.foreign_workbook`,
+    `store.py:1683`), it passes no record. Otherwise a copied workbook would read Machined from its original's
+    parts.
 - The rule goes by what the record's parts were built as, not by the record's schema number. Any F1 write moves the
   record to 11 (§1.2), so a rule on the number would flip a machined gearbox to Printed after its first Export or
   Apply fix.
@@ -351,67 +367,57 @@ The checks:
 - **A sleeve's relief** (W9b) clears a dog's tip by 0.5 × module a side (Ø m(z + 3), `W9B-INTERFACES.md` §4). That
   is under 0.3 mm below module 0.6, where the module check already warns. Nothing more is added.
 
-### 2.3 Undercut and interference (warnings, printed pairs only)
+### 2.3 Undercut and interference (no pair check in F1)
 
-The single gear's undercut warning (`spur.py:877-880`) gains a printed sentence: *a printed gear keeps this
-material, so the mate's tips may run into it*, ahead of the shift it already names.
+**The single gear.** The undercut warning (`spur.py:877-880`) says today that *a generated gear would lose the
+bottom of its flanks, which this profile does not show*. On a printed gear that is not what happens: nothing
+generates it, and the flank is made as drawn, a radial line and a fillet below the base circle. So a printed gear's
+warning gains one sentence in place of the cure's lead-in: *Printed, the gear is made as drawn, with no undercut;
+whether a mate's tip clears its flank below the base circle is not checked here, so turn the pair in SolidWorks.*
+The shift it already names stays. A machined gear's sentence is unchanged.
 
-For a printed pair the check runs on the form and at each Meshes row. It uses the shifts and the working centre
-distance, and transverse values for helical kinds (`rb` from `αt`, addendum `mn (1 + x)`):
+**No pair interference warning is built in F1** (the coordinating session's ruling, 2026-11-18, the user's to
+overrule). This applies to ring pairs, outside pairs and bevel pairs alike. The first two revisions planned a
+check by the radial measure: whether one gear's tip circle reaches past the other's base-circle tangent point,
+`√(rb₂² + (C sin αw)²)` against `ra₂`. That measure is the generated-gear condition (KHK's), and it does not
+describe the parts the app draws.
 
-- **outside pair:** each gear's tip must not reach past the other's base-circle tangent point,
-  `ra₂ ≤ √(rb₂² + (C sin αw)²)`, and the same with the gears exchanged. Made both ways, it passes no pair that has a
-  gear of 12 teeth or fewer;
-- **ring and pinion:** the ring's tip must not reach inside the pinion's tangent point,
-  **`ra₂ ≥ √(rb₂² + (C sin αw)²)`**. The first draft had this the wrong way round: it cleared three of the repo's
-  own rings that fail and warned on one that passes;
-- **bevel pair:** the outside condition on the Tredgold pair at the back cone, with Gleason's addenda
-  (`pair.bevel_candidate`, `pair.py:675`, already uses that pair for its clash);
-- **crossed helical pair:** no pair check. Each gear's own undercut limit stands, and the sentence says that is all
-  that was checked.
+*Ring pairs.* The third review swept the app's own drawn outlines (`kind.outline`, recipe A) through three pitches,
+at the app's phases, with depth measured normal to the boundary. This was pure Python, not run on SolidWorks:
 
-A sleeve on its dog or hub is a coupling of equal tooth counts, not a pair, and is not checked here.
+- Where the radial measure reports 0.11 to 0.56 mm of reach (a 12- to 20-tooth pinion in a 54-tooth ring at modules
+  1 and 2; RangeBox's 13 in 55 at module 1.25, 0.401 mm), the drawn parts overlap by at most 0.026 mm with no
+  backlash.
+- With the printed default they do not overlap at all, and every ring case clears once each gear has 0.04 mm of
+  backlash.
+- So the second revision's fact that "a pinion of 17 teeth or fewer clears no ring" is true of the radial measure
+  and not of the drawn parts. A warning built on it would be said on nearly every printed planetary about an
+  overlap the parts do not have. The half-nozzle margin that revision proposed is withdrawn with it.
 
-**How common the ring case is, and what this plan does about it.**
+*Outside pairs, the same test applied.* The same sweep ran five outside pairs: 6 / 30, 8 / 40, 10 / 40, 12 / 60 and
+13 / 80, at modules 1 and 1.5. Below its base circle the pinion's flank is drawn, a radial line and a fillet, not
+undercut, and the mate's tip reaches 1 module past its pitch line where a hob reaches 1.25.
 
-*Facts, from the second review's calculation and checked again here:* unshifted at 20°, a pinion of 17 teeth or
-fewer clears no ring at all. 18 teeth needs a ring of 161 or more, 19 needs 86, 20 needs 64, 24 needs 40 and 30
-needs 34. So nearly every printed planetary would carry this warning. The interference is a matter of the tooth
-counts. It is just as real for machined gears (KHK's `z₁/z₂ ≥ 1 − tan αa₂ / tan αw`), and the check is
-printed-only here for the rule's sake, not because printing causes it.
+- The radial measure reports 0.24 to 0.62 mm of reach for those pairs.
+- The drawn flanks overlap by 0.005 to 0.067 mm with no backlash, and by nothing with the printed default.
+- The worst, 6 / 30, clears from about 0.08 mm of backlash, against the printed default's 0.3 mm per gear.
 
-*How deep it is.* The ring's tip reaches inside the pinion's tangent radius by `√(rb₂² + (C sin αw)²) − ra₂`. At
-module 1, by a calculation here (not measured), that is:
+So for outside pairs too, the radial measure states an overlap the drawn parts do not have, at the printed default.
+These figures are the third review's sweep, read and not rerun for this revision. They are an inference from the
+app's outlines, not a measurement. Not modelled: helical, shifted and bevel pairs, recipe B, and a printed tip's
+radial growth. **So no outside-pair warning is kept either**: none is true of the parts as drawn at the printed
+default in any case the sweep covered. The cases it did not cover are not checked by F1 at all, rather than checked
+by a measure shown to overstate.
 
-- with a 54-tooth ring, 0.369 mm for a 12-tooth pinion, 0.278 for 14, 0.191 for 16, 0.108 for 18 and 0.029 for 20;
-- for RangeBox's 13 in 55 at module 1.25, 0.401 mm;
-- for planetary_4to1's 18 in 54 at module 1, 0.108 mm.
+**W7's planetary sentence stays exactly as it is** for printed and machined stages alike
+(`checks._check_stages`, `workbook/checks.py:358-366`, with `report.undercut` at `:362` feeding the build's
+interference clause, `gearbox.py:280-282`). It already says the right thing: the undercut is not modelled, and the
+pair is to be turned in SolidWorks.
 
-The depth grows with the module.
-
-**The ruling proposed (the coordinating session's to confirm, the user's to overrule):** a warning nearly every
-planetary shows is a warning nobody reads. So the pair check, for every printed pair alike, warns only when a tip
-reaches past the other gear's tangent point by **more than half the nozzle width**, measured radially (0.2 mm at
-0.4). Two reasons:
-
-- A printed tip's corners come out rounded by about half a line, which is the very sliver the condition is about.
-  That is an inference from how a line is laid down, not a measurement; §3.2's pair print is where it is first seen,
-  and the margin is one constant if it proves wrong.
-- At module 1 it still warns a 54-tooth ring's pinions of 15 teeth or fewer and RangeBox's planet, and stops warning
-  where the overlap is a tenth of a millimetre.
-
-The sentence then gives the depth in mm and says what clears it: a pinion of more teeth, or a larger ring. It says
-the interference comes from the tooth counts, not from printing, and that the build checks interference only where
-the gears stand. Below the margin, nothing is said. The pair check's other cases are unchanged by this.
-
-**In a printed planetary stage** the check, with that margin, takes the place of W7's sentence
-(`checks._check_stages`, `workbook/checks.py:358-366`, "is below the undercut limit, which is not modelled, and
-meshes …"), so nothing is said twice. It replaces the warning only. `_check_stages` also fills `report.undercut`
-(`:362`), which becomes `Plan.undercut`, the clause of the build's interference sentence (`gearbox.py:280-282`).
-A printed stage still fills it as today. A machined stage keeps W7's sentence word for word.
-
-The check is a warning, not an error: the app cannot say the drawn root meets the tip, only that the pair is at
-risk.
+**Later work** (§7): a check that sweeps the two drawn outlines through the mesh with each gear's own backlash, less
+a printer's allowance of the size D3 budgets (about 0.1 mm a flank), and warns on any overlap. It is pure code beside
+`internal.tip_clash`, which samples the pinion only above its base circle. It is to be rated once §3.2's prints
+give the printer's real figure. Its signature would take each gear's recipe, since the outlines need it.
 
 ### 2.4 The undrawn part of the flank
 
@@ -522,9 +528,6 @@ importable from then on. Stubs return neutral values, never raise, so B's and C'
      `BevelDerived` through `section`;
    - the four `to_dict`s leaving `nozzle` out while None (§1.1).
 4. **The pair maths' names, in `pair.py`, stubbed:**
-   - `printed_pair_warnings(g1, g2, centre, *, ring=False, bevel=None, crossed=False) -> List[PairWarning]`, where
-     `PairWarning(gear: str, depth_mm: float, message: str)` names which gear's tip reaches and how far past the
-     half-nozzle margin. The stub returns `[]`;
    - `ring_tip_clearance(...)`, of `tip_clearance`'s signature. The stub returns `tip_clearance`'s figure;
    - `printed_tip_thickness(module, teeth, pressure_angle, helix_angle, shift, nozzle) -> float`. The stub returns
      `tip_thickness`;
@@ -533,8 +536,17 @@ importable from then on. Stubs return neutral values, never raise, so B's and C'
 5. **The workbook's names:**
    - `model.Box.process = "machined"` and `model.Box.nozzle = ""`;
    - `schema.Setting.words: Tuple[str, ...] = ()`;
+   - **the two `Setting`s, Process and Nozzle, in `schema.BOX_SETTINGS`** (after Efficiency, before Units, with
+     their notes and Process's words);
+   - **`to_sheets`' two `box_values` keys** (`model.py:601-604`), writing the Box's word as held and its nozzle;
+   - **the pin of the Box's titles, `tests/test_workbook_model.py:24-27`, moved to the two new titles.**
+
+   These three land in one commit. `to_sheets` writes `box_values.get(key, "")` for every setting
+   (`model.py:605-606`), so the settings without the keys would write a gearbox built in code with a blank
+   Process. Read back with no record, that blank is Printed. And the pin is in a file only F1-0 may touch, so B
+   could not add the settings without breaking a test it may not edit.
    - `assess.blank_process(record) -> str`, written whole (§1.3: it is D11's switch);
-   - `assess.assess(..., blank_process=PROCESS_PRINTED)`;
+   - `assess.assess(..., blank_process=PROCESS_PRINTED)`, resolving a blank Process in both `read` and `spec`;
    - `Gear.spec_values` passing `process` and `nozzle` from the Box.
 6. **The form's names:** `gui.GEAR_COMPOUND` gains `process` and `nozzle`, so `test_gui_spec.py:49-52` stays
    green. `_gear_spec` does not yet set them.
@@ -542,10 +554,10 @@ importable from then on. Stubs return neutral values, never raise, so B's and C'
    - `store.LINK_SCHEMA_VERSION = 11` with `_W9D_LINK_SCHEMA = 10`;
    - `store.PRINTED_SCHEMA = 3` and `SCHEMA_VERSION = 3`;
    - `sidecar_schema` giving 3 for a printed spec;
-   - the eight pinned lines of §1.2 moved.
+   - every literal 10 of §1.2 moved: the ten lines listed there, and any more `git grep` finds at the cut.
 8. **The labels and words:**
    - `update._SPEC_COLUMNS`'s new pair is `("process", "Process")`;
-   - every new sentence's words go in the note: the checks of §2.2 and §2.3, K11's two (§6), the Box's error and
+   - every new sentence's words go in the note: the checks of §2.2, the single gear's printed undercut sentence of §2.3, K11's two (§6), the Box's error and
      note, the Workbook panel's Process line in both states, and the three (A)-only sentences of §1.3, kept for a
      later switch.
 
@@ -559,8 +571,9 @@ importable from then on. Stubs return neutral values, never raise, so B's and C'
   `test_workbook_user_record`, `test_workbook_window`.
 
 F1-0's source files are `spec.py`, `store.py`, `gears/spur.py`, `helical.py`, `internal.py`, `bevel.py`
-(item 2 and item 3 only), `gears/pair.py` (stubs), `workbook/model.py` (item 5's lines), `workbook/schema.py`
-(`Setting.words`), `workbook/assess.py`, and `gui.py` (`GEAR_COMPOUND`). The whole suite and §2.7's pins
+(item 2 and item 3 only), `gears/pair.py` (stubs), `workbook/model.py` (item 5's lines: `Box`, `spec_values`,
+`to_sheets`' keys), `workbook/schema.py` (`Setting.words` and the two settings), `workbook/assess.py`, and `gui.py`
+(`GEAR_COMPOUND`). The whole suite and §2.7's pins
 pass at its commit.
 
 **The packages.** Each owns its files outright from F1-0's commit on. No two share a file, in `src` or in
@@ -574,19 +587,22 @@ pass at its commit.
   - Tests: `test_gears_spur`, `_helical`, `_internal`, `_bevel`, `_clutch`, `_pair`, `test_profile_shift`,
     and a new `test_printed_gears.py`.
 - **B, the workbook, the record's comparisons and Update.**
-  - Files: `workbook/schema.py` (the Process and Nozzle settings, the Backlash column's blank words, `:155`),
-    `workbook/model.py` (`_read_box` keeping the blank, the word check, `to_sheets`, `template`),
-    `workbook/checks.py` (the pair check at each Meshes row; the planetary sentence when printed, with
-    `report.undercut` still filled), `workbook/update.py` (`_SPEC_COLUMNS`), and `swbuild.py` (K11's words
-    only, `:5460-5489`).
+  - Files: `workbook/schema.py` (the Backlash column's blank words, `:155`; the two settings are F1-0's),
+    `workbook/model.py` (`_read_box` keeping the blank, the word check, `template`; `to_sheets`' keys are F1-0's),
+    `workbook/checks.py` (§2.2's radial clearance at each Meshes row; W7's planetary sentence untouched),
+    `workbook/update.py` (`_SPEC_COLUMNS`), and `swbuild.py` (K11's words only, `:5460-5489`).
   - Tests: `test_workbook_checks`, `test_workbook_update`, `test_workbook_gearbox`,
     `test_swbuild_user_work` (K11's words), and a new `test_printed_workbook.py`, which also reads the committed
-    workbooks printed and tests `blank_process` with each kind of record. `test_workbook_model` was F1-0's; B
+    workbooks printed and tests `blank_process` with each kind of record. It also tests that no `Assessment` holds a
+    blank Process, in `read` or in `spec`. `test_workbook_model` was F1-0's; B
     adds its Box tests to the new file instead, so the ten files stay F1-0's alone.
 - **C, what the user sees.**
   - Files: `gui.py` (the rows, `_gear_spec`, `_load_record`, Solve passing the process), `ui_text.py` (the
-    backlash readouts' third state, the explainers, the Workbook panel's Process line), `workbook_gui.py` (`_plan`
-    reading the record before `_assess`, which passes `blank_process(record)`; the panel's line), `design/` (the
+    backlash readouts' third state, the explainers, the Workbook panel's Process line), `workbook_gui.py` (the
+    third review's three should-fixes: `_assess` reads the record and passes `blank_process(record)`, so that both
+    its callers, `_plan` and the raw assessment at `:692`, resolve the blank alike; it passes no record when the
+    record is another workbook's, by `store.foreign_workbook`; and it relies on `assess` leaving no blank in
+    `read`; plus the panel's line), `design/` (the
     board first: the strip with its Process row, and a gearbox built before F1 opened Machined, then typed Printed),
     `README.md`.
   - Tests: `test_gui_spec`, `test_ui_text`, and a new `test_printed_window.py` for the window.
@@ -594,10 +610,22 @@ pass at its commit.
     point 3). C rewrites those lines there after F1-0 is in, as its only edit to that file, and no other package
     touches it.
 
-B's `checks.py` calls A's pair check, and C's readouts read the derived gear's properties and the Box's resolved
-Process. Each meets the others only through item 1 to 8's names. For two implementers in place of three, A and B
+B's `checks.py` calls A's ring-pair clearance, and C's readouts read the derived gear's properties and the Box's
+resolved Process. Each meets the others only through item 1 to 8's names. For two implementers in place of three, A and B
 are one package (the model) and C the other (the view). The review then reads the merged head, and one SolidWorks
 run follows.
+
+**When each package can start.**
+
+1. **F1-0 first, alone**, once W9 is merged into `workbook` and `printed` is cut. It needs nothing more settled:
+   the third review's three open items (the schema lines, the Box settings with their pin, and the pair check's
+   signature) are settled above.
+2. **B and C next, in parallel**, as soon as F1-0's commit is in. Neither waits on A, since F1-0 lands the printed
+   backlash and stubs every name A fills.
+3. **A at the same time.** The third review had A wait on §2.3. That wait is discharged by the ruling written
+   there: no pair interference check, and no `printed_pair_warnings` in the interface. A's remaining work is §2.2's
+   per-gear checks, the ring-pair clearance, the printed tip, Solve's ranking and the fixes, all settled. If the
+   coordinating session wants this revision checked again first, A is the only package that waits for it.
 
 **What must not move.**
 
@@ -637,10 +665,10 @@ run follows.
   - module 1 warning below 26 teeth and passing at 26; module 1.25 passing from 11;
   - the module floor; clearance at module 0.75 passing within the tolerance; bevel pairs under module 1.6;
   - the rim; helix 45°; the ring's tip; the ring-fillet sentence;
-  - the ring cases with the half-nozzle margin: RangeBox 13 in 55 (0.401 mm) warns, planetary_4to1's 18 in 54
-    (0.108 mm) does not, Risky_Placements' 14 in 36 warns, and E4's 24 in 72 is clear;
-  - the planetary sentence said once when printed and as today when machined, with `report.undercut` filled either
-    way.
+  - no pair interference warning, printed or machined, on any pair: RangeBox, planetary_4to1 and Risky_Placements
+    printed carry exactly the warnings they carry machined, except §2.2's per-gear ones;
+  - W7's planetary sentence and `report.undercut` the same printed as machined;
+  - the single gear's printed undercut sentence in place of the generated-gear lead-in, the named shift kept.
 - *Solve and the fixes:* printed ranking and marking; no row with a pointed tip; machined rows equal to the pin.
 - *K11:* for a printed default the user changed in SolidWorks, the sentence names the workbook's value in words
   and the set-back as the exact IIF text SolidWorks must hold (§6).
@@ -656,8 +684,9 @@ run follows.
 - **D3** is two constants and one equation text. Changing the number later is a one-line change and its tests. A
   printed part already built then reads *changes on Update* for Backlash, and Update carries it in place. No part is
   made new.
-- **D6** is warnings on printed pairs only. Changing their wording, threshold or margin later moves no machined
-  pin. Drawing the true undercut would be a plan of its own, and nothing in F1 stands in its way.
+- **D6** is now one sentence on a printed single gear, and no pair check (§2.3). The later sweep check (§7) adds a
+  function and its warnings and moves no machined pin. Drawing the true undercut would be a plan of its own, and
+  nothing in F1 stands in its way.
 - **D7** is F4's only; F1 does not read it.
 - **D11** is ruled (B). If the user chooses (A), the switch is `assess.blank_process`'s body, and three sentences
   are added (§1.3). Packages B and C can be written now.
@@ -689,11 +718,11 @@ estimate, not a measurement: about 20 minutes on 2026 and 30 on 2024.
 2. K9's running clearance stands for printed sleeves unchanged (§6). *Confirmed.*
 3. The Workbook panel shows *Process* for every gearbox, Machined too. Under (B) the machined ones are the ones that
    need saying. *Confirmed*; `test_workbook_window`'s pinned panel text moves by that line.
-4. In a printed planetary stage the pair check replaces W7's undercut sentence, the warning only, with
-   `report.undercut` still filled (§2.3). *Confirmed with that condition.*
+4. *Withdrawn by the coordinating session's ruling of 2026-11-18:* no pair check replaces W7's planetary
+   sentence, which stays word for word, printed and machined (§2.3).
 5. The link record goes to 11 whatever the process, as W9b's 8 did. *Confirmed.*
 6. F2's export refuses a part the record marks unsaved or mismatched (§3.1). *Confirmed.*
-7. **New:** the pair check's half-nozzle margin (§2.3), proposed so the ring warning keeps its meaning.
+7. *Withdrawn by the same ruling:* the half-nozzle margin. No pair interference warning is built in F1 (§2.3).
 8. **New:** D11 answered (B) by the coordinating session.
 
 
@@ -863,7 +892,8 @@ of the first revision's forward-looking sentences:
   - F1 keeps them by §1's default: every fixture W9 built in code is machined without an edit, and the three
     five Excel- or LibreOffice-saved workbooks are marked machined as read in F1-0, in the ten files that read them
     (§2.7).
-  - Every new check is for printed gears, which is why the pair check is printed-only.
+  - Every new check is for printed gears. No pair interference check is built (§2.3), so W7's planetary sentence
+    and W9's warning counts are untouched by it.
   - F1 adds no finding and changes no SolidWorks call, so `findings.py` and `tests/test_findings.py`, with
     W9c's and W9d's 2024 gates, are untouched.
 - **W9 took link schemas 7, 8, 9 and 10 and sidecar schema 2** (`store.py:421-426`, `:30-35`). F1 takes link 11
@@ -959,6 +989,10 @@ of the first revision's forward-looking sentences:
   lightening holes. Crowning. Bevel strength. Materials other than PLA. Wear, heat and creep. Setting
   a SolidWorks material: it stays the manual step it is.
 - A Process per Gears row (one gearbox with printed and machined gears). Process is the Box's, as D1 has it.
+- **A pair interference check on the drawn parts** (§2.3, the coordinating session's ruling). It would sweep the two
+  drawn outlines through the mesh with each gear's own backlash, less a printer's allowance of about 0.1 mm a flank,
+  and warn on any overlap. It would take each gear's recipe, and be rated once §3.2's prints give the printer's
+  real figure.
 
 
 ## 8. Risks
@@ -983,8 +1017,10 @@ of the first revision's forward-looking sentences:
 - **A field on a derived class reaches every record.** The derived gear is written whole into each `.gear.json`, so
   any field added to one later goes there too. §1.1 keeps F1's out while machined, and §2.7's pin on the whole
   `.gear.json` is what catches the next one.
-- **The half-nozzle margin is an inference (§2.3).** If a printed tip is not rounded as assumed, some at-risk ring
-  pairs go unwarned. It is one constant, and §3.2's pair print is the first place it can be seen.
+- **No pair is checked for interference in F1 (§2.3).** The sweep that cleared the drawn parts at the printed
+  default is an inference from the app's outlines, and did not cover helical, shifted or bevel pairs or recipe B.
+  A printed pair whose flanks do meet is found by turning it in SolidWorks, or by printing it, as W7's sentence
+  already says for a planetary.
 - **K11's set-back for the printed default is an equation.** A user who typed a number in SolidWorks is told to
   type the IIF back, given exactly, or the number in the cell. That is the same burden as today's `0.3 * "Module"`,
   but a longer text.
@@ -1144,3 +1180,59 @@ place.
     file is the panel line's pins.
   - The first revision's file table is folded into the interface and the packages.
 - **Open points.** 1 to 6 are recorded with the review's verdicts. 7 (the margin) and 8 (D11) are new.
+
+
+## Changes after the third check
+
+2026-11-18. To the third check (the last section of `docs/PLAN-PRINTED-REVIEW.md`, `d2e34a6`, which read `ffe8812`
+against the code at `5de0290`) and to the coordinating session's ruling on the ring pair check. Each change is by
+section, with why.
+
+**The check's must-fixes:**
+
+- **The schema pins (§1.2, §2.8 item 7).** There are ten lines, not eight; `test_workbook_carry.py:79` and `:1057`
+  were missed. I counted again with `git grep` and listed every one. F1-0 now moves every literal 10 that grep finds
+  at the cut, not a list, since W9's work still landing may add more. `probe/w9d_demonstration.py:1007` checks the
+  schema too; it is W9d's demonstration script and is noted, not moved.
+- **The Box settings (§2.8 item 5, packages).** F1-0 now takes the two `Setting`s, `to_sheets`' two `box_values`
+  keys and the pin `tests/test_workbook_model.py:24-27` together in one commit. Why: `to_sheets` writes
+  `box_values.get(key, "")`, so the settings alone would write a gearbox built in code with a blank Process, which
+  reads Printed with no record. And the pin is in a file only F1-0 may touch. B keeps `_read_box`'s word check and
+  `template`.
+- **The pair check's signature (§2.8 item 4).** `printed_pair_warnings` and `PairWarning` are removed from the
+  interface, following the ruling below.
+
+**The check's should-fixes, for package C (§1.3, §2.8):**
+
+- `_assess` itself resolves the blank, so its second caller (`workbook_gui.py:692`, feeding
+  `wb_link.consequence`) agrees with `_plan`.
+- It passes no record when the record is another workbook's (`store.foreign_workbook`).
+- `assess` resolves `read`'s Box as well as `spec`'s, so no `Assessment` holds a blank Process; B's new test
+  file holds it.
+
+**The ring pair check (§2.3, D6, Context, §2.8, §7, §8, open points 4 and 7): the coordinating session's ruling,
+2026-11-18, the user's to overrule.** F1 builds no interference warning for a pinion inside a ring, with or without
+a margin, and W7's planetary sentence stays exactly as it is.
+
+- Why: the third check swept the drawn outlines through the mesh. The radial measure reports overlaps the drawn
+  parts do not have: at most 0.026 mm with no backlash, and none at the printed default, RangeBox's 13 in 55 among
+  them.
+- The half-nozzle margin and the "nearly every planetary warns" consequence go with it.
+- A check that sweeps the drawn outlines with a printer's allowance is listed in §7 as later work.
+
+**Outside pairs (§2.3).** The same test was applied, from the third check's sweep of five outside pairs (6 / 30 to
+13 / 80, modules 1 and 1.5), read and not rerun.
+
+- The pinion's flank below its base circle is drawn, not undercut.
+- The radial measure reports 0.24 to 0.62 mm, while the drawn flanks overlap by at most 0.067 mm with no backlash,
+  and by nothing at the printed default (6 / 30 clears from about 0.08 mm).
+- So no outside-pair warning is true of the parts as drawn at the printed default in any case covered, and none is
+  kept. Bevel pairs, which rested on the same measure, go with them.
+- The single gear's undercut warning gains a printed sentence that says what is true: made as drawn, no undercut,
+  the mate not checked, turn it in SolidWorks.
+- The Context's generated-gear figures are marked as such.
+
+**When packages start (§2.8).** F1-0 first, once `printed` is cut. Then B and C in parallel. A can start with them,
+since the §2.3 wait the check gave it is discharged by the ruling; it waits only if the coordinating session wants
+this revision checked again.
+
