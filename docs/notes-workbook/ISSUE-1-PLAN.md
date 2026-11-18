@@ -1084,6 +1084,41 @@ held in error, can leave such a box standing after it is not measured (the revie
 `Session.open_document`'s `ActivateDoc3`); `remake-m3`'s second pass measures the app's press as the first
 activation after the stop. If a run shows it, this section and W9a's sentences take it.
 
+**2026-11-18, after the 2024 rerun of remake's M3 (`1dc9350`; reviewed in `W9C-RUNS-REVIEW.md`, `6665b4e`).** What it
+measured, on SolidWorks 2024 32.5.0 from `c2d95cc`, the close path asked for:
+- *The box at the first activation after a stop.* Both times something brought RangeBox forward first after step 1
+  left the ring (an app part) in error, What's Wrong came at `ActivateDoc3` and did not go: at the script's own read
+  (up at 0.41 s, still up 60.18 s after the job) and, in the second pass, in the app's own press again, as the first
+  activation since step 1 (up at 5.56 s, still up 60.24 s after the press). Each was owned by the frame with the frame
+  enabled, and each went 0.25 s after the script's `BM_CLICK` on its own Close. The app's press returned its
+  still-in-error stop with the box up, so it blocked nothing. No box came at a second activation or in a press that
+  rebuilt. *Inference:* the box comes at the first activation with a feature in error and goes only when SolidWorks
+  rebuilds after it (`findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2024` True; on 2026 False, no box at all, on run
+  11's log, to be re-based on the 2026 run of remake-m3).
+- *The assembly's save flag.* SolidWorks 2024 marked RangeBox at its first open-and-activate after step 1, whoever
+  made it, not at step 1; the app wrote nothing and saved nothing.
+
+The coordinating session's rulings, the user's to overrule:
+- **The second pass's one FAIL is a fact of SolidWorks 2024, not a fault of the app**, and nothing is run again for
+  it. The script now states the assembly's save flag going False to True as that fact when it is the only flag that
+  changed, no changing call was traced and no file was written; any other difference still fails.
+- **The app still never closes the What's Wrong box; it tells the user truly what the box does.** On a SolidWorks
+  whose findings say the box shows and stays (2024): before the press, *SolidWorks may show its What's Wrong box during
+  the Update: leave it alone while the Update runs. It closes by itself once SolidWorks rebuilds; if the Update stops
+  before that, it stays until you close it with its Close button.*; after a stop that leaves a part in error, in place
+  of *may have shown*, *SolidWorks may show its What's Wrong box for the part left in error when the assembly is next
+  brought forward; it does not close by itself: close it with its Close button.*; and after the still-in-error
+  sentence, *SolidWorks may show its What's Wrong box for that part when this press brings the assembly forward; it
+  does not close by itself: close it with its Close button, then close the documents as above.*
+
+**Not measured on 2024, as it now stands** (in place of the list above where they differ): a person bringing the
+assembly forward by hand after a stop, and closing the documents with the box up; how long a box that outlives its
+job stays past 60 s; a press that stops before any rebuild with the user's own work in error (AHEAD is said there and
+not shown); which document's `ActivateDoc3` raised the box in the app's press; a person pressing FeatureXpert or the
+box's own checkbox while an Update runs; a Build with the user's work in error; the mate case on a gearbox without
+modes; other kinds of mate error; a box longer than 23 s in an Update that rebuilt; "show errors every rebuild" off.
+*Measured since the list above:* a box that outlives its job (twice, each closed by the script's press of its Close).
+
 
 ## Changes after W9b, W9c's probes and the review of W9c's packages
 

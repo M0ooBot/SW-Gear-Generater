@@ -1924,8 +1924,10 @@ def _close_unsaved(named: Sequence[str], whom: str, assembly: str, which: str, *
     SolidWorks again.* ``whom`` is *it*, *them* or *them all* for the documents ``named`` (stems). With ``assembly``
     (a path, :func:`workbook.update.assembly_holding`): *close it and RangeBox in SolidWorks without saving,
     answering No when SolidWorks asks to save them (the files on disk are as before that Update), then press Update
-    SolidWorks again.*, the assembly not named twice when it is among them (should-fix A: SolidWorks marks the open assembly modified when a part of it is changed,
-    and keeps a part loaded with its changes while the assembly stays open). ``which``: *this* or *that* Update.
+    SolidWorks again.*, the assembly not named twice when it is among them (should-fix A: SolidWorks marks the open assembly modified once a
+    part of it has been changed (seen after the part's change on 2026, run 11; at the assembly's first open-and-activate
+    after it on 2024, remake-m3, W9C-RUNS-REVIEW.md's review of 1dc9350, §2), and keeps a part loaded with its changes
+    while the assembly stays open, its save flag no longer saying so once its own window is closed (2024, step 2b)). ``which``: *this* or *that* Update.
 
     W9d, the merge's ruling: where the assembly closed is the record's (``assembly``, or ``own`` among ``named``), the
     advice says what closing it unsaved costs (:func:`_close_costs`): whatever else is unsaved in it, including,

@@ -18,7 +18,9 @@ The landing section of the seventh run (2026, from 71d8510), each set straight: 
 down) failed with code 72; 0.0996 and 0.1276 (external, m1 18 -> 17 and 17 -> 16), 0.1438 and 0.1730 (rings, m1
 30 -> 28, and m1.25 40 -> m1.5 32) rebuilt clean. Nothing between 0.038 and 0.0996 is measured. Every route it took
 (55 -> 54 via 53, 56 -> 55 via 54, 30 -> 28 via 27, 18 -> 17 via 16, 40 -> 32 via 31) rebuilt clean to a part
-built from scratch.
+built from scratch. On SolidWorks 2024 (W9c's confirming run, 4315774, 32.5.0) the same two one-tooth-down rings set
+straight failed the same way, the solved end past the origin, but with code 51 on both Tooth Space and Teeth, the
+number 2024 has given for every feature in error seen; nothing here reads the number.
 
 :func:`line_landings` foresees it from the part's own globals before and after (no spec, no recipe: the sketch's
 geometry is a function of ``Base Radius``, ``Flank Offset``, ``Involute t1``, and the tip cap or the root and fillet),
