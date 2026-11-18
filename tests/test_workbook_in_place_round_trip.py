@@ -993,8 +993,8 @@ def test_a_stop_in_a_part_left_in_error_says_close_it_without_saving_never_save_
         "Update SolidWorks stopped. Gear_m1.25_N29.SLDPRT: SolidWorks reported an error rebuilding Gear_m1.25_N29. It "
         "had already changed Gear_m1.25_N29, not saved, and Gear_m1.25_N29 is left in error: close it and RangeBox "
         "in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on disk are as "
-        "before this Update; that also loses anything else not saved in RangeBox), then press Update SolidWorks "
-        "again.")
+        "before this Update; closing RangeBox so also discards whatever else is unsaved in it), then press Update "
+        "SolidWorks again.")
     assert "save it in SolidWorks to keep" not in press.after and "put right" not in press.after
 
 
@@ -1039,7 +1039,8 @@ def test_the_footer_after_a_stop_in_a_part_left_in_error_says_close_without_savi
         "Gear_m1.25_N29 has changes from Update SolidWorks that are not saved, and Gear_m1.25_N29 was left in error "
         "when it stopped: close it and RangeBox in SolidWorks without saving, answering No when SolidWorks asks to "
         "save them (the files on disk are as before that "
-        "Update; that also loses anything else not saved in RangeBox), then press Update SolidWorks again."), text
+        "Update; closing RangeBox so also discards whatever else is unsaved in it), then press Update SolidWorks "
+        "again."), text
     assert "save them in SolidWorks to keep" not in text and "save it in SolidWorks to keep" not in text
     back = store.link_record_from_json(store.link_record_to_json(d.record))
     assert back.unsaved_in_error == d.record.unsaved_in_error                  # written and read back
@@ -1079,7 +1080,7 @@ def test_pressing_again_without_closing_keeps_the_mark_and_says_close_without_sa
         "Gear_m1.25_N29 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the "
         "new values, so this press set nothing in it: close it and RangeBox in SolidWorks without saving, answering "
         "No when SolidWorks asks to save them (the files on disk are as before that "
-        "Update; that also loses anything else not saved in RangeBox), then press Update "
+        "Update; closing RangeBox so also discards whatever else is unsaved in it), then press Update "
         "SolidWorks again.")
     text, _ = d.footer(_sun_backlash(range_box()))
     assert "was left in error when it stopped: close it and RangeBox in SolidWorks without saving, answering No" in text
@@ -1252,14 +1253,14 @@ def test_pressed_again_with_the_ring_still_open_in_error_the_press_writes_nothin
         "Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the "
         "new values, so this press set nothing in it: close it and RangeBox in SolidWorks without saving, answering "
         "No when SolidWorks asks to save them (the files on disk are as before that "
-        "Update; that also loses anything else not saved in RangeBox), then press Update "
+        "Update; closing RangeBox so also discards whatever else is unsaved in it), then press Update "
         "SolidWorks again."), again.after
     text, _ = d.footer(_m3_stage())
     assert text.endswith(
         "Gear_m1.25_N13, Gear_m1.25_N29 and Ring_m1.25_N55 have changes from Update SolidWorks that are not saved, and "
         "Ring_m1.25_N55 was left in error when it stopped: close them all and RangeBox in SolidWorks without saving, "
         "answering No when SolidWorks asks to save them (the files on disk are as before that "
-        "Update; that also loses anything else not saved in RangeBox), then press "
+        "Update; closing RangeBox so also discards whatever else is unsaved in it), then press "
         "Update SolidWorks again."), text
     assert "to keep" not in text and "already matches" not in text, text
     d.sw.close_all()                                         # closed without saving, as told: the third press goes
@@ -1406,7 +1407,7 @@ def test_the_close_without_saving_advice_names_the_assembly_that_holds_the_part_
         "Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the "
         "new values, so this press set nothing in it: close it and RangeBox in SolidWorks without saving, answering No "
         "when SolidWorks asks to save them (the files on disk are as before that "
-        "Update; that also loses anything else not saved in RangeBox), then press Update SolidWorks "
+        "Update; closing RangeBox so also discards whatever else is unsaved in it), then press Update SolidWorks "
         "again.")
     assert ui_text.still_in_error_sentence([ring]) == (
         "Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the "

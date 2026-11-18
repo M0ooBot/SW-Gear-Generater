@@ -974,7 +974,7 @@ def test_a_later_update_that_finds_the_new_assembly_loaded_from_its_file_says_th
     out = gearbox.Finished()
     update._follow_carry(desk.record, up, later, out, mtime=lambda p: 1763400000.5)
     assert out.notes == ["RangeBox_r2 was closed without saving after Build again… carried your work into it, so it "
-                         "does not hold it; RangeBox.SLDASM still does."]
+                         "does not hold it; RangeBox.SLDASM held it when it was carried."]
     assert store.carry_unsaved(desk.record) is None and desk.record.unsaved == {}
     # Still open (in the session when the job began, not loaded): nothing said, the mark stands.
     desk.record.gearbox.carry.unsaved_at = 1763400000.5
@@ -1642,8 +1642,9 @@ def test_a_question_whose_only_mate_is_may_keeps_its_time_in_that_sentence(desk,
     record = copy.deepcopy(desk.record)
     entry = record.gearbox.user_work
     entry.components = []
-    entry.mates = [store.UserMateEntry("UserLimit10", "other", 5, [["app", "Sun"], ["app", "RangeSlv"]], ["H", "N", "L"],
-                                       entities=[["app", "Sun", "plane", "plane1"], ["app", "RangeSlv", "plane", "plane1"]])]
+    entry.mates = [store.UserMateEntry("UserLimit10", "other", 5, [["app", "Sun"], ["app", "RangeSlv"]],
+                                       ["H", "N", "L"], entities=[["app", "Sun", "plane", "plane1"],
+                                                                  ["app", "RangeSlv", "plane", "plane1"]])]
     said = _each_mate_once(desk, record)
     assert said.startswith(f"As read at {_at(desk)}, your UserLimit10 is made again if the press reads it as a plain "
                            "distance mate; a limit distance mate is not made again."), said
@@ -1655,8 +1656,8 @@ def test_a_question_whose_only_mate_is_may_keeps_its_time_in_that_sentence(desk,
 from test_workbook_in_place_round_trip import measured, _sun_backlash  # noqa: E402,F401 - W9c's gates; a backlash edit
 
 CARRY_SAVE = "RangeBox_r2 holds what Build again… carried of yours, not saved: save it in SolidWorks to keep it."
-COSTS = ("that also loses anything else not saved in RangeBox_r2 and what Build again… carried into it, which "
-         "RangeBox.SLDASM still holds")
+COSTS = ("closing RangeBox_r2 so also discards whatever else is unsaved in it, including what Build again… carried "
+         "into it, which RangeBox.SLDASM held when it was carried")
 
 
 def _carried_desk(desk):
@@ -1766,4 +1767,4 @@ def test_with_no_close_advice_the_carry_line_stands_as_today(desk, carrying):
     sun = next(p.path for p in desk.record.parts if "Sun" in p.gears)
     text = _footer_with(desk, [sun], [])
     assert text.endswith(CARRY_SAVE) and "without saving, answering No" not in text, text
-    assert COSTS not in text and "loses anything else" not in text
+    assert COSTS not in text and "discards whatever else" not in text

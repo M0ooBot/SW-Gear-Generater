@@ -1922,8 +1922,8 @@ def _close_unsaved(named: Sequence[str], whom: str, assembly: str, which: str, *
     and keeps a part loaded with its changes while the assembly stays open). ``which``: *this* or *that* Update.
 
     W9d, the merge's ruling: where the assembly closed is the record's (``assembly``, or ``own`` among ``named``), the
-    advice says what closing it unsaved costs (:func:`_close_costs`): anything else not saved in it, and, while it
-    holds what Build again… carried unsaved (``record``'s ``CarryEntry``), that too, with where it still is."""
+    advice says what closing it unsaved costs (:func:`_close_costs`): whatever else is unsaved in it, including,
+    while it holds what Build again… carried unsaved (``record``'s ``CarryEntry``), that, with where it came from."""
     asm = _stem(assembly) if assembly else ""
     costs = _close_costs(named, asm, own, record)
     if asm:
@@ -1935,25 +1935,26 @@ def _close_unsaved(named: Sequence[str], whom: str, assembly: str, which: str, *
             f"{'is' if one else 'are'} as before {which} Update{costs}), then press Update SolidWorks again.")
 
 
-CLOSE_LOSES_CARRY = "and what Build again… carried into it"      # the cost clause's mark (the footer's rule)
+CLOSE_LOSES_CARRY = "including what Build again… carried into it"    # the cost clause's mark (the footer's rule)
 
 
 def _close_costs(named: Sequence[str], asm: str, own: str, record) -> str:
     """What closing the record's assembly without saving costs besides the Update's own changes, said inside the
-    advice (the merge's ruling, and W9C-RUNS-REVIEW's low should-fix): *; that also loses anything else not saved in
-    RangeBox_r2*, and while it holds a carry unsaved (``store.carry_unsaved``) *… and what Build again… carried into
-    it, which RangeBox.SLDASM still holds*. The app reads no save flag of an assembly open before the press, so the
-    first is said whenever the assembly is closed, never as a fact about it. ``""`` when the assembly is not among
-    what is closed."""
+    advice (the merge's ruling, and W9C-RUNS-REVIEW's low should-fix, in the words of the review of 9cbfc08):
+    *; closing RangeBox so also discards whatever else is unsaved in it*, and while it holds a carry unsaved
+    (``store.carry_unsaved``) *…, including what Build again… carried into it, which RangeBox.SLDASM held when it was
+    carried* (the app cannot see whether the old assembly changed since). The app reads no save flag of an assembly
+    open before the press, so the first is said whenever the assembly is closed, never as a fact about it. ``""``
+    when the assembly is not among what is closed."""
     closes = asm or next((n for n in named if own and n.casefold() == _stem(own).casefold()), "")
     if not closes:
         return ""
-    out = f"; that also loses anything else not saved in {closes}"
+    out = f"; closing {closes} so also discards whatever else is unsaved in it"
     from . import store
     carry = store.carry_unsaved(record)
     box = getattr(record, "gearbox", None)
     if carry is not None and box is not None and _stem(box.assembly).casefold() == closes.casefold():
-        out += f" {CLOSE_LOSES_CARRY}, which {_file(carry.assembly) or 'the old assembly'} still holds"
+        out += f", {CLOSE_LOSES_CARRY}, which {_file(carry.assembly) or 'the old assembly'} held when it was carried"
     return out
 
 
@@ -6145,9 +6146,10 @@ def carry_footer_line(record) -> str:
 
 def carry_lost_line(assembly: str, old: str) -> str:
     """§9.4: found closed unsaved by a later job, *RangeBox_r2 was closed without saving after Build again… carried
-    your work into it, so it does not hold it; RangeBox.SLDASM still does.*"""
+    your work into it, so it does not hold it; RangeBox.SLDASM held it when it was carried.* (the review of 9cbfc08:
+    the app cannot see whether the old assembly changed since, so never the present)."""
     return (f"{_stem(assembly)} was closed without saving after Build again… carried your work into it, so it does "
-            f"not hold it; {_file(old) if old else 'the old assembly'} still does.")
+            f"not hold it; {_file(old) if old else 'the old assembly'} held it when it was carried.")
 
 
 def carry_unsaid(again, result, exc: BaseException) -> str:

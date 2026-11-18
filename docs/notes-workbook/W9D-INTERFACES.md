@@ -979,16 +979,18 @@ The build's own sentence is said first and unchanged in every case.
 
 While `CarryEntry.unsaved_at` stands: *RangeBox_r2 holds what Build again… carried of yours, not saved: save it in
 SolidWorks to keep it.* Found closed unsaved by a later job: *RangeBox_r2 was closed without saving after Build again…
-carried your work into it, so it does not hold it; RangeBox.SLDASM still does.* Nothing offers to carry again (D11).
+carried your work into it, so it does not hold it; RangeBox.SLDASM held it when it was carried.* (never the present:
+the app cannot see whether the old assembly changed since). Nothing offers to carry again (D11).
 
 **Beside advice to close the assembly without saving** (the merge's ruling on `7ce641e`): where the app says to close
 the record's assembly without saving (a stop in a part left in error, the footer's line on documents left in error,
 the still-in-error sentence; the assembly named with the part, or among the documents), saving it would save the part
 in error with it, so that advice stands, says what it costs inside its parenthesis, and the carry's save line is not
-said beside it, in the footer or after a job's sentence: *(the files on disk are as before that Update; that also
-loses anything else not saved in RangeBox_r2 and what Build again… carried into it, which RangeBox.SLDASM still
-holds)*. The first clause is said whenever the assembly is closed so, carry or not (W9C-RUNS-REVIEW's low
-should-fix): no press reads the save flag of an assembly open before it (`_note_opened` reads only a document it
+said beside it, in the footer or after a job's sentence: *(the files on disk are as before that Update; closing
+RangeBox_r2 so also discards whatever else is unsaved in it, including what Build again… carried into it, which
+RangeBox.SLDASM held when it was carried)* (the review of `9cbfc08`'s words: the carry counted once, as part of what
+is unsaved, and the old assembly in the past). With no carry unsaved it ends *…; closing RangeBox so also discards
+whatever else is unsaved in it)*, said whenever the assembly is closed so (W9C-RUNS-REVIEW's low should-fix): no press reads the save flag of an assembly open before it (`_note_opened` reads only a document it
 loads, `_vouches` only one marked), so it is said as what closing can lose, never as a fact. A later Build again… does
 not carry it again from RangeBox.SLDASM (it reads the record's current revision), so the sentence does not promise
 it. With no such advice everything is as above.

@@ -773,7 +773,7 @@ record's problems by kind, so the second `unsettled` overwrites the first's subj
   all) and RangeBox in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on disk are
   as before this/that Update)*, the assembly not named twice when it is among the documents changed. Tk-side only.
   W9d's merge (`7ce641e`, the coordinator's ruling): where the assembly is among what is closed, the parenthesis adds
-  *; that also loses anything else not saved in RangeBox* (the low should-fix of W9C-RUNS-REVIEW: no press reads the
+  *; closing RangeBox so also discards whatever else is unsaved in it* (the low should-fix of W9C-RUNS-REVIEW: no press reads the
   save flag of an assembly open before it, so it is said always, as what closing can lose), and, while the assembly
   holds an unsaved carry, what W9D-INTERFACES §9.4 adds.
 - **Known caveat, for after W9c: an unmarked part with an app feature in error, which the press leaves alone.** It

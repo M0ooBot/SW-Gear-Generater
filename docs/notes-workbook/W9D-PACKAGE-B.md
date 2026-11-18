@@ -351,8 +351,8 @@ fake, a carry left unsaved in RangeBox_r2 and an Update of r2 stopped on Sun's p
 > Update SolidWorks stopped. Gear_m1.25_N29_r2.SLDPRT: SolidWorks reported an error rebuilding Gear_m1.25_N29_r2. It
 > had already changed Gear_m1.25_N29_r2, not saved, and Gear_m1.25_N29_r2 is left in error: close it and RangeBox_r2
 > in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on disk are as before this
-> Update; that also loses anything else not saved in RangeBox_r2 and what Build again… carried into it, which
-> RangeBox.SLDASM still holds), then press Update SolidWorks again.
+> Update; closing RangeBox_r2 so also discards whatever else is unsaved in it, including what Build again… carried
+> into it, which RangeBox.SLDASM held when it was carried), then press Update SolidWorks again.
 
 The footer after it is that sentence alone; the footer with no note ends with the same advice in its *have changes
 … that are not saved* form, and no *save it in SolidWorks to keep it*. Pinned too: the assembly alone left in error,
@@ -365,13 +365,40 @@ close advice (a stop with nothing in error, documents unsaved but none in error)
 - **The user's own unsaved work (W9C-RUNS-REVIEW's low should-fix).** No press reads the save flag of an assembly that
   was open before it (`_note_opened` reads only a document the press loads, `_vouches` only one marked unsaved), so the
   app cannot know it was modified before the press; the short form is said whenever the assembly is closed so, carry
-  or not: *; that also loses anything else not saved in RangeBox*. That changes W9c's pinned sentences in
+  or not: *; closing RangeBox so also discards whatever else is unsaved in it*. That changes W9c's pinned sentences in
   `tests/test_workbook_in_place_round_trip.py` (five strings, the parenthesis only); a part-only close is unchanged.
 - **Fragments.** `probe/w9c_demonstration.py`'s matchers (*the assembly named*, *in SolidWorks without saving,
   answering No when SolidWorks asks to save*, no *to keep*) still match; its hand-written examples in its self-check
   keep the old parenthesis, which no matcher reads. `probe/w9d_demonstration.py`'s carry footer line and save phrase
   are unchanged wherever no close advice is given.
 - The window passes the job's record to `gearbox_update_status` (`record=`), used when the finish wrote none.
+
+### The review of `9cbfc08` (`dd07597`): the cost parenthesis reworded
+
+The clause now names what it closes and counts the carry once, as part of what is unsaved; the old assembly is said
+in the past, since the app cannot see whether the user changed it since. The lost-carry line likewise: *RangeBox_r2 was
+closed without saving after Build again… carried your work into it, so it does not hold it; RangeBox.SLDASM held it
+when it was carried.* Each form as printed (the fake; the footer's forms with the record's marks set by hand):
+
+- Stop, carry unsaved: *… close it and RangeBox_r2 in SolidWorks without saving, answering No when SolidWorks asks to
+  save them (the files on disk are as before this Update; closing RangeBox_r2 so also discards whatever else is
+  unsaved in it, including what Build again… carried into it, which RangeBox.SLDASM held when it was carried), then
+  press Update SolidWorks again.*
+- Stop, no carry: *… close it and RangeBox in SolidWorks without saving, answering No when SolidWorks asks to save
+  them (the files on disk are as before this Update; closing RangeBox so also discards whatever else is unsaved in
+  it), then press Update SolidWorks again.*
+- Footer, the assembly alone in error: *… close it in SolidWorks without saving (the file on disk is as before that
+  Update; closing RangeBox_r2 so also discards whatever else is unsaved in it, including …), then press …*
+- Footer, the assembly beside a part in error: *… close them all in SolidWorks without saving, answering No when
+  SolidWorks asks to save them (the files on disk are as before that Update; closing RangeBox_r2 so also discards …)*
+- Footer, several parts: *… close them all and RangeBox_r2 in SolidWorks without saving, answering No when SolidWorks
+  asks to save them (the files on disk are as before that Update; closing RangeBox_r2 so also discards …)*
+- Parts only, no assembly closed: unchanged (*close it in SolidWorks without saving (the file on disk is as before
+  this Update), then press Update SolidWorks again.*).
+
+`probe/w9c_demonstration.py`'s matched words (*in SolidWorks without saving, answering No when SolidWorks asks to save*,
+the assembly's name) are unchanged; `probe/w9d_demonstration.py` matches *was closed without saving after Build again…
+carried your work into it* of the lost-carry line, unchanged. The printed states are unchanged.
 
 ## The strings, in full
 
