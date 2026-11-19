@@ -198,7 +198,9 @@ column 104 px, value columns 96 px. Values carry no unit; one `mm` caption heads
 each column. Where a value came from a default it says so (`0.45 · 0.3m`; a
 printed gear's blank Backlash `0.3 · printed default`, the third state). A
 printed gear with a bore ends with *Bore as cut* `8.2 · 8 + 0.2`, and a D with
-*Flat as cut* (F3; a machined gear only with an allowance or a D). A
+*Flat as cut* (F3; a machined gear only with an allowance or a D). After them a printed spur,
+helical, herringbone or ring gear ends with *Holds once*, *about 0.58 N·m · 39 N at
+17 MPa* (F4: *What a tooth is rated to take*, below). A
 helical gear's column starts with six more: Helix `15° · right`, Transverse m,
 Transverse α, Lead, Twist on face (face to apex for a herringbone), and
 Overlap εβ. A shifted gear's starts with Profile shift `+0.3 · 0.6`, the
@@ -2001,6 +2003,108 @@ Drive (W, `round` · `flat`, blank round) and Flat (X, mm), after End band and
 before Part name, which moves to Y and Notes to Z. A workbook written before F3
 is read and written by its own headers, so nothing lands in the wrong column. A
 ring's or sleeve's typed bore field is an error at its cell (package A's).
+
+### What a tooth is rated to take (F4)
+
+PLAN-PRINTED §5.1 to §5.4 and §5.6, package C of stage F4; the interface is
+`docs/notes-printed/F4-INTERFACES.md`. The figures are package A's
+(`gears.strength`: `rate`, `holds`, `torque_held`, and the rounding every reader
+shows, `newtons`, `newton_metres`, `megapascals`); the Box's Allowable stress is
+F4-0's; the warning at a Meshes row and the Results block are package B's. Every
+sentence of the form's below is `ui_text`'s. Boards: `PrintedStrength` (a printed
+pinion of 20 teeth in a printed ring of 54, module 1, face 10) and
+`WorkbookStrength` (a printed gearbox of one mesh at 2 N·m, B's warning in its
+Checks list; `gen.py` draws it from B's module, and its board is written once B's
+module is in, with the Workbook boards B's warnings reach).
+
+**The row** (`ui_text.holds_row`, laid by `gui._rows_with_span` after every row of
+`derived_rows`, so after F2's span row and F3's *Bore as cut*; F2's Measured entry
+stays the panel's foot). Label *Holds once*; the value is the torque one tooth is
+rated to take once about the gear's own axis, then the force at its pitch circle,
+at 17 MPa (`strength.ALLOWABLE_DEFAULT`: the form has no Box), over the gear's own
+toothed width (a herringbone's face less its groove):
+
+| Gear | Value |
+|---|---|
+| a printed spur gear, m 1.5, z 20, face 10 (§5.3's A1) | *about 0.58 N·m · 39 N at 17 MPa* |
+| a helical one, β 20°, face 12 (A4) | *about 0.78 N·m · 49 N at 17 MPa* |
+| the same as a herringbone with Groove 4 (A5) | *about 0.52 N·m · 33 N at 17 MPa* |
+| a ring, m 1, z 54, face 10 (A6): YS past its range | *about 0.80 N·m · 29 N at 17 MPa · stress factor past its range* |
+| a ring whose tips lie inside its base circle, z 33 (A10) | *not rated: tips inside the base circle* |
+
+Forces are whole newtons from 10 N and to 0.1 N under that; torques to 0.01 N·m
+under 10, 0.1 under 100, whole from 100. **Which gears** (`ui_text.holds_rating`):
+a printed spur, helical or herringbone gear, outside or a ring, that rates, and a
+ring not rated for its tips inside its base circle. **No row** for a machined
+gear (its rows are `derived_rows` exactly, as before F4), a bevel gear, either gear
+of a crossed pair (its teeth meet at a point), and a gear not rated for any other
+reason (it does not validate and is never built). In a pair each column has its
+own, a dash where a gear has none.
+
+**Laid into its column.** The value is long beside the other rows' figures, and two
+columns of it would widen the strip past its 460 px. So `_show_derived` lays it
+into the room its column has (the rows' 434 px, less the 104 px label column and
+8 px a column, and a few px of the label's own padding), measured in mono_tiny
+(`ui_text.holds_value_lines`): whole phrases first, a new line starting *·* where
+the value's own *·* falls, and a phrase too long for a line wrapped at its spaces;
+its label sits at its top. With one gear the second column keeps no width of its
+own (before F4 it kept 96 px of blank that no row needed), so a single gear's
+value is one line, and a ring's past its range two:
+
+    about 0.80 N·m · 29 N at 17 MPa
+    · stress factor past its range
+
+In a pair each column has about 150 px, so the pinion's reads *about 0.22 N·m* / *· 22 N at 17 MPa*, and the ring's
+*about 0.80 N·m* / *· 29 N at 17 MPa* / *· stress factor past its range*, that last phrase wrapped at a space where
+the font needs it (the board's stand-in measure, a character of 6.9 px, wraps it after *past*).
+
+**The line under the rows** (`ui_text.holds_line`, after every line of F2's, *A:*
+or *B:* before it in a pair):
+
+- YS past its range: *Holds once: the ring's 0.15 mm fillet is sharper than the
+  stress factor's range, which is carried past it.* (the fillet as drawn, 0.3 mm
+  on A9's module 2 ring); an outside gear whose typed Fillet is that sharp says
+  the same of *the gear's* fillet (A1 with Fillet 0.1: q_s 11.2);
+- a ring not rated: *Holds once: not rated:* and package A's clause
+  (`ToothRating.why`), *its tips lie inside its base circle (31.000 mm against
+  31.010), where a tooth cannot be involute, so the tip load the rating takes is
+  outside what it covers.*
+
+No card: the row is a reading, as Bore as cut is, and the README's *What a tooth
+is rated to take* says what it is and is not.
+
+**The Box's Allowable stress** (F4-0's: `workbook/schema.py`, `model.py`), after
+Nozzle and before Units, `Box!B11` in a workbook `to_sheets` writes: MPa, blank 17,
+*New workbook…* writing 17; its note *printed teeth only: the root stress a tooth
+is rated to take once; blank: 17, provisional (about half a printed PLA data
+sheet's 35 MPa within the layers) until you type your own figure here*; a figure
+that does not read an error at its cell (*Box!B11: Allowable stress must be a
+number (got 'x').*, *… must be more than zero (got '0').*), the checks then using
+17. It is not a gear's value: typing it changes no part. The Workbook panel says
+nothing new.
+
+**The warning at a Meshes row** (package B's `workbook.strength.warning_sentence`,
+at the row's cell, the pair first, once a row, naming the mode with the largest
+share; said only past 100 % or for a ring not rated in a loaded mesh). As
+F4-INTERFACES §6.1 drafts it, B's tests pinning B's own words:
+
+> Meshes row 2: Sun and Planet: Printed, these teeth take about 230 N at the pitch
+> circle in L, 13.6 times the 17 N Planet's teeth are rated to take at 17 MPa
+> (provisional: type your own in the Box's Allowable stress): 24 N once, with an
+> allowance of 0.7 because a planet's teeth are loaded in both directions as the
+> gearbox runs; the load is shared by 3 planets, one taking 1.25 of an even share.
+> Use a larger module, a wider face, less torque, or your own tested allowable. An
+> estimate for teeth printed flat, with the whole load on one tooth's tip: not a
+> running rating; heat, wear and creep are not worked out.
+
+**The Results block** (package B's `export.results_sheet`, a printed gearbox whose
+first input has a torque, after the box size): *Tooth strength (printed)* | Mode |
+Force (N) | Weaker gear | Rated to take (N) | Share used (%), a row per Meshes row
+and mode, *turns unloaded here* or *the torque past a shared output is not shared
+out (not worked out)* where no force is worked out, *not rated: a bevel pair* (or
+*a crossed pair*); then *Worst share*, *Allowable stress (MPa)* and a note row
+(F4-INTERFACES §6.3). A machined gearbox's Results are what they were (F4-0's
+pins).
 
 ### Planetary stages (W7)
 
