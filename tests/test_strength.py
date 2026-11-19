@@ -525,21 +525,14 @@ def test_a_torque_is_said_to_a_hundredth_under_10_n_m(torque, said):
     assert strength.megapascals(12.5) == "12.5"
 
 
-def test_the_stubs_are_importable_and_neutral_until_their_packages_fill_them():
-    """F4-0's stubs (F4-INTERFACES §4, §5): B's mesh strengths give nothing and say nothing, C's row shows nothing."""
+def test_the_names_b_and_c_meet_through_are_the_interfaces():
+    """F4-INTERFACES §4, §5: the label and the two wordings F4-0 fixed. What B's mesh strengths and C's row return is
+    held by their own tests (tests/test_strength_workbook.py, tests/test_strength_form.py), now the stubs are filled."""
     from gear_generator import ui_text
     from gear_generator.workbook import strength as mesh
-    from test_workbook_planetary import planetary_4to1
-    from gear_generator.workbook import checks
-    spec = replace(planetary_4to1(), box=replace(planetary_4to1().box, process="printed"))
-    assert mesh.mesh_strengths(spec, checks.check(spec)) == ()
-    assert mesh.warning_sentence((), 17.0, False) == ""
-    assert ui_text.holds_row(rating_of("A1")) is None and ui_text.HOLDS_LABEL == "Holds once"
+    assert ui_text.HOLDS_LABEL == "Holds once"
     assert (mesh.TURNS_UNLOADED, mesh.NOT_SHARED_OUT) == (
         "turns unloaded here", "the torque past a shared output is not shared out (not worked out)")
-    for stub, owner in ((mesh.mesh_strengths, "package B"), (mesh.warning_sentence, "package B"),
-                        (ui_text.holds_row, "package C")):
-        assert "F4-0's stub" in stub.__doc__ and owner in stub.__doc__
 
 
 
