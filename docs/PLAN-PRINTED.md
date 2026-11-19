@@ -1822,9 +1822,15 @@ it gets one follow-up round, as W9c's did.
   with §4.1.1's words: the way back is typing the old figure, never clearing the cell (C).
 - **W9d's carry.** `update._SPEC_COLUMNS` (`:3196`) gains *Bore allowance*, *Drive* and *Flat*, so a part made new by
   them says *its Drive changed*.
-  - `_bore_mm` gives the hole as cut, as built (§4.1.1), so W9d's word "bore", a coaxial cylinder of exactly that
-    radius (to 1e-4 mm, `W9D-INTERFACES.md` §4.4; `swbuild.py:7168`, `:7537-7538`), still names a printed bore.
-  - A D's arc face is a partial cylinder, still "bore"; its flat is a plane, *a face of Sun*.
+  - `_bore_mm` gives the hole as cut, as built (§4.1.1), the radius W9d's word "bore" is judged by (a coaxial
+    cylinder of half of it, to 1e-4 mm, `W9D-INTERFACES.md` §4.4). **As the code stands the word is never said live**,
+    before F3 as after (`F3-DEMONSTRATION-RUNS-REVIEW.md` §4). "Bore" is said only for a face read coaxial
+    (`swbuild.py` near :7620). A face on a part made new is read so only for a gear mate (W9d's M1 walk). A gear mate's
+    coaxial face goes to §4.3's Gear Axis rule first. So F3's change to `_bore_mm` is right and harmless, and no user
+    meets the word; this is W9d's matter, not F3's. (Corrected after F3's demonstration runs: this line said the word
+    still names a printed bore.)
+  - Against the fake, a D's arc face, a partial cylinder of that radius, reads "bore", and its flat, a plane, *a face of
+    Sun*.
   - `COAXIAL_FACE_READ` was verified on full cylinders only (`W9D-INTERFACES.md:793`, `:848`). A partial one is very
     likely the same, and is shown against the fake only: a caveat.
 - **Mates on faces.** A user's mate on the bore of a part made new by its allowance or drive is named, not found
@@ -2626,17 +2632,23 @@ of the first revision's forward-looking sentences:
   - No gear moves: a gear's phase is set by the centre of its tooth space (`workbook/geometry.py:8`, `phases` at
     `:430-497`), and backlash widens the space evenly about that centre. That is read from the code, and F1's runs
     bear it out: every app body stood at its record frame after the press, in H, N and L, on both versions.
-    K2's refusals are not met. **Route (c1)'s puts are made all the same** (measured, F1's SolidWorks runs of
+    K2's refusals are not met on `setup.master`, which holds no user mate on a gear's own faces or planes. **Route
+    (c1)'s puts are made all the same** (measured, F1's SolidWorks runs of
     2026-11-18, `F1-DEMONSTRATION-RUNS-REVIEW.md`): on SolidWorks 2026 and 2024 alike the Update re-placed the whole
     train in every mode (the carrier, Sun, the three planet copies, both dogs and RangeSlv, 33 puts, the locked
     sprockets carried along as the footer foresaw), each gear put where it already stood, harmlessly
     (`probe/results/f1-demo-sw2026-20261118-1-spur-pair-rangebox-clean.log`:936-939, 1012;
     `probe/results/sw2024/f1-demo-sw2024-20261118-1-rangebox-clean.log`:93-96, 169). W9a's own value Update of
-    Sun's Backlash does the same (`w9a-final-sw2026-20261117.log`:95, 98). So a user's mate on an app gear's face is
-    re-solved by those puts, as by any of W9a's value Updates; `setup.master` has no such mate, so that was not seen.
+    Sun's Backlash does the same (`w9a-final-sw2026-20261117.log`:95, 98). A user's mate on an app gear's own face
+    is **not** re-solved by those puts: K2, the user's accepted rule (ISSUE-1-PLAN), refuses before any write an
+    Update that puts back a gear holding a user mate to its own faces or planes, naming it, and the app did so on a
+    printed D's face in F3's demonstration on SolidWorks 2026 (`F3-DEMONSTRATION-RUNS-REVIEW.md` §2, 26-2:3490). The
+    way is to lock the user's component to the gear instead. (Corrected after F3's demonstration runs: this paragraph
+    said such a mate was re-solved.)
   - W9c's landing guard (`swbuild._landing_route`) foresees no landing for this change: by the second review's
     calculation, each tooth line's new start lies about a whole line length from its old end.
-  - A user mate on a tooth face re-solves by about 0.035 mm, as for any change of values.
+  - A user mate on a tooth face is refused by K2, as above, never re-solved (the 0.035 mm by which a tooth face moves
+    is what such a mate would have had to follow).
   - F1's SolidWorks run shows this on a copy of W9a's `setup.master` with Printed typed (§2.8).
   - *Build again…* after Printed is typed makes every gear new, since a part is reused only when its globals are as
     recorded (`gearbox._matches`, `gearbox.py:440-449`). W9d then carries the user's components onto the new parts
@@ -3341,3 +3353,22 @@ with why.
 - **Pins and tests** (§5.5, §5.6): F4-0's Results pins pass a fixed `when`; B's edit to `test_printed_workbook.py`
   asserts the exact added sentences in order; F4-0's interface states M1's rule, the pointed tooth, the two wordings and
   R1; A's note carries S4's comparisons.
+
+## Changes after F3's demonstration runs
+
+2026-11-19. To `docs/notes-printed/F3-DEMONSTRATION-RUNS-REVIEW.md` (`c641f3d`, §4) and the coordinating session's ruling
+on it. Each change is by section, with why.
+
+- **§6, Gearboxes W9 built: a user's mate on a gear's face.**
+  - The paragraph on route (c1)'s puts said such a mate *is re-solved by those puts*, and the line after it that a mate on
+    a tooth face *re-solves by about 0.035 mm*.
+  - K2, the user's accepted rule, refuses that Update before any write, and the app did so on SolidWorks 2026 in F3's
+    demonstration (26-2:3490). Both now say K2 refuses it, and that the way is to lock the component to the gear.
+  - *K2's refusals are not met* now says on what: `setup.master`, which holds no such mate.
+- **§4.4, W9d's word "bore".** It is never said live as the code stands, before F3 as after, so the line no longer claims
+  it names a printed bore. F3's `_bore_mm` is right and harmless. A D's faces are said as the fake reads them.
+- **Not a plan change, recorded here for the record's sake.** The strip's Update values measured the trig units before it
+  knew whether anything was to be set. That marked a part with nothing to update as modified in SolidWorks, and Print
+  files then refused it as changed and not saved. The fault predates F3 (to `0c48a61`, 2026-09-14). By the
+  coordinator's ruling of 2026-11-19 it is fixed in `swbuild.update_variables`: the equations are read first, and the
+  units are measured only when something is to be set, as the workbook's Update already did.
