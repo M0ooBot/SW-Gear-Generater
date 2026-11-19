@@ -477,8 +477,33 @@ def _triple(body):
         return None
 
 
+# The entities a face's bounds pass through on the way to its vertices: never its surface, nor an edge's curve.
+_BOUND_KINDS = ("FACE_OUTER_BOUND", "FACE_BOUND", "EDGE_LOOP", "ORIENTED_EDGE", "EDGE_CURVE", "VERTEX_LOOP")
+
+
+def _face_vertices(data, bounds):
+    """The points of every VERTEX_POINT a face's bounds reach (its loops, their edges, their ends), in the file's unit."""
+    seen, todo, points = set(), [int(r) for r in _REF.findall(bounds)], []
+    while todo:
+        ref = todo.pop()
+        if ref in seen:
+            continue
+        seen.add(ref)
+        body = data.get(ref, "")
+        name = body.split("(", 1)[0].strip().upper()
+        if name == "VERTEX_POINT":
+            refs = _REF.findall(body)
+            p = _triple(data.get(int(refs[0]), "")) if refs else None
+            if p is not None and len(p) == 3:
+                points.append(p)
+        elif name in _BOUND_KINDS:
+            todo.extend(int(r) for r in _REF.findall(body))
+    return points
+
+
 def step_faces(text):
-    """[("plane", location, normal) | ("cylinder", location, axis, radius) | ("other",)] of every ADVANCED_FACE."""
+    """[("plane", location, normal, vertices) | ("cylinder", location, axis, radius) | ("other",)] of every
+    ADVANCED_FACE; a plane's vertices are those its bounds reach (_face_vertices)."""
     data = {}
     for m in F2P._STATEMENT.finditer(text or ""):  # noqa: SLF001
         s = m.group(0)[:-1].replace("\r", "").replace("\n", " ").strip()
@@ -501,7 +526,7 @@ def step_faces(text):
         refs = [int(r) for r in _REF.findall(surface)]
         name = surface.split("(", 1)[0].strip().upper()
         if name == "PLANE" and refs:
-            out.append(("plane",) + placement(refs[0]))
+            out.append(("plane",) + placement(refs[0]) + (_face_vertices(data, f.group(1)),))
         elif name == "CYLINDRICAL_SURFACE" and refs:
             loc, axis = placement(refs[0])
             r = re.search(r",\s*([-+0-9.Ee]+)\s*\)\s*$", surface)
@@ -513,15 +538,21 @@ def step_faces(text):
 
 def step_bore_judged(text, radius, h=None, reach=None):
     """The bore as the STEP file holds it: one cylinder or more about Z of the hole's radius (a D's arc one or more), to STEP_TOL;
-    with h, exactly one plane square to the end faces within reach, its normal along X, its location on x = h; without,
-    none; the least VERTEX_POINT radius (D + a)/2, and on a D at least two vertices of that radius at x = h."""
+    with h, exactly one plane face square to the end faces within reach, its normal along X, its location on x = h;
+    without, none; the least VERTEX_POINT radius (D + a)/2, and on a D at least two vertices of that radius at x = h.
+    A plane face is within reach when every vertex its bounds reach is: the plane's own distance from the axis does not
+    tell, since a tooth's radial flank lies on a plane through the axis (SolidWorks 2026's first print run: 40 of them).
+    A plane face square to the end faces whose bounds reach no vertex fails, so no face is passed unread."""
     reach = reach if reach is not None else radius + 1.0
     faces = step_faces(text)
     cylinders = [f for f in faces if f[0] == "cylinder" and f[1] and f[2] and f[3] is not None
                  and abs(abs(f[2][2]) - 1.0) <= AXIS_TOL and math.hypot(f[1][0], f[1][1]) <= 1e-3 and f[3] < reach]
-    planes = [f for f in faces if f[0] == "plane" and f[1] and f[2] and abs(f[2][2]) <= AXIS_TOL
-              and abs(sum(p * n for p, n in zip(f[1], f[2]))) < reach]
+    square = [f for f in faces if f[0] == "plane" and f[1] and f[2] and abs(f[2][2]) <= AXIS_TOL]
+    planes = [f for f in square if f[3] and all(math.hypot(p[0], p[1]) < reach for p in f[3])]
     out = []
+    unread = sum(1 for f in square if not f[3])
+    if unread:
+        out.append(f"{unread} plane face(s) square to the end faces whose bounds reach no vertex")
     if not cylinders:
         out.append("no cylinder about Z in the bore")
     off = [round(f[3], 6) for f in cylinders if abs(f[3] - radius) > STEP_TOL]
@@ -651,9 +682,12 @@ def made_faces(radius, h=None, chord=None, *, sliver=False, flat_x=None, two_fla
 
 
 def made_step_bore(radius, h=None, chord=None, *, plane_x=None, extra_plane=False, r_off=0.0, vertex_off=0.0,
-                   split=False):
+                   split=False, teeth=2, bounds=True):
     """A made-up STEP file of a printed spur's bore as SolidWorks writes one: the bore's cylinder and the D's plane as
-    ADVANCED_FACEs on their AXIS2_PLACEMENT_3Ds, the gear's outer cylinder, an end face, and the vertices."""
+    ADVANCED_FACEs on their AXIS2_PLACEMENT_3Ds, the gear's outer cylinder, an end face, teeth radial flanks (planes
+    through the axis, out at the teeth, as SolidWorks 2026 wrote the tooth spaces' straight sides), and the vertices.
+    Each plane square to the end faces is bounded by a loop through its corners' VERTEX_POINTs (with bounds False the
+    D's plane's bound reaches nothing, its corners left as loose vertices)."""
     lines = ["ISO-10303-21;", "HEADER;", "FILE_SCHEMA (( 'AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }' ));", "ENDSEC;",
              "DATA;"]
     n = [100]
@@ -674,22 +708,49 @@ def made_step_bore(radius, h=None, chord=None, *, plane_x=None, extra_plane=Fals
 
     def face(surface):
         return add(f"ADVANCED_FACE ( 'NONE', ( #{add('FACE_OUTER_BOUND ( ''NONE'', #1, .T. )')} ), #{surface}, .T. )")
+
+    def vertex(p):           # the bore's vertices moved out by vertex_off, the teeth's left
+        scale = (radius + vertex_off) / radius if math.hypot(p[0], p[1]) < radius + 1.0 else 1.0
+        return add(f"VERTEX_POINT ( 'NONE', #{point(p[0] * scale, p[1] * scale, p[2])} )")
+    line = add(f"LINE ( 'NONE', #{point(0, 0, 0)}, #{direction(0, 0, 1)} )")   # an edge's curve: never walked
+
+    def bounded(surface, corners):
+        ends = [vertex(p) for p in corners]
+        edges = []
+        for a, b in zip(ends, ends[1:] + ends[:1]):
+            curve = add(f"EDGE_CURVE ( 'NONE', #{a}, #{b}, #{line}, .T. )")
+            edges.append(add(f"ORIENTED_EDGE ( 'NONE', *, *, #{curve}, .T. )"))
+        loop = add("EDGE_LOOP ( 'NONE', ( " + ", ".join(f"#{e}" for e in edges) + " ) )")
+        bound = add(f"FACE_OUTER_BOUND ( 'NONE', #{loop}, .T. )")
+        return add(f"ADVANCED_FACE ( 'NONE', ( #{bound} ), #{surface}, .T. )")
+
+    def rect(x, half):
+        return [(x, -half, 0.0), (x, half, 0.0), (x, half, 8.0), (x, -half, 8.0)]
     for _ in range(2 if split else 1):
         face(add(f"CYLINDRICAL_SURFACE ( 'NONE', #{place((0, 0, 0), (0, 0, 1), (1, 0, 0))}, {radius + r_off:.12f} )"))
     face(add(f"CYLINDRICAL_SURFACE ( 'NONE', #{place((0, 0, 0), (0, 0, 1), (1, 0, 0))}, 16.5 )"))
     face(add(f"PLANE ( 'NONE', #{place((0, 0, 8), (0, 0, 1), (1, 0, 0))} )"))
-    corners = []
+    for k in range(teeth):   # a radial flank: its plane through the axis, its face from the root out to the tip
+        a = math.radians(4.2 + 18.0 * k)
+        c, s = math.cos(a), math.sin(a)
+        bounded(add(f"PLANE ( 'NONE', #{place((14.0 * c, 14.0 * s, 0), (-s, c, 0), (c, s, 0))} )"),
+                [(13.0 * c, 13.0 * s, 0.0), (16.5 * c, 16.5 * s, 0.0), (16.5 * c, 16.5 * s, 8.0), (13.0 * c, 13.0 * s, 8.0)])
     if h is not None:
         x = h if plane_x is None else plane_x
-        face(add(f"PLANE ( 'NONE', #{place((x, 0, 0), (-1, 0, 0), (0, 1, 0))} )"))
+        surface = add(f"PLANE ( 'NONE', #{place((x, 0, 0), (-1, 0, 0), (0, 1, 0))} )")
+        if bounds:
+            bounded(surface, rect(x, chord / 2.0))
+        else:
+            face(surface)
+            for p in rect(x, chord / 2.0):
+                vertex(p)
         if extra_plane:
-            face(add(f"PLANE ( 'NONE', #{place((-x, 0, 0), (1, 0, 0), (0, 1, 0))} )"))
-        corners = [(h, s * chord / 2.0, z) for s in (-1, 1) for z in (0.0, 8.0)]
+            bounded(add(f"PLANE ( 'NONE', #{place((-x, 0, 0), (1, 0, 0), (0, 1, 0))} )"), rect(-x, chord / 2.0))
     else:
-        corners = [(-radius, 0.0, 0.0), (-radius, 0.0, 8.0)]
-    for p in corners + [(16.5, 0.0, 0.0), (0.0, 16.5, 8.0)]:
-        scale = (radius + vertex_off) / radius if math.hypot(p[0], p[1]) < 16 else 1.0
-        add(f"VERTEX_POINT ( 'NONE', #{point(p[0] * scale, p[1] * scale, p[2])} )")
+        for p in [(-radius, 0.0, 0.0), (-radius, 0.0, 8.0)]:
+            vertex(p)
+    for p in [(16.5, 0.0, 0.0), (0.0, 16.5, 8.0)]:
+        vertex(p)
     lines += ["ENDSEC;", "END-ISO-10303-21;"]
     return "\n".join(lines) + "\n"
 
@@ -894,20 +955,30 @@ def _self_check(ok, scratch):
        "mates: the bore mate's entity on Sun a face of radius 4.1 by EntityParams holds; another radius (a carry onto "
        "another face about the axis), an edge, none and two each fail")
 
-    # 6. The bore read from a STEP file.
+    # 6. The bore read from a STEP file. Every made-up file holds teeth radial flanks, planes through the axis out at the
+    # teeth, as SolidWorks 2026 wrote them; the reading at c5d4391 counted each as in the bore (its plane's distance from
+    # the axis), so its count of the made-up D's planes is held at 3 here to show the files carry what failed it.
+    def _old_step_planes(text):
+        return sum(1 for f in step_faces(text) if f[0] == "plane" and f[1] and f[2] and abs(f[2][2]) <= AXIS_TOL
+                   and abs(sum(p * n for p, n in zip(f[1], f[2]))) < R + 1.0)
     step_cases = {"the plane on -X": made_step_bore(R, h, c, plane_x=-h), "two planes": made_step_bore(R, h, c,
                                                                                                       extra_plane=True),
                   "the radius 0.02 over": made_step_bore(R, h, c, r_off=0.02),
                   "the vertices 0.02 out": made_step_bore(R, h, c, vertex_off=0.02),
-                  "a round where a D is wanted": made_step_bore(R)}
+                  "a round where a D is wanted": made_step_bore(R),
+                  "the D's plane with bounds that reach no vertex": made_step_bore(R, h, c, bounds=False)}
     held = [k for k, t in step_cases.items() if not step_bore_judged(t, R, h)]
     faces = step_faces(made_step_bore(R, h, c))
     ok(step_bore_judged(made_step_bore(R, h, c), R, h) == [] and step_bore_judged(made_step_bore(R), R) == []
        and step_bore_judged(made_step_bore(R, h, c, split=True), R, h) == []
        and step_bore_judged(made_step_bore(R, h, c), R) != [] and not held
-       and sorted(f[0] for f in faces) == ["cylinder", "cylinder", "plane", "plane"],
-       f"step: the D (one cylinder of R about Z, or the arc as two, one plane on x = h, the least vertex radius R, the "
-       f"flat's corners at x = h) and a round bore hold, read through F2's statement splitter; a D read as round and "
+       and sorted(f[0] for f in faces) == ["cylinder", "cylinder"] + ["plane"] * 4
+       and step_bore_judged(made_step_bore(R, h, c, teeth=40), R, h) == [] and step_bore_judged(made_step_bore(R, teeth=40), R) == []
+       and _old_step_planes(made_step_bore(R, h, c)) == 3,
+       f"step: the D (one cylinder of R about Z, or the arc as two, one plane face in the bore by its vertices, on x = h, "
+       f"the least vertex radius R, the flat's corners at x = h) and a round bore hold, with two teeth radial flanks or "
+       f"forty (planes through the axis, which the reading at c5d4391 counted in the bore: 3 planes in the D), read "
+       f"through F2's statement splitter; a D read as round and "
        f"{', '.join(step_cases)} each fail: held {held or 'none'}")
 
     # 7. The words, against the app's own.
@@ -1618,8 +1689,13 @@ def reducer_master(which):
                        "either way)"}[which]
     printed = which != "machined"
     with switched(which == "on", f"{name}: {why}"):
+        # The machined one says Machined on its Box: the fixture's Process is blank, and a blank Process on a workbook
+        # with no record beside it reads back Printed (F1, PLAN-PRINTED §2.8 item 5; model.to_sheets writes the word as
+        # held), so W9a's spec_reducer planned the four parts printed on SolidWorks 2026's first run.
         folder, _, _, wdesk = A.w8_step(W.write_fixture, CTX["worker"], CTX["excel"], name,
-                                        (lambda f: F2P.spec_printed_reducer(made, f)) if printed else A.spec_reducer)
+                                        (lambda f: F2P.spec_printed_reducer(made, f)) if printed else
+                                        (lambda f: dataclasses.replace(made, box=dataclasses.replace(
+                                            made.box, output_folder=f, process="machined"))))
         try:
             jobs = {j.gear_ids[0]: j.spec.process for j in wdesk.a.parts.jobs}
             check(sorted(jobs) == sorted(REDUCER) and all(p == ("printed" if printed else "machined")
@@ -1682,10 +1758,16 @@ def section_built(out):
         flags = flags_in("built, before the quiet Update values", folder)
         seen = strip_press(app, strand, {}, snapshot)
         r = seen["jobs"][-1]["value"] if seen["jobs"] else None
-        check(r is not None and r.ok and not r.changed and (F2.sw_files(folder), F2.sha(where)) == prints
-              and flags_in("built, after", folder) == flags,
+        files_now, record_now, flags_now = F2.sw_files(folder), F2.sha(where), flags_in("built, after", folder)
+        # Each part of the judgement said apart (SolidWorks 2026's first run failed it with none of them shown).
+        moved = {k: (prints[0].get(k), files_now.get(k)) for k in set(prints[0]) | set(files_now)
+                 if prints[0].get(k) != files_now.get(k)}
+        check(r is not None and r.ok and not r.changed and files_now == prints[0] and record_now == prints[1]
+              and flags_now == flags,
               f"built: a quiet Update values on Coupon_F2 writes nothing: changed {r and list(r.changed)}, no file or "
-              f"record written, no save flag turned: {seen['status']!r}")
+              f"record written, no save flag turned: {seen['status']!r}; jobs {len(seen['jobs'])}, ok "
+              f"{r is not None and r.ok}; SolidWorks files moved {moved or 'none'}; the .gear.json "
+              f"{'the same' if record_now == prints[1] else 'changed'}; save flags {flags} before, {flags_now} after")
         seen = strip_press(app, strand, {"bore_allowance": TYPED_G2}, snapshot)
         check(seen["status"] == SAID_ALLOWANCE and not seen["jobs"] and seen["count"] == 0
               and F2.sha(where) == prints[1],
@@ -1733,10 +1815,15 @@ def section_built(out):
         f = desk.say_footer("built-f2, G2's allowance typed")
         g2 = file_of(parts["G2"]).rsplit(".", 1)[0]
         said = list(u.structural) if u is not None else []
+        # The plan lists a part whose change is structural among its changed parts (workbook/update.py's _part makes
+        # every part's PartUpdate changed=True and returns the sentence beside it), so G2's part is the one changed
+        # part here, not none (SolidWorks 2026's first run read ['Gear_m1.5_N68_P.SLDPRT'] with the sentence).
+        changing = [file_of(p.path) for p in (u.changed_parts if u else [])]
         check(u is not None and u.needs_new_revision and len(said) == 1 and g2 in said[0] and SAID_ALLOWANCE in said[0]
-              and not u.changed_parts and f.build_action == F2.ui_text.BUILD_AGAIN,
+              and changing == [file_of(parts["G2"])] and f.build_action == F2.ui_text.BUILD_AGAIN,
               f"built-f2: an allowance typed on G2 (built before F3, no global) is structural (G4): Update would make "
-              f"G2's part new, naming it alone, and the window offers Build again...: {said}")
+              f"G2's part new, naming it alone, and the window offers Build again...: {said}; changed parts {changing}; "
+              f"the footer's action {f.build_action!r}")
         W.edit(desk, book, ("Gears", ref, None))
         check(desk.update is not None and desk.update.record_matches and F2.sw_files(copy) == before[0],
               "built-f2: the allowance cleared, Update plans nothing again; nothing was written")
@@ -2055,9 +2142,12 @@ def section_userwork(out):
         users = A.rb_users()
         sun0 = A.sun_part(box)
         entry = next(e for e in desk.record.current_parts() if store.same_path(e.path, sun0))
-        check(not GearSpec.from_dict(dict(entry.spec)).has_bore() and keyway_code("userwork: Sun", sun0) == 0,
-              "userwork: Sun was built with no bore and holds the User Keyway, in no error")
+        # The keyway is read once RangeBox is open: features_of reads an open part only (None otherwise), and on
+        # SolidWorks 2026's first run this check came before the open and read None.
         F2.open_assembly("userwork: RangeBox opened", asm)
+        code0 = keyway_code("userwork: Sun", sun0)
+        check(not GearSpec.from_dict(dict(entry.spec)).has_bore() and code0 == 0,
+              f"userwork: Sun was built with no bore and holds the User Keyway, in no error (its code {code0})")
         A.users_in_copy("userwork, before", desk, copy, users)
         mates0 = mates_now("userwork, before", asm)
 
@@ -2095,18 +2185,20 @@ def section_userwork(out):
         desk.plan_solidworks()
         asm = desk.record.gearbox.assembly
 
-        say("-- userwork  the user's keyway cut again in Sun and a mate on its D's bore face; a quiet press records them")
+        # The bore mate is made after the in-place Update, not before it: a user's concentric on Sun's own face is a
+        # mate K2 refuses an Update that puts Sun back over (ISSUE-1-PLAN K2: "a mate to a gear's own faces or planes"
+        # refuses before any write, named), and SolidWorks 2026's first run met exactly that refusal, naming
+        # UserBoreMate in H, N and L. So the in-place Update is made with the user's keyway in Sun and their eight
+        # mates, and the bore mate, made on the D as the Update left it, is what the last Build again... carries.
+        say("-- userwork  the user's keyway cut again in Sun; a quiet press records it")
         A.keyway("userwork: the user's keyway in the new Sun", sun1)
-        R1 = d_expected(8, 0.2, 7)["R"]
-        bore_mate("userwork: the user's bore mate", desk, R1)
-        A.save_user(copy, "the user's keyway and bore mate")
+        A.save_user(copy, "the user's keyway")
         desk.plan_solidworks()
         result, _ = A.press(desk, "userwork: the quiet press")
         work = desk.record.gearbox.user_work
         check(result is not None and result.changed == [] and work is not None
-              and BORE_MATE in [m.name for m in work.mates]
               and "User Keyway" in [f.name for f in work.features if store.same_path(f.path, sun1)],
-              f"userwork: the quiet press changed nothing and recorded the bore mate and the keyway in Sun")
+              f"userwork: the quiet press changed nothing and recorded the keyway in Sun")
 
         say("-- userwork  Sun's allowance 0.2 to 0.3 and Flat 7 to 7.2: one Update, in place")
         W.edit(desk, book, *sun_cells(book, SUN_IN_PLACE))
@@ -2123,12 +2215,23 @@ def section_userwork(out):
         sun_judged("userwork: Sun in place", desk, placed, out)
         mates_a = mates_now("userwork, after the in-place Update", asm)
         users_mates = sorted(n for n in mates_b if n.startswith("User"))
-        check(mates_a == mates_b and BORE_MATE in users_mates and all(mates_a[n][0] == 0 for n in users_mates)
+        check(mates_a == mates_b and len(users_mates) == 8 and all(mates_a[n][0] == 0 for n in users_mates)
               and keyway_code("userwork: Sun", sun1) == 0,
-              f"userwork: the user's feature and mates as before the Update (codes and states, the bore mate among "
-              f"them, every one in no error; the User Keyway in no error): {users_mates}")
+              f"userwork: the user's feature and mates as before the Update (codes and states, the eight carried, "
+              f"every one in no error; the User Keyway in no error): {users_mates}")
         A.save_user(copy, "the in-place Update")
         desk.plan_solidworks()
+
+        say("-- userwork  a mate of the user's on the D's bore face as the Update left it; a quiet press records it")
+        bore_mate("userwork: the user's bore mate", desk, d_expected(8, 0.3, 7.2)["R"])
+        A.save_user(copy, "the user's bore mate")
+        desk.plan_solidworks()
+        result, _ = A.press(desk, "userwork: the quiet press after the bore mate")
+        work = desk.record.gearbox.user_work
+        check(result is not None and result.changed == [] and work is not None
+              and BORE_MATE in [m.name for m in work.mates]
+              and "User Keyway" in [f.name for f in work.features if store.same_path(f.path, sun1)],
+              f"userwork: the quiet press changed nothing and recorded the bore mate and the keyway in Sun")
 
         say("-- userwork  Sun's allowance cleared (as built: 0.3) and its Part name SunGear: Build again...")
         W.edit(desk, book, *sun_cells(book, {"bore_allowance": ""}),
