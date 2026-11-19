@@ -2134,3 +2134,77 @@ The kinematics agree with §5.2's reading:
 
 **Ready for F4-0 once M1 and M2 are in the plan.** Neither needs the user, and nothing else in §5 is in doubt: every one of
 the plan's other figures was reproduced from the app's own geometry and kinematics.
+
+
+---
+
+# Re-check of the revision to F4's review (2026-11-19)
+
+**Read at `1d76576`** (§5 revised, and *Changes after F4's review*). The coordinator's rulings are taken as given: M1, a
+ring whose tips lie inside its base circle is not rated; R1, the 0.7 stays as an allowance for running. Figures are from a
+fresh scratch script on the app's own geometry and `checks.check`, built as before and not from the plan's numbers. Nothing
+was run on SolidWorks or Excel, and the suite was not run.
+
+## 1. The two must-fixes
+
+- **M1 is fixed at its cause.**
+  - *The condition.* It is `InternalDerived.tip_below_base` (d_a < d_b), the same test that drives the app's own
+    warning. It is applied to the drawn section, and to the virtual ring for a helical ring. I swept helical rings
+    (β 5° to 45°, 20 to 79 teeth, 14.5°, 20° and 25°) and found no case where the drawn section and the virtual ring
+    disagree on it.
+  - *A10, my figures.* At m 1, z 33, d_a 31.000 mm against d_b 31.010 mm, it is not rated. At z 34, d_a 32.000 against
+    31.952, it is rated: Y_F 2.1242, Y_S 2.6416, q_s 8.756.
+  - *Where it is said.* §5.1, §5.2, §5.4, §5.6 (the interface's item 4 and A's and B's tests) and §5.7 all carry it.
+  - *Pointed teeth.* `rate` now says *not rated* for a pointed tooth too.
+- **M2 is fixed at its cause.**
+  - §5.1 now states that a helical ring's force is taken at its transverse diameter, never at z · m_n.
+  - Risky_Placements reads 14.3 in §5.3 and in U-c.
+  - The A9 and B8 rows now pinned would fail if the force were taken at z · m_n.
+
+## 2. A9 and B8, recomputed
+
+- **A9.** Y_F 2.0408, Y_S 2.6948, q_s 8.500, d 76.6208. It is rated to take 61.823 N and 2.3685 N·m. All agree with the
+  plan.
+- **B8.** All three meshes agree with the plan:
+
+  | Mesh | My result |
+  |---|---|
+  | G5–G6 | 723.563 N (G6's own side 709.092); G5 50.670 N, G6 61.823 N; G5 the weaker; 1428.0 % |
+  | G1–G2 | 335.605 N (d 29.7970 and 42.5671); G1 50.670 N, G2 56.971 N; 662.3 % |
+  | G3–G4 | 453.154 N at b 12 (the faces' overlap); G3 62.836 N, G4 71.137 N; 721.2 % |
+
+## 3. A mesh with an unrated ring, and the *Worst share* row
+
+- **The mesh itself reads right.**
+  - The share is counted over the gear that rates. That is a true lower bound, and the plan says so.
+  - The ring is named at its Meshes row whenever the mesh is loaded, whether or not the share passes 100 %. So a mesh
+    whose rated gear reads under 100 % is not passed over in silence.
+- **The *Worst share* row cannot pass off a lower bound as the worst.** When a lower bound is the worst figure, it is
+  marked *(Ring not rated)*, and every unrated gear or mesh is listed after it by name.
+- **One way it can still mislead (should-fix, B's words).**
+  - *What it misses.* The row covers rated meshes and unrated ones, but not loaded meshes that are *not worked out*.
+  - *Where that bites.* In TransferCase_Parallel and E4 in 4H and 4L, the front branch FDrive–FIdler–FOut carries torque
+    past a shared output. FIdler is a gear whose teeth are loaded both ways, and it is never rated. The row would read
+    the low range's 2258.1 % as the gearbox's worst and stay silent about it.
+  - *The fix.* After the unrated list, the row should also name every mesh that carries torque but is not shared out,
+    with its modes, for example *not worked out: FDrive–FIdler, FIdler–FOut in 4H and 4L (past a shared output)*.
+- **Wording, small.** §5.2's opening still says *each Meshes row whose two gears are rated*. It should cover a mesh where
+  one gear rates and the other is a ring that is not rated, since §5.2's own bullet below it works out that mesh's share.
+
+## 4. The 17 MPa basis and the wording
+
+- **The basis.** D7, H1, the Box's note and the README now give 17 MPa as about half a printed PLA data sheet's 35 MPa
+  within the layers, for a single load, and provisional. That is the basis I asked for.
+- **The form's row.** It is now *Holds once — about 0.58 N·m · 39 N at 17 MPa*, so it says *about* and the stress, and a
+  ring adds that its stress factor is past range.
+- **The warning.** It now says *rated to take … once*, calls a blank allowable provisional and says where to type one, and
+  names the user's own tested allowable as a remedy. The 0.7 is worded as R1 rules, beside the figure for a single load
+  rather than inside it. The worked sentence's numbers check: 230 N, 17 N (16.851), 24 N once (24.072), 13.6 times.
+- **The Results sheet.** It gives the two wordings in place of *no torque here*.
+- **Two leftover uses of *holds*.** §5.4's form bullet (*what each printed gear holds at 17 MPa*) and the README title
+  (*What a tooth holds*) still use it. Harmless; C can align them.
+
+## 5. Readiness
+
+- **F4-0, with package A, may start.** Nothing left touches A's maths, the Box or the pins.
+- **Left for B, should-fix:** the *Worst share* row's not-worked-out list, and §5.2's opening sentence.
