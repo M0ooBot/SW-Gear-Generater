@@ -641,8 +641,13 @@ def test_the_rim_is_measured_from_the_hole_as_cut():
     bore = g.df - 2.0 * g.module + 0.1            # a rim 0.05 under one module once a 0.2 allowance is cut
     assert not [m for m in messages(spec(bore=repr(round(bore - 0.2, 9)))) if "rim" in m[2]]
     rims = [m for m in messages(spec(bore=repr(round(bore - 0.2, 9)), bore_allowance="0.2")) if "rim" in m[2]]
-    assert rims and rims[0][2] == (f"The bore leaves {spur._num((g.df - bore) / 2.0)} mm of rim under the teeth, "
+    shaft = round(bore - 0.2, 9)
+    assert rims and rims[0][2] == (f"The bore, {spur._num(shaft)} mm with its 0.2 mm allowance ({spur._num(bore)} mm "
+                                   f"as cut), leaves {spur._num((g.df - bore) / 2.0)} mm of rim under the teeth, "
                                    f"thinner than one module ({spur._num(g.module)} mm).")
+    # With no allowance the sentence is the one a gear said before F3 (F3-REVIEW S2 names the hole only when cut so).
+    plain = [m for m in messages(spec(bore=repr(round(bore, 9)))) if "rim" in m[2]]
+    assert plain[0][2].startswith(f"The bore leaves {spur._num((g.df - bore) / 2.0)} mm of rim under the teeth")
 
 
 def test_the_printed_rim_is_measured_from_the_hole_as_cut(monkeypatch):
@@ -654,7 +659,22 @@ def test_the_printed_rim_is_measured_from_the_hole_as_cut(monkeypatch):
     assert not [m for m in messages(base) if "three nozzle widths" in m[2]]
     monkeypatch.setattr(spur, "PRINTED_DEFAULT_IN_PLANS", True)       # the printed default is cut
     said = [m for m in messages(base) if "three nozzle widths" in m[2]]
-    assert said and said[0][2].startswith(f"Printed, the bore leaves {spur._num((g.df - bore) / 2.0)} mm of rim")
+    assert said and said[0][2] == (f"Printed, the bore, {spur._num(bore - 0.2)} mm with its 0.2 mm allowance "
+                                   f"({spur._num(bore)} mm as cut), leaves {spur._num((g.df - bore) / 2.0)} mm of rim "
+                                   "under the teeth, under three nozzle widths (1.2 mm).")
+    typed_0 = [m for m in messages(base.with_values(bore_allowance="0")) if "three nozzle widths" in m[2]]
+    assert not typed_0                                                  # F1's figure, 1.15 mm, passes
+
+
+def test_a_printed_bevels_rim_names_the_hole_as_cut():
+    s = GearSpec(**{**BEVEL, "process": "printed", "module": "1", "face_width": "6"})
+    g = kind_of(s).derive(s)
+    bore = 2.0 * (bevel.toe_root_radius(g) - 1.0) - 0.4         # rim 1.2 mm before the cut, 1.1 once 0.2 is cut
+    cut = s.with_values(bore=repr(round(bore, 9)), bore_allowance="0.2")
+    said = [m[2] for m in messages(cut) if "three nozzle widths" in m[2]]
+    assert said == [f"Printed, the bore, {spur._num(bore)} mm with its 0.2 mm allowance ({spur._num(bore + 0.2)} mm as "
+                    f"cut), leaves {spur._num(bevel.toe_root_radius(g) - (bore + 0.2) / 2.0)} mm of rim under the teeth, "
+                    "under three nozzle widths (1.2 mm)."]
 
 
 def test_the_herringbones_groove_floor_is_against_the_hole_as_cut():

@@ -359,4 +359,5 @@ def test_the_windows_warnings_for_a_gearbox_built_before_f3_are_unchanged_with_t
     fresh = wb_assess.assess(window.reading.spec, window.reading.diagnostics, str(desk.folder), "",
                              blank_process="printed")
     assert [d.message for d in fresh.diagnostics if d.message not in before] == [
-        "Gears!J2: G1: The bore leaves 1.425 mm of rim under the teeth, thinner than one module (1.5 mm)."]
+        "Gears!J2: G1: The bore, 18.7 mm with its 0.2 mm allowance (18.9 mm as cut), leaves 1.425 mm of rim under the "
+        "teeth, thinner than one module (1.5 mm)."]

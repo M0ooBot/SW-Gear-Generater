@@ -1007,11 +1007,11 @@ def section_diagnostics(g: SpurDerived, recipe: str, undercut_limit: Optional[fl
         if g.printed and PRINTED_RIM_NOZZLES * g.nozzle > g.module:
             # §2.2: printed, the stricter floor is said; above 3 nozzle widths of module that is today's one module.
             if rim < PRINTED_RIM_NOZZLES * g.nozzle - PRINTED_TOLERANCE:
-                out.append(printed_rim_warning(rim, g.nozzle))
+                out.append(printed_rim_warning(rim, g.nozzle, g.bore, g.bore_allowance))
         elif rim < g.module:
             out.append(Diagnostic(WARNING, (
-                f"The bore leaves {_num(rim)} mm of rim under the teeth, thinner "
-                f"than one module ({_num(g.module)} mm)."), "bore"))
+                f"{_the_bore('The bore', g.bore, g.bore_allowance)} leaves {_num(rim)} mm of rim under the "
+                f"teeth, thinner than one module ({_num(g.module)} mm)."), "bore"))
     if g.tip_thickness < TIP_THICKNESS_WARNING * g.module:
         out.append(Diagnostic(WARNING, (
             f"The tooth tip is {_num(g.tip_thickness)} mm thick, under 0.3 × module "
@@ -1063,11 +1063,20 @@ def printed_module_warning(module: float, nozzle: float) -> Optional[Diagnostic]
         f"{_num(nozzle)} mm nozzle rounds the profile off."), "module")
 
 
-def printed_rim_warning(rim: float, nozzle: float) -> Diagnostic:
-    """F1 (§2.2): the wall between a printed gear's bore and its root, said when under three nozzle widths."""
+def printed_rim_warning(rim: float, nozzle: float, bore: float = 0.0, allowance: float = 0.0) -> Diagnostic:
+    """F1 (§2.2): the wall between a printed gear's bore and its root, said when under three nozzle widths. F3: a bore
+    cut with an allowance is named with it, the rim being measured on the hole as cut (F3-REVIEW S2); with none the
+    sentence is F1's."""
     return Diagnostic(WARNING, (
-        f"Printed, the bore leaves {_num(rim)} mm of rim under the teeth, under three nozzle widths "
-        f"({_num(PRINTED_RIM_NOZZLES * nozzle)} mm)."), "bore")
+        f"Printed, {_the_bore('the bore', bore, allowance)} leaves {_num(rim)} mm of rim under the teeth, under three "
+        f"nozzle widths ({_num(PRINTED_RIM_NOZZLES * nozzle)} mm)."), "bore")
+
+
+def _the_bore(lead: str, bore: float, allowance: float) -> str:
+    """A rim sentence's subject: ``lead`` alone with no allowance, as before F3, else
+    ``the bore, 20 mm with its 0.2 mm allowance (20.2 mm as cut),`` (F3-REVIEW S2), so the rim is said of the hole as
+    cut, as the bore's check against the root says it."""
+    return f"{lead}, {bore_size_words(bore, allowance)}," if allowance else lead
 
 
 def printed_section_warnings(g: SpurDerived) -> List[Diagnostic]:

@@ -660,7 +660,7 @@ def validate(spec: GearSpec, derived: Optional[BevelDerived] = None, recipe: str
     elif g.printed and g.bore > 0.0:
         rim = toe_root_radius(g) - g.bore_as_cut / 2.0
         if rim < spur.PRINTED_RIM_NOZZLES * g.section.nozzle - spur.PRINTED_TOLERANCE:
-            out.append(spur.printed_rim_warning(rim, g.section.nozzle))
+            out.append(spur.printed_rim_warning(rim, g.section.nozzle, g.bore, g.bore_allowance))
     if g.face_width > g.cone_distance / 3.0 or g.face_width > 10.0 * g.module:
         out.append(Diagnostic(WARNING, (
             f"A face width of {_num(g.face_width)} mm is more than the Gleason limit of the smaller of a third of the "
