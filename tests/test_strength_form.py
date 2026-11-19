@@ -82,7 +82,9 @@ def test_the_line_under_the_rows_says_why_a_ring_is_past_the_stress_factors_rang
     ring = rating(**A10)
     assert not ring.rated and ring.short == "tips inside the base circle"
     assert ui_text.holds_line(ring) == f"Holds once: not rated: {ring.why}."
-    assert "31.000 mm against 31.010" in ring.why
+    assert ui_text.holds_line(ring) == (     # F4-REVIEW S1: the sentence as the user reads it, pinned whole
+        "Holds once: not rated: its tips lie inside its base circle (31.000 mm against 31.010), where its teeth cannot "
+        "be involute, and the rating needs an involute tip to load.")
 
 
 def test_an_outside_gear_with_a_fillet_typed_that_sharp_says_its_own_past_the_range():
@@ -150,6 +152,7 @@ def test_the_readme_says_what_the_figure_is_and_is_not():
         "far lower", "17 MPa is provisional", "35 MPa", "Allowable stress", "Box", "a printed tooth broken in a jig",
         "1.25", "0.7", "not rated", "stress factor past its range", "bevel", "crossed", "steel",
         "6 to 23 times", "heat", "wear", "creep", "fatigue", "layers",
+        "so printed as typed they would break, or would not run.",
     ):
         assert said.lower() in section, said
 
@@ -229,6 +232,26 @@ def test_a_ring_with_its_tips_inside_its_base_circle_reads_not_rated_and_says_wh
     app._derive_now()
     assert holds_cells(app) == ["not rated: tips inside the base circle"]
     assert app.measured_text.get() == f"Holds once: not rated: {app._ratings['a'].why}."
+    assert app.measured_text.get() == (
+        "Holds once: not rated: its tips lie inside its base circle (31.000 mm against 31.010), where its teeth cannot "
+        "be involute, and the rating needs an involute tip to load.")
+
+
+def test_a_recipe_b_ring_with_its_tips_inside_its_base_circle_reads_not_rated_on_the_form(app):
+    """F4-REVIEW S4: a ring drawn by Arcs (recipe B), z 30, whose flank arc runs on to its tip, is not rated on the form
+    itself, its row and its line the same as recipe A's, with its own diameters."""
+    from gear_generator.spec import RECIPE_ARCS
+    app.recipe.set(RECIPE_ARCS)
+    form(app, **{**A10, "teeth": "30"})
+    app._derive_now()
+    assert app._held_spec("a").recipe == RECIPE_ARCS
+    derived = app._derived["a"]
+    assert derived is not None and app._ratings["a"] is not None
+    assert (round(derived.da, 3), round(derived.db, 3)) == (28.0, 28.191)
+    assert holds_cells(app) == ["not rated: tips inside the base circle"]
+    assert app.measured_text.get() == (
+        "Holds once: not rated: its tips lie inside its base circle (28.000 mm against 28.191), where its teeth cannot "
+        "be involute, and the rating needs an involute tip to load.")
 
 
 def test_a_machined_gear_shows_no_row_and_its_rows_are_derived_rows_as_before(app):

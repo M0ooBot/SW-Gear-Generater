@@ -223,8 +223,8 @@ groove). In a pair each gear's column has its own.
   over: planetary_4to1 6.4, Arc_Move 6.9, RangeBox 13.6 in L, Risky_Placements
   14.3, the E4 transfer case 21.4, Reducer_12to1 and TransferCase_Parallel 22.6.
   Even against a best estimate of a break every one is over, so printed as
-  typed they would break. That is their torques, not the check: for a printed
-  gearbox, use a larger module, a wider face, less torque, or your own tested
+  typed they would break, or would not run. That is their torques, not the
+  check: for a printed gearbox, use a larger module, a wider face, less torque, or your own tested
   allowable.
 
 #### Calibrating your printer

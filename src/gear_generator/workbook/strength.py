@@ -35,8 +35,11 @@ ring is named in ``unrated``.
 - ``UNWORKED`` (B's, past the stub's six): both its shafts turn and its branch reaches a turning output without
   passing a loaded shaft, yet kinematics gives it no torque (a W3 split, one shaft driving two branches; a stage with
   nothing held). It carries torque too, and is not worked out;
-- ``UNLOADED``: anything else, a shaft that does not turn (a free member), a stage that idles, a branch reaching no
-  output (J17's pruning): it *turns unloaded here*.
+- ``UNDRIVEN``: a shaft of it does not turn in this mode (a free member, missing from ``Motion.speeds``: the
+  transfer cases' front branch in 2H and N): it is *not driven here*, and may not turn at all (F4-REVIEW S2, the
+  coordinator's ruling of 2026-11-18);
+- ``UNLOADED``: anything else, both shafts turning with no load (a stage that idles, a branch reaching no output,
+  J17's pruning): it *turns unloaded here*.
 """
 
 from __future__ import annotations
@@ -51,7 +54,8 @@ from .schema import FRAME
 
 # The states of one Meshes row in one mode (§5.2, §5.4; the review's S3).
 RATED = "rated"                    # loaded here, at least one of its gears rated: force, weaker, share
-UNLOADED = "unloaded"              # not loaded here: a stage that idles, a branch reaching no output, a free member
+UNLOADED = "unloaded"              # not loaded here, both shafts turning: a stage that idles, a branch reaching no output
+UNDRIVEN = "not driven"            # not loaded here, a shaft not turning: a free member (F4-REVIEW S2, ruled)
 NOT_SHARED = "not shared"          # loaded past a shared output, which kinematics does not share out (J17)
 NOT_RATED = "not rated"            # loaded here, and neither gear rates
 BEVEL = "bevel"                    # a bevel pair: never rated (§5.1)
@@ -62,6 +66,7 @@ UNWORKED = "not worked out"
 
 # The Results block's wordings where no force is worked out (§5.4), never *no torque here*.
 TURNS_UNLOADED = "turns unloaded here"
+NOT_DRIVEN = "not driven here"                                                      # F4-REVIEW S2, for UNDRIVEN
 NOT_SHARED_OUT = "the torque past a shared output is not shared out (not worked out)"
 NOT_GIVEN = "the torque here is not given (past a split, not worked out)"          # B's, for UNWORKED
 
@@ -327,10 +332,11 @@ def _not_loaded_state(spec: Any, links: Dict[str, Set[str]], motion: Any, m: _Me
     past = set(getattr(motion, "past_split", ()) or ())
     if any(s in past for s in shafts):
         return NOT_SHARED
-    if all(s in motion.speeds for s in shafts):
-        start = [s for s in shafts if not _loaded(motion, s)]
-        if _reaches_output(spec, links, motion, start, set(shafts)):
-            return UNWORKED
+    if not all(s in motion.speeds for s in shafts):
+        return UNDRIVEN
+    start = [s for s in shafts if not _loaded(motion, s)]
+    if _reaches_output(spec, links, motion, start, set(shafts)):
+        return UNWORKED
     return UNLOADED
 
 
@@ -483,6 +489,8 @@ def results_rows(rows: Sequence[MeshStrength], allowable: float, typed: bool, bo
             out.append([r.name, "", f"not rated: {PAIR_WORDS[r.state]}"])
         elif r.state == UNLOADED:
             out.append([r.name, r.mode, "—", "", "", TURNS_UNLOADED])
+        elif r.state == UNDRIVEN:
+            out.append([r.name, r.mode, "—", "", "", NOT_DRIVEN])
         elif r.state == NOT_SHARED:
             out.append([r.name, r.mode, "—", "", "", NOT_SHARED_OUT])
         elif r.state == UNWORKED:
@@ -535,7 +543,7 @@ def worst_row(rows: Sequence[MeshStrength]) -> List:
 
 
 __all__ = [
-    "BEVEL", "CROSSED", "GearSide", "MeshStrength", "NOT_GIVEN", "NOT_RATED", "NOT_SHARED", "NOT_SHARED_OUT", "RATED",
-    "TURNS_UNLOADED", "UNLOADED", "UNWORKED", "allowable_of", "mesh_strengths", "results_rows", "warning_sentence",
+    "BEVEL", "CROSSED", "GearSide", "MeshStrength", "NOT_DRIVEN", "NOT_GIVEN", "NOT_RATED", "NOT_SHARED", "NOT_SHARED_OUT", "RATED",
+    "TURNS_UNLOADED", "UNDRIVEN", "UNLOADED", "UNWORKED", "allowable_of", "mesh_strengths", "results_rows", "warning_sentence",
     "worked_out", "worst_row",
 ]

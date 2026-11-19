@@ -224,8 +224,8 @@ def test_a_ring_whose_tips_lie_inside_its_base_circle_is_not_rated_with_its_reas
     """M1 (A10): m 1, z 33 at 20°, its tips 31.000 mm against the base circle's 31.010, is not rated; z 34 is."""
     r = rating_of("A10")
     assert (r.rated, r.short, r.ring) == (False, "tips inside the base circle", True)
-    assert r.why == ("its tips lie inside its base circle (31.000 mm against 31.010), where a tooth cannot be involute, "
-                     "so the tip load the rating takes is outside what it covers")
+    assert r.why == ("its tips lie inside its base circle (31.000 mm against 31.010), where its teeth cannot be "
+                     "involute, and the rating needs an involute tip to load")
     with pytest.raises(ValueError, match="not rated: its tips lie inside its base circle"):
         strength.holds(r)
     z34 = rating_of("A10", teeth="34")
@@ -667,6 +667,6 @@ def test_a_recipe_b_ring_with_its_tips_inside_its_base_circle_is_not_rated_by_a_
     for drawn in ("A", "B"):
         r = strength.rate(g, drawn)
         assert (r.rated, r.short) == (False, "tips inside the base circle")
-        assert r.why == (f"its tips lie inside its base circle ({g.da:.3f} mm against {g.db:.3f}), where a tooth "
-                         "cannot be involute, so the tip load the rating takes is outside what it covers")
+        assert r.why == (f"its tips lie inside its base circle ({g.da:.3f} mm against {g.db:.3f}), where its teeth "
+                         "cannot be involute, and the rating needs an involute tip to load")
         assert "radial line" not in r.why

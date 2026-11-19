@@ -136,12 +136,14 @@ def _mm(value: float) -> str:
 
 
 def why_tips_inside_base(da: float, db: float, virtual: bool = False) -> str:
-    """M1's clause: *its tips lie inside its base circle (31.000 mm against 31.010), where a tooth cannot be
-    involute, …*. True of both recipes (F4-0-REVIEW S1): on recipe A the last of each tooth there is a straight radial
-    line, on recipe B the flank arc runs on to the tip, and no involute exists inside the base circle on either. A
-    neutral reason; package C words what the user reads."""
+    """M1's clause: *its tips lie inside its base circle (31.000 mm against 31.010), where its teeth cannot be
+    involute, and the rating needs an involute tip to load*. True of both recipes (F4-0-REVIEW S1): on recipe A the last
+    of each tooth there is a straight radial line, on recipe B the flank arc runs on to the tip, and no involute exists
+    inside the base circle on either. Worded plainly for the user, who reads it after *Ring is not rated:* at a Meshes
+    row and after *Holds once: not rated:* on the form (F4-REVIEW S1)."""
     where = " on its virtual spur ring" if virtual else ""
-    return (f"its tips lie inside its base circle{where} ({_mm(da)} mm against {_mm(db)}), where a tooth cannot be involute, so the tip load the rating takes is outside what it covers")
+    return (f"its tips lie inside its base circle{where} ({_mm(da)} mm against {_mm(db)}), where its teeth cannot be "
+            "involute, and the rating needs an involute tip to load")
 
 
 def why_off_fillet(tangent: float) -> str:

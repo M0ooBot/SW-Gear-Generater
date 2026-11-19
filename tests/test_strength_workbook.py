@@ -164,6 +164,10 @@ def test_a_ring_not_rated_is_named_at_its_meshes_row_with_its_reason_under_100_p
     assert (r.state, r.unrated, r.weaker, r.side("Ring").held) == (mesh.RATED, ("Ring",), "Pin", None)
     assert r.share < 1.0 and round(r.share, 9) == round(r.force / r.side("Pin").held, 9)     # the pinion alone
     assert said(a) == [f"Meshes row 2: Pin and Ring: Printed, {ring_said()}"]
+    assert said(a) == [   # F4-REVIEW S1: the sentence as the user reads it, pinned whole
+        "Meshes row 2: Pin and Ring: Printed, Ring is not rated: its tips lie inside its base circle (31.000 mm against "
+        "31.010), where its teeth cannot be involute, and the rating needs an involute tip to load; the share counts "
+        "Pin alone."]
 
 
 def test_a_ring_not_rated_and_the_pinions_share_past_100_percent_are_one_warning():
@@ -194,17 +198,20 @@ def test_a_ring_of_34_teeth_is_rated():
 
 # -- not worked out: the two wordings, the shared output, a split (S3; the re-check's should-fix) --------------------
 
-def test_the_transfer_case_front_branch_is_not_shared_out_in_4h_and_4l_and_turns_unloaded_in_2h():
+def test_the_transfer_case_front_branch_is_not_shared_out_in_4h_and_4l_and_not_driven_in_2h_and_n():
+    """F4-REVIEW S2, ruled: the front branch is a free member in 2H and N (its shafts are not in Motion.speeds), so it
+    is *not driven here*, never *turns unloaded here*, which is kept for a branch that turns with no load."""
     a = assessed(transfer_case_parallel())
     for name in ("FDrive–FIdler", "FIdler–FOut"):
         assert [(r.mode, r.state) for r in rows_of(a, name)] == [
-            ("2H", mesh.UNLOADED), ("4H", mesh.NOT_SHARED), ("N", mesh.UNLOADED), ("4L", mesh.NOT_SHARED)]
-    # the low range in 2H, 4H and N: a branch reaching no output (J17's pruning) turns unloaded
+            ("2H", mesh.UNDRIVEN), ("4H", mesh.NOT_SHARED), ("N", mesh.UNDRIVEN), ("4L", mesh.NOT_SHARED)]    # the low range in 2H, 4H and N: a branch reaching no output (J17's pruning) turns unloaded
     assert [r.state for r in rows_of(a, "LayPin–LoGear")] == [mesh.UNLOADED] * 3 + [mesh.RATED]
     rows = block(a)
     assert ["FDrive–FIdler", "4H", "—", "", "", "the torque past a shared output is not shared out (not worked out)"] \
         in rows
-    assert ["FDrive–FIdler", "2H", "—", "", "", "turns unloaded here"] in rows
+    assert ["FDrive–FIdler", "2H", "—", "", "", "not driven here"] in rows
+    assert ["FIdler–FOut", "N", "—", "", "", "not driven here"] in rows
+    assert not any(row[0] in ("FDrive–FIdler", "FIdler–FOut") and "turns unloaded here" in row for row in rows)
     assert ["Worst share", "LayPin–LoGear in 4L, 2258.1 %",
             "not worked out: FDrive–FIdler, FIdler–FOut in 4H and 4L (past a shared output)"] in rows
     assert not any("no torque here" in str(cell) for row in rows for cell in row)
