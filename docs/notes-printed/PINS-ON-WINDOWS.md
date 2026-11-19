@@ -1,7 +1,9 @@
 # The hashed pins under Windows' python.exe
 
-By the coordinator's ruling of 2026-11-19 on F3-DEMONSTRATION-RUNS-REVIEW §4. Commits `a118315` (the pins) and
-`280bff8` (F3's demonstration self-check). No SolidWorks and no Excel were used.
+By the coordinator's ruling of 2026-11-19 on F3-DEMONSTRATION-RUNS-REVIEW §4, then the coordinator's rulings on this
+note's findings (the last section). Commits `a118315` (the pins), `280bff8` (F3's demonstration self-check), `cf1bb84`
+(this note), then the Linux-only skips and the three self-checks' fixes, and this note updated. No SolidWorks and no
+Excel were used.
 
 ## What was done
 
@@ -59,8 +61,8 @@ The same texts were made under both Pythons at `12440a3`.
   - python.exe gives `C:\Out\Gear_m2_N17.SLDPRT`.
   - The cause is that the planner joins a Windows folder and a file name with `os.path.join`: `workbook/build.py:190`
     and `workbook/gearbox.py:781`, `:782` and `:817`. That is posixpath on Linux and ntpath on Windows.
-  - So these two pins (five tests) still fail under python.exe, and the failure says where. Nothing was normalised to
-    hide this.
+  - Nothing was normalised to hide this. By ruling 1 these two pins (five tests) are **Linux-only**. Off Linux they
+    are skipped, and the skip says why (see *Linux-only pins* below).
 
 ## Deliberate breaks (scratch copies, deleted afterwards)
 
@@ -97,40 +99,16 @@ Each cell gives tests failed / pin tests among them.
 
 ## The numbers
 
-**Linux** (venv, `PYTHONPATH=src`):
-- Whole suite: **5568 passed, 1 failed, 1 skipped.** The failure is the known Tk font-width test,
-  `test_a_second_workbooks_r2_parts_beside_long_ids_are_shortened_to_the_room_left`.
+**First pass**, before the rulings below:
+- Linux whole suite: 5568 passed, 1 failed, 1 skipped.
+- python.exe:
+  - `test_printed_rule.py`: 483 passed, 5 failed. At `12440a3`, before any of this work, it was 339 passed, 147 failed.
+  - `test_workbook_build.py` and `test_workbook_window.py`, run alone: 166 passed, 2 skipped.
+  - A wider batch: the F2 and F3 test files and `test_findings` passed. `BEFORE_W7` (5), `BEFORE_W8` (9) and
+    `test_swbuild`'s W7 put-back log (1) failed, being Linux-only hashes. Two `test_strength_form.py` tests failed on
+    Tk font metrics.
 
-**python.exe** (Python 3.13.14, `PYTHONPATH` the worktree's `src` in its `\\wsl.localhost` form):
-- `test_printed_rule.py`:
-  - **483 passed, 5 failed** (the path joins);
-  - at `12440a3`, before this work: **339 passed, 147 failed** (23 STRIP, 92 marked machined, 23 as built, 4 SOLVE,
-    FIXTURES, 4 RECORD_BEFORE_F1).
-- `test_printed_rule.py`, `test_workbook_planetary.py` and `test_findings.py` together: **744 passed, 10 failed.**
-  - 5 failures are the path joins.
-  - 5 are W7's `BEFORE_W7` hashes, which are Linux-only. They are outside this ruling and were not converted.
-- `test_workbook_build.py` and `test_workbook_window.py`, run alone: **166 passed, 2 skipped.**
-- At the same code, a wider batch run before the change: the F2 and F3 test files and `test_findings` pass.
-  - The W-era hashes `BEFORE_W7` (5), `BEFORE_W8` (9) and `test_swbuild`'s W7 put-back log (1) fail. They are
-    Linux-only and were not touched.
-  - Two F4 tests in `test_strength_form.py` fail on Tk font metrics, also when run alone:
-    - a line wraps after "tips" rather than after "inside";
-    - the derived panel is 461 px wide, against a 460 px strip.
-
-**Self-checks** (`--self-check`), as ok / failed, Linux then python.exe:
-
-| Script | Linux | python.exe |
-|---|---|---|
-| f1_demonstration | 61 / 0 | 61 / 0 |
-| f2_demonstration | 35 / 0 | 35 / 0 |
-| f3_demonstration | 18 / 0 | 18 / 0 (its pins check failed here before `280bff8`) |
-| f2_probes | 125 / 0 | 125 / 0 |
-| w9b_demonstration | 50 / 0 | crashes after 28 ok: UnicodeEncodeError; 50 / 0 with `PYTHONIOENCODING=utf-8` |
-| w9c_demonstration | 105 / 0 | crashes after 34 ok: UnicodeEncodeError; 105 / 0 with `PYTHONIOENCODING=utf-8` |
-| w9c_probes | 27 / 0 | 27 / 0 |
-| w9d_demonstration | 62 / 0 | 62 / 0 |
-| w9d_probes | 73 / 0 | 73 / 0 |
-| workbook_assembly_check | 7 / 0 | does not start (below) |
+**After the rulings:** see *Rulings and what was done* below.
 
 ## Found, for a ruling
 
@@ -154,3 +132,49 @@ Each cell gives tests failed / pin tests among them.
    - It is a Linux-only self-check by construction.
 6. **w9b's and w9c's self-checks crash under python.exe when their output is piped,** because `π` and `−` are not in
    cp1252. They pass with `PYTHONIOENCODING=utf-8`.
+
+## Rulings and what was done (2026-11-19, the user's to overrule)
+
+1. **Path joins: the pins are Linux-only.** In `tests/test_printed_rule.py` these five tests are marked `LINUX_PATHS`.
+   Off Linux they are skipped, with the reason said in the skip, and no second text is stored:
+   - `test_the_w8_fixtures_and_rangebox_plan_bit_for_bit_as_at_the_cut` (FIXTURES);
+   - `test_a_record_written_before_f1_is_nothing_to_update_or_make_again` (RECORD_BEFORE_F1);
+   - `test_a_record_written_before_f1_is_nothing_to_do_against_a_workbook_marked_machined_or_left_blank`, three cases
+     (RECORD_BEFORE_F1).
+2. **The absolute tolerance of 1e-12 is accepted.**
+3. **W7's hashes are left as they are and are Linux-only.**
+   - These are `test_workbook_planetary.test_every_workbook_before_w7_plans_bit_for_bit_as_it_did`, `BEFORE_W7`, five
+     cases. They are skipped off Linux with the reason said.
+   - Their text was checked under both Pythons. Per workbook, 7 to 73 numbers differ, all within 1e-12 (the `float.hex`
+     figures among them). There are 11 to 15 path joins, as in (1).
+   - **The Linux-only pins on the branch are exactly these ten tests (five here, five in (1)).** Every other hashed pin of
+     `test_printed_rule.py` holds by its stored text off Linux.
+   - Outside this ruling's reach, and not touched: `test_workbook_modes`' `BEFORE_W8` and `test_swbuild`'s
+     `W7_PUT_BACK_LOG`. They are Linux-only hashes too and still fail under python.exe.
+4. **`test_strength_form.py`'s two Tk-metric tests** are the form's author's. They were left alone.
+5. **The three self-checks run under python.exe, and nothing any of them checks changed.**
+   - `workbook_assembly_check` now uses the real `win32api`, `win32gui` and `win32process` where they import, and its
+     stand-ins only where they do not. `xlhelp` is always stood in, and the self-check calls none of them.
+   - `w9b_demonstration` and `w9c_demonstration` reconfigure stdout and stderr to UTF-8, as the other probe scripts do.
+
+Commits: `0e876b1` (the skips) and `d1d5d35` (the self-checks).
+
+**The numbers after the rulings:**
+
+- **Linux,** whole suite: **5568 passed, 1 failed, 1 skipped.** The failure is the known Tk font-width test.
+- **python.exe,** `test_printed_rule.py`, `test_workbook_planetary.py` and `test_findings.py` together: **744 passed, 10
+  skipped, 0 failed.** The ten skips are the Linux-only pins above, each saying why.
+- **Self-checks,** ok / failed, the same on Linux and under python.exe, with no `PYTHONIOENCODING` set:
+
+  | Script | ok / failed |
+  |---|---|
+  | f1_demonstration | 61 / 0 |
+  | f2_demonstration | 35 / 0 |
+  | f3_demonstration | 18 / 0 |
+  | f2_probes | 125 / 0 |
+  | w9b_demonstration | 50 / 0 |
+  | w9c_demonstration | 105 / 0 |
+  | w9c_probes | 27 / 0 |
+  | w9d_demonstration | 62 / 0 |
+  | w9d_probes | 73 / 0 |
+  | workbook_assembly_check | 7 / 0 |
