@@ -4,10 +4,11 @@ read back from what SolidWorks holds. The sections, what each line bears out, th
 and what the script does not measure are in docs/notes-printed/F3-DEMONSTRATION.md.
 
 python.exe probe/f3_demonstration.py <repo src> <output folder under C:\> --pid PID [--log FILE]
-                                     [--sections dshape,allowance,print,built,userwork|all]
+                                     [--sections dshape,allowance,print,built,hub,userwork|all]
                                      [--user-master <W9a's setup.master>]
                                      [--reducer-off-master <this script's f3-reducer-off.master>]
                                      [--reducer-on-master <this script's f3-reducer-on.master>]
+                                     [--reducer-machined-master <this script's f3-reducer-machined.master>]
                                      [--redo] [--close-outlived-whats-wrong]
 python probe/f3_demonstration.py --self-check     (no SolidWorks, no Excel: every judgement below on made-up readings
                                                    and on the app's own figures, each failing way shown; the strip's
@@ -21,7 +22,8 @@ sections that judge the default (allowance, print, built) refuse with a sentence
 judge typed and as-built figures only and run either way. Where a section needs what F2's code built, it builds it in
 this run with the switch turned off in this process only, says so, and turns it back.
 
-Sections (each runs alone; built keeps its two reducers as masters for a rerun; userwork needs --user-master):
+Sections (each runs alone; built keeps its three reducers as masters for a rerun; userwork needs --user-master).
+Every build's checks are held free of a sketch not fully defined:
 
 - dshape     First (S6): the stand-in for a probe of a sketch that could solve to the far side, as W9c's landing
              section was for the ring. A printed spur (m 1.5, z 20, face 8, Bore 8, allowance 0.2 typed, Drive flat,
@@ -30,10 +32,11 @@ Sections (each runs alone; built keeps its two reducers as masters for a rerun; 
              nothing written), back, and to a press fit; the allowance to 0 and the Drive to round each refused in B's
              words; then from D to round and back, each made new by the form's Build. After every change: no feature in
              error, the Bore Sketch fully defined, the volume within 0.1 % of the same gear built from scratch, the
-             bore read face by face (one cylinder of radius (D + a)/2 about the axis, one flat at h on +X, the round
-             reaching -X: the 278-degree D, never the sliver), a tooth space centred on +X, and the chord link read as
-             SolidWorks holds it, equal to the app's text and evaluating to the app's figure.
-- allowance  A printed spur, helical and bevel gear and a hub, each built with the default allowance and with one typed
+             bore read face by face without trusting a face's padded box (every round face of radius (D + a)/2 about
+             the axis, together reaching -X; one flat whose plane is at h on +X: the 278-degree D, never the sliver),
+             the tip lands counted (where they sit, and the boxes' lengths, logged as facts), and the chord link read
+             as SolidWorks holds it, equal to the app's text, evaluating to the app's figure, its Value agreeing.
+- allowance  A printed spur, helical, herringbone and bevel gear and a hub, each built with the default allowance and with one typed
              (the spur's negative): the hole as cut read from the part's faces against Bore plus allowance, the
              global as SolidWorks holds it, the .gear.json at schema 4; a machined gear of the same sizes built beside
              each: no F3 global, schema 1, the hole its Bore, its record that of F3-0's pins.
@@ -47,7 +50,11 @@ Sections (each runs alone; built keeps its two reducers as masters for a rerun; 
              nothing; an allowance typed on one of them is refused as structural (G4), naming that part alone. Then the
              printed 12 : 1 built with the switch on: G2's allowance typed and one Update, G2's bore changed in place
              and nothing else touched or saved; G2's allowance changed by hand in SolidWorks, saved, and pressed again:
-             the Update stops naming the global and its cell (K11).
+             the Update stops naming the global and its cell (K11). Then a machined 12 : 1 built before F3, Printed
+             typed and one Update: each part's Backlash written, no "Bore Allowance" added.
+- hub        RangeBox_Fixed (W9b's fixture with the hub) printed, its Hub row with a D bore and an allowance (its mate
+             RangeSlv, a sleeve, takes none), built by the app's own Build, turned through every mode as W9b's build
+             section turns it with no interference read, and the Hub's hole as cut read as dshape reads a D.
 - userwork   A copy of W9a's setup.master (RangeBox with the user's work), Printed typed and one Update; Sun (built
              with no bore) given Bore, allowance, Drive flat and Flat, which only Build again... can do; the user's
              keyway cut again in the new Sun and a mate of the user's on its D bore face, recorded by a quiet press;
@@ -148,6 +155,7 @@ DSHAPE_STEPS = (
 # printed with the allowance blank (the default), printed with it typed, and machined with it blank.
 ALLOWANCE_KINDS = (("spur", dict(), "-0.1"),
                    ("helical", dict(kind="helical", helix_angle="20"), "0.3"),
+                   ("herringbone", dict(kind="herringbone", helix_angle="30", module="2", teeth="20"), "0.3"),
                    ("bevel", dict(kind="bevel", teeth="20", mate_teeth="40"), "0.3"),
                    ("hub", dict(kind="hub", module="1.25", teeth="17", face_width="20", bore="8"), "0.25"))
 
@@ -298,10 +306,13 @@ def hole_radius(faces, reach):
     return min((f["r"] for f in cylinders), default=None)
 
 
-def bore_judged(faces, radius, h=None, chord=None):
-    """The bore as its faces read: one cylinder or more about the axis, each of the hole's radius; with h, a D: exactly
-    one cylinder and one flat, the flat's normal along X and its plane at x = h (on +X), its length along Y the chord,
-    the round reaching -X and never past the flat (the major arc, never the sliver); without h, no flat at all."""
+def bore_judged(faces, radius, h=None):
+    """The bore as its faces read, without a box wherever a box could mislead (GetBox pads a face's box, about 0.24 mm
+    at each end in W9b's reading): every cylinder about the axis in the bore at the hole's radius (CylinderParams); with
+    h, a D: those cylinders together reaching -X by their boxes (one-sided, so padding cannot pass a sliver, whose
+    round lies between x = h and R), SolidWorks free to make the arc one face or more, and exactly one flat, its normal
+    along X and its plane at x = h on +X (PlaneParams' point); without h, no flat at all. The far side shows as the
+    plane at -h, a sliver as a round not reaching -X, a wrong chord as the plane off h, a wrong radius as the radius."""
     cylinders, flats = bore_faces(faces, radius + 1.0)
     out = []
     if not cylinders:
@@ -313,46 +324,97 @@ def bore_judged(faces, radius, h=None, chord=None):
         if flats:
             out.append(f"{len(flats)} flat face(s) in a round bore")
         return out
-    if len(cylinders) != 1:
-        out.append(f"{len(cylinders)} cylinders in the D, not one")
+    if cylinders and min(c["box"][0] for c in cylinders) > -radius + BOX_TOL:
+        out.append(f"the round's box starts at x {min(c['box'][0] for c in cylinders):.4f}: it does not reach -X (the "
+                   "minor arc, the sliver)")
     if len(flats) != 1:
         out.append(f"{len(flats)} flat faces in the D, not one")
         return out
-    flat = flats[0]
-    n, root, box = flat["normal"], flat["root"], flat["box"]
+    n, root = flats[0]["normal"], flats[0]["root"]
     if abs(abs(n[0]) - 1.0) > AXIS_TOL:
         out.append(f"the flat's normal {[round(v, 9) for v in n]} is not along X")
     elif abs(root[0] - h) > FLAT_TOL:
         out.append(f"the flat's plane at x {root[0]:.6f}, not at h {h:.6f} on +X (to {FLAT_TOL:g})")
-    if chord is not None and abs((box[4] - box[1]) - chord) > 2 * BOX_TOL:
-        out.append(f"the flat spans {box[4] - box[1]:.4f} along Y, not the chord {chord:.4f}")
-    for c in cylinders:
-        if c["box"][0] > -radius + BOX_TOL:
-            out.append(f"the round's box starts at x {c['box'][0]:.4f}: it does not reach -X (the minor arc, the "
-                       "sliver)")
-        if c["box"][3] > h + BOX_TOL:
-            out.append(f"the round's box reaches x {c['box'][3]:.4f}, past the flat at {h:.4f}")
+    return out
+
+
+def bore_facts(faces, radius, h=None, chord=None):
+    """What the boxes say of the bore, for the log only (M1 of the review: GetBox pads): how many faces the round is,
+    its boxes' least and greatest x (the padding beyond -R shown), and on a D the round's greatest x past the flat and
+    the flat's span along Y against the chord."""
+    cylinders, flats = bore_faces(faces, radius + 1.0)
+    out = {"cylinders": len(cylinders), "flats": len(flats)}
+    if cylinders:
+        x0, x1 = min(c["box"][0] for c in cylinders), max(c["box"][3] for c in cylinders)
+        out.update(round_x=[round(x0, 4), round(x1, 4)], padding_beyond_minus_r=round(-radius - x0, 4))
+        if h is not None:
+            out["round_past_the_flat"] = round(x1 - h, 4)
+    if h is not None and len(flats) == 1:
+        b = flats[0]["box"]
+        out.update(flat_span=round(b[4] - b[1], 4), chord=None if chord is None else round(chord, 4))
     return out
 
 
 def lands_judged(faces, tip_radius, teeth):
-    """A tooth space centred on +X (ruling 2): the tip lands (cylinders about the axis at d_a / 2) number the teeth,
-    none crosses +X, and the two nearest it have their box centres at plus and minus half a pitch."""
+    """The tip lands, the cylinders about the axis at d_a / 2 that the cut spaces leave of the blank's outer cylinder,
+    number the teeth. Where they sit (a space on +X, ruling 2) rests on partial faces' boxes no run has read, so it is
+    a fact (lands_facts), not judged here."""
     lands = [f for f in faces if f.get("kind") == "cylinder" and coaxial(f) and abs(f["r"] - tip_radius) <= 1e-3]
-    if len(lands) != int(teeth):
-        return [f"{len(lands)} tip lands at radius {tip_radius:.4f}, not {teeth}"]
-    out = []
-    across = [f for f in lands if f["box"][3] > 0 and f["box"][1] < 0 < f["box"][4]]
-    if across:
-        out.append(f"{len(across)} tip land(s) cross +X: a tooth, not a space, faces the flat")
+    return [] if len(lands) == int(teeth) else [f"{len(lands)} tip lands at radius {tip_radius:.4f}, not {teeth}"]
+
+
+def lands_facts(faces, tip_radius, teeth):
+    """The tip lands' box centres as angles: the two nearest +X (a space centred there puts them at plus and minus half
+    a pitch) and whether any land's box crosses +X; facts until a log shows partial faces' boxes are tight."""
+    lands = [f for f in faces if f.get("kind") == "cylinder" and coaxial(f) and abs(f["r"] - tip_radius) <= 1e-3]
     angles = [math.degrees(math.atan2((f["box"][1] + f["box"][4]) / 2.0, (f["box"][0] + f["box"][3]) / 2.0))
               for f in lands]
-    half = 180.0 / int(teeth)
     above = min((a for a in angles if a > 0), default=None)
     below = max((a for a in angles if a < 0), default=None)
-    if above is None or below is None or abs(above - half) > ANGLE_TOL or abs(below + half) > ANGLE_TOL:
-        out.append(f"the tip lands nearest +X are at {above} and {below} degrees, not +-{half:.3f}")
-    return out
+    across = sum(1 for f in lands if f["box"][3] > 0 and f["box"][1] < 0 < f["box"][4])
+    half = 180.0 / int(teeth)
+    return {"nearest_above": None if above is None else round(above, 3),
+            "nearest_below": None if below is None else round(below, 3), "half_pitch": round(half, 3),
+            "crossing_plus_x": across,
+            "space_on_plus_x": (above is not None and below is not None and abs(above - half) <= ANGLE_TOL
+                                and abs(below + half) <= ANGLE_TOL and not across)}
+
+
+def undefined(checks):
+    """The lines of a build's checks saying a sketch is not fully defined (swbuild's _verify puts them in checks, not
+    failures, so a result reads ok with one)."""
+    return [str(c) for c in (checks or ()) if "not fully defined" in str(c)]
+
+
+def gearbox_undefined(result):
+    """The same over every part a gearbox build built."""
+    return [c for r in getattr(getattr(result, "parts", None), "built", []) or [] for c in undefined(getattr(r, "checks", []))]
+
+
+def mate_face_judged(entities, component, radius):
+    """A mate's entities as Session.mate_definition reads them ([(component Name2, kind, EntityParams)]): exactly one on
+    the component, a face, a cylinder's EntityParams (point, axis, radius in metres) of the radius given, to 1e-4 mm."""
+    mine = [e for e in entities if e[0] == component]
+    if len(mine) != 1:
+        return [f"{len(mine)} of the mate's entities on {component}, not one"]
+    _, kind, params = mine[0]
+    if kind != "face" or len(params) < 7:
+        return [f"the mate's entity on {component} is a {kind} with params {list(params)}, not a cylinder's face"]
+    got = float(params[6]) * 1000.0
+    return [] if abs(got - radius) <= RADIUS_TOL else [f"the mate's face on {component} has radius {got:.6f}, not "
+                                                        f"{radius:.6f}"]
+
+
+def value_judged(value, want):
+    """The Equation Manager's own Value of a link against the figure worked here, read as mm or as m (its unit is not
+    documented for a dimension's equation): (what is wrong, the unit it agreed in)."""
+    if value is None:
+        return ["no Value"], ""
+    if abs(float(value) - want) <= 1e-6:
+        return [], "mm"
+    if abs(float(value) * 1000.0 - want) <= 1e-6:
+        return [], "m"
+    return [f"the Value {value} is {want:.6f} neither in mm nor in m"], ""
 
 
 def norm(text):
@@ -385,6 +447,8 @@ def link_judged(equations, values, dimension, app_text, want, split, evaluate):
         return out + [f"{dimension} does not evaluate here: {type(exc).__name__}: {exc}"]
     if abs(got - want) > EQ_TOL:
         out.append(f"{dimension} evaluates to {got:.9f}, not {want:.9f}")
+    wrong, _ = value_judged(found[0][1], want)
+    out += [f"{dimension}: {w}" for w in wrong]
     return out
 
 
@@ -448,7 +512,7 @@ def step_faces(text):
 
 
 def step_bore_judged(text, radius, h=None, reach=None):
-    """The bore as the STEP file holds it: one cylinder or more about Z of the hole's radius (one for a D), to STEP_TOL;
+    """The bore as the STEP file holds it: one cylinder or more about Z of the hole's radius (a D's arc one or more), to STEP_TOL;
     with h, exactly one plane square to the end faces within reach, its normal along X, its location on x = h; without,
     none; the least VERTEX_POINT radius (D + a)/2, and on a D at least two vertices of that radius at x = h."""
     reach = reach if reach is not None else radius + 1.0
@@ -466,8 +530,6 @@ def step_bore_judged(text, radius, h=None, reach=None):
     if h is None and planes:
         out.append(f"{len(planes)} plane(s) in a round bore")
     if h is not None:
-        if len(cylinders) != 1:
-            out.append(f"{len(cylinders)} cylinders in the D, not one")
         if len(planes) != 1:
             out.append(f"{len(planes)} planes in the D, not one")
         elif abs(abs(planes[0][2][0]) - 1.0) > AXIS_TOL or abs(planes[0][1][0] - h) > STEP_TOL:
@@ -559,7 +621,7 @@ def arc_box(r, a0, a1, z0=0.0, z1=8.0):
 
 
 def made_faces(radius, h=None, chord=None, *, sliver=False, flat_x=None, two_flats=False, teeth=20, tip=16.5,
-               shift=0.0, lands=None):
+               shift=0.0, lands=None, pad=0.0, split=False):
     """Made-up face reads of a printed spur's part, as part_faces gives them: the tip lands about the axis, a fillet
     off it, the two end faces, and the bore (a round, or a D's arc and flat)."""
     faces = [{"kind": "plane", "normal": (0.0, 0.0, s), "root": (0.0, 0.0, z), "box": [-tip, -tip, z, tip, tip, z]}
@@ -577,15 +639,19 @@ def made_faces(radius, h=None, chord=None, *, sliver=False, flat_x=None, two_fla
         return faces
     half = math.degrees(math.acos(h / radius))
     a0, a1 = ((-half, half) if sliver else (half, 360.0 - half))
-    faces.append({"kind": "cylinder", "r": radius, "axis": (0.0, 0.0, 1.0), "point": (0.0, 0.0, 0.0),
-                  "box": arc_box(radius, a0, a1)})
+    for b0, b1 in ([(a0, 180.0), (180.0, a1)] if split else [(a0, a1)]):
+        faces.append({"kind": "cylinder", "r": radius, "axis": (0.0, 0.0, 1.0), "point": (0.0, 0.0, 0.0),
+                      "box": arc_box(radius, b0, b1)})
     for x in ([flat_x if flat_x is not None else h] + ([-h] if two_flats else [])):
         faces.append({"kind": "plane", "normal": (-1.0, 0.0, 0.0), "root": (x, 0.0, 4.0),
                       "box": [x, -chord / 2.0, 0.0, x, chord / 2.0, 8.0]})
+    for f in faces:          # GetBox pads every box (W9b: about 0.24 mm at each end)
+        f["box"] = [v - pad for v in f["box"][:3]] + [v + pad for v in f["box"][3:]]
     return faces
 
 
-def made_step_bore(radius, h=None, chord=None, *, plane_x=None, extra_plane=False, r_off=0.0, vertex_off=0.0):
+def made_step_bore(radius, h=None, chord=None, *, plane_x=None, extra_plane=False, r_off=0.0, vertex_off=0.0,
+                   split=False):
     """A made-up STEP file of a printed spur's bore as SolidWorks writes one: the bore's cylinder and the D's plane as
     ADVANCED_FACEs on their AXIS2_PLACEMENT_3Ds, the gear's outer cylinder, an end face, and the vertices."""
     lines = ["ISO-10303-21;", "HEADER;", "FILE_SCHEMA (( 'AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }' ));", "ENDSEC;",
@@ -608,7 +674,8 @@ def made_step_bore(radius, h=None, chord=None, *, plane_x=None, extra_plane=Fals
 
     def face(surface):
         return add(f"ADVANCED_FACE ( 'NONE', ( #{add('FACE_OUTER_BOUND ( ''NONE'', #1, .T. )')} ), #{surface}, .T. )")
-    face(add(f"CYLINDRICAL_SURFACE ( 'NONE', #{place((0, 0, 0), (0, 0, 1), (1, 0, 0))}, {radius + r_off:.12f} )"))
+    for _ in range(2 if split else 1):
+        face(add(f"CYLINDRICAL_SURFACE ( 'NONE', #{place((0, 0, 0), (0, 0, 1), (1, 0, 0))}, {radius + r_off:.12f} )"))
     face(add(f"CYLINDRICAL_SURFACE ( 'NONE', #{place((0, 0, 0), (0, 0, 1), (1, 0, 0))}, 16.5 )"))
     face(add(f"PLANE ( 'NONE', #{place((0, 0, 8), (0, 0, 1), (1, 0, 0))} )"))
     corners = []
@@ -749,18 +816,19 @@ def _self_check(ok, scratch):
        f"steps are A's error at Flat in this script's words; the allowance to 0 and Drive to round are B's sentences "
        f"here, and so are D to round and round to D: {wrong or 'all'}")
 
-    # 4. The links: the app's texts evaluate to the figures here, as SolidWorks would hold them; each fault fails.
+    # 4. The links: the app's texts evaluate to the figures here, as SolidWorks would hold them, and SolidWorks' own
+    # Value (in mm or in m) agrees; each fault fails.
     held_ok, faults = [], {}
+    ev = (lambda e, v: evaluate(e, v, DEGREES))
     for D, a, F in [hole_of(p) for _, _, how, _, p in dshape_states() if how == "value"] + [hole_of(DSHAPE)]:
         gs = _spec_of(dict(DSHAPE, bore=str(D), bore_allowance=str(a), flat=str(F)))
         g = kind_for(gs).derive(gs)
         cut, radius_expr, h_expr = spur.bore_expressions(g)
         chord_expr = spur.chord_expression(radius_expr, h_expr)
         values = {BORE_GLOBAL: D, ALLOWANCE_GLOBAL: a, FLAT_GLOBAL: F}
-        eqs = [(f'"{BORE_GLOBAL}" = {D}', D), (f'"{ALLOWANCE_GLOBAL}" = {a}', a), (f'"{FLAT_GLOBAL}" = {F}', F),
-               (f'"{BORE_DIM}" = {radius_expr}', 0.0), (f'"{FLAT_DIM}" = {chord_expr}', 0.0)]
-        ev = (lambda e, v: evaluate(e, v, DEGREES))
         d = d_expected(D, a, F)
+        eqs = [(f'"{BORE_GLOBAL}" = {D}', D), (f'"{ALLOWANCE_GLOBAL}" = {a}', a), (f'"{FLAT_GLOBAL}" = {F}', F),
+               (f'"{BORE_DIM}" = {radius_expr}', d["R"] / 1000.0), (f'"{FLAT_DIM}" = {chord_expr}', d["chord"])]
         held_ok.append(link_judged(eqs, values, FLAT_DIM, chord_expr, d["chord"], split_equation, ev)
                        + link_judged(eqs, values, BORE_DIM, radius_expr, d["R"], split_equation, ev))
         faults = {
@@ -770,32 +838,61 @@ def _self_check(ok, scratch):
             "missing": link_judged(eqs[:4], values, FLAT_DIM, chord_expr, d["chord"], split_equation, ev),
             "twice": link_judged(eqs + eqs[-1:], values, FLAT_DIM, chord_expr, d["chord"], split_equation, ev),
             "another text": link_judged(eqs, values, FLAT_DIM, chord_expr.replace("2 *", "2.0 *"), d["chord"],
-                                        split_equation, ev)}
-    ok(not any(held_ok) and all(faults.values()) and "^ 0.5" in chord_expr and "abs" in chord_expr,
+                                        split_equation, ev),
+            "SolidWorks' Value off": link_judged(eqs[:4] + [(eqs[4][0], d["chord"] + 0.01)], values, FLAT_DIM,
+                                                 chord_expr, d["chord"], split_equation, ev)}
+    units = (value_judged(5.3666, 5.3666), value_judged(0.0053666, 5.3666), value_judged(0.53666, 5.3666),
+             value_judged(None, 5.3666))
+    ok(not any(held_ok) and all(faults.values()) and "^ 0.5" in chord_expr and "abs" in chord_expr
+       and [u[1] for u in units] == ["mm", "m", "", ""] and not units[0][0] and units[2][0] and units[3][0],
        f"links: the app's chord and radius links, as SolidWorks would give them back, evaluate here to the chord and R "
-       f"on every dshape state; sqr, a chord 0.01 off, none, two and another text each fail: "
+       f"on every dshape state, and SolidWorks' own Value agrees read in mm (the chord) or in m (the radius); sqr, a "
+       f"chord 0.01 off, none, two, another text and a Value 0.01 off each fail, and a Value in neither unit: "
        f"{[h for h in held_ok if h] or 'held'}; faults caught {sorted(k for k, v in faults.items() if v)}")
 
-    # 5. The bore by its faces.
+    # 5. The bore by its faces: judged without the boxes' padding (the review's M1), a split arc accepted (S1).
     d = d_expected(8, 0.2, 7)
     R, h, c = d["R"], d["h"], d["chord"]
     good = made_faces(R, h, c)
-    cases = {"the sliver": made_faces(R, h, c, sliver=True), "the flat on -X": made_faces(R, h, c, flat_x=-h),
-             "two flats": made_faces(R, h, c, two_flats=True), "the radius 2e-4 over": made_faces(R + 2e-4, h, c),
-             "the flat 2e-4 off": made_faces(R, h, c, flat_x=h + 2e-4), "a round where a D is wanted": made_faces(R),
-             "a short chord": made_faces(R, h, c - 0.5)}
-    held = [k for k, f in cases.items() if not bore_judged(f, R, h, c)]
-    ok(bore_judged(good, R, h, c) == [] and bore_judged(made_faces(R), R) == [] and bore_judged(good, R) != []
-       and bore_judged([f for f in good if not (f["kind"] == "cylinder" and f["r"] == R)], R, h, c) != [] and not held,
-       f"faces: the D (one cylinder of R about the axis, one flat at h on +X, the round reaching -X) and a round bore "
-       f"hold; a D read as round, no cylinder, and {', '.join(cases)} each fail: held {held or 'none'}")
-    ok(lands_judged(good, 16.5, 20) == [] and lands_judged(made_faces(R, h, c, shift=9.0), 16.5, 20) != []
+    holds = {"exact boxes": good, "boxes padded 0.25 mm (W9b measured 0.24)": made_faces(R, h, c, pad=0.25),
+             "the arc as two faces": made_faces(R, h, c, split=True),
+             "two faces, padded": made_faces(R, h, c, split=True, pad=0.25)}
+    cases = {"the sliver": made_faces(R, h, c, sliver=True), "the sliver padded": made_faces(R, h, c, sliver=True,
+                                                                                            pad=0.25),
+             "the flat on -X": made_faces(R, h, c, flat_x=-h), "two flats": made_faces(R, h, c, two_flats=True),
+             "the radius 2e-4 over": made_faces(R + 2e-4, h, c), "the flat 2e-4 off": made_faces(R, h, c, flat_x=h + 2e-4),
+             "a round where a D is wanted": made_faces(R)}
+    failed = [k for k, f in holds.items() if bore_judged(f, R, h)]
+    held = [k for k, f in cases.items() if not bore_judged(f, R, h)]
+    facts = bore_facts(made_faces(R, h, c, pad=0.25), R, h, c)
+    ok(not failed and not held and bore_judged(made_faces(R), R) == [] and bore_judged(good, R) != []
+       and bore_judged([f for f in good if not (f["kind"] == "cylinder" and f["r"] == R)], R, h) != []
+       and abs(facts["padding_beyond_minus_r"] - 0.25) < 1e-3 and abs(facts["round_past_the_flat"] - 0.25) < 1e-3
+       and abs(facts["flat_span"] - (c + 0.5)) < 1e-3,
+       f"faces: the D (every round face of R about the axis, together reaching -X; one flat at h on +X) and a round bore "
+       f"hold with {', '.join(holds)}; a D read as round, no cylinder, and {', '.join(cases)} each fail; the boxes' "
+       f"padding is logged, not judged ({facts}): failed {failed or 'none'}, held {held or 'none'}")
+    lf = lands_facts(good, 16.5, 20)
+    ok(lands_judged(good, 16.5, 20) == [] and lands_judged(made_faces(R, h, c, pad=0.25), 16.5, 20) == []
        and lands_judged(made_faces(R, h, c, lands=19), 16.5, 20) != []
-       and lands_judged(made_faces(R, h, c, shift=3.0), 16.5, 20) != [],
-       "faces: a tooth space centred on +X holds; a tooth on +X, a land missing and the teeth turned 3 degrees each "
-       "fail")
+       and lf["space_on_plus_x"] and not lands_facts(made_faces(R, h, c, shift=9.0), 16.5, 20)["space_on_plus_x"],
+       f"faces: the tip lands number the teeth, padded or not; a land missing fails; where they sit is a fact, a space on "
+       f"+X read so and a tooth on +X not: {lf}")
     ok(volume_judged(100.0, 100.05) == [] and volume_judged(100.0, 100.2) != [] and volume_judged(None, 100.0) != []
        and volume_judged(100.0, 0.0) != [], "volume: 0.05 % holds; 0.2 %, no volume and no twin each fail")
+    ok(undefined(["Bore Sketch is fully defined", "a value checked"]) == []
+       and undefined(["Bore Sketch is under-defined, not fully defined"]) != []
+       and gearbox_undefined(types.SimpleNamespace(parts=types.SimpleNamespace(built=[
+           types.SimpleNamespace(checks=[]), types.SimpleNamespace(checks=["Tooth Space Sketch is over-defined, not "
+                                                                           "fully defined"])]))) != []
+       and gearbox_undefined(types.SimpleNamespace(parts=types.SimpleNamespace(built=[]))) == [],
+       "sketches: a build's checks saying a sketch is not fully defined are caught, a part's among a gearbox's too")
+    ent = [("Sun-1", "face", (0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0041)), ("Sprocket-4", "face", (0, 0, 0, 0, 0, 1, 0.005))]
+    ok(mate_face_judged(ent, "Sun-1", 4.1) == [] and mate_face_judged(ent, "Sun-1", 4.15) != []
+       and mate_face_judged([("Sun-1", "edge", ())] + ent[1:], "Sun-1", 4.1) != []
+       and mate_face_judged(ent[1:], "Sun-1", 4.1) != [] and mate_face_judged(ent + ent[:1], "Sun-1", 4.1) != [],
+       "mates: the bore mate's entity on Sun a face of radius 4.1 by EntityParams holds; another radius (a carry onto "
+       "another face about the axis), an edge, none and two each fail")
 
     # 6. The bore read from a STEP file.
     step_cases = {"the plane on -X": made_step_bore(R, h, c, plane_x=-h), "two planes": made_step_bore(R, h, c,
@@ -806,10 +903,11 @@ def _self_check(ok, scratch):
     held = [k for k, t in step_cases.items() if not step_bore_judged(t, R, h)]
     faces = step_faces(made_step_bore(R, h, c))
     ok(step_bore_judged(made_step_bore(R, h, c), R, h) == [] and step_bore_judged(made_step_bore(R), R) == []
+       and step_bore_judged(made_step_bore(R, h, c, split=True), R, h) == []
        and step_bore_judged(made_step_bore(R, h, c), R) != [] and not held
        and sorted(f[0] for f in faces) == ["cylinder", "cylinder", "plane", "plane"],
-       f"step: the D (one cylinder of R about Z, one plane on x = h, the least vertex radius R, the flat's corners at "
-       f"x = h) and a round bore hold, read through F2's statement splitter; a D read as round and "
+       f"step: the D (one cylinder of R about Z, or the arc as two, one plane on x = h, the least vertex radius R, the "
+       f"flat's corners at x = h) and a round bore hold, read through F2's statement splitter; a D read as round and "
        f"{', '.join(step_cases)} each fail: held {held or 'none'}")
 
     # 7. The words, against the app's own.
@@ -882,13 +980,38 @@ def _self_check(ok, scratch):
        f"scripts are each defined there, and every Session member they call is swcom.Session's: missing "
        f"{missing[0] or 'none'}; members {missing[1] or 'all found'}")
 
-    # 11. The strip's own form, through dshape's steps, a job answered here.
+    # 11. hub, offline: RangeBox_Fixed printed with the Hub row's D assesses with no error, plans the Hub's D and its
+    # globals, and records it at schema 4.
+    import importlib.util
+    spec_ = importlib.util.spec_from_file_location("f3_workbook_fixtures", os.path.join(REPO, "tests",
+                                                                                       "workbook_fixtures.py"))
+    fixtures = importlib.util.module_from_spec(spec_)
+    spec_.loader.exec_module(fixtures)
+    made = fixtures.range_box_fixed()
+    hub_d = dict(bore="8", bore_allowance="0.2", drive="flat", flat="7")
+    box = dataclasses.replace(made, gears=tuple(dataclasses.replace(g, **hub_d) if g.id == "Hub" else g
+                                                 for g in made.gears),
+                              box=dataclasses.replace(made.box, process="printed"), source_path="C:\\B\\X.xlsx")
+    from gear_generator.workbook import assess
+    a = assess.assess(box, [], "C:\\Out\\")
+    job_ = next((j for j in a.parts.jobs if "Hub" in j.gear_ids), None)
+    held = {v.name: v.expression_for(DEGREES) for v in kind_for(job_.spec).variables(job_.spec, job_.derived)} \
+        if job_ else {}
+    ok(not [d for d in a.diagnostics if d.is_error] and job_ is not None and job_.derived.bore_flat == 7.0
+       and abs(job_.derived.bore_allowance - 0.2) < 1e-12 and float(held.get(ALLOWANCE_GLOBAL, "nan")) == 0.2
+       and float(held.get(FLAT_GLOBAL, "nan")) == 7.0
+       and store.sidecar_schema(job_.spec.to_dict(), list(held.items())) == 4
+       and made.gear("Hub").kind == "hub",
+       f"hub offline: RangeBox_Fixed printed with the Hub's D assesses with no error, and the Hub plans Flat 7 at 0.2, "
+       f"its two globals and schema 4: errors {[d.message for d in a.diagnostics if d.is_error]}")
+
+    # 12. The strip's own form, through dshape's steps, a job answered here.
     _self_check_form(ok, scratch)
 
 
 LIVE_FROM = {"A": "w9a_demonstration.py", "W": "workbook_assembly_check.py", "F2": "f2_demonstration.py",
              "D": "w9d_demonstration.py", "CP": "w9c_probes.py", "C9": "w9c_demonstration.py",
-             "C": "w9c_demonstration.py"}
+             "C": "w9c_demonstration.py", "B9": "w9b_demonstration.py"}
 
 
 def live_names_missing():
@@ -907,7 +1030,7 @@ def live_names_missing():
         for imported in re.findall(r"^from\s+\S+\s+import\s+([^(#\n]+)", text, re.M):
             found |= {n.split(" as ")[-1].strip() for n in imported.split(",")}
         tops[alias] = found
-    used = set(re.findall(r"(?<![\w.])(A|W|F2|D|CP|C9|C)\.([A-Za-z_]\w*)", live))
+    used = set(re.findall(r"(?<![\w.])(A|W|F2|D|CP|C9|C|B9)\.([A-Za-z_]\w*)", live))
     gone = sorted(f"{a}.{n}" for a, n in used if n not in tops[a])
     members = set(re.findall(r"(?<![\w.])s\.([A-Za-z_]\w*)\(", live))
     lacking = sorted(m for m in members if not hasattr(swcom.Session, m))
@@ -1018,7 +1141,8 @@ say, check, note = W.say, W.check, W.note
 OUT = W.OUT
 CTX, RESULT, run, job = A.CTX, A.RESULT, A.run, A.job
 WW_CLOSE_FLAG = "--close-outlived-whats-wrong"      # W9c's flag, its own path (w9c_demonstration.close_outlived_on)
-GIVEN = {"off": A._arg("--reducer-off-master"), "on": A._arg("--reducer-on-master")}  # noqa: SLF001
+GIVEN = {"off": A._arg("--reducer-off-master"), "on": A._arg("--reducer-on-master"),  # noqa: SLF001
+         "machined": A._arg("--reducer-machined-master")}  # noqa: SLF001
 FREE_GB = F2.PRESS_FREE_GB                          # F1's floor before a RangeBox copy and its presses
 
 
@@ -1165,14 +1289,17 @@ def judge_hole(label, got, fields, derived, reference=None, volume=True):
         return evaluate(expression, scope, DEGREES)
     if F is not None:
         d = d_expected(D, a, F)
-        problems = bore_judged(got["faces"], d["R"], d["h"], d["chord"])
+        problems = bore_judged(got["faces"], d["R"], d["h"])
         problems += link_judged(got["equations"], values, FLAT_DIM, spur.chord_expression(radius_expr, h_expr),
                                 d["chord"], split_equation, ev)
         problems += link_judged(got["equations"], values, BORE_DIM, radius_expr, d["R"], split_equation, ev)
     else:
         problems = bore_judged(got["faces"], (D + a) / 2.0)
         problems += link_judged(got["equations"], values, BORE_DIM, cut, D + a, split_equation, ev)
-    problems += lands_judged(got["faces"], derived.da / 2.0, int(fields.get("teeth") or derived.teeth))
+    teeth = int(fields.get("teeth") or getattr(derived, "teeth", 0) or 0)
+    tip = getattr(derived, "da", None)
+    if tip and teeth:
+        problems += lands_judged(got["faces"], tip / 2.0, teeth)
     problems += globals_judged(values, a, F)
     problems += [f"in error {got['in_error']}"] if got["in_error"] else []
     problems += [] if got["sketch"] == FULLY_DEFINED else [f"the Bore Sketch reads {got['sketch']}, not 3 (fully "
@@ -1180,11 +1307,17 @@ def judge_hole(label, got, fields, derived, reference=None, volume=True):
     if volume:
         problems += volume_judged(got["volume"], reference)
     facts = facts_of(got)
+    facts["boxes"] = bore_facts(got["faces"], (D + a) / 2.0, *((d["h"], d["chord"]) if F is not None else ()))
+    if tip and teeth:
+        facts["tip_lands"] = lands_facts(got["faces"], tip / 2.0, teeth)
+    facts["link_value_units"] = [value_judged(v, w)[1] for (dim, w) in (
+        (FLAT_DIM, d["chord"] if F is not None else None), (BORE_DIM, d["R"] if F is not None else D + a))
+        for t, v in got["equations"] if w is not None and t.split("=", 1)[0].strip().strip('"') == dim]
     say(f"fact    {label}: {facts}; its twin's volume {reference}")
     check(not problems, f"{label}: D {fmt(D)}, a {fmt(a)}, " + (f"Flat {fmt(F)}" if F is not None else "round")
           + ": nothing in error, the Bore Sketch fully defined, the bore by its faces"
-          + (" (one cylinder of R about the axis, one flat at h on +X facing a tooth space, the round reaching -X)"
-             if F is not None else " (round, no flat)") + ", the links as SolidWorks holds them and the globals"
+          + (" (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted)"
+             if F is not None else " (round, no flat)") + ", the links as SolidWorks holds them and its Values, the globals"
           + (", the volume within 0.1 % of its twin" if volume else "") + f": {problems or 'as said'}")
     return {"facts": facts, "problems": problems}
 
@@ -1205,9 +1338,9 @@ def form_build_now(label, app, folder):
         say("        " + line)
     app._finish_single(context, result)  # noqa: SLF001 - the form's own finish: the status and the .gear.json
     say(f"status  {label}: {app.status.get()}")
-    check(result.ok and bool(result.saved) and os.path.isfile(store.sidecar_path(path)),
-          f"{label}: built and saved by the form's job, its .gear.json written by the form: ok {result.ok}, failures "
-          f"{list(result.failures)}")
+    check(result.ok and bool(result.saved) and os.path.isfile(store.sidecar_path(path)) and not undefined(result.checks),
+          f"{label}: built and saved by the form's job, every sketch fully defined, its .gear.json written by the form: "
+          f"ok {result.ok}, failures {list(result.failures)}, not fully defined {undefined(result.checks) or 'none'}")
     F2.activate(label, path)
     return spec, derived, path, result
 
@@ -1234,9 +1367,9 @@ def twin(label, spec, folder, cache):
         result, state = run(f"{label}: twin {n} built from scratch", build, 900)
     finally:
         left = run(f"{label}: twin {n} closed", W.quit_in(where))
-    clean = result.ok and state is not None and not state["in_error"]
+    clean = result.ok and state is not None and not state["in_error"] and not undefined(result.checks)
     say(f"fact    {label}: twin {n} ({spec_n.stem()}): built ok {result.ok}, failures {list(result.failures)}, "
-        f"{state}; left open {left}")
+        f"not fully defined {undefined(result.checks) or 'none'}, {state}; left open {left}")
     check(clean and not left, f"{label}: twin {n} built from scratch clean and closed")
     cache[key] = state["volume"] if clean else None
     return cache[key]
@@ -1382,8 +1515,10 @@ def section_allowance(out):
                 problems = list(errors) + ([] if result.ok and state and not state["in_error"] else
                                            [f"built ok {result.ok}, failures {list(result.failures)}, in error "
                                             f"{state and state['in_error']}"])
+                problems += undefined(result.checks)
                 problems += [] if hole is not None and abs(hole - R) <= RADIUS_TOL else [f"the hole reads {hole}, not "
                                                                                         f"{R:.6f}"]
+                problems += bore_judged(state["faces"], R) if state else []
                 problems += globals_judged(values, want_a, None)
                 problems += [] if sidecar_schema(text) == (4 if want_a else 1) else [
                     f"the .gear.json at schema {sidecar_schema(text)}, not {4 if want_a else 1} ({note_ or 'no note'})"]
@@ -1462,9 +1597,9 @@ def section_print(out):
 
 
 def reducer_master(which):
-    """The printed 12 : 1 built once through the app's own Build (W8's write_fixture and build_turning) with the switch
-    off ("off": F2's code) or on ("on": F3's), kept as f3-reducer-<which>.master, or given by
-    --reducer-<which>-master."""
+    """The 12 : 1 built once through the app's own Build (W8's write_fixture and build_turning): printed with the switch
+    off ("off": F2's code) or on ("on": F3's), or machined with it off ("machined": a gearbox built before F3), kept as
+    f3-reducer-<which>.master, or given by --reducer-<which>-master."""
     if GIVEN[which]:
         return GIVEN[which]
     name = f"f3-reducer-{which}"
@@ -1476,16 +1611,24 @@ def reducer_master(which):
         raise AssertionError(f"an earlier build of {name} in this <out> kept no master; give --reducer-{which}-master "
                              "or a fresh <out>")
     made = wb_link.Link(W.FIXTURE_12).read().spec
-    why = ("in this process only, so the printed 12 : 1 is built as F2's code built it: a blank allowance plans none"
-           if which == "off" else "on, as committed after F3: a blank allowance plans the default")
+    why = {"off": "in this process only, so the printed 12 : 1 is built as F2's code built it: a blank allowance plans "
+                  "none",
+           "on": "on, as committed after F3: a blank allowance plans the default",
+           "machined": "in this process only: the machined 12 : 1 built as before F3 (a machined blank plans none "
+                       "either way)"}[which]
+    printed = which != "machined"
     with switched(which == "on", f"{name}: {why}"):
         folder, _, _, wdesk = A.w8_step(W.write_fixture, CTX["worker"], CTX["excel"], name,
-                                        lambda f: F2P.spec_printed_reducer(made, f))
+                                        (lambda f: F2P.spec_printed_reducer(made, f)) if printed else A.spec_reducer)
         try:
-            jobs = {j.gear_ids[0]: (j.stem, j.spec.process) for j in wdesk.a.parts.jobs}
-            check(jobs == {g: (s, "printed") for g, (s, _, _, _) in REDUCER.items()},
-                  f"{name}: the four parts plan printed under F2's names: {jobs}")
-            A.w8_step(W.build_turning, CTX["worker"], wdesk, name, 4)
+            jobs = {j.gear_ids[0]: j.spec.process for j in wdesk.a.parts.jobs}
+            check(sorted(jobs) == sorted(REDUCER) and all(p == ("printed" if printed else "machined")
+                                                         for p in jobs.values()),
+                  f"{name}: the four parts plan {'printed' if printed else 'machined'}: {jobs}")
+            built = A.w8_step(W.build_turning, CTX["worker"], wdesk, name, 4)
+            result = built[1] if isinstance(built, tuple) and len(built) == 2 else None
+            check(result is not None and not gearbox_undefined(result),
+                  f"{name}: every part's sketches fully defined: {gearbox_undefined(result) if result else 'no result'}")
         except (AssertionError, W.Halt):
             A.w8_step(W.end_copy, CTX["worker"], folder, name)
             raise
@@ -1663,6 +1806,93 @@ def section_built(out):
             A.w8_step(W.end_copy, CTX["worker"], copy, "built-f3", save=False)
 
 
+    say("-- built  a machined 12 : 1 built before F3, Printed typed and one Update (guard 4, live): Backlash written, no "
+        "\"Bore Allowance\" added")
+    copy, path, book, desk = A.copy_desk(reducer_master("machined"), "built-machined", REDUCER_BOOK)
+    try:
+        asm = desk.record.gearbox.assembly
+        parts = gear_parts(desk)
+        before = {g: run(f"built-machined: {g}'s globals", lambda s, p=p: W.live_globals(s, p)) for g, p in parts.items()}
+        found, empty = F2.box_process_row(book)
+        row = found or empty
+        W.edit(desk, book, *(([] if found else [("Box", f"A{row}", "Process")]) + [("Box", f"B{row}", "Printed")]))
+        u = desk.update
+        check(desk.a.spec.box.process == "printed" and u is not None and not u.needs_new_revision
+              and len(u.changed_parts) == len(parts),
+              f"built-machined: Printed typed: Update changes the {len(parts)} parts in place, none made new: "
+              f"{[file_of(p.path) for p in (u.changed_parts if u else [])]}")
+        F2.open_assembly("built-machined: the assembly opened", asm)
+        result, _ = A.press(desk, "built-machined: Printed, one Update")
+        after = {g: run(f"built-machined: {g}'s globals after", lambda s, p=p: W.live_globals(s, p))
+                 for g, p in parts.items()}
+        moved = {g: (before[g].get(spur.BACKLASH), after[g].get(spur.BACKLASH)) for g in parts}
+        added = {g: sorted(n for n in (ALLOWANCE_GLOBAL, FLAT_GLOBAL) if n in after[g]) for g in parts}
+        on_record = {file_of(e.path): sorted(str(n) for n, _ in e.variables if str(n) in (ALLOWANCE_GLOBAL, FLAT_GLOBAL))
+                     for e in desk.record.current_parts()}
+        schemas = {g: sidecar_of(p)[2] for g, p in parts.items()}
+        check(result is not None and result.ok and all(b is not None and a is not None and abs(a - b) > 1e-9
+                                                       for b, a in moved.values())
+              and not any(added.values()) and not any(on_record.values())
+              and all(s is not None and s < 4 for s in schemas.values()),
+              f"built-machined: the Update wrote each part's Backlash ({moved}) and no F3 global, in SolidWorks "
+              f"({added}) or on record ({on_record}); each .gear.json below schema 4 ({schemas})")
+    finally:
+        if not W.HUNG["on"]:
+            A.w8_step(W.end_copy, CTX["worker"], copy, "built-machined", save=False)
+
+
+# -- hub ----------------------------------------------------------------------------------------------------------------
+
+
+HUB_D = dict(bore="8", bore_allowance="0.2", drive="flat", flat="7")   # the Hub row's bore; RangeSlv, its mate, takes none
+
+
+def spec_hub(folder=""):
+    """RangeBox_Fixed (W9b's fixture with the hub, tests/workbook_fixtures.py) with Printed on its Box and the Hub row
+    given a D bore and an allowance; its mate RangeSlv is a sleeve, which takes no bore field (G9), so no other row."""
+    made = W.w8_fixtures().range_box_fixed()
+    gears = tuple(dataclasses.replace(g, **HUB_D) if g.id == "Hub" else g for g in made.gears)
+    return dataclasses.replace(made, gears=gears, box=dataclasses.replace(made.box, output_folder=folder,
+                                                                          process="printed"))
+
+
+def section_hub(out):
+    say("== hub  RangeBox_Fixed printed, its Hub row with Bore 8, allowance 0.2, Drive flat and Flat 7, written by the "
+        "app's write_new and built by the app's own Build; turned through every mode as W9b's build section turns it, "
+        "no interference; the Hub's hole as cut read")
+    say(switch_line("hub (typed figures only: judged whatever it reads)"))
+    import w9b_demonstration as B9   # noqa: PLC0415 - W9b's per-mode read and judgement
+    folder, path, book, desk = A.w8_step(W.write_fixture, CTX["worker"], CTX["excel"], "hub", spec_hub)
+    try:
+        hub_row = desk.reading.spec.gear("Hub")
+        errors = B9.errors_of(desk.a)
+        check(not errors and desk.a.spec.box.process == "printed"
+              and (hub_row.bore_allowance, hub_row.drive, hub_row.flat) == ("0.2", "flat", "7"),
+              f"hub: the workbook reads Printed and the Hub row's D, with no error: {errors}")
+        plan, result = A.w8_step(W.build_turning, CTX["worker"], desk, "hub", None, None)
+        check(result.ok and not result.clashes and not result.interference_error and not gearbox_undefined(result),
+              f"hub: the Build ended ok, every sketch fully defined, no interference: clashes {result.clashes}, "
+              f"{gearbox_undefined(result) or ''}")
+        B9.hub_mates("hub", desk, plan)
+        globals_ = B9.part_globals(desk, ("RangeSlv", "HighDog", "LowDog", "Hub"))
+        every = B9.mode_read("hub", desk)
+        out["clean"] = B9.judge_every("hub", desk, every, globals_, against_section3=False, out=out)
+        out["interferences"] = every["interferences"]
+        check(all(not v for v in every["interferences"].values()) and len(every["interferences"]) == len(desk.record.gearbox.modes),
+              f"hub: no interference read in any of the {len(every['interferences'])} modes: {every['interferences']}")
+        box = desk.record.gearbox
+        hub = next(c.part for c in box.components if c.gear == "Hub")
+        entry = next(e for e in desk.record.current_parts() if store.same_path(e.path, hub))
+        spec = as_built(GearSpec.from_dict(dict(entry.spec)), entry.variables)
+        derived = kind_for(spec).derive(spec)
+        out["hub_hole"] = judge_hole("hub: the Hub's hole", part_read("hub: the Hub", hub),
+                                     dict(HUB_D, teeth=spec.teeth), derived, volume=False)
+        check(sidecar_of(hub)[2] == 4, f"hub: the Hub's .gear.json at schema {sidecar_of(hub)[2]} (4)")
+    finally:
+        if not W.HUNG["on"]:
+            A.w8_step(W.end_copy, CTX["worker"], folder, "hub", save=False)
+
+
 # -- userwork -----------------------------------------------------------------------------------------------------------
 
 
@@ -1730,7 +1960,7 @@ def bore_mate(label, desk, radius):
         sun, u4 = s._component("sun"), s._component("u4")  # noqa: SLF001
         mine = [f for k, r, f in CP.part_faces_of(sun) if k == "cylinder" and abs(r - radius) <= 1e-4]
         theirs = [f for k, r, f in CP.part_faces_of(u4) if k == "cylinder" and abs(r - SPROCKET_BORE_R) <= 1e-4]
-        if len(mine) != 1 or not theirs:
+        if not mine or not theirs:
             return {"faces": (len(mine), len(theirs))}
         kept, status = CP.raw_mate(s, BORE_MATE, 1, (lambda: CP.select_face(s, sun, mine[0], False, 1),
                                                      lambda: CP.select_face(s, u4, theirs[0], True, 1)))
@@ -1738,14 +1968,39 @@ def bore_mate(label, desk, radius):
         s.find_mate("bm", kept)
         s.set_mate_suppressed_in("bm", False, modes)
         s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
-        return {"faces": (1, len(theirs)), "kept": kept, "status": status, "flags": s.mate_suppression("bm", modes),
-                "codes": {m.name: (m.code, m.suppressed) for m in s.mate_states()}}
+        return {"faces": (len(mine), len(theirs)), "kept": kept, "status": status,
+                "flags": s.mate_suppression("bm", modes),
+                "codes": {m.name: (m.code, m.suppressed) for m in s.mate_states()},
+                "entities": mate_entities(s, "bm")}
     got = run(label, job(box.assembly, work))
     say(f"person  {label}: {got}")
+    wrong = mate_face_judged(got.get("entities", []), sun_name, radius)
     check(got.get("kept") == BORE_MATE and got["codes"].get(BORE_MATE, (1, True))[0] == 0
-          and not any(got["flags"].values()),
-          f"{label}: the user's concentric on Sun's bore face made, on in every mode, in no error")
+          and not any(got["flags"].values()) and not wrong,
+          f"{label}: the user's concentric made on Sun's bore face (its entity on Sun read by mate_definition: a face "
+          f"of radius {radius:.4f}; the arc read as {got.get('faces', (0,))[0]} face(s)), on in every mode, in no error: "
+          f"{wrong or 'as said'}")
     return got
+
+
+def mate_entities(s, handle):
+    """A found mate's entities as Session.mate_definition reads them: [(component Name2, kind, EntityParams)]."""
+    definition = s.mate_definition(handle)
+    return [(e.component, e.kind, tuple(e.params)) for e in definition.entities]
+
+
+def carried_face(label, desk, name, radius):
+    """The carried bore mate read in the new revision by mate_definition: its entity on Sun a face of the hole's
+    radius, so a concentric remade onto another face about the axis fails."""
+    box = desk.record.gearbox
+    sun_name = dict(W.bodies(box))["Sun"]
+
+    def work(s):
+        s.find_mate("cm", name)
+        return mate_entities(s, "cm")
+    entities = run(label, job(box.assembly, work))
+    say(f"fact    {label}: {entities}")
+    return mate_face_judged(entities, sun_name, radius)
 
 
 def carry_said(label, result, out):
@@ -1775,7 +2030,9 @@ def build_again(label, desk):
     _, result = desk.build()
     if result is None:
         raise AssertionError(f"{label}: the build raised: {desk.error}")
-    check(bool(getattr(result, "ok", False)), f"{label}: built ok: {list(getattr(result, 'failures', []))}")
+    check(bool(getattr(result, "ok", False)) and not gearbox_undefined(result),
+          f"{label}: built ok, every part's sketches fully defined: {list(getattr(result, 'failures', []))} "
+          f"{gearbox_undefined(result) or ''}")
     return result
 
 
@@ -1889,9 +2146,13 @@ def section_userwork(out):
         named = [n.item for n in (cr.named if cr else [])]
         codes = mates_now("userwork, the new revision", desk.record.gearbox.assembly)
         new_name = remade.get(BORE_MATE)
-        check(new_name is not None and BORE_MATE not in named and codes.get(new_name, (1, True)) == (0, False),
+        onto = carried_face("userwork: the carried bore mate's face", desk, new_name,
+                            d_expected(8, 0.3, 7.2)["R"]) if new_name else ["not remade"]
+        check(new_name is not None and BORE_MATE not in named and codes.get(new_name, (1, True)) == (0, False)
+              and not onto,
               f"userwork: the mate on Sun's bore face is carried (W9d's \"bore\": the D's arc at (D + a)/2, as built), "
-              f"made again as {new_name}, in no error: remade {sorted(remade)}, named {named}")
+              f"made again as {new_name} on SunGear's face of radius 4.15 by mate_definition, in no error: remade "
+              f"{sorted(remade)}, named {named}; {onto or 'its face as said'}")
         A.users_in_copy("userwork, after", desk, copy, users)
     finally:
         if not W.HUNG["on"]:
@@ -1900,11 +2161,11 @@ def section_userwork(out):
 
 # -- the run ------------------------------------------------------------------------------------------------------------
 
-ORDER = ["dshape", "allowance", "print", "built", "userwork"]
+ORDER = ["dshape", "allowance", "print", "built", "hub", "userwork"]
 SECTIONS = {"dshape": section_dshape, "allowance": section_allowance, "print": section_print, "built": section_built,
-            "userwork": section_userwork}
+            "hub": section_hub, "userwork": section_userwork}
 FOLDERS = {"dshape": ["dshape"], "allowance": ["allowance"], "print": ["print"],
-           "built": ["built", "built-f2", "built-f3"], "userwork": ["userwork"]}
+           "built": ["built", "built-f2", "built-f3", "built-machined"], "hub": ["hub"], "userwork": ["userwork"]}
 
 
 def done_here(name):
