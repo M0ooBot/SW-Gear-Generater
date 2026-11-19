@@ -20,7 +20,7 @@ built.** What remains is the user's (the closing section, *The plan closes*).
     - §3.2: the coupons built, printed and measured; Bambu Studio opening the files (U5); and from the numbers, D3's
       printed backlash and F3's bore allowance, on the user's word (U4);
     - standing caveats, none blocking (`F2-DEMONSTRATION-RUNS-REVIEW.md` §5).
-  - **Nothing of the printed work is merged into `workbook`.** It lives on `printed`.
+  - **The printed work is merged into `workbook`** (2026-11-19, at the user's word: *"by default i want to work with printed gears"*).
 - **F3 is closed** (2026-11-19): built (F3-0 and packages A, B and C, with their reviews, `F3-REVIEW.md`), the printed
   default switched on (`262c0f7`), and shown on SolidWorks 2026 and confirmed on 2024 (`F3-DEMONSTRATION.md`, its runs'
   review `c641f3d`, and `F3-CLOSE-REVIEW.md`, `30ecc7a`: done by its *Done when*). What it leaves open is in §4's head.
@@ -30,7 +30,7 @@ built.** What remains is the user's (the closing section, *The plan closes*).
 - **F4 is closed** (2026-11-19): built on its own branch `f4` and merged (`1afc1f0`), reviewed (`F4-0-REVIEW.md`,
   `F4-REVIEW.md`: done, no must-fix). It is pure maths and needed no SolidWorks.
 - **Still the user's:** §3.2's step and the figures that come from it; the coordinating session's rulings made for them;
-  F4's allowable stress and its questions for afterwards (§5.7); and **whether `printed` is merged into `workbook`**.
+  F4's allowable stress and its questions for afterwards (§5.7). (`printed` was merged into `workbook` on 2026-11-19 at their word.)
 
 D11 is ruled (B) by the coordinating session, the user's to overrule. D3, D6 and D7 stand as assumed.
 
@@ -758,7 +758,7 @@ user is met (`F2-DEMONSTRATION-RUNS-REVIEW.md` §2, `70a2c42`). Its demonstratio
   - Bambu Studio opening the STEP files (U5);
   - §3.2's table filled;
   - from it, D3's printed backlash (U4, with the choice above 0.3 mm) and F3's bore allowance.
-- **Nothing of it is merged into `workbook`.** The README's *Calibrating your printer* and §3.2 below are the
+- **It is merged into `workbook`** (2026-11-19, with the rest of this plan, at the user's word). The README's *Calibrating your printer* and §3.2 below are the
   user's instructions.
 
 Read against the code at `61460b9` on branch `printed`, which holds F1 closed and W9 merged (`138d646`); `src` is
@@ -3441,7 +3441,7 @@ on it. Each change is by section, with why.
 - **F4's questions for afterwards** (§5.7): their own allowable stress, derating across layers, the committed
   gearboxes' torques (typed for steel), the form's inputs, and a warning near the limit.
 - **Whether branch `printed` is merged into `workbook`.** It changes what the app does for a user (Printed by default,
-  the bore allowance, the strength warnings), so it waits for their word. Nothing of this plan is in `workbook` yet.
+  the bore allowance, the strength warnings), so it waits for their word. Nothing of this plan is in `workbook` yet. *Answered 2026-11-19: the user said to merge (*"by default i want to work with printed gears"*), and it is merged.*
 
 **Waiting on other things, not on the user:**
 - the design boards' PNG renders, which need the Mac's Chrome;
