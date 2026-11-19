@@ -2208,8 +2208,9 @@ The torques are the assessment's own: `report.motion` with no modes, else each `
 (`workbook/checks.py:33`, `:60`). Its `torques` are each shaft's (`kinematics.py:39`) and `held` the held member's
 (`:53`). **`kinematics.py` does not change.**
 
-For each Meshes row whose two gears are rated and laid out on parallel shafts (`report.meshes`, kind `PARALLEL`), in each
-mode in which it is in mesh:
+For each Meshes row laid out on parallel shafts (`report.meshes`, kind `PARALLEL`) whose gears rate, or one of whose gears
+rates and the other is a ring that is not rated (§5.1, M1: the share is then over the gear that rates alone, a true lower
+bound, said, and the ring named), in each mode in which it is in mesh:
 
 1. **Is it loaded here?** Only when both gears' shafts carry a torque in this mode: in `torques` (0 counts, an idler
    or a planet) or in `held`. Otherwise its force is *not worked out here*: a branch that reaches no output (J17's
