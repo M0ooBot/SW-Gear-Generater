@@ -224,8 +224,8 @@ def test_a_ring_whose_tips_lie_inside_its_base_circle_is_not_rated_with_its_reas
     """M1 (A10): m 1, z 33 at 20°, its tips 31.000 mm against the base circle's 31.010, is not rated; z 34 is."""
     r = rating_of("A10")
     assert (r.rated, r.short, r.ring) == (False, "tips inside the base circle", True)
-    assert r.why == ("its tips lie inside its base circle (31.000 mm against 31.010), so the last of each tooth is a "
-                     "straight radial line and its tip load has no involute to act along")
+    assert r.why == ("its tips lie inside its base circle (31.000 mm against 31.010), where a tooth cannot be involute, "
+                     "so the tip load the rating takes is outside what it covers")
     with pytest.raises(ValueError, match="not rated: its tips lie inside its base circle"):
         strength.holds(r)
     z34 = rating_of("A10", teeth="34")
@@ -642,3 +642,38 @@ def test_risky_placements_rows_b8_at_the_helical_rings_transverse_diameter():
         if other is not None:
             assert round(min(sides), 3) == other and round(rb.d, 4) == 76.6208
             assert round(100 * 2000 * m.torques[pb.shaft] / 72.0 / held[0], 1) != share     # the slip M2 names
+
+
+
+# -- rings drawn by recipe B (F4-0-REVIEW S1 and S2, the coordinator's rulings of 2026-11-18) -------------------------
+
+@pytest.mark.parametrize("spec, y_f, y_s", [
+    (dict(module="1", teeth="54", face_width="10", teeth_side="internal", bore="", recipe="B", **PRINTED), 2.01028,
+     2.67363),
+    (dict(module="2", teeth="80", face_width="10", teeth_side="internal", bore="", recipe="B"), 2.26901, 2.55098),
+])
+def test_a_ring_drawn_by_recipe_b_is_the_reviews_figure_by_the_module_and_by_beam_statics(spec, y_f, y_s):
+    """F4-0-REVIEW S2's reference figures (z 54 m 1 printed, z 80 m 2 machined, both recipe B: the load along the flank
+    arc's radius at the tip), held by the module and by the independent beam working on the drawn tooth."""
+    g, recipe = derived_of(GearSpec(**spec))
+    assert recipe == "B"
+    r = strength.rate(g, recipe)
+    here = beam(g, recipe, g.face_width)
+    assert r.rated and r.ring and r.past_range is (r.q_s >= 8.0)
+    assert r.y_f == pytest.approx(y_f, abs=1e-5) and r.y_s == pytest.approx(y_s, abs=1e-5)
+    assert here["y_f"] == pytest.approx(y_f, abs=1e-5) and here["y_s"] == pytest.approx(y_s, abs=1e-5)
+    assert r.s_fn == pytest.approx(here["s"], abs=1e-9) and r.h_f == pytest.approx(here["h"], abs=1e-9)
+
+
+def test_a_recipe_b_ring_with_its_tips_inside_its_base_circle_is_not_rated_by_a_reason_true_of_both_recipes():
+    """S1: on recipe B the ring's flank is an arc right up to its tip (internal.arc_flank draws it), so the reason
+    names no radial line: no involute exists inside the base circle on either recipe. The ruling, not rated, stands."""
+    spec = GearSpec(**{**GEARS["A10"], "teeth": "30", "recipe": "B"})
+    g, recipe = derived_of(spec)
+    internal.arc_flank(g)                                     # the arc is drawn: the tooth has a defined normal there
+    for drawn in ("A", "B"):
+        r = strength.rate(g, drawn)
+        assert (r.rated, r.short) == (False, "tips inside the base circle")
+        assert r.why == (f"its tips lie inside its base circle ({g.da:.3f} mm against {g.db:.3f}), where a tooth "
+                         "cannot be involute, so the tip load the rating takes is outside what it covers")
+        assert "radial line" not in r.why

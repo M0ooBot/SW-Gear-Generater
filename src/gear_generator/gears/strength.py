@@ -39,8 +39,9 @@ never z · mn). The fillet is drawn in the transverse section, so in the normal 
 
 **What is not rated**, with its reason in :attr:`ToothRating.why`: a bevel gear (ISO 10300's virtual gear at the mean
 cone is another standard); a ring whose tips lie inside its base circle (``InternalDerived.tip_below_base``, on the
-drawn section or a helical ring's virtual ring: its tip corner is on the radial line the app draws there, with no
-involute normal to load along; the coordinator's ruling on F4's review, M1); a pointed tooth; a gear whose 30° or 60°
+drawn section or a helical ring's virtual ring: no involute exists inside the base circle, so its tip corner is on
+the radial line recipe A draws there, or on recipe B's arc carried past where an involute could be; the coordinator's
+ruling on F4's review, M1, for both recipes); a pointed tooth; a gear whose 30° or 60°
 point falls off its drawn fillet; and a tooth that does not draw. :func:`rate` never raises.
 
 **YS past its range.** ISO gives YS for 1 ≤ qs < 8. A ring's 0.15 × module fillet gives qs about 7.8 to 11.3, past it;
@@ -135,10 +136,12 @@ def _mm(value: float) -> str:
 
 
 def why_tips_inside_base(da: float, db: float, virtual: bool = False) -> str:
-    """M1's clause: *its tips lie inside its base circle (31.000 mm against 31.010), so …* (§5.4's words)."""
+    """M1's clause: *its tips lie inside its base circle (31.000 mm against 31.010), where a tooth cannot be
+    involute, …*. True of both recipes (F4-0-REVIEW S1): on recipe A the last of each tooth there is a straight radial
+    line, on recipe B the flank arc runs on to the tip, and no involute exists inside the base circle on either. A
+    neutral reason; package C words what the user reads."""
     where = " on its virtual spur ring" if virtual else ""
-    return (f"its tips lie inside its base circle{where} ({_mm(da)} mm against {_mm(db)}), so the last of each tooth is "
-            "a straight radial line and its tip load has no involute to act along")
+    return (f"its tips lie inside its base circle{where} ({_mm(da)} mm against {_mm(db)}), where a tooth cannot be involute, so the tip load the rating takes is outside what it covers")
 
 
 def why_off_fillet(tangent: float) -> str:

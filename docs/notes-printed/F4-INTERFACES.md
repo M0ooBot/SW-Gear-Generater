@@ -65,7 +65,7 @@ the plan's list `short` (the reason in a few words) and `ring` (F4-0's decision 
   | Not rated | `short` | `why` |
   |---|---|---|
   | a bevel gear | *a bevel gear* | *a bevel gear's tooth tapers along its face, and rating it needs ISO 10300's virtual gear at the mean cone, which this check does not work out* |
-  | a ring whose tips lie inside its base circle (M1) | *tips inside the base circle* | *its tips lie inside its base circle (31.000 mm against 31.010), so the last of each tooth is a straight radial line and its tip load has no involute to act along* |
+  | a ring whose tips lie inside its base circle (M1) | *tips inside the base circle* | *its tips lie inside its base circle (31.000 mm against 31.010), where a tooth cannot be involute, so the tip load the rating takes is outside what it covers* (true of both recipes: F4-0-REVIEW S1) |
   | a pointed tooth (S6; never built) | *pointed teeth* | *its teeth come to a point below the outer diameter, so there is no tip corner to load (a pointed tooth is never built)* |
   | the 30° or 60° point off the drawn fillet (never met) | *section off the fillet* | *the point where its root fillet's tangent makes 30° with the tooth's centreline is not on the fillet as drawn, so its critical section is not defined* |
   | a tooth that does not draw, an unknown recipe, an involute starting outside the tip | *tooth not drawn* | *its tooth could not be drawn (…)* |
@@ -207,8 +207,8 @@ The variants:
 - **a ring not rated (M1), the mesh loaded in some mode and the other gear's share at or under 100 %:**
 
   > Meshes row 3: Sun and Ring: Printed, Ring is not rated: its tips lie inside its base circle (31.000 mm against
-  > 31.010), so the last of each tooth is a straight radial line and its tip load has no involute to act along; the
-  > share counts Sun alone.
+  > 31.010), where a tooth cannot be involute, so the tip load the rating takes is outside what it covers; the share
+  > counts Sun alone.
 
 - **a ring not rated and the other gear's share past 100 %:** one warning, the full sentence for the gear that rates,
   then *Ring is not rated: …; the share counts Sun alone.* before *Use a larger module, …*;
@@ -223,8 +223,8 @@ The variants:
 - A ring past YS's range: *about 0.80 N·m · 29 N at 17 MPa · stress factor past its range* (A6), and under the rows:
   *Holds once: the ring's 0.15 mm fillet is sharper than the stress factor's range, which is carried past it.*
 - A ring not rated (M1): *not rated: tips inside the base circle* (A10), and under the rows: *Holds once: not rated:
-  its tips lie inside its base circle (31.000 mm against 31.010), so the last of each tooth is a straight radial line and
-  its tip load has no involute to act along.*
+  its tips lie inside its base circle (31.000 mm against 31.010), where a tooth cannot be involute, so the tip load the
+  rating takes is outside what it covers.*
 - In pair mode the line under the rows is prefixed *A:* or *B:*, as F2's are.
 
 ### 6.3 The Results block (B's)
