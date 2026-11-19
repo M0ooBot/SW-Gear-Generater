@@ -1939,8 +1939,9 @@ allowance or a D, so a plain machined gear's rows are F2's (the card pin,
   its flat*.
 - **Drive.** *Round cuts a round hole. Flat cuts a D, for a shaft with a flat:
   type its size across the flat in Flat. The flat is cut on the gear's +X side,
-  square to its X axis and facing the middle of a tooth space, the same in every
-  gear. The assembly does not model a shaft's flat: it turns each gear to mesh on
+  square to its X axis and facing the middle of a tooth space (on a helical gear
+  at its section plane, one overrun behind the face; on a herringbone at its
+  middle), the same in every gear. The assembly does not model a shaft's flat: it turns each gear to mesh on
   its own, so gears that share a D-shaft are phased by their flats in your
   machine and by their meshes in the assembly.* Worked: *round → a hole of 8.2
   mm*; *flat → a D 8.2 mm across its round and 7.2 across its flat, its flat 3.1

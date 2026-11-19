@@ -599,8 +599,9 @@ _BORE_COPY: Dict[str, Tuple[str, str, str]] = {
     "drive": (
         "Drive", "",
         "Round cuts a round hole. Flat cuts a D, for a shaft with a flat: type its size across the flat in Flat. The "
-        "flat is cut on the gear's +X side, square to its X axis and facing the middle of a tooth space, the same in "
-        "every gear. The assembly does not model a shaft's flat: it turns each gear to mesh on its own, so gears that "
+        "flat is cut on the gear's +X side, square to its X axis and facing the middle of a tooth space (on a helical "
+        "gear at its section plane, one overrun behind the face; on a herringbone at its middle), the same in every "
+        "gear. The assembly does not model a shaft's flat: it turns each gear to mesh on its own, so gears that "
         "share a D-shaft are phased by their flats in your machine and by their meshes in the assembly."),
     "flat": (
         "Flat", "F",

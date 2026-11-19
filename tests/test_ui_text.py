@@ -4536,8 +4536,8 @@ BORE_ALLOWANCE_COPY = (
     "shows which. Negative for a press fit. A slicer's X-Y hole compensation does the same job, so keep it at 0.")
 DRIVE_COPY = (
     "Round cuts a round hole. Flat cuts a D, for a shaft with a flat: type its size across the flat in Flat. The flat "
-    "is cut on the gear's +X side, square to its X axis and facing the middle of a tooth space, the same in every "
-    "gear. The assembly does not model a shaft's flat: it turns each gear to mesh on its own, so gears that share a "
+    "is cut on the gear's +X side, square to its X axis and facing the middle of a tooth space (on a helical gear at its "
+    "section plane, one overrun behind the face; on a herringbone at its middle), the same in every gear. The assembly does not model a shaft's flat: it turns each gear to mesh on its own, so gears that share a "
     "D-shaft are phased by their flats in your machine and by their meshes in the assembly.")
 FLAT_COPY = (
     "Your shaft's size across its flat, from the flat to the opposite round side, as your calipers read it. The hole's "
