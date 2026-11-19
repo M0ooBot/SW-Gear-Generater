@@ -1035,13 +1035,16 @@ def _self_check(ok, scratch):
                   f"(switch on), at the figure typed (the spur's -0.1 among them), at the Bore machined; the global "
                   f"exactly when printed, schema 4 or 1; with the switch off the default plans 0: {wrong or 'all'}")
 
-    # 9. The machined parts are F3-0's pins: their plans and .gear.json byte for byte as at the cut.
+    # 9. The machined parts are F3-0's pins: their plans and .gear.json as at the cut, held as the pins hold them (by
+    # hash on Linux; elsewhere by the stored text, floats to a relative 1e-12: PINS-ON-WINDOWS.md).
     pins = pinned_tests()
-    wrong = [n for n, f, _ in ALLOWANCE_KINDS
-             if pins.GEARS[n] != f or pins.strip_print(n, process="machined") != pins.STRIP[n]
-             or pins._sha(pins.sidecar_text(n, process="machined")) != pins.SIDECARS[n]]  # noqa: SLF001
+    wrong = [(n, p) for n, f, _ in ALLOWANCE_KINDS
+             for p in ([f"not GEARS[{n!r}]"] if pins.GEARS[n] != f else []) + [
+                 pins.pin_problem("STRIP", n, pins.strip_text(n, process="machined")),
+                 pins.pin_problem("SIDECARS", n, pins.sidecar_text(n, process="machined"))] if p]
     ok(not wrong, f"pins: the four machined gears built beside the printed ones are tests/test_printed_rule.py's GEARS, "
-                  f"and their plans and .gear.json hold F3-0's STRIP and SIDECARS hashes: {wrong or 'all four'}")
+                  f"and their plans and .gear.json hold F3-0's STRIP and SIDECARS pins ({pins.PIN_HOW}): "
+                  f"{wrong or 'all four'}")
 
     # 10. The live part, read as source: every name it takes from the scripts it runs on is one they define, and every
     # Session member it calls is the app's (the live part cannot be imported off Windows).
