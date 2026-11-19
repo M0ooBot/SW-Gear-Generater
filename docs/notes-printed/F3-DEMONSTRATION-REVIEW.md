@@ -206,3 +206,49 @@ SolidWorks and its own log):
 - **SolidWorks 2024**, the confirming build, WSL idle, `--close-outlived-whats-wrong` on each.
   1. `--sections userwork` (with the hub section) and `--user-master …\w9a-confirm-sw2024-20261117-002313\out\setup.master`.
   2. `--sections dshape,allowance,print,built` in a second fresh session, `dshape` first.
+
+
+## Re-check of `c5d4391` (the review's must-fix and should-fix points taken)
+
+**Self-check, run here: 18 checks, 0 failed.** No SolidWorks.
+
+**Verdict: nothing in `c5d4391` should stop the run. The `dshape` run on 2026 can go on.**
+
+**M1 is fixed at its cause.** `bore_judged` no longer reads a box anywhere padding could fail it. The two checks it
+dropped (the round past the flat, and the flat's span against the chord) now go to the log through `bore_facts`, with
+the padding measured.
+
+**No check that told a right D from a wrong one is loosened.** It still judges:
+- every coaxial cylinder in the bore at (D + a)/2 by `CylinderParams`;
+- the round reaching −X by the least box x over all of them. This check is one-sided, and the self-check shows the
+  sliver failing even with its boxes padded 0.25 mm;
+- exactly one flat, its normal along X and its `PlaneParams` point at h on +X;
+- in `dshape`, the volume against its twin, unchanged.
+
+So the far side, the sliver, a wrong chord and a wrong radius each still fail. A split arc is now accepted in the faces,
+the STEP file and `bore_mate`. The tip lands are still counted; only their angles are a fact (ruling 2's angle is not
+in the Done-when).
+
+**M2 is a real showing of the Done-when's item.** The `hub` section:
+- writes RangeBox_Fixed printed with the Hub row's D and allowance by the app's `write_new`;
+- builds it by the app's own Build through W8's `build_turning`, whose checks include `result.clashes == []` and no
+  interference error, and every part's sketches fully defined;
+- reads every mode with W9b's `mode_read`, shown and rebuilt in turn, and judges each mode's interference list empty
+  and the count of modes the record's;
+- runs W9b's `judge_every` against the record and the app's own read (no mate in error, the gears free);
+- reads the Hub's hole as a D.
+
+Judging against W9b's §3 table is off (`against_section3=False`), as its author says. That table pins W9b's frames and
+gaps for W9b's own rows; turning with no interference is judged without it, so this is no gap in the Done-when.
+RangeSlv taking no D is right (G9: a sleeve has no bore).
+
+**The should-fixes are in and each fails its way in the self-check:**
+- sketch status from every build's `checks`;
+- `mate_definition`'s entity on Sun a face of 4.1 when made, and 4.15 when carried;
+- the herringbone;
+- the machined 12 : 1 typed Printed: Backlash written, no F3 global in SolidWorks or on record, `.gear.json` below 4.
+
+**The one new hard check is a small false-FAIL risk.** `value_judged` holds each link's Equation Manager `Value` to the
+chord or R in mm or in m, and no run has read a link's `Value` before. If SolidWorks answers in some third way, every
+D state's check fails on that line alone. The other problems are listed apart and the `Value` is logged, so the
+evidence stays readable. It is a reason to read the log line by line, not to stop.
