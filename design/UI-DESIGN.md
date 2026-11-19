@@ -2043,7 +2043,9 @@ own, a dash where a gear has none.
 **Laid into its column.** The value is long beside the other rows' figures, and two
 columns of it would widen the strip past its 460 px. So `_show_derived` lays it
 into the room its column has (the rows' 434 px, less the 104 px label column and
-8 px a column, and a few px of the label's own padding), measured in mono_tiny
+8 px a column, and the value label's own border and padding, `GearApp._chrome`:
+4 px on Linux's Tk, 6 on Windows', whose labels take a 2 px border), measured in
+the platform's mono_tiny
 (`ui_text.holds_value_lines`): whole phrases first, a new line starting *·* where
 the value's own *·* falls, and a phrase too long for a line wrapped at its spaces;
 its label sits at its top. With one gear the second column keeps no width of its
@@ -2055,7 +2057,20 @@ value is one line, and a ring's past its range two:
 
 In a pair each column has about 150 px, so the pinion's reads *about 0.22 N·m* / *· 22 N at 17 MPa*, and the ring's
 *about 0.80 N·m* / *· 29 N at 17 MPa* / *· stress factor past its range*, that last phrase wrapped at a space where
-the font needs it (the board's stand-in measure, a character of 6.9 px, wraps it after *past*).
+the font needs it (the board's stand-in measure, a character of 6.9 px, wraps it after *past*). Where the breaks fall
+is the platform's: Windows' fonts measure wider, so a value may break once more there (the unrated ring's *not rated:
+tips inside the base circle* in a pair breaks once on Linux and twice on Windows); what it says does not change.
+
+**The panel's width on Windows.** Measured under Windows' `python.exe` (Tk 8.6) and Linux's, the Derived panel holds
+460 px in every case with the row (single and pair, outside, ring, the unrated ring and the past-its-range line), its
+rows at most 426 px of the body's 434 on Windows (382 to 400 on Linux), and it is exactly as wide with the row as
+without. One line was not: a ring of 33 teeth's own warning (*The teeth's tips, at 31 mm, are inside the base circle
+…*, older than F4, machined too), wrapped at 430 px, came to 435 with Windows' 6 px of label chrome, and the panel to
+461. Every line across the panel body (the line under the rows, each warning) now wraps at the body's 434 px less its
+own label's chrome (`GearApp._text_room`): 430 on Linux, as before, and 428 on Windows. The F1 to F3 rows were
+measured the same way and keep to the strip on both: the Gear panel with Process and Nozzle 360 px on Windows (384 on
+Linux), a gear's panel with Bore allowance, Drive and Flat at most 456 (454), the span row and Measured entry inside
+the rows' 434, and the Pair panel 428 (434).
 
 **The line under the rows** (`ui_text.holds_line`, after every line of F2's, *A:*
 or *B:* before it in a pair):

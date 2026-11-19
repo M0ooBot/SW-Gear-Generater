@@ -773,8 +773,8 @@ class GearApp(ttk.Frame):
             self.measured[side].trace_add("write", lambda *_: self._show_measured())
         # What a reading typed tells, or why a printed gear shows no span, under the rows.
         self.measured_label = tk.Label(body, textvariable=self.measured_text, bg=theme.WHITE, fg=theme.INK,
-                                       font=self.fonts.hint, anchor="w", justify="left",
-                                       wraplength=theme.px(STRIP_WIDTH - 30))
+                                       font=self.fonts.hint, anchor="w", justify="left")
+        self.measured_label.configure(wraplength=self._text_room(self.measured_label))
         self.measured_label.grid(row=4, column=0, sticky="ew", pady=(theme.px(4), 0))
         self.measured_label.grid_remove()
 
@@ -1392,6 +1392,19 @@ class GearApp(ttk.Frame):
             return spans.NONE
 
     @staticmethod
+    def _chrome(label: tk.Label) -> int:
+        """A label's own border, padding and highlight, both sides, in px: what is laid inside it must leave this much.
+        Tk gives a label a 2 px border on Windows and 1 px on Linux, so the same wraplength is 2 px wider on Windows."""
+        return 2 * sum(int(float(str(label.cget(option)))) for option in ("borderwidth", "padx", "highlightthickness"))
+
+    @classmethod
+    def _text_room(cls, label: tk.Label) -> int:
+        """The wraplength of a line across the Derived panel's body (the line under the rows, a warning): the rows'
+        width less the label's own chrome, so that its widest wrapped line keeps to the strip on every platform (on
+        Windows a warning wrapped at the old 430 px came to 435 px with its 6 px of chrome, a pixel past the body)."""
+        return theme.px(DERIVED_ROWS_WIDTH) - cls._chrome(label)
+
+    @staticmethod
     def _rating_of(kind: Any, spec: GearSpec, derived: Any) -> Any:
         """F4: the gear's tooth rating for its Holds once row (ui_text.holds_rating), by its kind's recipe; None for a
         gear that shows none, and never a fault that takes the panel with it."""
@@ -1599,10 +1612,10 @@ class GearApp(ttk.Frame):
                 self._derived_widgets.append(head)
             # F4: the Holds once row's value, long beside the others, laid into the room its column has, so that two
             # columns of it in a pair keep to the strip's width (ui_text.holds_value_lines); its label at its top.
-            # Each value label's own border and padding (a few px) come off the room as well. With one gear the second
-            # column, empty, keeps no width of its own (it kept 96 px of blank before F4, which no row needed).
-            room = (theme.px(DERIVED_ROWS_WIDTH - DERIVED_LABEL_WIDTH) - len(shown) * theme.px(8)) / len(shown) \
-                - theme.px(8)
+            # Each value label's own border and padding come off the room as well (_chrome: 4 px on Linux's Tk, 6 on
+            # Windows'). With one gear the second column, empty, keeps no width of its own (it kept 96 px of blank
+            # before F4, which no row needed).
+            room = (theme.px(DERIVED_ROWS_WIDTH - DERIVED_LABEL_WIDTH) - len(shown) * theme.px(8)) / len(shown)
             self.derived_rows.columnconfigure(2, minsize=theme.px(DERIVED_VALUE_WIDTH) if len(shown) > 1 else 0)
             for row, label in enumerate(labels, start=1):
                 holds = label == ui_text.HOLDS_LABEL
@@ -1612,10 +1625,11 @@ class GearApp(ttk.Frame):
                 self._derived_widgets.append(name)
                 for index, values in enumerate(columns):
                     text = values.get(label, "—")
-                    if holds:
-                        text = ui_text.holds_value_lines(text, room, self.fonts.mono_tiny.measure)
                     value = tk.Label(self.derived_rows, text=text, bg=theme.WHITE, fg=theme.INK,
                                      font=self.fonts.mono_tiny, anchor="w", justify="left")
+                    if holds:
+                        value.configure(text=ui_text.holds_value_lines(text, room - self._chrome(value),
+                                                                       self.fonts.mono_tiny.measure))
                     value.grid(row=row, column=1 + index, sticky="nw" if holds else "w", padx=(theme.px(8), 0))
                     self._derived_widgets.append(value)
             # F2 (§3.0): the Measured entry under the rows, in the column of each gear with a span figure.
@@ -1660,8 +1674,8 @@ class GearApp(ttk.Frame):
         for row, (text, level) in enumerate(dict.fromkeys(lines)):
             label = tk.Label(self.warning_frame, text=text, bg=theme.WHITE,
                              fg=theme.ERROR if level == "error" else theme.MUTED,
-                             font=self.fonts.hint, anchor="w", justify="left",
-                             wraplength=theme.px(STRIP_WIDTH - 30))
+                             font=self.fonts.hint, anchor="w", justify="left")
+            label.configure(wraplength=self._text_room(label))
             label.grid(row=row, column=0, sticky="w")
             self._warning_widgets.append(label)
 

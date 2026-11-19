@@ -151,3 +151,34 @@ At the coordinator's word, in a fifth commit (design files and this note):
     against 28.191), where its teeth cannot be involute, and the rating needs an involute tip to load.*
   - `design/UI-DESIGN.md` follows (the two sentences, eight states with *not driven here*); `gen.py` run again changed
     no board.
+
+## Under Windows' Python (after the merge into `printed`, at the coordinator's word, 2026-11-19)
+
+Two of `tests/test_strength_form.py`'s Tk tests failed under Windows' `python.exe` (Tk 8.6, run against this worktree
+through its Windows path), where the app runs: the pair's unrated ring pinned the break of its value (*not rated: tips
+inside / the base circle*), which Windows' wider font breaks twice; and the width test read the Derived panel at 461 px.
+
+**Measured under Windows and Linux** (a scratch probe, since deleted: fourteen forms, printed and machined, with and
+without the row), before the fix:
+
+- the Holds once row and its line never widened anything: the rows at most 426 px of the panel body's 434 on Windows
+  (382 to 400 on Linux), the line under the rows at most 431 (430), and the panel exactly as wide without them;
+- the 461 was a ring of 33 teeth's own warning (*The teeth's tips, at 31 mm, are inside the base circle …*), older than
+  F4 and said machined too: wrapped at 430 px, its 429 px line plus Windows' 6 px of label chrome (a 2 px border and
+  1 px padding a side; Linux's is 4) came to 435, a pixel past the body;
+- the F1 to F3 rows keep to the strip on both: the Gear panel with Process and Nozzle 360 px on Windows (384 Linux), a
+  gear's panel with Bore allowance, Drive and Flat at most 456 (454), Gear B's 417 (410), the Pair panel 428 (434),
+  the span row and the Measured entry inside the rows, the span's line under the rows at most 426 (430). Nothing to fix
+  there.
+
+**Fixed** (`gui.py`): every line across the Derived panel's body (the line under the rows and each warning) wraps at
+the body's 434 px less its own label's chrome (`GearApp._text_room`, `_chrome`): 430 on Linux, as before, so nothing
+moves there, and 428 on Windows; the Holds once value's room takes off the value label's own chrome in place of a flat
+8 px. After: the panel 460 px in every case on both platforms.
+
+**Tests** (`test_strength_form.py`, mine): the pair's unrated ring now asserts the whole value and that it breaks,
+not where (the break is the font's); the width test, now fourteen cases (seven forms, printed and machined), asserts
+the requirement on whichever platform runs it: the panel no wider than the strip's 460 px, the rows within the body's
+434, and the panel with the row and its line no wider than the same form without them; and a new test holds each
+warning and the line under the rows to the body's width less their chrome. Nothing asserts less than before: the
+Linux pixel count it replaced is now asserted on every platform, against the platform's own fonts.

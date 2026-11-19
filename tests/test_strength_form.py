@@ -286,27 +286,74 @@ def test_in_a_pair_each_column_has_its_own_and_the_line_says_which(app):
         "B: Holds once: the ring's 0.15 mm fillet is sharper than the stress factor's range, which is carried past it.")
     form(app, "b", teeth="33")
     app._derive_now()
-    assert holds_cells(app)[1] == "not rated: tips inside\nthe base circle"
+    cell = holds_cells(app)[1]
+    # Where the line breaks is the platform's font's (Linux's Tk breaks it once, Windows' twice); that it breaks, and
+    # says the whole value, holds on both.
+    assert joined(cell) == "not rated: tips inside the base circle" and "\n" in cell
     assert app.measured_text.get() == f"B: Holds once: not rated: {app._ratings['b'].why}."
 
 
-def test_two_columns_of_it_keep_to_the_strips_width(app):
-    from gear_generator import gui, theme
-    app.mode.set("pair")
-    app._on_mode_changed()
-    app.mesh.set("internal")
-    for side, teeth in (("a", "20"), ("b", "54")):
-        form(app, side, module="1", teeth=teeth, face_width="10")
+WIDTH_CASES = {
+    "single A1": ("single", "", dict(A1)), "single A6": ("single", "", dict(A6)),
+    "single A10": ("single", "", dict(A10)), "single A1 sharp fillet": ("single", "", dict(A1, fillet="0.1")),
+    "pair outside": ("pair", "external", dict(module="1", face_width="10")),
+    "pair ring": ("pair", "internal", dict(module="1", face_width="10")),
+    "pair ring unrated": ("pair", "internal", dict(module="1", face_width="10", b_teeth="33")),
+}
+
+
+def lay_out(app, case):
+    mode, mesh_, fields = WIDTH_CASES[case]
+    fields = dict(fields)
+    b_teeth = fields.pop("b_teeth", "54")
+    if mode == "pair":
+        app.mode.set("pair")
+        app._on_mode_changed()
+        app.mesh.set(mesh_)
+        form(app, "a", teeth="20", **fields)
+        form(app, "b", teeth=b_teeth, **fields)
+    else:
+        form(app, **fields)
     app._derive_now()
     app.update_idletasks()
-    assert app.derived_panel.winfo_reqwidth() <= theme.px(gui.STRIP_WIDTH)
-    app.mode.set("single")
-    app._on_mode_changed()
-    for fields in (A6, A10, A1):
-        form(app, **fields)
-        app._derive_now()
-        app.update_idletasks()
-        assert app.derived_panel.winfo_reqwidth() <= theme.px(gui.STRIP_WIDTH)
+    return app.derived_panel.winfo_reqwidth(), app.derived_rows.winfo_reqwidth()
+
+
+@pytest.mark.parametrize("process", ["printed", PROCESS_MACHINED])
+@pytest.mark.parametrize("case", list(WIDTH_CASES))
+def test_the_row_and_its_line_keep_the_strip_as_wide_as_it_is_without_them(app, monkeypatch, case, process):
+    """The requirement, on whichever platform runs it: the Derived panel with the Holds once row and its line is no
+    wider than the same form without them, and no wider than the strip's 460 px (gui.STRIP_WIDTH); the rows keep to
+    the panel body's 434 (gui.DERIVED_ROWS_WIDTH). Windows' Tk measures the same text wider than Linux's, and gives a
+    label a 2 px border where Linux gives 1, so a pixel count taken on one is not asserted on the other."""
+    from gear_generator import gui, theme
+    app.process.set(process)
+    app._on_process_changed()
+    panel, rows = lay_out(app, case)
+    assert panel <= theme.px(gui.STRIP_WIDTH) and rows <= theme.px(gui.DERIVED_ROWS_WIDTH)
+    if process == "printed":
+        assert holds_cells(app) is not None
+    monkeypatch.setattr(ui_text, "holds_row", lambda *_a, **_k: None)
+    monkeypatch.setattr(ui_text, "holds_line", lambda *_a, **_k: "")
+    app._derive_now()
+    app.update_idletasks()
+    assert holds_cells(app) is None
+    assert panel <= app.derived_panel.winfo_reqwidth()
+
+
+def test_a_long_warning_and_the_line_under_the_rows_wrap_inside_the_panel_body(app):
+    """A ring of 33 teeth's own warning (older than F4, machined too) wrapped at 430 px came to 435 with a label's 6 px
+    of chrome on Windows, a pixel past the body; each such line now wraps at the body's width less its own chrome."""
+    from gear_generator import gui, theme
+    form(app, **A10)
+    app._derive_now()
+    app.update_idletasks()
+    body = theme.px(gui.DERIVED_ROWS_WIDTH)
+    labels = app.warning_frame.winfo_children() + [app.measured_label]
+    assert any("inside the base circle" in w.cget("text") for w in app.warning_frame.winfo_children())
+    for label in labels:
+        assert int(float(str(label.cget("wraplength")))) + gui.GearApp._chrome(label) == body
+        assert label.winfo_reqwidth() <= body
 
 
 def test_a_crossed_pairs_gears_show_no_row_and_a_parallel_pair_of_them_does(app):
