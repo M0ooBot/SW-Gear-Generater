@@ -2066,8 +2066,9 @@ or *B:* before it in a pair):
   the same of *the gear's* fillet (A1 with Fillet 0.1: q_s 11.2);
 - a ring not rated: *Holds once: not rated:* and package A's clause
   (`ToothRating.why`), *its tips lie inside its base circle (31.000 mm against
-  31.010), where a tooth cannot be involute, so the tip load the rating takes is
-  outside what it covers.*
+  31.010), where its teeth cannot be involute, and the rating needs an involute
+  tip to load.* (F4-REVIEW S1); a ring drawn by Arcs says the same with its own
+  diameters (z 30: *28.000 mm against 28.191*).
 
 No card: the row is a reading, as Bore as cut is, and the README's *What a tooth
 is rated to take* says what it is and is not.
@@ -2113,9 +2114,9 @@ and `test_printed_workbook.py`'s `STRENGTH_SAID`:
   rated to take once at 17 MPa …*;
 - a ring not rated, the pinion at or under 100 %: *Pin and Ring: Printed, Ring is
   not rated:* and package A's clause (`ToothRating.why`), *its tips lie inside its
-  base circle (31.000 mm against 31.010), where a tooth cannot be involute, so the
-  tip load the rating takes is outside what it covers; the share counts Pin
-  alone.*; with the pinion past 100 %, one warning: the pinion's sentence, then
+  base circle (31.000 mm against 31.010), where its teeth cannot be involute, and
+  the rating needs an involute tip to load; the share counts Pin alone.*
+  (F4-REVIEW S1); with the pinion past 100 %, one warning: the pinion's sentence, then
   the ring's, then *Use …*;
 - neither gear rated, loaded: *Printed, A is not rated: …; B is not rated: …; so
   no share is worked out.*
@@ -2125,13 +2126,14 @@ and `test_printed_workbook.py`'s `STRENGTH_SAID`:
 the box size* row, behind a blank row, for a printed gearbox whose first input
 has a torque). Head *Tooth strength (printed)* | *Mode* | *Force (N)* | *Weaker
 gear* | *Rated to take (N)* | *Share used (%)*, then a row per Meshes row and
-mode, in the Meshes sheet's order and each mode's, in one of seven states:
+mode, in the Meshes sheet's order and each mode's, in one of eight states:
 
 | State | Row |
 |---|---|
 | rated | *Sun–Planet* · *L* · 229.885 · *Planet* · *16.851 (0.7)* · 1364.3 (force to 0.001 N, share to 0.1 %, as numbers; the figure text when marked *(0.7)* or *(stress factor past its range)*) |
 | rated, a ring not rated | *Pin–Ring* · · 266.667 · *Pin (Ring not rated)* · 19.161 · 1391.7 |
-| unloaded | *Sun–Planet* · *H* · *—* · · · *turns unloaded here* |
+| unloaded: both shafts turn with no load (a stage that idles, a branch reaching no output) | *Sun–Planet* · *H* · *—* · · · *turns unloaded here* |
+| not driven: a shaft of the mesh does not turn in this mode (a free member: the transfer cases' front branch in 2H and N; F4-REVIEW S2, the coordinator's ruling) | *FDrive–FIdler* · *2H* · *—* · · · *not driven here* |
 | not shared | *FDrive–FIdler* · *4H* · *—* · · · *the torque past a shared output is not shared out (not worked out)* |
 | not worked out (B's seventh state, `UNWORKED`: both shafts turn and the branch reaches a turning output with no torque given, as past W3's split) | *G1–G2* · · *—* · · · *the torque here is not given (past a split, not worked out)* |
 | not rated | *A–B* · *L* · *—* · · · *not rated: A (short), B (short)* |

@@ -124,3 +124,30 @@ At the coordinator's word, in a fifth commit (design files and this note):
    the form: Process is one row).
 3. That every sentence is true in its state: *rated to take once* is never said beside the 0.7 (the form never applies
    it), and *about* and the MPa are in every figure.
+
+## The coordinator's rulings on F4's review (`F4-REVIEW.md`, `be19cc5`; 2026-11-18, each the user's to overrule)
+
+- **Every choice of packages B and C is accepted**, C's seven among them; no must-fix.
+- **The four should-fixes were taken across the packages' files by package C's author**, at the coordinator's word, the
+  parallel work being over:
+  - **S1** (`gears/strength.py`, `why_tips_inside_base`): the unrated ring's reason now reads *its tips lie inside its
+    base circle (31.000 mm against 31.010), where its teeth cannot be involute, and the rating needs an involute tip to
+    load*, true of both recipes. So B's warning reads *Meshes row 2: Pin and Ring: Printed, Ring is not rated: its tips
+    lie inside its base circle (31.000 mm against 31.010), where its teeth cannot be involute, and the rating needs an
+    involute tip to load; the share counts Pin alone.*, and the form's line *Holds once: not rated: its tips lie inside
+    its base circle (31.000 mm against 31.010), where its teeth cannot be involute, and the rating needs an involute tip
+    to load.* Both are now pinned whole (`test_strength_workbook.py`, `test_strength_form.py`), beside the tests that
+    compose them from `ToothRating.why`; `test_strength.py`'s two literals follow. The sentences quoted above in this
+    note are as they stood before.
+  - **S2, ruled** (`workbook/strength.py`, `_not_loaded_state`): an eighth state, `UNDRIVEN`, worded `NOT_DRIVEN`,
+    *not driven here*, for a mesh a shaft of which does not turn in the mode (missing from `Motion.speeds`: the transfer
+    cases' front branch in 2H and N, which `Motion.free` lists); *turns unloaded here* is kept for a branch whose shafts
+    both turn with no load (RangeBox's stage in H and N, the low range in 2H, 4H and N). Not listed on *Worst share*,
+    as an unloaded mesh is not. `test_strength_workbook.py`'s transfer-case test follows, asserting the new state, both
+    Results rows and that the front branch never says *turns unloaded here*.
+  - **S3** (`README.md`): *so printed as typed they would break, or would not run.*, pinned in `test_strength_form.py`.
+  - **S4** (`test_strength_form.py`): a ring drawn by Arcs (recipe B), z 30, is pinned not rated on the form itself:
+    *not rated: tips inside the base circle* and *Holds once: not rated: its tips lie inside its base circle (28.000 mm
+    against 28.191), where its teeth cannot be involute, and the rating needs an involute tip to load.*
+  - `design/UI-DESIGN.md` follows (the two sentences, eight states with *not driven here*); `gen.py` run again changed
+    no board.
