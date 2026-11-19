@@ -61,6 +61,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 SELF_CHECK = "--self-check" in sys.argv
 
+# Every line is written in UTF-8, whatever the console's or a pipe's encoding (Windows' python.exe writing to a pipe
+# uses cp1252, which has no π or −), as the other probe scripts do.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
+
 if "--help" in sys.argv or "-h" in sys.argv:
     print(__doc__)
     raise SystemExit(0)

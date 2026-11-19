@@ -337,15 +337,23 @@ import time
 import traceback
 
 # ``--self-check`` (no SolidWorks, no Excel, no pywin32; F1, the coordinator's ruling of 2026-11-18): the Desk reads a
-# workbook's blank Process as the Workbook window does. The Windows-only modules are stood in for and the run's
-# arguments made a scratch folder's, so this file loads anywhere; ``self_check`` runs at its end.
+# workbook's blank Process as the Workbook window does. The Windows-only modules are stood in for where they do not
+# import, and the run's arguments made a scratch folder's, so this file loads anywhere; ``self_check`` runs at its end.
+# Where pywin32 is installed (Windows' python.exe) its own modules are used, since swcom's win32com reads win32api
+# when it loads and fails on a stand-in (2026-11-19); the self-check calls none of them. xlhelp, the Excel helper, is
+# always stood in: the self-check opens no Excel.
 SELF_CHECK = "--self-check" in sys.argv
 if SELF_CHECK:
+    import importlib
     import tempfile
     import types
     _SCRATCH = tempfile.mkdtemp(prefix="w8-self-check-")
-    for _name in ("win32api", "win32gui", "win32process", "xlhelp"):
-        sys.modules[_name] = types.ModuleType(_name)
+    for _name in ("win32api", "win32gui", "win32process"):
+        try:
+            importlib.import_module(_name)
+        except ImportError:
+            sys.modules[_name] = types.ModuleType(_name)
+    sys.modules["xlhelp"] = types.ModuleType("xlhelp")
     sys.argv = [sys.argv[0], os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"),
                 _SCRATCH, "--pid", "0", "--log", os.path.join(_SCRATCH, "self-check.log")]
 
