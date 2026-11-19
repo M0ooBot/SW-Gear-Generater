@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from ..gears import bevel, crossed
-from . import checks, geometry, schema, xlsx
+from . import checks, geometry, schema, strength, xlsx
 from .checks import Report
 from .fixes import Fix
 from .model import GearboxSpec, from_book as model_from_book
@@ -100,6 +100,11 @@ def results_sheet(spec: GearboxSpec, report: Report, when: Optional[str] = None)
     left_out = box_left_out(spec, report)
     if left_out:
         rows.append([RESULTS_LEFT_OUT, left_out])
+    if report.strength:
+        # F4 (package B; PLAN-PRINTED §5.4): a printed gearbox whose first input has a torque, its teeth mode by mode.
+        allowable, typed = strength.allowable_of(spec)
+        rows.append([])
+        rows.extend(strength.results_rows(report.strength, allowable, typed, spec.box.allowable))
     note = schema.RESULTS_NOTE.format(when=when)
     if any(m.kind == geometry.CROSSED for m in turned):
         note += (" The efficiency typed for a crossed helical mesh is the workbook's: a crossed pair slides along its "

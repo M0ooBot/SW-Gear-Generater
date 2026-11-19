@@ -293,18 +293,46 @@ def test_a_printed_crossed_pair_is_checked_as_an_outside_pair():
     assert clearance_said(crossed_pair(2.0)) == [] and clearance_said(crossed_pair(0.5, process="machined")) == []
 
 
+_PROVISIONAL = "17 MPa (provisional: type your own in the Box's Allowable stress)"
+_PLANET = ("N once, with an allowance of 0.7 because a planet's teeth are loaded in both directions as the gearbox runs; "
+           "the load is shared by 3 planets, one taking 1.25 of an even share.")
+_REMEDY = (" Use a larger module, a wider face, less torque, or your own tested allowable. An estimate for teeth printed "
+           "flat, with the whole load on one tooth's tip: not a running rating; heat, wear and creep are not worked out.")
+STRENGTH_SAID = {        # F4 (PLAN-PRINTED §5.5, the review's S7): exactly B's sentences, in order, with their figures
+    "RangeBox": [
+        "Meshes row 2: Sun and Planet: Printed, these teeth take about 230 N at the pitch circle in L, 13.6 times the "
+        f"17 N Planet's teeth are rated to take at {_PROVISIONAL}: 24 {_PLANET}{_REMEDY}",
+        "Meshes row 3: Planet and Ring: Printed, these teeth take about 221 N at the pitch circle in L, 13.1 times the "
+        f"17 N Planet's teeth are rated to take at {_PROVISIONAL}: 24 {_PLANET}{_REMEDY}"],
+    "planetary_4to1": [
+        "Meshes row 2: Sun and Planet: Printed, these teeth take about 93 N at the pitch circle, 6.4 times the 14 N "
+        f"Planet's teeth are rated to take at {_PROVISIONAL}: 21 {_PLANET}{_REMEDY}",
+        "Meshes row 3: Planet and Ring: Printed, these teeth take about 89 N at the pitch circle, 6.2 times the 14 N "
+        f"Planet's teeth are rated to take at {_PROVISIONAL}: 21 {_PLANET}{_REMEDY}"],
+    "Risky_Placements": [
+        f"Meshes!A{row}: {a} and {b}: Printed, these teeth take about {force} N at the pitch circle, {times} times the "
+        f"{held} N {a}'s teeth are rated to take once at {_PROVISIONAL}.{_REMEDY}"
+        for row, a, b, force, times, held in ((2, "G1", "G2", 336, "6.6", 51), (3, "G3", "G4", 453, "7.2", 63),
+                                              (4, "G5", "G6", 724, "14.3", 51))],
+}
+
+
 @pytest.mark.parametrize("make", [range_box, planetary_4to1, "Risky_Placements"], ids=["RangeBox", "planetary_4to1",
                                                                                      "Risky_Placements"])
 def test_printed_gearboxes_carry_the_gearbox_warnings_they_carry_machined(make):
     """§2.3 and §2.8: no pair interference warning is built, printed or machined, and W7's planetary sentence and
-    report.undercut stay as they are. What printed adds is the gears' own (§2.2, package A's), never the gearbox's."""
+    report.undercut stay as they are. What printed adds is the gears' own (§2.2, package A's), never the gearbox's,
+    but for F4's strength warnings (§5.5): a printed gearbox says exactly what its machined twin says, then B's
+    sentences for it, in order, each with its figures."""
     if make == "Risky_Placements":
         spec, _ = read(FIXTURES / "excel-windows" / "Risky_Placements.xlsx")
     else:
         spec = make()
     machined = assess.assess(replace(box_of(spec, process="machined"), source_path=BOOK), [], OUT)
     printed = assess.assess(replace(box_of(spec, process="printed"), source_path=BOOK), [], OUT)
-    assert [d.message for d in printed.report.diagnostics] == [d.message for d in machined.report.diagnostics]
+    name = make if isinstance(make, str) else {range_box: "RangeBox", planetary_4to1: "planetary_4to1"}[make]
+    assert [d.message for d in printed.report.diagnostics] == ([d.message for d in machined.report.diagnostics]
+                                                               + STRENGTH_SAID[name])
     assert printed.report.undercut == machined.report.undercut
     assert printed.report.stages == machined.report.stages
 
