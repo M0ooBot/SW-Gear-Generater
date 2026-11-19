@@ -91,7 +91,7 @@ Each row has the answer this plan assumes; say where it is wrong.
 | D4 | Which shaft drive first? | **Answered 2026-11-16: D-flat.** Hex and a keyway are the same kind of sketch and can follow; a boss with a setscrew or a heat-set insert is not in this plan. |
 | D5 | The file for the slicer, and which slicer | **Answered 2026-11-16: the user's slicer is Bambu Studio, so STEP.** Bambu Studio is said to open STEP; F2's own step, the user opening an exported gear there, is what shows it. No STL export. |
 | D6 | Undercut | **Warn on the single gear, and build no pair check in F1** (§2.3, the coordinating session's ruling of 2026-11-18, the user's to overrule). The radial test planned before reports overlaps the drawn parts do not have; a sweep of the drawn outlines is later work (§7). Drawing the true undercut root is another sketch topology and not in this plan. F1 can go ahead on it (§2.8). |
-| D7 | PLA's allowable tooth stress | **Provisional: 17 MPa**, a third of the roughly 50 MPa a PLA datasheet gives, against a stress that includes the fillet's concentration (§5). No standard gives a figure for printed PLA, so this is the writer's judgement, typed on the Box sheet and replaced by the user's own tests. F4's only; F1 does not touch it. F4 can go ahead on it (§5.7). |
+| D7 | PLA's allowable tooth stress | **Provisional: 17 MPa**, about half the 35 MPa a printed PLA data sheet gives for tensile strength within the layers (Bambu PLA Basic, V3.0, by search summaries; 31 MPa across them), against a stress that includes the fillet's concentration, for a single load: printed PLA's fatigue strength is far lower, so the figure is labelled *once* (§5.1). The first revision's *a third of the roughly 50 MPa a PLA datasheet gives* was not what the filament the print list names reports (F4's review). No standard gives a figure for printed PLA, so this is the writer's judgement, typed on the Box sheet and replaced by the user's own tests. F4's only; F1 does not touch it. F4 can go ahead on it (§5.7). |
 | D8 | Where this sits beside W9 | **Answered 2026-11-16: W9 first; on 2026-11-18 the user said to carry on past W9.** This plan starts once W9 is merged into `workbook`, on a branch `printed` cut from it. What it takes on from W9 is in §6. |
 | D9 | The edge chamfer against first-layer squish | **Answered 2026-11-16: left to the slicer for now.** Not built in F1 to F4; the export's print list asks for the slicer's first-layer compensation. The review found the chamfer is the costliest piece here (§4.3). It gets a plan of its own only if the test prints show the slicer's setting is not enough. |
 | D10 | A printed part's file name | **Answered 2026-11-16: ends `_P`** (`Gear_m1.5_N25_P`), as a shifted gear ends `_x0.09`. It is a different part from the machined gear of the same sizes, and without the mark the second of the two would be refused as existing. Machined names stay as they are. As W9b ruled for a sleeve's bands (`W9B-INTERFACES.md` §7), the mark is the default name only. An Update that makes a built machined part printed keeps its file and name, since a default stem that drifts with the values is a value change (`gearbox.name_changed`, `workbook/gearbox.py:405-415`). So only a part *built* printed carries `_P`. |
@@ -2079,7 +2079,7 @@ printed gears only.
 
 and what one tooth holds at the allowable σFP:
 
-    Ft,held = σFP · b · mn / (YF · YS)        (× 0.7 for teeth that bend both ways, §5.2)
+    Ft,held = σFP · b · mn / (YF · YS)        (× 0.7, an allowance for teeth loaded in both directions as the gearbox runs, §5.2)
     T,held  = Ft,held · d / 2000              N·m, d the pitch diameter in mm
 
 - **Sources.** ISO 6336-3:2006 and :2019, *Calculation of load capacity of spur and helical gears, Part 3*, §6.2 (the
@@ -2117,35 +2117,59 @@ and what one tooth holds at the allowable σFP:
     z / cos³ β_b; at 20° the two differ by 0.8 %, and F4 uses ISO's.
   - Its tooth is drawn by the app's own spur routines (`spur.profile`, `spur.involute_flank`), with the normal module,
     the normal pressure angle, the gear's normal backlash, its shift, and the fillet radius as typed or defaulted. The
-    fillet is drawn in the transverse sketch (`helical.py:334`), so in the normal section its curvature is not exactly
-    ρ; F4 keeps ρ, an approximation its note states.
-  - Ft and d are transverse: Ft = 2000 T / d with d the section's pitch diameter.
+    fillet is drawn in the transverse sketch (`helical.py:334`), so in the normal section its radius lies between
+    ρ cos² β and ρ / cos β; F4 keeps ρ, which moves Y_S by at most about 3 % at β 20° (A's note says so).
+  - Ft and d are transverse: Ft = 2000 T / d with d the section's pitch diameter, **a helical ring's included**
+    (z m_n / cos β, never z m_n: A9, B8).
+- **The 30° section is ISO's convention, not the beam's worst.** The app's root narrows toward its fillet, and scanning
+  the fillet for the largest 6 h cos α_F / s² finds the worst section at a tangent of 8° to 16°, reading above the 30°
+  one by 2.5 to 9.2 % (1.7 to 7.4 % with Y_S taken at each point) on A1, A2, A8 and m 2 z 100 (the review's figures).
+  F4 keeps 30°, since Y_S is calibrated on it; A's note says the figure can read up to about 7 % low on small pinions,
+  and *exact* above is about the geometry only.
 - **b is the toothed width**: the face, or a herringbone's face less its groove (2 × `HelicalDerived.toothed_width`,
   `helical.py:181`). In a mesh it is no more than the two faces' overlap (`geometry.faces_overlap`,
   `workbook/geometry.py:520`).
 - **A ring** is rated on its own drawn tooth with the 60° tangent; a helical ring on its virtual ring
-  (`internal.section`, `internal.py:282`, with z_n).
+  (`internal.section`, `internal.py:282`, with z_n), its force at its own transverse pitch diameter (A9, B8).
+  - **A ring whose tips lie inside its base circle is not rated** (M1; the coordinator's ruling of 2026-11-18, the
+    user's to overrule). The condition is `InternalDerived.tip_below_base`, d_a < d_b, on the ring's drawn section, or on
+    the virtual ring of a helical ring: with the default depth that is every ring of 33 teeth or fewer at 20° (d_a =
+    (z − 2) m against z m cos α; z 33 gives 31.000 against 31.010 mm at module 1, z 34 is rated). The app builds such a
+    ring with its own warning (*the last of each tooth is a straight radial line*), so its tip corner is on that radial
+    line, where there is no involute normal for the load to act along. F4 gives no figure for it rather than invent one.
+    What is shown is §5.4's: *not rated*, the ring named, and the reason in a sentence, on the form's row, at the Meshes
+    row and on the Results sheet. `rate` returns `rated=False` with that sentence.
+  - **In a mesh** with such a ring, the share is taken over the gear that rates (the pinion) alone, and says so. It is a
+    true lower bound: the mesh's share can only be higher. The ring is named as not rated whether or not that share
+    passes 100 %.
+  - **A pointed tooth** (flanks meeting below the outer diameter) is a validation error and never built, but `rate`
+    still says *not rated* for it, with its own sentence, rather than load a point past the apex (the review's S6).
   - **At the ring's 0.15 × module fillet, q_s is 7.8 to 11.3** over modules 0.5 to 3 and 20 to 150 teeth: past Y_S's
-    range. F4 carries the formula past 8 rather than stopping there, since Y_S grows with q_s and stopping would
-    understate the stress. The ring's figures say so (§5.4).
+    range (the review's sweep: 7.78 to 8.97 for 34 to 150 teeth at 20°, 7.09 to 11.26 over 14.5° to 30°). F4 carries the
+    formula past 8 rather than stopping there, since Y_S grows with q_s and stopping would understate the stress. **Every
+    place a ring's figure is read says so**: the form's row, the warning and the Results row (§5.4).
 - **An outside gear stays in range.** Over every outside gear the app builds in a sweep of modules 0.5 to 3, 6 to 300
-  teeth, 14.5° to 30°, printed and machined, both recipes), q_s is 1.21 to 3.86, and the 30° point lies on the drawn
+  teeth, 14.5° to 30°, printed and machined, both recipes), q_s is 1.21 to 3.54 (the review's sweep of 1696 gears), and the 30° point lies on the drawn
   fillet arc in every one, as the 60° point does on every ring.
   - A q_s under 1 would be taken at 1, on the safe side; none was met.
   - If the tangent point ever fell off the drawn arc, the gear would not be rated and would say why.
 - **The figure against the tables.** Unshifted, with no backlash, at module 2 (depth 2.25 m), the app's tooth gives
-  Y_F 3.326, 2.755 and 2.546 at 20, 40 and 100 teeth. Lewis's tip-loaded full-depth tooth gives about 3.1, 2.6 and 2.2
-  (1 / Y, as recalled). At modules 1 and 1.25 the app's depth is 2.4 m (`spur.tooth_depth`), and z 20 gives 3.696.
-  - So the app's tooth reads 7 to 15 % weaker than the textbook's. Its radial flank below the base circle, and its
+  Y_F 3.326, 2.755 and 2.546 at 20, 40 and 100 teeth. ISO's own generated tooth, loaded at the tip with the 1.25 / 0.38 rack,
+  gives Y_Fa 2.800, 2.405 and 2.195 (Y_Fa · Y_Sa 4.347, 4.013, 3.939), by the review's own coding of Method B. At modules 1 and 1.25 the app's depth is 2.4 m (`spur.tooth_depth`), and z 20 gives 3.696.
+  - So the app's tooth reads **15 to 32 % weaker in Y_F** than ISO's generated tooth (18 to 38 % with Y_S): +19 % at
+    m 2 z 20, +15 % at z 40, +16 % at z 100, +32 % at m 1 z 20 (depth 2.4 m). The chord shows why: s_Fn / m is 1.801 on the
+    app's tooth at z 20 against ISO's 1.945. Its radial flank below the base circle, and its
     fillet set on a radial line, leave a narrower root than a trochoid. That is the plan's point, not an error, and A's
     note says it.
-  - Y_S comes out **1.42 to 1.83** for the outside gears of §5.3, and 2.55 to 2.61 for its rings (past the range). The
+  - Y_S comes out **1.42 to 1.83** for the outside gears of §5.3, and 2.55 to 2.69 for its rings (past the range). The
     first review's *roughly 1.5 to 2* holds for outside gears.
 
 **Which gears are rated, and which are not.**
 
 - **Rated:** spur, helical and herringbone gears, outside and ring.
 - **Not rated, and said so where a figure would be:**
+  - **a ring whose tips lie inside its base circle** (M1, above): no involute at its tip corner;
+  - **a pointed tooth** (never built, but `rate` says so);
   - **bevel gears.** The tooth tapers along the face and needs the virtual gear at the mean cone (ISO 10300, another
     standard); the app's back-cone section is the heel's;
   - **crossed helical pairs.** Their teeth meet at a point and slide, which ISO 6336 does not cover, and they wear out
@@ -2157,17 +2181,24 @@ and what one tooth holds at the allowable σFP:
 
 - A spur tooth then bends within its layers.
 - A helical tooth's axial component, Ft · tan β, is carried across the root in shear, and that shear crosses the layers.
-  By this revision's estimate it is small: about 0.035 of the root's peak stress for A4 (§5.3), τ = Ft tan β / (b · s_Fn)
-  against σ_F. F4 does not derate for it, and every sentence says the figure is for teeth printed flat.
+  It is not the larger part: the root's bending stress itself runs along the fillet in the normal section, and at the 30°
+  point that direction leaves the layer plane by sin 30° · sin β, so it puts **about 0.17 σ_F of shear between the
+  layers** at β 20° (0.21 at 25°) and about 0.03 σ_F across them (the review's figures; the axial shear alone,
+  Ft tan β / (b · s_Fn), is 0.035 for A4). That is still small against a printed PLA's strength across its layers, 31 MPa
+  against 35 within them on Bambu's PLA Basic sheet (by search summaries). F4 does not derate for it, and every sentence
+  says the figure is for teeth printed flat.
 - A gear printed on its side is not covered.
 - **Nor is infill.** The print list asks five walls, 2 mm a side at 0.4 mm. Up to about module 2 the critical chord
-  (1.3 to 3.6 mm in §5.3's gears) is all wall; above that its middle is infill, which the allowable does not allow for.
-  The README says so.
+  (1.3 to 3.6 mm in §5.3's gears) is all wall. Above that its middle is infill; but bending is carried by the outer
+  fibres, which are the walls, running along the fillet as an X-Y test bar's do, so what weakens such a root is the seam
+  between wall and infill rather than the infill's density. The README says both in a sentence.
 
 **The wording that keeps it an estimate.** Every place the figure shows does three things:
 
 - it says *about*, and gives the allowable it used;
-- it says *once*: one static load, not a running rating (the first review asked for this in the panel itself);
+- it says *once* of a gear's own figure: one static load, not a running rating (the first review asked for this in the
+  panel itself), since printed PLA's fatigue strength is far lower (10 to 25 % of its tensile strength at 2 × 10⁶
+  cycles, by secondary sources). The 0.7 for teeth loaded both ways (§5.2) is never called *once*;
 - in the workbook, it names what it does not cover: heat (PLA softens near 55 to 60 °C), wear, creep at the bore or
   under a steady load, fatigue, and load across layers.
 
@@ -2198,12 +2229,18 @@ mode in which it is in mesh:
    of its meshes it takes the largest force its non-idler mates give it, and a chain of idlers shares one figure. That
    leaves out each idler's efficiency loss: a few per cent, on the safe side.
 
-**What each gear holds in that mesh** is §5.1's Ft,held, with b the mesh's width, **× 0.7 when its teeth bend both
-ways**: an idler or a planet, each told by a shaft torque of exactly 0 in that mode.
+**What each gear is rated to take in that mesh** is §5.1's Ft,held, with b the mesh's width, **× 0.7 when its teeth
+are loaded in both directions as the gearbox runs**: an idler or a planet, each told by a shaft torque of exactly 0 in
+that mode.
 
-- 0.7 is AGMA 2001's allowance for reversed bending (as recalled: *for idler gears, use 70 percent* of the allowable),
-  as the first review planned for idlers. A planet's teeth bend both ways too, against the sun and the ring. It is a
-  fatigue rule applied to a static figure, on the safe side.
+- **R1, the coordinator's ruling (2026-11-18, the user's to overrule): the 0.7 stays**, worded as an allowance for a
+  tooth loaded in both directions as the gearbox runs, not as part of a figure called *once*. A single static load does
+  not weaken a tooth because the next contact is on its other flank; running, a tooth bent both ways endures less, and
+  planets and idlers fail first in service. It is AGMA 2001's allowance for reversed bending (by secondary sources:
+  *70 percent of s_at for idler gears*), as the first review planned for idlers; ISO 6336-3:2019's Annex B (Y_M) is the
+  ISO home of the same idea. A planet's teeth are loaded both ways too, by the sun on one flank and the ring on the
+  other.
+- **A ring that is not rated** (§5.1, M1) takes no figure: the share is the other gear's alone, said as such.
 - **The share used** is Ft over the smaller of the two gears' figures, and that gear is *the weaker*.
 
 **Where the share is said:**
@@ -2229,7 +2266,12 @@ At 17 MPa, printed, recipe A unless said, from the app's derived gears at `11f2a
 | A6 | ring m 1, z 54, face 10 | 0.3, printed | 2.2574 | 2.5535 | 8.341, past the range | 29.49 | 0.7963 |
 | A7 | A1 drawn by recipe B | 0.3, printed | 3.4536 | 1.6274 | 2.288 | 45.37 | 0.6805 |
 | A8 | spur m 1, z 12, face 10 | 0.3, printed | 6.8916 | 1.4151 | 1.701 | 17.43 | 0.1046 |
+| A9 | helical ring m 2, z 36, β 20°, face 10 (z_n 42.723, d 76.6208) | 0.3, printed | 2.0408 | 2.6948 | 8.500, past the range | 61.82 | 2.3685 |
+| A10 | ring m 1, z 33, face 10 (tips 31.000 mm inside the base circle's 31.010) | 0.3, printed | — | — | — | not rated | not rated |
 
+- A9 is the helical ring the review asked for (M2): its force and its torque are at its transverse diameter, 76.6208 mm,
+  never z · m_n = 72. A10 pins M1: `rate` gives `rated=False` and the sentence naming the reason. A9's 61.823 N is to
+  1e-3 N in B8.
 - A1 against A3 is the Done-when's *gear thinned by backlash carrying less than the same gear without*: 38.61 N against
   45.95.
 - A1 machined (blank backlash 0.45 mm) would hold 35.04 N. That is said only to show how backlash enters; the form shows
@@ -2246,6 +2288,9 @@ At 17 MPa, printed, recipe A unless said, from the app's derived gears at `11f2a
 | B5 | Idler_Train at 0.25 N·m | both | 16.667 | as in B3 and B4 | GI | 57.5 %: **no warning** |
 | B6 | RangeBox, 10 N·m (`tests/workbook_fixtures.py:99`) | Sun–Planet, in L; not worked out in H and N | 229.885 | Sun 32.982; Planet 16.851 (0.7 × 24.072) | Planet | 1364.3 % |
 | B7 | the same | Planet–Ring, in L | 220.782 | Planet 16.851; Ring 37.989 | Planet | 1310.2 % |
+| B8 | Risky_Placements, committed (`tests/fixtures/excel-windows/`), read printed, 5 N·m: S1 5, S2 7, S3 10.78, S4 27.1656 N·m | G5–G6, helical in a helical ring | 723.563 (G6's own side 709.092, at d 76.6208) | G5 50.670; G6 61.823 (A9) | G5 | 1428.0 % |
+| B8 | the same | G1–G2, helical (d 29.7970, 42.5671) | 335.605 | G1 50.670; G2 56.971 | G1 | 662.3 % |
+| B8 | the same | G3–G4, herringbone, b 12 (the faces' overlap; G3 is 16 wide) | 453.154 | G3 62.836; G4 71.137 | G3 | 721.2 % |
 
 - *Idler_Train* is new and is built in B's test. Shafts: In (input, 1000 rpm, 1 N·m) at the origin, Idl at X 33.75 and
   Out (output) at X 82.5, all Z+. Spur gears: G1 on In (z 20), GI on Idl (z 25) and G3 on Out (z 40), module 1.5, face
@@ -2258,9 +2303,15 @@ should hear it (U-c, §5.7):
 - planetary_4to1 6.4 times;
 - RangeBox, RangeBox_Fixed and the RangeBox_W9 fixture 13.6 times, in L;
 - the E4 transfer case 21.4 times and TransferCase_Parallel 22.6 times, in 4L;
-- Risky_Placements up to 14.9 times, Reducer_12to1 22.6 times and Arc_Move 6.9 times.
+- Risky_Placements up to 14.3 times (B8; the first revision's 14.9 took the helical ring's force at z · m_n, against
+  §5.1's own rule), Reducer_12to1 22.6 times and Arc_Move 6.9 times.
 
-Their typed torques, 5 and 10 N·m, are far beyond PLA teeth of module 1 to 2 and 10 mm wide.
+**Their torques were typed for steel.** The fixtures' 5 and 10 N·m were typed for machined gearboxes before Printed
+existed, and a steel tooth's allowable is some fifteen to twenty times 17 MPa. The check stacks margin (the tip load with
+Y_ε 1, 17 MPa against about 35, and for a planet K_γ and the 0.7: about 2.7 for a plain gear and 4.9 for a planet, by the
+review's estimate), but even against a best-estimate break all of them are over: planetary_4to1 about 1.3 times, Arc_Move
+2.5, RangeBox 2.8, Reducer_12to1 and TransferCase_Parallel about 8. Printed as typed they would break or would not run,
+and nothing in the check is to be softened to make them read better.
 
 ### 5.4 Where the user gives the inputs and reads the result
 
@@ -2269,7 +2320,8 @@ Their typed torques, 5 and 10 N·m, are far beyond PLA teeth of module 1 to 2 an
 - **The torque** is the Shafts sheet's, as today. F4 asks for nothing new there.
 - **The allowable stress** is a new Box setting after Nozzle and before Units:
   `Setting("allowable", "Allowable stress", unit="MPa", default="17", numeric=True, note=…)`. Its note: *printed teeth
-  only: the root stress a tooth is rated to; blank: 17, a provisional figure until your own tests*.
+  only: the root stress a tooth is rated to once; blank: 17, provisional (about half a printed PLA data sheet's 35 MPa
+  within the layers) until you type your own figure here*.
   - It is read like Nozzle (`model._read_box`, `workbook/model.py:394`): a number above zero, else an error at its
     cell, *Allowable stress must be more than zero (got 'x').*, and the checks then use 17.
   - `model.Box` gains `allowable = ""`, and `checked_allowable(box)` gives the checked text, as `checked_nozzle`
@@ -2285,9 +2337,13 @@ Their typed torques, 5 and 10 N·m, are far beyond PLA teeth of module 1 to 2 an
 
 **What the user reads.**
 
-- **The form's Derived panel**, for a printed spur, helical, herringbone or ring gear only: one row, *Holds, once* —
-  *0.58 N·m · 39 N* (A1). That is the torque about its own axis and the force at its pitch circle, at its own toothed
-  width.
+- **The form's Derived panel**, for a printed spur, helical, herringbone or ring gear only: one row, *Holds once* —
+  *about 0.58 N·m · 39 N at 17 MPa* (A1). That is the torque about its own axis and the force at its pitch circle, at
+  its own toothed width, for a single load: the row says *about* and the stress, by §5.1's own rule.
+  - **A ring** past Y_S's range (nearly every ring) adds *· stress factor past its range* to its value, and a ring
+    whose tips lie inside its base circle reads *not rated: tips inside the base circle* (M1). The full sentence of
+    each goes on one line under the rows, after any line F2 puts there; if C's suite run finds that moves a pin of
+    `_measured_lines`, the sentence goes in the row's value instead.
   - In pair mode each gear's column has its own.
   - The row is added in `gui._rows_with_span` (`gui.py:1383`), beside F2's span row, **not in
     `ui_text.derived_rows`**, whose last rows are pinned (`tests/test_ui_text.py:4520`: *Bore as cut* and *Flat as cut*
@@ -2298,30 +2354,50 @@ Their typed torques, 5 and 10 N·m, are far beyond PLA teeth of module 1 to 2 an
 - **The warning at a Meshes row** (B), in the house's form, the pair first, as F1's clearance warning is said
   (`checks.py:514`):
 
-  > Meshes row 2: Sun and Planet: Printed, the teeth would take about 230 N at the pitch circle in L, 13.6 times the
-  > 17 N one tooth of Planet holds at 17 MPa (a planet's teeth bend both ways, so 0.7 of a gear's; the load is shared
-  > by 3 planets, one taking 1.25 of an even share); use a larger module, a wider face or less torque. A static
-  > estimate for teeth printed flat with the whole load on one tooth's tip: not a running rating; heat, wear and creep
-  > are not worked out.
+  > Meshes row 2: Sun and Planet: Printed, these teeth take about 230 N at the pitch circle in L, 13.6 times the 17 N
+  > Planet's teeth are rated to take at 17 MPa (provisional: type your own in the Box's Allowable stress): 24 N once,
+  > with an allowance of 0.7 because a planet's teeth are loaded in both directions as the gearbox runs; the load is
+  > shared by 3 planets, one taking 1.25 of an even share. Use a larger module, a wider face, less torque, or your own
+  > tested allowable. An estimate for teeth printed flat, with the whole load on one tooth's tip: not a running rating;
+  > heat, wear and creep are not worked out.
 
-  - With no modes, no *in L*. With no two-way gear, no first bracket. With no planets, no second.
+  - With no modes, no *in L*. With no two-way gear, the figure is the one tooth is *rated to take once*, with no
+    allowance clause. With no planets, no sharing clause. With an allowable typed on the Box, no *provisional* bracket.
   - A ring past Y_S's range adds *(its 0.15 mm fillet is sharper than the stress factor's range, which is carried past
     it)*.
-  - Forces of 10 N and more in whole newtons, under that to 0.1 N; the times to 0.1.
+  - **A ring that is not rated** (M1) is said at its Meshes row whenever the mesh is loaded in some mode, whether or not
+    the share passes 100 %: *Ring is not rated: its tips lie inside its base circle (31.000 mm against 31.010), so the
+    last of each tooth is a straight radial line and its tip load has no involute to act along; the share counts Sun
+    alone.* When the other gear's share passes 100 %, the two are one warning.
+  - Forces of 10 N and more in whole newtons, under that to 0.1 N; the times to 0.1. F4-0 settles the words; these are
+    proposed.
 - **The Results sheet** (`export.results_sheet`, `workbook/export.py:51`), for a printed gearbox whose first input has
   a torque: a block after the box size (`:91`), in the Meshes sheet's order and each mode's.
 
-      Tooth strength (printed) | Mode | Force (N) | Weaker gear | It holds (N) | Share used (%)
-      Sun–Planet               | H    | —         |             |              | no torque here
-      Sun–Planet               | L    | 229.885   | Planet      | 16.851       | 1364.3
+      Tooth strength (printed) | Mode | Force (N) | Weaker gear | Rated to take (N) | Share used (%)
+      Sun–Planet               | H    | —         |             |                   | turns unloaded here
+      Sun–Planet               | L    | 229.885   | Planet      | 16.851 (0.7)      | 1364.3
 
-  - Then a row *Allowable stress (MPa)* with the figure used, and *the Box's* or *blank: provisional*.
+  - **Two wordings where no force is worked out** (the review's S3), told apart by `Motion.shared` and `past_split`:
+    *turns unloaded here* (RangeBox's stage in H and N, a branch that reaches no output, the transfer cases' front branch
+    in 2H) and *the torque past a shared output is not shared out (not worked out)* (the transfer cases' loaded front
+    branch, FDrive–FIdler–FOut, in 4H and 4L, which does carry torque). *No torque here* is never said.
+  - A gear's figure with the 0.7 is marked *(0.7)*, the allowance for teeth loaded in both directions, and a ring past
+    Y_S's range *(stress factor past its range)*.
+  - **A worst-mesh row**, *Worst share*: the largest share over every rated mesh and mode, *Sun–Planet in L, 1364.3 %*.
+    **An unrated mesh, or a mesh with a ring that is not rated, never stands as the worst on its own figure**: its share
+    over the gear that rates may be the worst and is then named with *(Ring not rated)*, and every mesh or gear not rated
+    is listed after the worst by name with its reason: *not rated: Ring (tips inside its base circle)*. With nothing
+    rated, the row reads *—* and the list.
+  - Then a row *Allowable stress (MPa)* with the figure used, and *the Box's* or *blank: provisional, type your own in
+    the Box's Allowable stress*.
   - A row for each bevel or crossed mesh: *not rated: a bevel pair* (or *a crossed pair*).
-  - A note row: *A static estimate for teeth printed flat, the whole load on one tooth's tip: not a running rating.
-    Heat, wear, creep and load across layers are not worked out.*
+  - A note row: *An estimate for teeth printed flat, the whole load on one tooth's tip: rated to take once, not a running
+    rating. Heat, wear, creep and load across layers are not worked out.*
   - A machined gearbox's Results are what they are today.
-- **The README** gains *What a tooth holds* under *Printed gears* (`README.md:76`): the formula in words; the 17 MPa and
-  how to replace it; the planets' and idlers' 0.7 and the planets' 1.25; and what is not covered (heat, wear, creep,
+- **The README** gains *What a tooth holds* under *Printed gears* (`README.md:76`): the formula in words; the 17 MPa,
+  its basis (about half a printed PLA data sheet's 35 MPa within the layers) and how to replace it; that a ring past
+  Y_S's range, and a ring with its tips inside its base circle, are said as such; the planets' and idlers' 0.7 and the planets' 1.25; and what is not covered (heat, wear, creep,
   fatigue, layers, infill above module 2, bevel and crossed pairs, couplings).
 - **The Workbook panel** says nothing new. Its Process line stays as F1 pinned it.
 
@@ -2349,12 +2425,13 @@ known Tk font test, and these six.
 |---|---|---|
 | `tests/test_workbook_model.py:27-29` | the Box's titles | *Allowable stress (MPa)* between *Nozzle (mm)* and *Units* |
 | `tests/test_printed_rule.py:535` | Process after Efficiency, Units after Nozzle | Process after Efficiency, Allowable after Nozzle, Units after Allowable |
-| `tests/test_printed_workbook.py:296-311`, three cases (RangeBox, planetary_4to1, Risky_Placements) | a printed gearbox says the gearbox warnings its machined twin says | the same, once F4's strength warnings are set aside by their sentence's mark; F4's own are pinned in B's file |
+| `tests/test_printed_workbook.py:296-311`, three cases (RangeBox, planetary_4to1, Risky_Placements) | a printed gearbox says the gearbox warnings its machined twin says | machined's diagnostics plus exactly B's strength sentences for that gearbox, in order (the review's S7), each pinned with its figures |
 | `tests/test_ui_text.py:4520` | *Bore as cut* and *Flat as cut* the last rows | **does not move**: the row goes in `gui.py` |
 
 - **Why none is a loosening.** The first two pin the Box's settings and their order, and gain one. The third pins §2.3's
-  ruling: no pair interference warning, and W7's sentence as it is. F4 touches neither. The test sets aside one named
-  kind of warning that the plan adds, and B pins that kind elsewhere with its figures.
+  ruling: no pair interference warning, and W7's sentence as it is. F4 touches neither. The test then asserts that a printed gearbox
+  says exactly what its machined twin says plus B's strength sentences for it, in order, which is stricter than setting
+  aside whatever carries a mark.
 - **F4-0 runs the suite again at its interface commit** and lists any other line that moves, with its reason.
 
 ### 5.6 F4, ready to execute
@@ -2365,15 +2442,17 @@ pure and small, and both packages need it. So A and F4-0 are one run.
 
 1. **Pins first, in their own commit**, at the commit F4-0 starts from, in `tests/test_printed_rule.py`: the machined
    `results_sheet` rows and diagnostics of RangeBox, RangeBox_Fixed and planetary_4to1, and of the committed
-   Risky_Placements and Reducer_12to1 read machined, each with its typed torque, by hash as `BEFORE_W8` does. They must
-   hold at every later commit.
+   Risky_Placements and Reducer_12to1 read machined, each with its typed torque, by hash as `BEFORE_W8` does, the
+   `results_sheet` called with a fixed `when` so its timestamp does not break the hash. They must hold at every later
+   commit.
 2. **`src/gear_generator/gears/strength.py`, new and whole** (pure):
    - `ALLOWABLE_DEFAULT = 17.0` (MPa), `TWO_WAY = 0.7`, `PLANET_SHARE = 1.25`, `TANGENT_OUTSIDE = 30.0` and
      `TANGENT_RING = 60.0` (degrees), `QS_RANGE = (1.0, 8.0)`;
    - `ToothRating`, frozen: `rated`, `why`, `y_f`, `y_s`, `s_fn`, `h_f`, `alpha_f_deg`, `rho_f`, `q_s`,
      `past_range`, `module` (normal), `width` (toothed, mm), `d` (pitch, mm), `teeth` (z, or z_n);
-   - `rate(derived, recipe) -> ToothRating`, which never raises: a bevel gear, a gear whose tangent point is off its
-     fillet, or one that does not derive is `rated=False` with its sentence;
+   - `rate(derived, recipe) -> ToothRating`, which never raises: a bevel gear, **a ring whose tips lie inside its base
+     circle (M1)**, **a pointed tooth**, a gear whose tangent point is off its fillet, or one that does not derive is
+     `rated=False` with its sentence;
    - `holds(rating, allowable=ALLOWABLE_DEFAULT, width=None, two_way=False) -> float` (N) and
      `torque_held(rating, force) -> float` (N·m);
    - `allowable_mpa(text) -> float`, blank 17.
@@ -2381,8 +2460,15 @@ pure and small, and both packages need it. So A and F4-0 are one run.
    `checked_allowable`, `_read_box`'s read and its error, `to_sheets`' key and `template`'s 17, with §5.5's two pinned
    lines, in one commit. That is F1's lesson: `test_workbook_model.py` and `test_printed_rule.py` are F4-0's alone, and
    `template` writing 17 needs `_read_box` reading it back for `test_printed_workbook.py:126-136` to hold.
-4. **The words**, written into the note: the Meshes-row warning in each variant, the Results block's headers and rows,
+4. **The rules the review asked stated in the interface:** M1's (a ring whose tips lie inside its base circle not rated,
+   named, the share over the other gear, the worst-mesh row), a pointed tooth not rated, the two *not worked out*
+   wordings, and R1's 0.7 as an allowance for running.
+5. **The words**, written into the note: the Meshes-row warning in each variant (*rated to take once*, *provisional*
+   with where to type one, the unrated ring), the Results block's headers and rows,
    the form's row label and value, the Box's note and error, and the README's paragraph.
+6. **A's note says** (the review's S4): the app's tooth against ISO's own generated tooth (§5.1: +15 to +32 % in Y_F,
+   +18 to +38 % with Y_S); the 30° section reading up to about 7 % under the beam's worst on small pinions; the
+   normal-section fillet's bound (Y_S within about 3 % at 20°); and which of its sources it read.
 
 F4-0's files: `docs/notes-printed/F4-INTERFACES.md` (new), `src/gear_generator/gears/strength.py` (new),
 `workbook/schema.py`, `workbook/model.py`; tests: a new `tests/test_strength.py`, `tests/test_printed_rule.py` (the
@@ -2390,7 +2476,8 @@ pins and line 535) and `tests/test_workbook_model.py` (27-29).
 
 F4-0's tests, in `tests/test_strength.py`:
 
-- A1 to A8;
+- A1 to A10: A9 the helical ring at its transverse diameter, A10 a ring with its tips inside its base circle, not rated,
+  with its sentence; and a pointed tooth not rated;
 - Y_S's formula at a hand-worked point;
 - at Q the fillet's tangent is at 30° (60° on a ring) to the centreline, and Q lies on the drawn arc;
 - α_F = α_a − γ_a outside and α_a + γ_a on a ring, on recipe A;
@@ -2412,7 +2499,11 @@ the user.
       additive;
     - `workbook/export.py`: the Results block, printed only.
   - Tests: a new `tests/test_strength_workbook.py`:
-    - B1 to B7, with Idler_Train;
+    - B1 to B8, with Idler_Train; B8's three Risky_Placements meshes, so a force taken at a helical ring's z · m_n fails;
+    - a planetary or ring pair with a ring of 33 teeth: the ring named as not rated at its Meshes row with its reason,
+      the share counting the pinion alone, and the Results' worst-mesh row listing it;
+    - the Results' two wordings: RangeBox's *turns unloaded here* in H and N, TransferCase_Parallel's front branch *not
+      shared out* in 4H and 4L;
     - RangeBox not worked out in H and N;
     - a machined gearbox told nothing, its Results unchanged;
     - a typed allowable of 34 halving the shares, and a bad one leaving 17;
@@ -2446,7 +2537,7 @@ in that run's window, so the coordinator may prefer to land it after.
 **Done when:**
 
 - F4-0's pins hold and its interface is reviewed.
-- B and C are in with their tests; A1 to A8 and B1 to B7 are pinned; the suite passes but for the known font-width test.
+- B and C are in with their tests; A1 to A10 and B1 to B8 are pinned; the suite passes but for the known font-width test.
 - §5.5's three lines are the only pinned lines that moved, each named in its package's note.
 - The README, `design/UI-DESIGN.md` and the boards say what the row, the warning and the block mean.
 - The stage is reviewed by a subagent, and its should-fixes are done.
@@ -2466,9 +2557,11 @@ needed. **No SolidWorks minutes.**
 
 *Standing on an assumed answer, so the code can go ahead:*
 
-- **D7 (H1).** 17 MPa: the Box's blank, written by *New workbook…*, a typed figure honoured. It is a third of the roughly
-  50 MPa a PLA datasheet gives, and the stress it is held against includes the fillet's Y_S, so it is a third at the
-  notch. Changing it later is one constant and its pins; nothing built moves, since the figure writes nothing.
+- **D7 (H1).** 17 MPa: the Box's blank, written by *New workbook…*, a typed figure honoured, provisional and the
+  user's to replace. It is about half the 35 MPa a printed PLA data sheet gives for tensile strength within the layers
+  (under a quarter of its 76 MPa bending strength), and the stress it is held against includes the fillet's Y_S and puts
+  the whole load on one tip. It is a figure for one load, not for running: printed PLA's fatigue strength is reported
+  at 10 to 25 % of its tensile strength. Changing it later is one constant and its pins; nothing built moves, since the figure writes nothing.
 - **H2.** ISO 6336-3's Method B quantities on the app's drawn tooth, the whole load at one tooth's tip, Y_ε = Y_β = 1,
   and every K factor 1.
 - **H3.** A helical or herringbone gear on ISO's virtual spur gear, drawn by the app's spur routines and keeping the
@@ -2476,7 +2569,10 @@ needed. **No SolidWorks minutes.**
 - **H4.** A ring with the 60° tangent, Y_S carried past q_s = 8, and said.
 - **H5.** Kγ = 1.25 for two planets or more. IEC 61400-4 is reported to use 1.25 for four planets, and AGMA 6123 less
   for three with a floating member (both from secondary sources); a printed carrier floats nothing.
-- **H6.** 0.7 for teeth that bend both ways: idlers and planets.
+- **H6.** 0.7 for teeth loaded in both directions as the gearbox runs, idlers and planets: **ruled (R1) by the
+  coordinator, 2026-11-18, the user's to overrule**, and never called *once*.
+- **M1's rule, ruled by the coordinator, 2026-11-18, the user's to overrule:** a ring whose tips lie inside its base
+  circle is not rated, named, with its reason (§5.1, §5.4).
 - **H7.** §5.2's force rules: the larger side; a shaft driving two meshes gives each its whole torque; an idler passes
   the largest force; *not worked out* where kinematics gives no torque.
 - **H8.** A warning only past 100 %, once per Meshes row, naming its worst mode; the Results sheet shows every share.
@@ -2491,9 +2587,12 @@ needed. **No SolidWorks minutes.**
 
 - **U-a.** Their own allowable, from a printed tooth broken in a jig or a pair run to failure: one Box cell.
 - **U-b.** Whether helical teeth should be derated for load across layers, and wide roots for infill above module 2.
-- **U-c.** Their torques. Every committed printed gearbox with a torque reads 6 to 23 times over (§5.3), and RangeBox
-  13.6 times at 10 N·m. Was 10 N·m a placeholder, or does RangeBox want a larger module, a wider face or another
-  material?
+- **U-c.** Their torques. **The committed printed gearboxes read 6 to 23 times over because their torques were typed
+  for steel**, before Printed existed (§5.3), and RangeBox reads 13.6 times at 10 N·m. Is 10 N·m what a printed
+  RangeBox must carry, or does it want a larger module, a wider face or another material? Two things go with the
+  question: every printed workbook read with a blank Process and no record (printed by D11) and an input torque now
+  carries these warnings, the user's own copies of RangeBox among them; and a planet's 0.7 is an allowance for running
+  applied to figures otherwise rated to take once (R1).
 - **U-d.** Whether the form should take a typed allowable (a new field that is not the spec's) or a torque.
 - **U-e.** Whether a share near the limit, say over 80 %, should also be said.
 
@@ -3187,3 +3286,58 @@ F1 to F3. Each change is by section, with why.
   goes from *two agent runs and the review* to six to eight, with no SolidWorks minutes.
 - **§5.7, the decisions, new.** D7 and H2 to H12 on assumed answers, none needing the user before code, and U-a to
   U-e to ask afterwards: U-c, the gearboxes' typed torques, above all.
+
+
+## Changes after F4's review
+
+2026-11-19. To F4's review (the last section of `docs/PLAN-PRINTED-REVIEW.md`, `0c7c479`, which reproduced A1 to A8 and B1
+to B7 to the digit and the formula by its own derivation) and the coordinator's rulings on it. Each change is by section,
+with why.
+
+**The two must-fixes:**
+
+- **M1, a ring whose tips lie inside its base circle** (§5.1, §5.2, §5.4, §5.6, §5.7). Ruled by the coordinator,
+  2026-11-18, the user's to overrule: **not rated.** The condition is `InternalDerived.tip_below_base` (d_a < d_b) on the
+  ring's section or a helical ring's virtual ring, every ring of 33 teeth or fewer at 20°. Its tip corner is on the
+  radial line the app draws there, where no involute normal exists. What is shown: *not rated* and the reason, by name,
+  on the form's row, at the Meshes row whenever the mesh is loaded (whether or not the other gear's share passes
+  100 %), and on the Results sheet. In a mesh the share counts the gear that rates alone, a true lower bound, and says
+  so. The Results' new *Worst share* row never lets an unrated mesh stand on its own figure: it names the worst rated
+  share (marked when a ring in that mesh is not rated) and lists every mesh or gear not rated after it, by name, with its
+  reason. A10 pins it; a pointed tooth is not rated either (S6).
+- **M2, Risky_Placements** (§5.3, §5.1, U-c). It reads 14.3 times (G5–G6, 1428.0 %), not 14.9. The first revision's
+  script took the helical ring G6's force at z · m_n (72 mm) instead of its transverse 76.621 mm, against §5.1's own
+  rule. Two rows are added, recomputed for this revision from the app's geometry and kinematics at `11f2a25`:
+  - **A9**, a helical ring m 2, z 36, β 20°, face 10, printed: z_n 42.723, d 76.6208, Y_F 2.0408, Y_S 2.6948, q_s 8.500
+    (past the range), rated to take 61.823 N and 2.3685 N·m once;
+  - **B8**, Risky_Placements printed at 5 N·m: G5–G6 723.563 N (G6's own side 709.092), G5 50.670 and G6 61.823 N,
+    1428.0 %; G1–G2 335.605 N, 662.3 %; the herringbone G3–G4 453.154 N at b 12, 721.2 %.
+
+**The rulings:**
+
+- **R1** (§5.2, §5.4, H6): the 0.7 stays, worded as an allowance for a tooth loaded in both directions as the gearbox
+  runs, never as part of a figure called *once*. The warning gives the gear's figure once and the allowance beside it;
+  the Results mark it *(0.7)*. B1 to B8's figures are unchanged.
+
+**The review's other points:**
+
+- **17 MPa's basis** (D7, H1, the Box's note, the README): about half the 35 MPa a printed PLA data sheet gives within
+  the layers (Bambu PLA Basic V3.0, by search summaries), not *a third of about 50*. It stays provisional and the user's
+  to replace, and the figure stays labelled a single load, since printed PLA's fatigue strength is far lower.
+- **Three figures corrected** (§5.1): the app's tooth is 15 to 32 % weaker in Y_F than ISO's own generated tooth (18 to
+  38 % with Y_S), not 7 to 15 % against Lewis as recalled; a helical tooth's shear between layers is about 0.17 σ_F, from
+  the bending stress itself, not 0.035 (no derating still right); outside gears' q_s tops out at 3.54, not 3.86. Also
+  stated: the 30° section can read up to about 7 % under the beam's worst on small pinions, the normal-section fillet's
+  bound (Y_S within about 3 %), and infill's part as the seam behind the walls.
+- **Y_S past its range on nearly every ring** is said where a ring's figure is read: the form's row, the warning and the
+  Results row.
+- **The wording** (§5.4): the form's row says *about* and *at 17 MPa*; the warning says *rated to take once*, not
+  *holds*, calls a blank allowable provisional and says where to type one, and names the user's own tested allowable as
+  a remedy; the Results sheet says *turns unloaded here* or *not shared out past a shared output*, never *no torque
+  here*, which was false of the transfer cases' loaded front branch.
+- **The committed printed gearboxes read 6 to 23 times over because their torques were typed for steel** (§5.3, U-c),
+  said plainly for the user's list, with the review's best-estimate margins and the D11 consequence for the user's own
+  copies of RangeBox.
+- **Pins and tests** (§5.5, §5.6): F4-0's Results pins pass a fixed `when`; B's edit to `test_printed_workbook.py`
+  asserts the exact added sentences in order; F4-0's interface states M1's rule, the pointed tooth, the two wordings and
+  R1; A's note carries S4's comparisons.
