@@ -540,3 +540,105 @@ def test_the_stubs_are_importable_and_neutral_until_their_packages_fill_them():
     for stub, owner in ((mesh.mesh_strengths, "package B"), (mesh.warning_sentence, "package B"),
                         (ui_text.holds_row, "package C")):
         assert "F4-0's stub" in stub.__doc__ and owner in stub.__doc__
+
+
+
+# -- §5.3's mesh rows, worked here from the app's own kinematics and A's figures (package B pins them through its own
+# -- workbook/strength.py; these hold that A's maths and checks.check's torques give them, row by row, by §5.2's rules)
+
+def _printed_assessment(spec, diagnostics=()):
+    from gear_generator.workbook import assess
+    spec = replace(spec, box=replace(spec.box, process="printed"), source_path="C:\\B\\W.xlsx")
+    return assess.assess(spec, list(diagnostics), "C:\\Out\\")
+
+
+def idler_train(torque="1"):
+    """§5.3's Idler_Train: In (input, 1000 rpm) at the origin, Idl at X 33.75, Out (output) at X 82.5, all Z+; spur
+    gears of module 1.5 and face 10, G1 (z 20) on In, GI (z 25) on Idl, G3 (z 40) on Out; G1–GI and GI–G3."""
+    from gear_generator.workbook.model import Box, Gear, GearboxSpec, Mesh, Shaft
+    return GearboxSpec(
+        box=Box(name="Idler_Train", pressure_angle="20", efficiency="98", process="printed"),
+        shafts=(Shaft("In", "frame", "0", "0", "0", "Z+", "input", "", "1000", torque, row=2),
+                Shaft("Idl", "frame", "33.75", "0", "0", "Z+", "", row=3),
+                Shaft("Out", "frame", "82.5", "0", "0", "Z+", "output", row=4)),
+        gears=(Gear("G1", "In", "0", "spur", "external", "20", "1.5", "", "10", "", row=2),
+               Gear("GI", "Idl", "0", "spur", "external", "25", "1.5", "", "10", "", row=3),
+               Gear("G3", "Out", "0", "spur", "external", "40", "1.5", "", "10", "", row=4)),
+        meshes=(Mesh("G1", "GI", row=2), Mesh("GI", "G3", row=3)))
+
+
+def _placed(a, gear):
+    placed = a.report.layout.placed[gear]
+    row = next(g for g in a.spec.gears if g.id == (placed.row or gear))
+    spec = row.gear_spec(a.spec.box)
+    return placed, strength.rate(placed.derived, kind_for(spec).recipe_for(spec))
+
+
+def test_the_planetary_rows_b1_b2_and_b6_b7():
+    """A planetary mesh: the member's torque over d N, × K_γ 1.25; the planet two-way (0.7)."""
+    from test_workbook_planetary import planetary_4to1
+    from workbook_fixtures import range_box
+    a = _printed_assessment(planetary_4to1())
+    m = a.report.motion
+    (sun_p, sun), (_, planet), (ring_p, ring) = (_placed(a, g) for g in ("Sun", "Planet copy 1", "Ring"))
+    assert (m.torques["S"], m.torques["P"], m.held["R"]) == (2.0, 0.0, pytest.approx(5.7624))
+    sun_planet = 2000 * m.torques["S"] / (sun_p.derived.d * 3) * strength.PLANET_SHARE
+    planet_ring = 2000 * m.held["R"] / (ring_p.derived.d * 3) * strength.PLANET_SHARE
+    held = (strength.holds(sun, width=10), strength.holds(planet, width=10, two_way=True), strength.holds(ring, width=10))
+    assert (round(sun_planet, 3), round(planet_ring, 3)) == (92.593, 88.926)
+    assert tuple(round(h, 3) for h in held) == (20.620, 14.434, 29.492)
+    assert round(100 * sun_planet / held[1], 1) == 641.5 and round(100 * planet_ring / held[1], 1) == 616.1
+
+    a = _printed_assessment(range_box())
+    low = next(mode for mode in a.report.modes if mode.name == "L").motion
+    assert all("Planet" not in mode.motion.torques for mode in a.report.modes if mode.name in ("H", "N"))
+    (sun_p, sun), (_, planet), (ring_p, ring) = (_placed(a, g) for g in ("Sun", "Planet copy 1", "Ring"))
+    sun_planet = 2000 * low.torques["Input"] / (sun_p.derived.d * 3) * strength.PLANET_SHARE
+    planet_ring = 2000 * low.held["Ring"] / (ring_p.derived.d * 3) * strength.PLANET_SHARE
+    held = (strength.holds(sun, width=10), strength.holds(planet, width=10, two_way=True), strength.holds(ring, width=10))
+    assert (round(sun_planet, 3), round(planet_ring, 3)) == (229.885, 220.782)
+    assert tuple(round(h, 3) for h in held) == (32.982, 16.851, 37.989)
+    assert round(strength.holds(planet, width=10), 3) == 24.072
+    assert round(100 * sun_planet / held[1], 1) == 1364.3 and round(100 * planet_ring / held[1], 1) == 1310.2
+
+
+@pytest.mark.parametrize("torque, force, share", [("1", 66.667, 230.0), ("0.25", 16.667, 57.5)])
+def test_the_idler_rows_b3_to_b5(torque, force, share):
+    """The idler (shaft torque exactly 0) passes on G1's force, the larger, and is two-way."""
+    a = _printed_assessment(idler_train(torque))
+    m = a.report.motion
+    assert m.torques["Idl"] == 0.0 and m.torques["Out"] == pytest.approx(1.9208 * float(torque))
+    (g1_p, g1), (_, gi), (g3_p, g3) = (_placed(a, g) for g in ("G1", "GI", "G3"))
+    from_g1, from_g3 = 2000 * m.torques["In"] / g1_p.derived.d, 2000 * m.torques["Out"] / g3_p.derived.d
+    assert round(from_g1, 3) == force and from_g3 < from_g1
+    if torque == "1":
+        assert round(from_g3, 3) == 64.027
+    held = (strength.holds(g1, width=10), strength.holds(gi, width=10, two_way=True), strength.holds(g3, width=10))
+    assert tuple(round(h, 3) for h in held) == (38.614, 28.984, 44.485) and round(strength.holds(gi, width=10), 3) == 41.406
+    assert round(100 * from_g1 / min(held[:2]), 1) == share == round(100 * from_g1 / min(held[1:]), 1)
+    if torque == "1":                                         # §5.3: a typed 34 MPa halves every share, B3 115.0 %
+        assert round(100 * from_g1 / strength.holds(gi, allowable=34.0, width=10, two_way=True), 1) == 115.0
+
+
+def test_risky_placements_rows_b8_at_the_helical_rings_transverse_diameter():
+    """M2: G6, a helical ring, gives its force at d 76.6208, never z mn = 72; the herringbone at the faces' overlap."""
+    from pathlib import Path
+    from gear_generator.workbook import geometry, model, xlsx
+    book = Path(__file__).resolve().parent / "fixtures" / "excel-windows" / "Risky_Placements.xlsx"
+    spec, diagnostics = model.from_book(xlsx.read(str(book)))
+    a = _printed_assessment(spec, diagnostics)
+    m = a.report.motion
+    want = {("G1", "G2"): (335.605, None, 10.0, 50.670, 56.971, 662.3),
+            ("G3", "G4"): (453.154, None, 12.0, 62.836, 71.137, 721.2),
+            ("G5", "G6"): (723.563, 709.092, 10.0, 50.670, 61.823, 1428.0)}
+    for (ga, gb), (force, other, width, held_a, held_b, share) in want.items():
+        (pa, ra), (pb, rb) = _placed(a, ga), _placed(a, gb)
+        sides = (2000 * m.torques[pa.shaft] / pa.derived.d, 2000 * m.torques[pb.shaft] / pb.derived.d)
+        b = min(geometry.faces_overlap(pa, pb), ra.width, rb.width)
+        held = (strength.holds(ra, width=b), strength.holds(rb, width=b))
+        assert round(max(sides), 3) == force and b == width
+        assert (round(held[0], 3), round(held[1], 3)) == (held_a, held_b)
+        assert round(100 * max(sides) / min(held), 1) == share
+        if other is not None:
+            assert round(min(sides), 3) == other and round(rb.d, 4) == 76.6208
+            assert round(100 * 2000 * m.torques[pb.shaft] / 72.0 / held[0], 1) != share     # the slip M2 names
