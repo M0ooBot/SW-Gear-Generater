@@ -1485,6 +1485,16 @@ def update_variables(sw: SolidWorks, variables: Sequence[GlobalVariable], expect
 
     Refuses unless the active document is the part the record describes: a
     wrong document would take the values silently where names happened to match.
+
+    The part's equations are read first, and planned in both trig units, as the workbook's Update reads them
+    (:func:`_held_unit`, W4 review S2). A part that already holds every global in one unit's form, and that SolidWorks
+    evaluates as that unit would, is *nothing to update* in that unit (degrees first, as the text cannot tell them
+    apart where no global holds trig), and no call that changes or marks the part is made. The units are measured
+    (``detect_trig_units``, which adds an equation and deletes it, and so turns the part's save flag on) only when
+    something is to be set, since the part is about to change anyway: then all is as it was. Before this (the F3
+    demonstration's runs on SolidWorks 2026 and 2024, F3-DEMONSTRATION-RUNS-REVIEW §3, the coordinator's ruling of
+    2026-11-19), a quiet Update values measured first and left the part marked modified with nothing written, and
+    Print files then refused it as changed in SolidWorks and not saved.
     """
     _gate(sw)
     active = sw.active_document()
@@ -1496,9 +1506,15 @@ def update_variables(sw: SolidWorks, variables: Sequence[GlobalVariable], expect
     result = UpdateResult(document=active.title)
     sw.begin_build()
     try:
-        result.trig = sw.detect_trig_units()
         current = sw.equations()
-        changes = planned_changes(current, variables, result.trig)
+        by_unit = {t: planned_changes(current, variables, t) for t in (DEGREES, RADIANS)}
+        try:
+            values: Optional[Dict[str, float]] = dict(sw.equation_values())
+        except (SolidWorksError, EquationError):
+            values = None               # its values not read: measured as before, never judged quiet on the text alone
+        held = _held_unit(by_unit, values, variables) if values is not None else ""
+        result.trig = held or sw.detect_trig_units()
+        changes = by_unit[result.trig]
         names = {name for name, _ in changes}
         result.unchanged = [v.name for v in variables if v.name not in names]
         try:

@@ -373,6 +373,21 @@ def test_a_part_changed_in_solidworks_and_not_saved_is_modified_and_nothing_is_w
     assert result.active_restored is True and sw.active.path == USERS
 
 
+def test_print_files_after_a_quiet_update_values_is_not_refused_as_changed(tmp_path, findings_on):
+    """F3-DEMONSTRATION-RUNS-REVIEW §3 (the coordinator's ruling, 2026-11-19): a quiet Update values from the strip, every
+    value already the form's, turns no save flag on, so Print files does not then say the part is changed in SolidWorks
+    and not saved; before, the units were measured first, which marked the part, and it was refused MODIFIED."""
+    from gear_generator.gears.base import GlobalVariable
+    findings_on(PART_WINDOW_READ="Visible")
+    sw = fake_with(windows=[PART], active=PART)
+    sw.open_document(PART)
+    sw.calls.clear()
+    result = swbuild.update_variables(sw, [GlobalVariable(n, e) for n, e in VARIABLES], PART)
+    assert result.ok and result.changed == [] and "detect_trig_units" not in names(sw)
+    printed = swbuild.print_parts(sw, plan_for(tmp_path))
+    assert printed.refusal is None and written_files(printed) == ["Gear_m1.5_N20_P.step"]
+
+
 def test_globals_that_differ_from_the_record_refuse_with_the_first_one(tmp_path, findings_on):
     sw = fake_with()
     sw.saved[_key(PART)] = ([equation_text("No. of Teeth", "20"), equation_text("Module", "1.5"),

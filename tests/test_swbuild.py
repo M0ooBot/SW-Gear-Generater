@@ -567,6 +567,7 @@ class FakeSolidWorks:
 
     def add_global_variable(self, name, expression):
         self._log("add_global_variable", name, expression)
+        self._touch()                  # an equation added marks the document modified, as detect_trig_units' add does
         self.equations_text.append(f'"{name}"= {expression}')
         return len(self.equations_text) - 1
 
@@ -2806,6 +2807,47 @@ def test_nothing_to_change_means_no_rebuild():
     fake = _built_fake(spec)
     result = swbuild.update_variables(fake, SPUR.variables(spec, SPUR.derive(spec)), PATH)
     assert result.changed == [] and "rebuild" not in names(fake)
+
+
+# A call that changes a document or turns its save flag on (detect_trig_units adds an equation and deletes it, which
+# SolidWorks 2026 and 2024 read as modified: swbuild.py's _read_live note, W4 review S2, the F3 demonstration's runs).
+MARKING = {"detect_trig_units", "add_global_variable", "set_global_variable", "set_rebuild_suppressed", "suppress",
+            "rebuild", "link_dimension", "save_as"}
+
+
+@pytest.mark.parametrize("trig", [DEGREES, RADIANS])
+def test_a_quiet_update_values_makes_no_changing_call_and_leaves_the_save_flag_as_it_was(trig):
+    """F3-DEMONSTRATION-RUNS-REVIEW §3, the coordinator's ruling of 2026-11-19: the part's equations are read first and,
+    when it already holds every global, nothing that marks it is called; before, the units were measured first and the
+    part read modified though nothing was written. Its unit is the one its text and values are in."""
+    spec = GearSpec(pressure_angle="20")
+    fake = FakeSolidWorks(trig=trig)
+    swbuild.build(fake, plan(spec), never_exists)
+    fake.calls.clear()
+    fake.touched.discard(_key(PATH))                  # saved: its save flag off
+    fake.active = DocInfo(title="Gear_m1.5_N25.SLDPRT", path=PATH, doc_type=1)
+    result = swbuild.update_variables(fake, SPUR.variables(spec, SPUR.derive(spec)), PATH)
+    assert result.ok and result.changed == [] and result.trig == trig
+    assert not set(names(fake)) & MARKING, names(fake)
+    assert _key(PATH) not in fake.touched and fake.memory.get(_key(PATH)) == fake.saved.get(_key(PATH))
+
+
+@pytest.mark.parametrize("trig", [DEGREES, RADIANS])
+def test_an_update_values_that_sets_a_value_measures_the_units_first_as_before(trig):
+    spec = GearSpec()
+    fake = FakeSolidWorks(trig=trig)
+    swbuild.build(fake, plan(spec), never_exists)
+    fake.calls.clear()
+    fake.touched.discard(_key(PATH))
+    fake.active = DocInfo(title="Gear_m1.5_N25.SLDPRT", path=PATH, doc_type=1)
+    wanted = spec.with_values(teeth="40")
+    variables = SPUR.variables(wanted, SPUR.derive(wanted))
+    result = swbuild.update_variables(fake, variables, PATH)
+    assert result.ok and result.changed == ["No. of Teeth"] and result.trig == trig
+    called = names(fake)
+    assert called.count("detect_trig_units") == 1
+    assert called.index("detect_trig_units") < called.index("set_global_variable") and called.count("rebuild") == 1
+    assert _key(PATH) in fake.touched
 
 
 @pytest.mark.parametrize("built,wanted,word", [
