@@ -20,8 +20,8 @@ worktree. No SolidWorks and no Excel.
 failed by design once B's body was in; A's author has since retired it at the coordinator's ruling. **Probe
 self-checks**, each **0 failed**: `f1_demonstration`, `f2_demonstration`, `f2_probes`, `f3_demonstration`,
 `w9b_demonstration`, `w9c_demonstration`, `w9d_demonstration`, `w9c_probes`, `w9d_probes`, `workbook_assembly_check`.
-F4-0's machined pins hold. Five mutations of the module (no 1.25, no idler passing, no seventh state, no two-way, and
-others tried by hand) each turn `test_strength_workbook.py` red.
+F4-0's machined pins hold. Four mutations of the module (no 1.25, no idler passing, no seventh state, no two-way) each
+turn `test_strength_workbook.py` red.
 
 **The one pinned line moved** is §5.5's third: `test_printed_workbook.py::test_printed_gearboxes_carry_the_gearbox_warnings_they_carry_machined`
 (RangeBox, planetary_4to1, Risky_Placements) now asserts the printed gearbox's diagnostics are exactly its machined
