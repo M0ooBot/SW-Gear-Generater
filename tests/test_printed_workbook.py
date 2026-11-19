@@ -417,12 +417,24 @@ def _footer(a, record, again, up):
     return [re.sub(r"As read at \d\d:\d\d", "As read at HH:MM", f.text), f.ok]
 
 
-def test_a_gearbox_w9_built_opens_machined_with_nothing_changed_and_nothing_written():
+def _today_is(monkeypatch, stamp):
+    """The clock fixed to the day of the record stamp ``stamp`` (``store.now()``'s form): ``ui_text.read_time`` says *14:02*
+    for a stamp of today and *14:02 on 2026-11-18* for another day, so a footer kept from that day reads the same on any
+    day the test runs. Only ``time.localtime()`` with no argument, the one clock read_time asks, is fixed."""
+    import calendar
+    import time
+    fixed = calendar.timegm(time.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ"))
+    real = time.localtime
+    monkeypatch.setattr(time, "localtime", lambda *when: real(*when) if when else real(fixed))
+
+
+def test_a_gearbox_w9_built_opens_machined_with_nothing_changed_and_nothing_written(monkeypatch):
     """What a user's gearbox meets the first time it is opened after F1, under (B): its workbook has no Process row,
     its record (schema 10) lists parts built machined, so the blank reads Machined, as built. Update finds nothing to
     do, Build again… reuses every part, W9d's columns find nothing changed, the footer says what W9 said, and the
     record and the files are left exactly as W9 wrote them (no write is planned; the window writes only on a press)."""
     snap, record, disk, a, up, again = _w9_opened()
+    _today_is(monkeypatch, record.gearbox.user_work.read_at)    # the day W9's footer was kept (it says no date)
     assert json.loads(snap["record"])["link_schema_version"] == 10 and a.read.box.process_cell == ""
     assert a.read.box.process == a.spec.box.process == "machined" and errors(a) == []
     assert all(not j.spec.is_printed() and not j.stem.endswith("_P") for j in a.parts.jobs)
