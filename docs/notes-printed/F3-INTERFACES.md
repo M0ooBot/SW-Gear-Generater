@@ -180,7 +180,7 @@ Stubs, each neutral and each saying so in its docstring:
 | 5 | Print files: `printout.workbook_print`, `print_part`, `bore_figures` (§7) | plans through `classify` (2 and 3); the bore figures from the as-built spec | B |
 | 6 | W9d's carry: `update._bore_mm`, `carry_for` (and `gearbox`'s `occupant`, `free_name`) | `_bore_mm` the hole as cut, Bore plus the as-built allowance; the jobs as-built | B |
 | 7 | K11: `swbuild._blank_meaning`, `_wanted_words` | a blank allowance said as built (§9); the set-back the literal | B |
-| 8 | K3: `ui_text._expression_words`, `_value_under` | a blank allowance said as built, never *type 0.2 in Gears!V2 again* (§9) | C |
+| 8 | K3: `ui_text._expression_words`, `_value_under` | the way back to an allowance an Update changed is typing the old figure, never clearing the cell, never *again* (§9) | C |
 | 9 | The strip: `gui._load_record`, the form's derive, `_update_target`, Update values | §5's contract | C |
 
 B also owns `update._GLOBAL_COLUMN` (`"Bore Allowance"` → `bore_allowance`, `"Bore Flat"` → `flat`) and
@@ -236,7 +236,11 @@ B also owns `update._GLOBAL_COLUMN` (`"Bore Allowance"` → `bore_allowance`, `"
   SolidWorks again.*
 
 **C** (`ui_text`, README):
-- K3, a blank allowance: was *0.2 (from its blank cell, the allowance as built)*, the way back *clear Gears!V2 again*.
+- K3 (as built by C and ruled after F3's review, `F3-REVIEW.md` §6): *Your User Keyway in Gear_m1.5_N20_P is in error in
+  SolidWorks now, after this Update set Bore Allowance 0.2 to 0.3 (Gears!V2) in that part: change your User Keyway to
+  fit, or type 0.2 in Gears!V2.* Never *clear Gears!V2 again*: a blank is as built, and after the Update the part holds
+  0.3, so a cleared cell would keep it. Never *again*: whether the old cell was blank or typed is not known to K3
+  (`DocumentValues.blank_cells` describes the new cell, which is never blank here). The draft said *clear … again*.
 - Explainers (kept out of `EXPLAINER_FIELDS`, as the span's card is, since the card pin iterates it):
   - *Bore allowance*: added to Bore when the hole is cut, on the diameter, so Bore stays your shaft's size. Blank: 0.2 mm
     for a printed gear not yet built (your printer's figure once the coupons give it), 0 machined, and for a gear

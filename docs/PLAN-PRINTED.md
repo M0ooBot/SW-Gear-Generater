@@ -1631,7 +1631,7 @@ recorded `variables` it holds; the review listed six, and the threading adds thr
 | **Print files**, `printout.workbook_print` and `print_part` (`printout.py:292-330`) | It plans through `classify`, which is threaded above, so a printed gearbox with a bore built before F3 is not refused. The list's bore line is taken from the as-built spec: *bore 8* for a part cut at 8, *bore 8 + 0.2 allowance* for one cut at 8.2. | B |
 | **W9d's carry**, `update._bore_mm` (`:3275`, `CarryBody.bore_mm`) and `carry_for` | `_bore_mm` gives the hole as cut, Bore plus the as-built allowance. `carry_for`'s jobs, `gearbox`'s `occupant` and `free_name` are checked in B's tests to see only as-built jobs. | B |
 | **K11**, `swbuild._blank_meaning` (`swbuild.py:5474`) and `_wanted_words` (`:5507`) | For a blank allowance the sentence says *0.2 (from its blank cell, the allowance as built)*. The set-back is the literal. | B |
-| **K3**, `ui_text._expression_words` and `_value_under` (`ui_text.py:5003-5038`) | For a blank cell it says *the allowance as built (from its blank cell)*, never *type 0.2 in Gears!X2 again*. | C |
+| **K3**, `ui_text._expression_words` and `_value_under` (`ui_text.py:5003-5038`) | The way back to the allowance an Update changed is typing the old figure, *type 0.2 in Gears!V2*: never *clear Gears!V2 again*, since a blank is as built and after the Update the part holds the new figure, and never *again*, since whether the old cell was blank or typed is not known there (C's words, ruled after F3's review). | C |
 | **The strip**, `gui._load_record` (`gui.py:1703`), the form's derive, `_update_target` (`gui.py:1745-1764`) and the Update values path (`:1870`, `:1945`) | When a record is open, the form's spec passes `as_built(spec, sidecar.record.variables)` before `derive`. So *Bore as cut* says 8 for a part cut at 8, and no Update values is offered for a bore that did not change. | C |
 
 **A pin that every printed part F1 and F2 built reads unchanged** (F3-0, in `tests/test_printed_rule.py`, beside the
@@ -1818,7 +1818,7 @@ it gets one follow-up round, as W9c's did.
   - The blank allowance's words are §4.1.1's (B).
   - A user's edit of the Bore Sketch's own dimension, rather than the global, is not K11's, as today.
 - **K3.** A feature of the user's in the bore (a keyway) that goes into error after an allowance changes is named,
-  with §4.1.1's blank-cell words (C).
+  with §4.1.1's words: the way back is typing the old figure, never clearing the cell (C).
 - **W9d's carry.** `update._SPEC_COLUMNS` (`:3196`) gains *Bore allowance*, *Drive* and *Flat*, so a part made new by
   them says *its Drive changed*.
   - `_bore_mm` gives the hole as cut, as built (§4.1.1), so W9d's word "bore", a coaxial cylinder of exactly that
@@ -2732,3 +2732,10 @@ session's two rulings on it. Each change is by section, with why.
   by their meshes in the assembly, which F3 does not reconcile. Whether the app should phase by flats later is V3, an
   open question for the user.
 
+## K3's words, after F3's review
+
+2026-11-19. F3's review (`docs/notes-printed/F3-REVIEW.md`, `d394a85`, §6 and S5) found package C's K3 words right and
+the draft wrong, and the coordinator ruled them in. An in-place change of `"Bore Allowance"` needs a typed new figure, so
+after the Update the part holds it and a cleared cell, being as built, would keep it; the way back is therefore *type 0.2
+in Gears!V2*, never *clear Gears!V2 again*, and without *again*, since whether the old cell was blank or typed is not
+known to K3. §4.1.1's table and §4.4 say so.
