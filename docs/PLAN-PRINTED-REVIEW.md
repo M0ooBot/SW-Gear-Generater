@@ -1832,3 +1832,305 @@ note or the packages, without changing the plan:
 
 The restated cost (seventeen to twenty-one agent runs, about 85 SolidWorks minutes) is consistent with F2's measured
 runs.
+
+---
+
+# Review of stage F4 as made ready to execute (2026-11-19)
+
+**Read at `a1a844c` on `printed`** (§5, 5.1 to 5.7, and *Changes before F4*). `src` and `tests` are unchanged since
+`11f2a25`, the commit §5 was read against. Nothing was run on SolidWorks or Excel, and the suite was not run. Every figure
+below is from my own scratch script, which imports the gear and workbook modules from this checkout (import path
+checked). It does not reuse the plan's working:
+- the 30° and 60° points are found from the fillet's centre as `spur.involute_flank` and `internal.involute_flank` give
+  it, with a check that each lies between the arc's two ends;
+- the load line is the numerically differentiated normal of the drawn flank at the tip, crossed with the centreline;
+- Y_F is worked by beam statics, not taken from the formula;
+- the torques are `checks.check`'s own, on each fixture marked printed.
+
+On sources: the MITcalc page was fetched and read. ISO 6336-3:2006's sample PDF from iteh was fetched, but its text could
+not be extracted here. The 2006 range of Y_S and the 60° tangent come from search summaries quoting the iteh preview; AGMA
+2001's 70 % and Bambu's data sheet come from search summaries, and neither document was opened.
+
+## 1. The formula (§5.1)
+
+**Y_F from beam theory.** Take a cantilever tooth with the normal force F_n at its tip, along the flank's normal, at α_F to
+the perpendicular of the centreline. Its bending part F_n cos α_F acts at h_F above the section of chord s_Fn, so
+σ = 6 F_n cos α_F h_F / (b s_Fn²). The normal force is constant along the line of action and T = F_n r_b, so
+F_n = F_t / cos α_n with F_t at the reference circle. Then σ = F_t/(b m_n) · 6 (h_F/m_n) cos α_F / ((s_Fn/m_n)² cos α_n):
+the plan's Y_F, form and all. Like ISO and Lewis, it leaves out the radial part F_n sin α_F, which compresses the root.
+
+**The ISO expressions, checked two ways.**
+- MITcalc's page gives Y_F, Y_S, L = s_Fn/h_Fe and q_s = s_Fn/(2ρ_F) exactly as §5.1 writes them. It writes
+  z_n = z/cos³β_b (so that is §5.1's "secondary source"), and T = π/6 for internal gears in its s_Fn and h_Fe, which is
+  the 60° tangent. The iteh preview, as the search quoted it, gives 1 ≤ q_s < 8 for 2006 and the 30°/60° chord
+  definition.
+- **Independently:** I coded ISO's Method B for a hobbed gear (E, G, H, the ϑ iteration, s_Fn, ρ_F, h_Fe), with the load
+  at the tip and the 1.25/0.38 basic rack. At z 20, x 0 it gives Y_Fa 2.800, Y_Sa 1.553 and Y_Fa·Y_Sa 4.347, which are the
+  chart values I recall from ISO 6336-3 and DIN 3990 (2.8, 1.55, about 4.35). Its α_Fen, 29.5115°, is A3's α_F to the
+  digit, since the tip of an involute is the same however the root was cut. So the expressions and the 30° method are as
+  ISO has them. I could not read the standard: the chart values are from memory, and so is z_n = z/(cos²β_b cos β),
+  which agrees with §5.1.
+
+**The fillet the app draws.**
+- *External gears:* 0.38 × module, `spur.FILLET_FACTOR` (`spur.py:94`). It is used printed or machined alike
+  (`SpurGear.derive`, `:824-828`), and a helical gear's `fillet_factor` is the same.
+- *Rings:* 0.15 × module (`internal.py:127`). A printed ring keeps it: `PRINTED_FILLET_FACTOR` 0.3 only sets the threshold
+  of F1's warning (`internal.py:598-608`).
+- A typed Fillet is used as typed. §5.1 is right on all of this.
+
+**Q on the drawn arc, and the q_s ranges.**
+- *Outside gears:* the 30° point is on the drawn arc in every one of the 1696 I swept (modules 0.5 to 3, teeth 6 to 300,
+  14.5° to 30°, printed and machined, both recipes). q_s runs 1.213 to 3.544. The plan's upper 3.86 is not reproduced,
+  which does not matter.
+- *Rings:* the 60° point is on the arc in every ring that has an involute tip. At 20°, rings of 34 to 150 teeth give q_s
+  7.78 to 8.97; from 14.5° to 30° the range is 7.09 to 11.26. So the ring is past 8 nearly always, as §5.1 says, and
+  carrying the formula on is the right side to err.
+
+**Two shapes §5.1 does not cover.**
+- **A ring whose tips lie inside its base circle: must-fix M1.** At 20° that is every ring of fewer than 34 teeth
+  (d_a = (z − 2)m < z m cos α). They validate with a warning only ("the last of each tooth is a straight radial line"), so
+  they are built. Their tip corner is on the radial line, where there is no involute normal, so §5.1's load line is
+  undefined. The plan's own sweep ("the 60° point on every ring", 20 to 150 teeth) must have done something with them,
+  and it is not written down. F4-0 needs a stated rule. My proposal: load at the involute's start (the base circle, the
+  innermost point the pinion can touch), with α_F taken from the normal there. The other choice is not rated, with a
+  sentence.
+- **Pointed teeth.** A tooth whose flanks meet below the outer diameter (tip thickness ≤ 0) is a validation error ("the
+  teeth come to a point…"), so it is never built. `rate` should still say *not rated* for it rather than load a point
+  past the apex, where my α_F stops matching the identity. Should-fix: name it among `rate`'s reasons.
+
+**Where the app's tooth stands against ISO's.** §5.1 sets the app's Y_F against Lewis "as recalled" and calls the app 7 to
+15 % weaker. Set against ISO's own generated tooth, with the load at the tip, unshifted and with no backlash:
+
+| | ISO Y_Fa | app Y_F | ISO Y_Fa·Y_Sa | app Y_F·Y_S | app over ISO |
+|---|---|---|---|---|---|
+| m 2, z 20 | 2.800 | 3.326 | 4.347 | 5.549 | +19 % (Y_F), +28 % (product) |
+| m 2, z 40 | 2.405 | 2.755 | 4.013 | 4.889 | +15 %, +22 % |
+| m 2, z 100 | 2.195 | 2.546 | 3.939 | 4.656 | +16 %, +18 % |
+| m 1, z 20 (depth 2.4 m) | 2.800 | 3.696 | 4.347 | 6.010 | +32 %, +38 % |
+
+The chord shows why: s_Fn/m is 1.801 on the app's tooth at z 20 against ISO's 1.945. The point stands, but the size is
+larger than §5.1 says. Should-fix: A's note compares with ISO's own tooth, in these figures.
+
+**The 30° section is ISO's convention, not the beam's worst section.** The app's root is a fillet set on a radial line, so
+the tooth narrows toward it. Scanning the fillet for the largest 6 h cos α_F / s², the worst section is at a tangent of
+8° to 16°, and it reads above the 30° section by:
+- A1 5.2 %, A2 3.6 %, A8 (m 1, z 12) 9.2 %, m 2 z 100 2.5 %;
+- 3.9 %, 2.6 %, 7.4 % and 1.7 % once Y_S is taken at each point.
+
+Keeping ISO's 30° is right, since Y_S is calibrated on it, but "exact" in §5.1 is about the geometry. Should-fix: A's note
+says the 30° figure can read up to about 7 % low on small pinions.
+
+**Helical gears.** The virtual spur gear is applied correctly:
+- z_n = z/(cos²β_b cos β) gives A4 23.735, against 23.553 by z/cos³β_b and 24.103 by z/cos³β;
+- normal module, normal pressure angle and normal backlash: the j that `HelicalGear.derive` takes is the normal one, and
+  the section gets j/cos β (`helical.py:345-357`);
+- F_t and d are transverse, and b is the face or a herringbone's 2 × toothed width.
+
+The transverse-drawn fillet's radius in the normal section lies between ρ cos²β and ρ/cos β. At β 20° that moves Y_S by
+at most about 3 % for A4 (exponent 1/(1.21 + 2.3/L) = 0.256), which A's note can say in place of "not exactly ρ".
+
+**Layers, on a helical tooth.** §5.1's 0.035 counts only the shear from the axial force. The root's bending stress itself
+runs along the fillet in the normal section, and at the 30° point that direction leaves the layer plane by
+sin 30° · sin β = 0.17 at 20° (0.21 at 25°). That gives about 0.17 σ_F of shear between layers and 0.03 σ_F across them.
+That is still small: Bambu's PLA Basic sheet gives 31 MPa across layers against 35 in them. So no derating is the right
+answer (H11), but the figure in §5.1 should be the larger one. Should-fix (wording).
+
+## 2. The worked rows, recomputed
+
+**Single gears.** Every figure is reproduced to the plan's last digit:
+
+| | Y_F | Y_S | q_s | Holds (N) | (N·m) |
+|---|---|---|---|---|---|
+| A1 | 4.1931 | 1.5749 | 2.131 | 38.614 | 0.5792 |
+| A2 | 3.2708 | 1.6975 | 2.458 | 45.929 | 2.0668 |
+| A3 | 3.3258 | 1.6685 | 2.370 | 45.952 | 0.6893 |
+| A4 | 3.8769 | 1.6089 | 2.226 | 49.058 | 0.7831 |
+| A5 | (as A4) | | | 32.705 | 0.5221 |
+| A6 | 2.2574 | 2.5535 | 8.341 | 29.492 | 0.7963 |
+| A7 | 3.4536 | 1.6274 | 2.288 | 45.369 | 0.6805 |
+| A8 | 6.8916 | 1.4151 | 1.701 | 17.432 | 0.1046 |
+
+Also reproduced:
+- A1 machined 35.044 N, and A3's α_a − γ_a = 29.5115° (equal to my numerical α_F; the ring's α_a + γ_a = 13.3242°, equal
+  too);
+- the module 2 Y_F 3.326, 2.755 and 2.546, and 3.696 at module 1;
+- A4's shear ratio 0.0345.
+
+On recipe B the identity does not hold (A7's α_F is 35.14° against 30.30°), as §5.1 says.
+
+**Meshes.** B1 to B7 are reproduced exactly, from `checks.check`'s torques:
+- planetary_4to1: S 2, P 0, C 7.7624, held R 5.7624, so 92.593 and 88.926 N, shares 641.5 % and 616.1 %;
+- Idler_Train, as §5.3 builds it (no diagnostics): In 1, Idl 0, Out 1.9208. G1's 66.667 N against G3's own 64.027, GI
+  28.984 (0.7 × 41.406), 230.0 %, and 57.5 % at 0.25 N·m;
+- RangeBox, RangeBox_Fixed and `RangeBox_W9.xlsx` in L: Input 10, Planet 0, Carrier 28.2145, held Ring 18.2145, so
+  229.885 and 220.782 N, 1364.3 % and 1310.2 %. In H and N no Planet, Carrier or Ring torque exists, so the meshes are
+  *not worked out*.
+
+The kinematics agree with §5.2's reading:
+- a planet's force is the member's torque over N d, × K_γ;
+- the ring side comes out 0.98² of the sun side, because kinematics runs two mesh efficiencies through the stage; that
+  does not matter here;
+- an idler and a planet both show a shaft torque of exactly 0.
+
+**Reversed bending.**
+- A planet's tooth does bend both ways: the sun presses one flank and the ring the other, as on an idler.
+- AGMA 2001's *70 percent of s_at for idler gears* is quoted in D04 and in C95 by several secondary sources, and one
+  extends it to planets. ISO 6336-3:2019's Annex B (Y_M) is the ISO home of the same idea; I could not see its values.
+
+**The six-to-23-times list.**
+- Confirmed: planetary_4to1 6.41; RangeBox, RangeBox_Fixed and the W9 fixture 13.64 in L; E4 21.42 and
+  TransferCase_Parallel 22.58 in 4L; Reducer_12to1 22.58; Arc_Move 6.90.
+- **Risky_Placements reads 14.28, not 14.9.** Its worst is G5–G6 at 1428.0 % (G5's 723.563 N against G5's 50.670 N).
+- 14.9 is reproduced exactly when G6, an internal helical ring, gives its force at d = z m_n = 72 mm instead of its
+  transverse 76.621 mm: 2000 × 27.1656 / 72 = 754.6 N, and 754.6 / 50.670 = 14.89. So the plan's script slipped on the
+  very rule §5.1 states (*F_t and d are transverse*).
+- None of B1 to B7 is a helical mesh, and no A row is a helical ring, so nothing would catch the same slip in B's code.
+  **Must-fix M2:** correct 14.9 to 14.3 in §5.3 and U-c, and add two pinned rows:
+  - **A9**, ring helical m 2, z 36, β 20°, face 10, printed: z_n 42.723, d 76.6208, Y_F 2.0408, Y_S 2.6948, q_s 8.500 past
+    the range, holds 61.823 N and 2.3685 N·m;
+  - **B8**, Risky_Placements printed at 5 N·m: G5–G6 F_t 723.563 N (G6's own side 709.09), G5 50.670 and G6 61.823, G5
+    the weaker, 1428.0 %. Beside it, the herringbone G3–G4: 453.154 N at b 12 (the overlap), G3 62.836 and G4 71.137,
+    721.2 %.
+
+**A wording that is false for a branch past a split.**
+- In E4 and TransferCase_Parallel in 4H and 4L, the front drive (FDrive–FIdler–FOut) is `past_split`: it carries torque,
+  but J17 does not share it out, so F4 says nothing of FIdler, a two-way gear, in any mode.
+- That is §5.2's rule and it is acceptable. But §5.4's Results row *no torque here* would then be false: those teeth are
+  loaded.
+- Should-fix: two wordings, *turns unloaded here* (RangeBox in H and N, the front branch in 2H) and *the torque past a
+  shared output is not shared out (not worked out)*, as `kinematics.Motion.shared` and `past_split` tell them apart.
+
+## 3. The allowable stress, and what the user is told
+
+**17 MPa as a default.**
+- *What the plan's basis misses.* The print list names Bambu Studio, and Bambu's PLA Basic data sheet (V3.0, by the
+  search summary) gives:
+  - tensile strength 35 ± 4 MPa in X-Y and 31 ± 3 in Z (ISO 527, printed specimens);
+  - bending strength 76 ± 5 in X-Y and 59 ± 6 in Z (ISO 178);
+  - V2.0 gave 39 and 35 tensile.
+
+  So *a third of the roughly 50 MPa a PLA datasheet gives* is not what the filament the app points at reports. 17 MPa is
+  about half its in-layer tensile strength and under a quarter of its bending strength.
+- *Not a fatigue figure.* Printed PLA's fatigue strength at 2 × 10⁶ cycles is reported at 10 to 25 % of its tensile strength
+  (13.5 MPa in one dataset; secondary sources disagree). So 17 MPa is a one-time figure, which is what *once* says.
+- *Why it is defensible.* As a provisional *once* default it holds:
+  - σ_F includes the full notch factor (PLA is brittle enough that the notch counts);
+  - the load is on one tooth's tip with Y_ε 1, worth 1.2 to 1.5 against load sharing;
+  - and it sits at about half the in-layer tensile strength.
+- **Should-fix:** D7's sentence, the README and the Box's note give this basis (a printed PLA data sheet's 35 MPa
+  in-layer tensile strength, about half), not "a third of about 50".
+
+**Layers and infill.**
+- *Layers.* Printed flat, a spur tooth's root stress lies in the layers. The walls follow the outline, so the fillet's
+  surface fibre runs along the beads, the best case and the one ISO 527's X-Y specimens measure.
+- *Infill.* Bending is carried by the outer fibres, which are the five walls (2 mm a side). So even above module 2 the
+  infill matters less than §5.1 implies: what weakens such a root is the seam between wall and infill, not the infill's
+  density.
+- The README can say both in a sentence.
+
+**Is 6 to 23 times the truth, or a check too severe? The truth about the typed torques.**
+- *Why the torques are high.* The fixtures' 5 and 10 N·m were typed for machined gearboxes before Printed existed. A
+  steel tooth's allowable is some fifteen to twenty times 17 MPa.
+- *How much margin the check stacks.* Against a best estimate of a one-time break (Y_ε about 0.75 at ε_α ≈ 1.5, the
+  load at 35 MPa, no K_γ, no 0.7), the stack is about 1.33 × 2.06 = 2.7 for a plain gear and × 1.25 × 1.43 = 4.9 for a
+  planet.
+- *What that leaves.* Against a best-estimate break:
+  - planetary_4to1 (6.4, a planet) is still about 1.3 times over;
+  - Arc_Move (6.9, plain gears) about 2.5 times;
+  - RangeBox (13.6, a planet) about 2.8 times;
+  - Reducer_12to1 and TransferCase_Parallel (22.6, plain gears) about 8 times.
+- *So:* printed as typed, all of them would break or would not run. U-c is the right question, and nothing in the check
+  should be softened to make these read better.
+
+**One rule to rule on (R1): 0.7 under *once*.**
+- 0.7 is a fatigue allowance: a tooth bent both ways endures less over many cycles. A single static load does not weaken
+  a tooth because the next contact is on its other flank.
+- So *Holds, once* and 0.7 do not fit together. Either:
+  - keep 0.7, as the realistic tilt (planets and idlers fail first in service), and word it as *teeth that bend both ways
+    are rated at 0.7, for running*; or
+  - drop it from the *once* figure.
+- I would keep it and word it, but this is the coordinator's ruling. It moves B1, B2, B3, B4, B6 and B7, and B5's 57.5 %.
+
+**The wording.**
+- **The form's row breaks §5.1's own rule.** §5.1 says every place the figure shows says *about* and gives the
+  allowable. §5.4's row *Holds, once — 0.58 N·m · 39 N* does neither. Should-fix: for example *about 0.58 N·m · 39 N at
+  17 MPa* (label *Holds once*), so a reader sees an estimate at a stated stress.
+- **The warning.**
+  - *Holds* reads as a breaking load; *is rated to take once* does not.
+  - A blank allowable should be called provisional, with where to type one.
+  - The user's own tested allowable is a remedy as real as a larger module.
+
+  Proposed, for F4-0 to settle:
+
+  > Meshes row 2: Sun and Planet: Printed, these teeth take about 230 N at the pitch circle in L, 13.6 times the 17 N
+  > one tooth of Planet is rated to take once at 17 MPa (provisional: type your own in the Box's Allowable stress)
+  > (…the two brackets as §5.4…); use a larger module, a wider face or less torque. An estimate for teeth printed flat,
+  > with the whole load on one tooth's tip: not a running rating; heat, wear and creep are not worked out.
+
+  Nothing frightening is added and nothing reassuring is lost: the multiple is the true one at the stated stress, and
+  the reader is told the stress is theirs to set.
+
+## 4. What must not move
+
+- **Machined gears.** They are told exactly what they were, by construction: the check is behind F1's `_printed`
+  (`checks.py:508-511`), the form's row behind a printed derived gear, the Results block behind a printed gearbox, and
+  every figure is pure maths. F4-0's pins (step 1) must give `export.results_sheet` a fixed `when`, or its timestamp
+  breaks the hash (should-fix, small).
+- **No schema number moves.** `store.py` keeps no Box value, so no record sees the setting. `_read_box` skips a label it
+  does not know (`model.py:405-407`), so an F3-era app reads a workbook with the row. `link.describe_changes` will list
+  *Box Allowable stress 17 → 34* as a changed cell, which is right; B's `update.classify` test holds that Update has
+  nothing to do.
+- **The three pinned lines.**
+  - `test_workbook_model.py:27-29` and `test_printed_rule.py:535` are the Box's titles and order.
+  - `test_printed_workbook.py:123`, *labels[7] == "Units"*, reads the committed `RangeBox_W9.xlsx`, so it does not move.
+  - I did not rerun the stub run. F4-0 reruns it, as §5.5 says.
+- **B's edit at `test_printed_workbook.py:296-311`.** As planned it is not a loosening, but it can be stricter at no cost.
+  Should-fix: assert that printed's diagnostics are machined's plus exactly B's strength sentences for that gearbox, in
+  order, rather than setting aside whatever carries the mark.
+- **W9's, F1's, F2's and F3's pins.** Nothing in §5 touches them, and the row is placed in `gui._rows_with_span` (which
+  takes `ui_text.derived_rows` unchanged) so `test_ui_text.py:4520` holds.
+
+## 5. Readiness
+
+- **Files.** F4-0, with A whole, then B and C: the files are disjoint as listed (F4-0: `gears/strength.py`, `schema.py`,
+  `model.py`, `test_strength.py`, `test_printed_rule.py`, `test_workbook_model.py`; B: `workbook/strength.py`, `checks.py`,
+  `export.py`, `test_strength_workbook.py`, `test_printed_workbook.py`; C: `gui.py`, `ui_text.py`, README, design,
+  `test_strength_form.py`).
+- **Tests and Done-when.** The tests owed are right, with M2's two rows added. The Done-when needs no SolidWorks, which
+  is right, since nothing F4 writes reaches a part.
+- **Cost.** Six to eight runs is honest by every earlier stage.
+- **What F4-0's interface must also state:** M1's rule; *not rated* for pointed teeth; the two *not worked out*
+  wordings; and R1's ruling.
+- **Decisions taken without the user, beyond §5.7's list.** None that blocks code. Two are worth putting in U-c's
+  question:
+  - every printed workbook read with a blank Process and no record (printed by D11) and an input torque will now carry
+    these warnings, the user's own copies of RangeBox among them;
+  - a planet's 0.7 is applied to a figure called *once* (R1).
+
+## 6. Before F4-0 starts
+
+**Must-fix**
+- **M1.** State what F4 does with a ring whose tips lie inside its base circle (every ring under 34 teeth at 20°; built,
+  with a warning): the load at the involute's start, or not rated with a sentence. Pin one such ring in A.
+- **M2.** Correct Risky_Placements' 14.9 to 14.3 (G5–G6, 1428.0 %) in §5.3 and U-c. Pin A9 (helical ring) and B8
+  (Risky_Placements' helical, herringbone and helical-ring meshes) with §2's figures, so a force taken at a helical ring's
+  normal-module diameter fails a test.
+
+**Should-fix**
+- S1. D7, the README and the Box's note give 17 MPa's basis as about half a printed PLA data sheet's 35 MPa in-layer
+  tensile strength (Bambu PLA Basic V3.0), not "a third of about 50".
+- S2. The form's row says *about* and the allowable (§5.1's own rule); the warning says *rated to take once*, calls a
+  blank allowable provisional and says where to type one.
+- S3. Results: *turns unloaded here* and *not shared out past a shared output* in place of one *no torque here*.
+- S4. A's note: the app's tooth against ISO's own generated tooth (+15 to +32 % in Y_F, +18 to +38 % with Y_S); the 30°
+  section reading up to about 7 % under the beam's worst on small pinions; the normal-section fillet bound (Y_S within
+  about 3 % at 20°).
+- S5. §5.1's interlayer figure: about 0.17 σ_F of shear at β 20° from the bending stress itself, not 0.035; the conclusion
+  (no derating) stands.
+- S6. `rate` says *not rated* for pointed teeth.
+- S7. F4-0's results pins pass a fixed `when`; B's edit to `test_printed_workbook.py` asserts the exact added sentences.
+
+**For a ruling:** R1, 0.7 under a *once* figure: keep it and word it for running (my preference), or drop it.
+
+**Ready for F4-0 once M1 and M2 are in the plan.** Neither needs the user, and nothing else in §5 is in doubt: every one of
+the plan's other figures was reproduced from the app's own geometry and kinematics.
