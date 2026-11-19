@@ -129,3 +129,46 @@ member. On the fake: `test_a_d_bore_is_built_and_updated_through_the_calls_the_a
 3. **`structural_change`'s order.** The allowance and flat tests sit after the bore, shift, groove and band tests and before the small-pinion arc test. A bore added and an allowance typed at once is said as the bore.
 4. **Choice 6** (rows planned as built in `plan_parts`) and its shared-file consequence.
 5. **Guard 5's analysis** above, by running it with the switch on.
+
+## After F3's review: the coordinator's rulings and B's fixes
+
+F3-REVIEW (`docs/notes-printed/F3-REVIEW.md`, `d394a85`) was ruled by the coordinating session on 2026-11-18, each ruling
+the user's to overrule. B's choices 1 to 5 and 8 above are accepted as written. Two are changed, and both are done here:
+
+- **Choice 6 → "rows on record are read as built for the checks only, and the jobs are planned as typed"** (M2).
+  - `build.plan_parts` checks a row on record as built (`check_gear(..., variables)`), so its diagnostics speak of the
+    hole its part was cut with. It plans the job from the typed row.
+  - So a new row identical to a row on record built before F3 shares the old part again with the switch on: one job,
+    no *not the same gear*. Build again… reuses the old part for both rows, as built. A row that truly differs (a Face
+    width, a typed allowance) is still refused by name.
+  - Reuse, Update and ruling 1 already read each recorded part as built from its own entry, so nothing depended on the
+    assessment's jobs being as built.
+  - One case is planned as built: a typed row that does not work out (its hole at the default reaching the root) gets
+    its job from the as-built spec, the part it has. Without that, a row clean as built would have no job, and the
+    window would say it is not placed.
+  - Tests: `test_the_windows_checks_read_a_row_on_record_as_built_and_its_job_is_planned_as_typed` (which replaces
+    `test_the_windows_checks_and_jobs_read_a_row_on_record_as_built`, changed by this ruling),
+    `test_a_new_row_identical_to_a_row_on_record_shares_its_part_with_the_default_on` and
+    `test_a_new_row_that_truly_differs_from_a_row_on_record_is_still_not_the_same_gear`.
+- **Choice 7 → "compare the allowance as built, as a number"** (S3).
+  - `update._changed_columns` takes the built part's globals (`variables`, default none). It reads both forms' Bore
+    allowance through `spec.as_built` and compares the figures.
+  - So a typed 0.3 cleared on a part made new for another reason, which keeps 0.3 by ruling 1, says nothing; nor does
+    0 typed where the part holds none. A figure that does not read compares as text, as before.
+  - `_why_part_new` passes the entry's globals.
+  - Test: `test_w9ds_columns_compare_the_allowance_as_built_as_a_number`.
+- **M1.** `pre_f3_desk` no longer asserts the switch is off. It turns the switch off for the build alone, as F2's code
+  built the gearbox, and puts it back, so B's tests hold with the switch committed on or off.
+- **Guard 5** is corrected by the coordinator's ruling in its own input (M3, `_values(as_built(printed, _recorded(S17)))`).
+  The worker is not changed. That edit is not B's.
+- **The window's wiring** (`workbook_gui._assess` passing the record) is C's, done at `7051698`. M2 needs no change there:
+  `assess`'s signature and `record` argument are as they were.
+
+**Tests and pins, after these fixes**, run in this worktree beside A's and C's work in progress:
+`tests/test_bore_workbook.py` (26), `test_printed_rule.py`, `test_printed_window.py`, `test_swbuild_user_work.py`,
+`test_workbook_build.py`, `test_workbook_update.py`, `test_workbook_carry.py` and `test_printout.py`.
+- **Switch off**: 1071 passed.
+- **Switch on**, in its own process: 1070 passed, 1 failed. The failure is guard 5, until its ruled correction lands.
+- **The whole suite, switch off**: 5388 passed, 1 skipped, 2 failed: the Tk font test, and
+  `test_bore_form.py::test_the_windows_warnings_for_a_gearbox_built_before_f3_are_unchanged_with_the_default_on`, a Tk
+  window test of C's that passes run alone (a false failure while other suites ran).
