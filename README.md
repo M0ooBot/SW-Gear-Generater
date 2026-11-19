@@ -103,6 +103,9 @@ same way, with these differences.
   gear keeps 0.04 mm of play a flank.*). The entry is not saved. A gear drawn
   with Arcs shows no figure (*not one figure on arcs; choose Involute to
   measure*); nor does a ring, a sleeve, a bevel gear or a machined gear.
+- **What a tooth is rated to take.** The Derived panel's **Holds once** row
+  says what one tooth is rated to take once, as an estimate: *What a tooth is
+  rated to take*, below.
 - **Print files.** The footer's **Print files**, beside **Build**, writes the
   part active in SolidWorks (a part Gear Generator built, with its
   `.gear.json` beside it) to a STEP file for the slicer; the SolidWorks bar
@@ -162,6 +165,67 @@ are phased to each other by their flats in your machine, and by their meshes in
 the assembly. That matters only where meshes close a loop between gears on
 D-fixed shafts; a planet on its pin, or a gear free on its shaft until a dog
 engages it, is not fixed.
+
+#### What a tooth is rated to take
+
+A printed spur, helical, herringbone or ring gear's Derived panel ends with
+**Holds once**: *about 0.58 N·m · 39 N at 17 MPa* for module 1.5, 20 teeth and
+a 10 mm face. That is the torque about the gear's own axis, and the force at its
+pitch circle, that one tooth is rated to take once at an allowable root stress
+of 17 MPa, over the gear's own toothed width (a herringbone's face less its
+groove). In a pair each gear's column has its own.
+
+- **What it is.** An estimate of a single load on one tooth, by a standard's
+  method applied to the tooth as the app draws it: ISO 6336-3's tooth-root
+  stress (Method B's form and stress-correction factors) worked out on the
+  drawn root, backlash and shift included, with the whole load on one tooth's
+  tip and every load factor 1. A helical or herringbone gear is rated on ISO's
+  virtual spur gear. The formulas are from secondary sources; the standard
+  itself was not read.
+- **What it is not.** It is not a life and not a running rating. Printed PLA's
+  strength under repeated load is far lower than under one load (its fatigue
+  strength is reported at 10 to 25 % of its tensile strength), so a gear that
+  runs wants a wide margin under this figure. The app's root, a radial line and
+  a fillet, is narrower than a hobbed one, so it reads 15 to 32 % weaker than
+  ISO's own generated tooth: the figure is for the tooth you print.
+- **17 MPa is provisional**: about half the 35 MPa a printed PLA data sheet
+  gives for tensile strength within the layers. The form always rates at 17. In
+  a workbook, type your own in the Box's **Allowable stress** (MPa, blank 17;
+  *New workbook…* writes the 17 there so you can see where yours goes), best a
+  figure from a printed tooth broken in a jig. It is not a gear's value: typing
+  it changes no part.
+- **A ring.** A ring's 0.15 × module fillet is sharper than the
+  stress-correction factor's range, which is carried past it: the row adds
+  *stress factor past its range*, and a line under the rows names the fillet
+  (so does any gear whose typed Fillet is that sharp). A ring whose tips lie
+  inside its base circle (33 teeth or fewer at 20°) is not rated: the row says
+  *not rated: tips inside the base circle*, and the line under the rows says
+  why.
+- **No row** for a machined gear, a bevel gear, or either gear of a crossed
+  pair, whose teeth meet at a point.
+- **In a workbook**, a printed gearbox with a torque on its input has each
+  mesh's force worked out from the Shafts sheet's torque, mode by mode. A
+  Meshes row whose teeth take more than they are rated to is warned of, and the
+  Results sheet lists every share. A planetary stage's load is shared among its
+  planets with one taking 1.25 of an even share, and a planet's or an idler's
+  teeth, loaded in both directions as the gearbox runs, are rated at 0.7 of
+  their figure, an allowance for running. Bevel and crossed meshes and a
+  sleeve's couplings are not rated, and the Results sheet says so.
+- **Not covered:** heat (PLA softens near 55 to 60 °C), wear, creep at the bore
+  or under a steady load, fatigue, load across the layers (the figure is for
+  teeth printed flat, as the print list asks; a gear printed on its side is not
+  covered), and the seam behind the walls of a root wider than five walls
+  (above about module 2).
+- **The example gearboxes read many times over when printed.** Their torques
+  were typed for steel before printed gears existed, and a steel tooth's
+  allowable is some fifteen to twenty times 17 MPa. Printed, the workbooks
+  under `tests/fixtures` and the gearboxes the tests build read 6 to 23 times
+  over: planetary_4to1 6.4, Arc_Move 6.9, RangeBox 13.6 in L, Risky_Placements
+  14.3, the E4 transfer case 21.4, Reducer_12to1 and TransferCase_Parallel 22.6.
+  Even against a best estimate of a break every one is over, so printed as
+  typed they would break. That is their torques, not the check: for a printed
+  gearbox, use a larger module, a wider face, less torque, or your own tested
+  allowable.
 
 #### Calibrating your printer
 
@@ -510,7 +574,7 @@ last few workbooks you opened.
 
 | Sheet | Holds |
 |---|---|
-| Box | the gearbox's Name, its Output folder (blank: the form's Folder), part and assembly templates, the pressure angle and efficiency per mesh that blank cells elsewhere take, and its Process (`Printed` or `Machined`) and Nozzle (mm, blank 0.4) for every gear in it |
+| Box | the gearbox's Name, its Output folder (blank: the form's Folder), part and assembly templates, the pressure angle and efficiency per mesh that blank cells elsewhere take, and its Process (`Printed` or `Machined`) and Nozzle (mm, blank 0.4) for every gear in it, and the Allowable stress (MPa, blank 17) printed teeth are rated at (*What a tooth is rated to take*) |
 | Shafts | one row per shaft: X, Y and Z of a point on its axis, from the origin; its Axis (`Z+`, `Z-`, `X+`, `Y-` …, or a direction `dx, dy, dz`); its Role (`input`, `output`, `fixed`); on an input, its speed in rpm and torque in N·m; and on a planet shaft, the carrier it is Mounted on and its Copies |
 | Gears | one row per gear: the shaft it is on, how far along the axis its face's middle is (At; a bevel gear's pitch apex), and the values the form takes — Kind, Teeth, Module, Face width, Bore, Helix angle, Hand, Profile shift, Bore allowance, Drive, Flat … — a blank cell taking the form's default (a blank Bore allowance: 0.2 printed for a part not yet built, as built for a part on record, 0 machined); and a Part name if you want one |
 | Meshes | one row per pair of gears in mesh, and its efficiency |
