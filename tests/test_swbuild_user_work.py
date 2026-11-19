@@ -14,7 +14,7 @@ from gear_generator import findings, swbuild, swcom
 from gear_generator.gears import kind_for, spur as spur_gears
 from gear_generator.gears.base import GlobalVariable
 from gear_generator.gears.equations import DEGREES, split_equation
-from gear_generator.spec import GearSpec
+from gear_generator.spec import GearSpec, as_built
 from gear_generator.swbuild import (PROBLEM_LOCK_BY_MODE, PROBLEM_OTHER_KIND, PROBLEM_TIE, PROBLEM_TWO_BODIES,
                                     PROBLEM_UNSETTLED, PROBLEM_VALUE, UserWorkRefused)
 
@@ -576,7 +576,10 @@ def test_a_printed_gears_blank_backlash_is_said_as_the_printed_default_and_set_b
     fake = _built_train()
     _edit(fake, P17, "Backlash", "0.2")
     printed = replace(S17, process="printed")
-    doc = swbuild.DocumentValues(P17, _values(printed), recorded=_recorded(S17), cells=(("Backlash", "Gears!P2"),))
+    # F3 (F3-REVIEW §3, M3): what a real Update hands the worker for this part, built from S17 and typed Printed:
+    # update._part plans it through as_built with its record's globals, so no "Bore Allowance" the part never held.
+    doc = swbuild.DocumentValues(P17, _values(as_built(printed, _recorded(S17))), recorded=_recorded(S17),
+                                 cells=(("Backlash", "Gears!P2"),))
     with pytest.raises(UserWorkRefused) as raised:
         _update_train(fake, parts=[doc])
     (problem,) = raised.value.problems

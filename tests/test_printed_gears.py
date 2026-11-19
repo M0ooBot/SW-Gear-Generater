@@ -94,17 +94,30 @@ def test_a_printed_module_under_2_5_nozzle_widths_is_said_and_module_1_is_not():
     assert not _printed_words(_said(_spec(module="0.9", teeth="60", bore="")))
 
 
-def test_the_printed_rim_is_three_nozzle_widths_where_that_is_more_than_a_module():
-    said = _said(_printed(module="0.8", teeth="30", bore="20"))
-    assert "Printed, the bore leaves 0.88 mm of rim under the teeth, under three nozzle widths (1.2 mm)." in said
+@pytest.mark.parametrize("allowance, at_20, at_21, at_33", [
+    # F1's figures: the hole cut at its Bore, an allowance typed 0.
+    ("0", "Printed, the bore leaves 0.88 mm", "Printed, the bore leaves 0.38 mm", "The bore leaves 1 mm"),
+    # F3's printed default on a gear built new (0.2 mm on the diameter, spur.BORE_ALLOWANCE_DEFAULT): the rim is
+    # measured on the hole as cut, Bore + 0.2, so each is 0.1 mm thinner (PLAN-PRINTED §4.1), and the sentence names
+    # the hole as cut (F3-REVIEW S2): (21.76 - 20.2) / 2, (21.76 - 21.2) / 2, (35 - 33.2) / 2.
+    ("", "Printed, the bore, 20 mm with its 0.2 mm allowance (20.2 mm as cut), leaves 0.78 mm",
+     "Printed, the bore, 21 mm with its 0.2 mm allowance (21.2 mm as cut), leaves 0.28 mm",
+     "The bore, 33 mm with its 0.2 mm allowance (33.2 mm as cut), leaves 0.9 mm"),
+])
+def test_the_printed_rim_is_three_nozzle_widths_where_that_is_more_than_a_module(allowance, at_20, at_21, at_33):
+    said = _said(_printed(module="0.8", teeth="30", bore="20", bore_allowance=allowance))
+    assert f"{at_20} of rim under the teeth, under three nozzle widths (1.2 mm)." in said
     assert not [m for m in _said(_spec(module="0.8", teeth="30", bore="20")) if "rim" in m]
     # Above module 1.2 today's one-module warning is the stricter, and a printed gear is told it as a machined one is.
     machined = [m for m in _said(_spec(module="2", teeth="20", bore="33")) if "rim" in m]
     assert machined == ["The bore leaves 1 mm of rim under the teeth, thinner than one module (2 mm)."]
-    assert [m for m in _said(_printed(module="2", teeth="20", bore="33")) if "rim" in m] == machined
+    printed = [m for m in _said(_printed(module="2", teeth="20", bore="33", bore_allowance=allowance)) if "rim" in m]
+    assert printed == [f"{at_33} of rim under the teeth, thinner than one module (2 mm)."]
+    if allowance == "0":
+        assert printed == machined
     # Under a module but over three nozzle widths does not happen above 1.2; at 0.8 the printed floor replaces it.
-    assert [m for m in _said(_printed(module="0.8", teeth="30", bore="21")) if "rim" in m] == [
-        "Printed, the bore leaves 0.38 mm of rim under the teeth, under three nozzle widths (1.2 mm)."]
+    thin = [m for m in _said(_printed(module="0.8", teeth="30", bore="21", bore_allowance=allowance)) if "rim" in m]
+    assert thin == [f"{at_21} of rim under the teeth, under three nozzle widths (1.2 mm)."]
 
 
 @pytest.mark.parametrize("kind", ["helical", "herringbone"])

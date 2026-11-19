@@ -112,11 +112,11 @@ BORE_ALLOWANCE_DEFAULT = SPEC_BORE_ALLOWANCE_DEFAULT  # mm on the diameter, prin
 FLAT_LEAST_H = 0.25           # × R
 FLAT_LEAST_DEPTH = 0.3        # mm
 # F3 (F3-INTERFACES §13, the coordinator's landing order of 2026-11-18): whether a printed gear's blank Bore allowance
-# on a part not on record plans BORE_ALLOWANCE_DEFAULT. Off as committed: such a gear then plans 0, as every printed
-# part F1 and F2 built holds, until packages B and C read every part on record through spec.as_built; one commit then
-# turns it on. A typed figure and an as-built figure (built_allowance) plan what they say whatever it is. Every kind
-# reads it here at call time, through bore_allowance_of, never by `from ... import`, so one assignment turns it on.
-PRINTED_DEFAULT_IN_PLANS = False
+# on a part not on record plans BORE_ALLOWANCE_DEFAULT. Package A committed it off, so such a gear planned 0 until
+# packages B and C read every part on record through spec.as_built; the switch commit, after F3's review, turned it on.
+# A typed figure and an as-built figure (built_allowance) plan what they say whatever it is. Every kind reads it here at
+# call time, through bore_allowance_of, never by `from ... import`, so one assignment turns it off again in a test.
+PRINTED_DEFAULT_IN_PLANS = True
 
 # The global variables, by name. The first ten are the user's own, byte for byte.
 TEETH = "No. of Teeth"
