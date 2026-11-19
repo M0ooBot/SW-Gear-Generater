@@ -372,3 +372,225 @@ build's sketches), S3 (`mate_definition` on the bore mate, made and carried), S4
 herringbone), S6 (the machined 12 : 1 typed Printed), S7 (the command lines), and the round hole in `allowance` judged by its
 faces. S8 is words for after the run. Look hardest at `hub` (W9b's `judge_every` run without §3 on a printed fixture whose
 Hub is bored) and at the bore mate's EntityParams radius in metres (W9d's `entity_key` reads it so).
+
+## The first run on SolidWorks 2026 (2026-11-18, from c5d4391, then 75d27cf; SolidWorks 2026 34.1.1)
+
+**Setup.**
+- Run folder `<probe folder>\f3-demo-sw2026-20261118-214917`. `snap` a `git archive` of `c5d4391` with `SNAPSHOT_COMMIT` beside
+  `src` (runs 1 and 2); `snap2` a `git archive` of `75d27cf`, the fixes below, for run 3. Each log's head names its snapshot (3).
+- `--self-check` on each snapshot: under Linux's Python 18 ok, 0 failed; under the run's Windows `python.exe` 17 ok, **1 failed**:
+  *pins* (F3-0's STRIP hashes for the five machined gears). The plans differ from Linux's in the last bit of two dimension
+  label coordinates (`at=(17.182694782833106, 17.182694782833103)` on Linux, `…106, …106` on Windows; `-4.596194077712559`
+  against `-4.59619407771256`): libm's `sin`/`cos`, nothing geometric. The SIDECARS hashes match on both, and the live
+  `allowance` section holds the machined records to `sidecar_text` only, so the run does not lean on STRIP. Not changed;
+  for a ruling (F3-0's pins are Linux-only as committed).
+- Three sessions, each started fresh in the background with nothing open (PIDs 56800, 57792, 36236) and exited after
+  (`taskkill` without `/F`; each went). Before the first, `tasklist` showed no SLDWORKS.exe, no Excel and no python.exe (only
+  SolidWorks' two `sldworks_fs.exe` services, before and after). Each invocation started and quit its own Excel.
+- Master, only copied: W9a's `setup.master` (`<probe folder>\w9a-final-sw2026-20261117-023433\out`). **The masters' hashes are the
+  runner's statement, outside the script, not in the logs**: `sha256sum` of both versions' `setup.master` (34 files) was
+  taken before the 2026 run, between the versions and after the 2024 run. The first listing was lost when the runner's scratch
+  folder was cleared during the run; the second and third match exactly, and no file of either master is newer than
+  2026-11-17 (the newest 02:53 that day), so nothing was written into them.
+- **Nothing written outside the run folders**, the runner's statement: a listing of `<probe folder>` outside the `f3-demo-*`
+  folders (50,415 entries, path, size and mtime) was the same between the versions and after the 2024 run (the listing before
+  the 2026 run was lost with the hashes); nothing in it, and nothing in the user's Documents or Desktop two levels down, is
+  newer than the 2026 run's start but the probe folder itself (the run folders made in it). APPDATA went to `out\appdata`.
+- Run 1: `--sections dshape`, alone first (S7). Run 2: `--sections allowance,print,built,hub,userwork --user-master …`.
+  Run 3, after the fixes: `--sections print,built,userwork --redo --user-master …` into the same `out`, the machined 12 : 1's
+  master of run 2 set aside by hand (`f3-reducer-machined.master.prev-…`: a section's `--redo` keeps the reducers' masters,
+  and run 2's had been built printed, below), the switch-off and switch-on masters reused. No close flag.
+- Logs `probe/results/f3-demo-sw2026-20261118-1-dshape-clean.log` (JSON `f3-demo-20261118-215150.json`),
+  `…-2-allowance-print-built-hub-userwork-13-failed.log` (`…-215759.json`) and `…-3-print-built-userwork-rerun-2-failed.log`
+  (`…-223549.json`); below, `1:`, `2:` and `3:` are their lines.
+- SolidWorks time about 71 min (21:51 to 23:02), the runs 4.5, 34.5 and 24 min.
+
+| Section | Run | Time | ok | FAIL | STOP | SolidWorks private, peak logged | Free, least logged |
+|---|---|---|---|---|---|---|---|
+| dshape | 1 | 268 s | 44 | 0 | 0 | 1.12 GB | 9.47 GB |
+| allowance | 2 | 485 s | 15 | 0 | 0 | 1.08 GB | 9.59 GB |
+| print | 2 | 36 s | 23 | 2 (script) | 0 | 1.14 GB | 9.54 GB |
+| built (three reducers built here) | 2 | 370 s | 90 | 5 (script 4, app 1) | 0 | 1.63 GB | 9.08 GB |
+| hub | 2 | 212 s | 23 | 0 | 0 | 1.94 GB | 8.87 GB |
+| userwork | 2 | 997 s | 37 | 6 (script) | 0 | 2.40 GB | 8.45 GB |
+| print | 3 | 40 s | 25 | 0 | 0 | 0.98 GB | 9.40 GB |
+| built (machined 12 : 1 rebuilt) | 3 | 218 s | 62 | 1 (app) | 0 | 1.49 GB | 8.73 GB |
+| userwork | 3 | 1213 s | 46 | 1 (script) | 0 | 2.21 GB | 8.34 GB |
+
+**Every FAIL, with its cause.**
+- *print, D and round* (2:162, 2:271): *41 planes in the D, not one*, *40 plane(s) in a round bore*. **Script.** The STEP reader
+  took every plane square to the end faces whose plane passed within (D + a)/2 + 1 of the axis as in the bore, and each tooth's
+  radial flank lies on a plane through the axis (the files hold 40, at 14.1 mm out). Fixed in `75d27cf`: a plane face is in the
+  bore when every vertex its bounds reach is; a square plane face whose bounds reach no vertex fails. Run 2's own files read
+  clean through it offline, and run 3's print is clean (3:129, 3:238).
+- *built: a quiet Update values on Coupon_F2* (2:376, 3:347). In run 2 the check said none of its parts; `75d27cf` says each
+  apart, nothing loosened. Run 3: one job, ok, *Nothing to update…*, no SolidWorks file moved, the .gear.json the same, and the
+  part's **save flag False before, True after**. **App** (or SolidWorks): the plan's *a quiet Update values runs and changes
+  nothing (no file, no .gear.json, no save flag)* does not hold. The likely cause, read from the code and not traced:
+  `swbuild.update_variables` calls `Session.detect_trig_units` before it knows nothing changes, which adds the equation
+  `"Gear Generator Trig Check"` and deletes it, and that marks the part. Nothing is written to disk. The same on 2024. For a
+  ruling: it is pre-F3 code (any built part), not F3's.
+- *built-f2: an allowance typed on G2 is structural* (2:961). **Script.** It required no changed part, but
+  `workbook/update.py`'s `_part` lists a structurally changed part among the changed parts with its sentence beside it (read:
+  `['Gear_m1.5_N68_P.SLDPRT']`). Fixed in `75d27cf` to G2's part being the one changed part; run 3 holds (3:401).
+- *f3-reducer-machined: the four parts plan machined* (2:1574), and from it *built-machined* (2:2121, 2:2132). **Script.**
+  W9a's `spec_reducer` keeps the fixture's blank Process, and a blank Process on a workbook with no record reads back Printed
+  (F1, PLAN-PRINTED §2.8 item 5): the "machined" 12 : 1 was built printed. Fixed in `75d27cf` (Machined on its Box); run 3
+  rebuilt it machined (3:479) and the guard-4 checks hold (3:1027, 3:1038).
+- *userwork: Sun was built with no bore and holds the User Keyway* (2:3050). **Script.** The keyway was read before RangeBox
+  was opened, and `features_of` reads an open part only. Fixed in `75d27cf`; run 3 reads code 0 (3:1066).
+- *userwork: the in-place Update* (2:3496), and from it *Sun in place* (2:3498), *Sun's newest part* (2:3855), *keeps its
+  allowance* (2:3857) and *the bore mate carried* (2:3858). **Script, by K2.** The user's concentric on Sun's bore face was made
+  before the in-place Update of Sun's allowance and Flat, and the app refused that Update before any write, exactly as K2
+  (ISSUE-1-PLAN, accepted by the user) rules for a user mate to a gear's own faces: *In modes H, N and L, UserBoreMate is a mate
+  in RangeBox_r2.SLDASM that Gear Generator did not make, on Sun, which Update SolidWorks puts back, and a mate of that kind is
+  not moved with its gear, so nothing is changed; in SolidWorks, lock your component to Sun instead, and Update SolidWorks puts
+  it with Sun, or suppress UserBoreMate in H, N and L, and press Update SolidWorks again.* The four after it follow from the
+  refusal (the last Build again… then kept 0.2 as built, the Flat 7.2 typed). Fixed in `75d27cf`: the bore mate is made after
+  the in-place Update, on the D it leaves (radius 4.15). **For a ruling:** PLAN-PRINTED §2.8 says *a user's mate on an app
+  gear's face is re-solved by those puts*; K2 and the app refuse instead.
+- *userwork: the bore mate carried* (3:1892): remade none, *named ['UserBoreMate']*. **Script.** The check required the mate
+  made again on SunGear; K5, as W9D-INTERFACES §4.4 rules it, names every face of an app part made new (`WHY_PART_NEW`) and
+  never re-finds it. Fixed in `771f492` to that rule; not rerun on 2026 (the budget), but run 3's log bears it out (the app's
+  sentence below, the eight other mates remade), and 2024 ran the fixed check clean.
+
+**dshape** (1:11-395): DShape (m 1.5, z 20, face 8, Bore 8, a 0.2, Flat 7) built by the form, *Bore as cut* '8.2 · 8 + 0.2' and
+*Flat as cut* '7.2 · 7 + 0.2' (1:13), its .gear.json at 4 (1:115). Each state read and judged (D, a, Flat; volume against its
+twin from scratch; the round's radius and its box's x range; the chord link's Value; the flat's span against the chord):
+
+| Step | D, a, F | Volume mm³ (twin) | R | Round's box x | Chord's Value = span |
+|---|---|---|---|---|---|
+| as built (1:119) | 8, 0.2, 7 | 4983.796 (4983.796) | 4.1 | −4.1 to 3.1 | 5.366563 |
+| Flat 7 → 5 (1:126) | 8, 0.2, 5 | 5094.350 (5094.350) | 4.1 | −4.1 to 1.1 | 7.899367 |
+| Flat 5 → 7.6 (1:133) | 8, 0.2, 7.6 | 4962.007 (4962.007) | 4.1 | −4.1 to 3.7 | 3.532704 |
+| Flat 7.6 → 7 (1:138) | 8, 0.2, 7 | 4983.796 (twin 1) | 4.1 | −4.1 to 3.1 | 5.366563 |
+| Bore 8 → 10, Flat 9 (1:145) | 10, 0.2, 9 | 4756.219 (4756.219) | 5.1 | −5.1 to 4.1 | 6.066300 |
+| allowance 0.2 → 0.4 (1:152) | 10, 0.4, 9 | 4730.675 (4730.675) | 5.2 | −5.2 to 4.2 | 6.131884 |
+| Flat 6.1, h = 0.25 R (1:159) | 10, 0.4, 6.1 | 4930.058 (4930.058) | 5.2 | −5.2 to 1.3 | 10.069757 |
+| Flat 9.7, 0.3 deep (1:169) | 10, 0.4, 9.7 | 4702.889 (4702.889) | 5.2 | −5.2 to 4.9 | 3.481379 |
+| back to 8, 0.2, 7 (1:177) | 8, 0.2, 7 | 4983.796 (twin 1) | 4.1 | −4.1 to 3.1 | 5.366563 |
+| allowance −0.1, press fit (1:184) | 8, −0.1, 7 | 5013.557 (5013.557) | 3.95 | −3.95 to 2.95 | 5.253570 |
+| DShape_Round (1:289) | 8, 0.2, round | 4954.394 (4954.394) | 4.1 | −4.1 to 4.1 | Bore@ 8.2 |
+| DShape_D, round to D (1:393) | 8, 0.2, 7 | 4983.796 (twin 1) | 4.1 | −4.1 to 3.1 | 5.366563 |
+
+- **No far-side solve, no sliver, nothing in error** in any state: the round one face of R about the axis reaching −X, one flat
+  at h on +X by PlaneParams, the Bore Sketch fully defined (status 3), each volume equal to its twin's to the logged places.
+- Each value step: the strip counted exactly the globals changed and Update values set those in one rebuild, the record
+  following (1:122 to 1:180). The bound steps refused by the form in A's words, nothing sent: *The flat is 1.2 mm from the axis,
+  under a quarter of the hole's radius (1.3 mm); type a Flat of at least 6.1 mm, or use a round bore.* (1:162) and *Your shaft's
+  flat is 0.2 mm deep (Bore 10 less Flat 9.8), under the 0.3 mm a printed D needs to hold; …* (1:172). The structural steps in
+  B's words, nothing sent: *A bore allowance cannot be added to or taken out of a built part through its values; build it again
+  as a new part.* (1:187), *The drive changed from 'flat' to 'round'; …* (1:190), *The drive changed from 'round' to 'flat'; …*
+  (1:290).
+- **Facts the review asked for**: SolidWorks' own Value of each link agreed **in mm**, the radius's too (the self-check allowed m
+  for it); `GetBox` on these faces is **tight** (padding beyond −R 0, the round's greatest x the flat's h exactly, the flat's
+  span the chord to 1e-4), so W9b's 0.24 mm padding is not met on a part's bore faces; the tip lands number 20 with the two
+  nearest +X at +8.983° and −8.982° against the half pitch 9°, none crossing +X: ruling 2's tooth space on +X, read.
+
+**allowance** (2:11-44): 15 parts, each built clean, the hole as cut by its faces to 1e-4 mm and judged round: spur 5.1, 4.95
+(a −0.1), 5.0 machined; helical 5.1, 5.15, 5.0; herringbone 5.1, 5.15, 5.0; bevel 5.1, 5.15, 5.0; hub 4.1, 4.125, 4.0 (2:14-42).
+`"Bore Allowance"` as typed or 0.2 printed, no F3 global machined; schema 4 printed, 1 machined, each machined record F3-0's pin.
+
+**print** (3:12-241): Print_D and Print_R each judged whole by F2's `written` (one new folder, the file and the list alone,
+`{'SaveAs': 1}`, SolidWorks as it was), AP203, millimetres, 344 vertices to radius 16.501185 over 8.000031. From the STEP file:
+the D one cylinder of 4.1 about Z, one plane face in the bore on x = h, its corners at x = h, the least vertex radius 4.1
+(3:129); the round one cylinder, no plane (3:238). The list: *bore 8 mm + 0.2 mm allowance (8.2 mm as cut), D-flat 7 mm (7.2 mm
+as cut)* and *bore 8 mm + 0.2 mm allowance (8.2 mm as cut)*, each *printed default* (3:130, 3:239).
+
+**built** (3:246-1040): **nothing built before F3 moves.** Coupon_F2 at schema 3 with no F3 global (3:344); opened with the
+switch on: count 0, *Bore as cut* '8', 0 allowance planned (3:346); the quiet Update values: the FAIL above; an allowance typed
+refused in B's words (3:348). F2's printed 12 : 1: four .gear.json at 3 (3:369); the footer word for word as with the switch off
+(3:375); a quiet Update writes nothing, marks nothing (3:387). **The structural refusal's sentence**: *Gear_m1.5_N68_P (G2): A
+bore allowance cannot be added to or taken out of a built part through its values; build it again as a new part.*, the footer
+offering Build again… (3:401); cleared, nothing planned (3:413). The 12 : 1 built with the switch on: every part 0.2 on record
+(3:432); G2's 0.3 a value, one Update (12.1 s, `ForceRebuild3` 2) changing G2 alone, its hole 6.15 by its faces, 0.3 in
+SolidWorks and on record, nothing saved (3:444-455). **K11**: 0.5 set by hand and saved, the press refused: *Bore Allowance in
+Gear_m1.5_N68_P is 0.5 in SolidWorks and 0.3 in the workbook: type 0.5 in Gears!V3, or set it back to 0.3 in SolidWorks, and press
+Update SolidWorks again.* (3:466-467). The machined 12 : 1 built before F3 (3:479-999), Printed typed: the four parts in place
+(3:1027), one Update (25 s): Backlash 0.45, 0.45, 0.6, 0.6 → 0.3, no F3 global in SolidWorks or on record, each .gear.json at 3
+(3:1038).
+
+**hub** (2:2135-3026): RangeBox_Fixed printed, its Hub row D 8, a 0.2, Flat 7, read with no error (2:2147); built by the app's
+Build, six parts, turning, every sketch fully defined, **no interference** (2:2998-3012); Hub Output's anchor with RangeSlv
+splined to it (2:3013). **Turned through H, N and L**: every body at its frame on record (6.6e-10 at worst), no mate in error,
+every gear free, RangeSlv at 55.5, 48 and 40.5 mm as on record, every mate's flag as on record, and **no interference read in
+any mode** (2:3014-3021). The Hub's hole read as a D: R 4.1, the flat at h, links, Values, globals, the sketch status 3
+(2:3023), schema 4 (2:3024).
+
+**userwork** (3:1042-1895, at `75d27cf`): Sun with no bore and the User Keyway at code 0 (3:1066); Printed and one Update (208 s)
+ok, the user's work as before (3:1101); Sun's bore and D structural, Sun alone: *Gear_m1.25_N29 (Sun): Drive changed from round to
+flat, which its values cannot carry; build it again as a new part.*; Build again… (277 s) gave Sun a D read as dshape reads one
+(the new Gear_m1.25_N29_P); the keyway cut again, a quiet press (107 s) recording it (3:1480); **Sun's allowance 0.3 and Flat 7.2 in
+place by one Update** (166 s): ok, Sun read as D 8, a 0.3, F 7.2 (3:1517), the user's eight mates and keyway as before (3:1519);
+the user's concentric made on the D's arc face, read by `mate_definition` as a face of radius 4.15, the arc one face, on in every
+mode (3:1523), recorded by a quiet press (3:1535); then Part name SunGear, allowance cleared, Build again…: SunGear keeps 0.3 as
+built (ruling 1, 3:1891). **The carry's reading of a D bore**: *UserBoreMate was on a face of Sun, and Sun's part is new because
+its Part name changed, so it is not made again*; the eight other mates made again. W9d does not read a concentric's face on a part
+made new (its walk reads a gear mate's only), so it says *a face of Sun*, not *Sun's bore*: `COAXIAL_FACE_READ` on a partial
+cylinder is still unread live.
+
+**Windows.** No What's Wrong. SolidWorks' notification box once, during FeatureExtrusion3 in the first 12 : 1 build of
+`built` (2:465, exempt by ruling); otherwise progress boxes (*Opening*, *Loading…*, *Calculating Interference Detection*, the untitled
+*Post load updating*).
+
+## The confirming run on SolidWorks 2024 (2026-11-18, from 771f492, SolidWorks 2024 32.5.0)
+
+**Setup.**
+- Run folder `<probe folder>\f3-demo-sw2024-20261118-230231`, `snap` a `git archive` of `771f492` (log heads 1:3, 2:3).
+  `--self-check` on it as on 2026: 17 ok, the pins check failing on Windows alone.
+- Two sessions, each fresh, PIDs 3164 (`userwork,hub`) and 18504 (`dshape,allowance,print,built`), each exited after; the 2026
+  session had exited first. Both with `--close-outlived-whats-wrong`; `userwork` and `hub` first, WSL idle but for a process
+  check and a log grep every 15 s. The close path never acted. Master W9a's 2024 `setup.master`, only copied (the statements
+  above).
+- Logs `probe/results/sw2024/f3-demo-sw2024-20261118-1-userwork-hub-clean.log` (JSON `f3-demo-20261118-230436.json`) and
+  `…-2-dshape-allowance-print-built-1-failed.log` (`…-234157.json`); below, `1:` and `2:` are these.
+- SolidWorks time about 61 min (23:03 to 00:04).
+
+| Section | Run | Time | ok | FAIL | STOP | SolidWorks private, peak logged | Free, least logged |
+|---|---|---|---|---|---|---|---|
+| userwork | 1 | 1880 s | 47 | 0 | 0 | 11.91 GB (4.41 at its end) | 8.67 GB |
+| hub | 1 | 244 s | 23 | 0 | 0 | 7.05 GB | 9.42 GB |
+| dshape | 2 | 312 s | 44 | 0 | 0 | 1.87 GB | 9.87 GB |
+| allowance | 2 | 560 s | 15 | 0 | 0 | 2.82 GB | 10.18 GB |
+| print | 2 | 39 s | 25 | 0 | 0 | 2.98 GB | 10.14 GB |
+| built (three reducers built here) | 2 | 415 s | 94 | 1 (app) | 0 | 8.30 GB | 9.56 GB |
+
+Run 1: 0 failed, 1 noted (the notification box), 0 STOPs (1:1766); run 2: 1 failed, 0 STOPs (2:2525).
+
+**Every check reads as on 2026**, but the one FAIL, the same: *built: a quiet Update values on Coupon_F2*, the save flag False
+before and True after (2:760). dshape every state clean (2:11-395), the same steps, the same refusals in the same words; allowance
+the same holes (2:398-427); print the same bore from each STEP file and the same list lines (2:546-547, 2:655-656); built: schema 3
+kept (2:757, 2:1313), the quiet Update writing nothing (2:1331), the structural sentence (2:1345), G2 in place to 6.15 (2:1934),
+K11 with Gears!V3 (2:1946), the machined 12 : 1 planned machined (2:1958) and its Backlash written with no F3 global (2:2517);
+hub turning in H, N and L with no interference (1:1754), the Hub's hole a D (1:1756); userwork through every step, the in-place
+Update ok over the user's work (1:486-490), the bore mate on the 4.15 face (1:494), and **the carry check at `771f492` holding**:
+UserBoreMate named `part new` for the Part name, its subjects `('Sun', 'its Part name changed', 'face', '')`, the eight remade
+(1:863-864).
+
+**Windows.** No What's Wrong box anywhere (none expected: nothing of the user's was left in error). The notification box once,
+during `GetNextFeature` (1:473-474, exempt); progress boxes otherwise.
+
+## What differs between the versions
+
+Every check reads the same on both. Measured differences, none judged a fault:
+- **Volumes**: each dshape state's volume on 2024 is 0.186 mm³ over 2026's (4983.982 against 4983.796 as built), each twin the
+  same on its own version, so every state is its twin's on both. Sun's D part 9382.060 against 9381.261.
+- **The tip lands**: the two nearest +X at ±9.000° on 2024, +8.983° and −8.982° on 2026.
+- **The STEP files**: 346 vertices to radius 16.500000 over 8.000009 on 2024, 344 to 16.501185 over 8.000031 on 2026 (F2 measured
+  the same); the faces 175 with 43 planes (D) and 42 (round) on both.
+- **The hub's build sense**: 2026 made *Planet copy 1 meshes Ring* again with the other Flip; 2024 RangeSlv's spline and its two
+  dog mates (each by its version's route, nothing left turned round).
+- **Time and memory**: userwork 1213 s on 2026, 1880 s on 2024 (RangeBox's Printed Update 208 s and 348 s, the in-place Update
+  166 s and 360 s); SolidWorks 2024's private memory peaked at 11.91 GB in userwork and 8.30 GB in built, against 2.40 GB on
+  2026. Free memory never under 8.3 GB, so neither floor came near.
+- What's Wrong: `whats_wrong_shows_in_update` True on 2024, False on 2026; no box came on either.
+
+**Not measured by these runs**, beyond *What the script does not measure*: the carry's `COAXIAL_FACE_READ` on a D's partial
+cylinder (W9d reads a face's axis on a part made new for a gear mate only); an Update over a user's mate on a D bore face (K2
+refuses it, shown on 2026 run 2 only); `userwork` at `771f492` on 2026 (run 3 was at `75d27cf`); a What's Wrong that outlives
+its job, and either memory floor's STOP.
+
+**Script changes for these runs**: `75d27cf` (the STEP reader's planes in the bore by their vertices; built's machined 12 : 1
+said Machined; the structural refusal's changed part; the quiet Update values' conjuncts said apart; userwork's keyway read after
+the open and its bore mate made after the in-place Update) and `771f492` (the bore mate named, by K5). Self-check after each: 18
+checks, 0 failed (Linux).

@@ -1,0 +1,690 @@
+{
+ "sections": {
+  "userwork": {
+   "userwork: Sun given a D": {
+    "inserted": [
+     [
+      "Sprocket-1",
+      "Sprocket-1"
+     ],
+     [
+      "Sprocket-4",
+      "Sprocket-2"
+     ],
+     [
+      "Housing-1",
+      "Housing-1"
+     ],
+     [
+      "Sprocket-2",
+      "Sprocket-3"
+     ],
+     [
+      "Sprocket-3",
+      "Sprocket-4"
+     ]
+    ],
+    "remade": [
+     [
+      "UserAxis1",
+      "UserAxis1"
+     ],
+     [
+      "UserLock1",
+      "UserLock1"
+     ],
+     [
+      "UserLock3",
+      "UserLock3"
+     ],
+     [
+      "UserAxis4",
+      "UserAxis4"
+     ],
+     [
+      "UserDist4",
+      "UserDist4"
+     ],
+     [
+      "UserAngle4",
+      "UserAngle4"
+     ],
+     [
+      "UserAxis2",
+      "UserAxis2"
+     ],
+     [
+      "UserLock2",
+      "UserLock2"
+     ]
+    ],
+    "named": [],
+    "stopped": "",
+    "changed_files": [],
+    "facts": [
+     "fixed as in RangeBox.SLDASM: Housing-1 fixed in every mode by one FixComponent in H",
+     "UserDist4 made again with Flip False for its FlipDimension 0; it reads FlipDimension 0",
+     "UserAngle4 made again with Flip False for its FlipDimension 0; it reads FlipDimension 0"
+    ]
+   },
+   "userwork: Sun's new part": {
+    "facts": {
+     "in_error": [],
+     "sketch": 3,
+     "volume": 9382.059955255772,
+     "coaxial_radii": [
+      4.1,
+      16.375,
+      19.375
+     ],
+     "side_planes": [
+      [
+       17.068054,
+       [
+        -0.047694224,
+        -0.998861983,
+        -0.0
+       ]
+      ],
+      [
+       17.068054,
+       [
+        -0.047694224,
+        0.998861983,
+        0.0
+       ]
+      ],
+      [
+       16.493817,
+       [
+        -0.261304959,
+        -0.965256297,
+        -0.0
+       ]
+      ],
+      [
+       16.844208,
+       [
+        0.168146641,
+        0.985761993,
+        0.0
+       ]
+      ],
+      [
+       15.832746,
+       [
+        0.376125156,
+        0.926568868,
+        0.0
+       ]
+      ],
+      [
+       15.148347,
+       [
+        -0.462697366,
+        -0.886516299,
+        -0.0
+       ]
+      ]
+     ],
+     "links": [
+      "\"Bore@Bore Sketch\"= ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2",
+      "\"Flat@Bore Sketch\"= 2 * ( ( abs ( ( ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2 ) * ( ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2 ) - ( \"Bore Flat\" - \"Bore Diameter\" / 2 + \"Bore Allowance\" / 2 ) * ( \"Bore Flat\" - \"Bore Diameter\" / 2 + \"Bore Allowance\" / 2 ) ) ) ^ 0.5 )"
+     ],
+     "link_values": [
+      4.1,
+      5.3665631459994945
+     ],
+     "globals": {
+      "Bore Diameter": 8.0,
+      "Bore Allowance": 0.2,
+      "Bore Flat": 7.0
+     },
+     "boxes": {
+      "cylinders": 1,
+      "flats": 1,
+      "round_x": [
+       -4.1,
+       3.1
+      ],
+      "padding_beyond_minus_r": 0.0,
+      "round_past_the_flat": 0.0,
+      "flat_span": 5.3666,
+      "chord": 5.3666
+     },
+     "tip_lands": {
+      "nearest_above": 6.207,
+      "nearest_below": -6.207,
+      "half_pitch": 6.207,
+      "crossing_plus_x": 0,
+      "space_on_plus_x": true
+     },
+     "link_value_units": [
+      "mm",
+      "mm"
+     ]
+    },
+    "problems": []
+   },
+   "userwork: Sun in place": {
+    "facts": {
+     "in_error": [],
+     "sketch": 3,
+     "volume": 9288.34009449377,
+     "coaxial_radii": [
+      4.15,
+      16.375,
+      19.375
+     ],
+     "side_planes": [
+      [
+       17.068054,
+       [
+        -0.047694224,
+        -0.998861983,
+        -0.0
+       ]
+      ],
+      [
+       17.068054,
+       [
+        -0.047694224,
+        0.998861983,
+        0.0
+       ]
+      ],
+      [
+       16.493817,
+       [
+        -0.261304959,
+        -0.965256297,
+        -0.0
+       ]
+      ],
+      [
+       16.844208,
+       [
+        0.168146641,
+        0.985761993,
+        0.0
+       ]
+      ],
+      [
+       15.832746,
+       [
+        0.376125156,
+        0.926568868,
+        0.0
+       ]
+      ],
+      [
+       15.148347,
+       [
+        -0.462697366,
+        -0.886516299,
+        -0.0
+       ]
+      ]
+     ],
+     "links": [
+      "\"Bore@Bore Sketch\"= ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2",
+      "\"Flat@Bore Sketch\"= 2 * ( ( abs ( ( ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2 ) * ( ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2 ) - ( \"Bore Flat\" - \"Bore Diameter\" / 2 + \"Bore Allowance\" / 2 ) * ( \"Bore Flat\" - \"Bore Diameter\" / 2 + \"Bore Allowance\" / 2 ) ) ) ^ 0.5 )"
+     ],
+     "link_values": [
+      4.15,
+      4.8989794855663575
+     ],
+     "globals": {
+      "Bore Diameter": 8.0,
+      "Bore Allowance": 0.3,
+      "Bore Flat": 7.2
+     },
+     "boxes": {
+      "cylinders": 1,
+      "flats": 1,
+      "round_x": [
+       -4.15,
+       3.35
+      ],
+      "padding_beyond_minus_r": 0.0,
+      "round_past_the_flat": 0.0,
+      "flat_span": 4.899,
+      "chord": 4.899
+     },
+     "tip_lands": {
+      "nearest_above": 6.207,
+      "nearest_below": -6.207,
+      "half_pitch": 6.207,
+      "crossing_plus_x": 0,
+      "space_on_plus_x": true
+     },
+     "link_value_units": [
+      "mm",
+      "mm"
+     ]
+    },
+    "problems": []
+   },
+   "userwork: Sun made new, its allowance blank": {
+    "inserted": [
+     [
+      "Sprocket-2",
+      "Sprocket-1"
+     ],
+     [
+      "Housing-1",
+      "Housing-1"
+     ],
+     [
+      "Sprocket-1",
+      "Sprocket-2"
+     ],
+     [
+      "Sprocket-3",
+      "Sprocket-3"
+     ],
+     [
+      "Sprocket-4",
+      "Sprocket-4"
+     ]
+    ],
+    "remade": [
+     [
+      "UserAxis1",
+      "UserAxis1"
+     ],
+     [
+      "UserLock1",
+      "UserLock1"
+     ],
+     [
+      "UserLock3",
+      "UserLock3"
+     ],
+     [
+      "UserAxis4",
+      "UserAxis4"
+     ],
+     [
+      "UserDist4",
+      "UserDist4"
+     ],
+     [
+      "UserAngle4",
+      "UserAngle4"
+     ],
+     [
+      "UserAxis2",
+      "UserAxis2"
+     ],
+     [
+      "UserLock2",
+      "UserLock2"
+     ]
+    ],
+    "named": [
+     [
+      "UserBoreMate",
+      "mate",
+      "part new"
+     ]
+    ],
+    "stopped": "",
+    "changed_files": [],
+    "facts": [
+     "fixed as in RangeBox_r2.SLDASM: Housing-1 fixed in every mode by one FixComponent in H",
+     "UserDist4 made again with Flip False for its FlipDimension 0; it reads FlipDimension 0",
+     "UserAngle4 made again with Flip False for its FlipDimension 0; it reads FlipDimension 0"
+    ]
+   },
+   "userwork: Sun's newest part": {
+    "facts": {
+     "in_error": [],
+     "sketch": 3,
+     "volume": 9359.025929199537,
+     "coaxial_radii": [
+      4.15,
+      16.375,
+      19.375
+     ],
+     "side_planes": [
+      [
+       17.068054,
+       [
+        -0.047694224,
+        -0.998861983,
+        -0.0
+       ]
+      ],
+      [
+       17.068054,
+       [
+        -0.047694224,
+        0.998861983,
+        0.0
+       ]
+      ],
+      [
+       16.493817,
+       [
+        -0.261304959,
+        -0.965256297,
+        -0.0
+       ]
+      ],
+      [
+       16.844208,
+       [
+        0.168146641,
+        0.985761993,
+        0.0
+       ]
+      ],
+      [
+       15.832746,
+       [
+        0.376125156,
+        0.926568868,
+        0.0
+       ]
+      ],
+      [
+       15.148347,
+       [
+        -0.462697366,
+        -0.886516299,
+        -0.0
+       ]
+      ]
+     ],
+     "links": [
+      "\"Bore@Bore Sketch\"= ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2",
+      "\"Flat@Bore Sketch\"= 2 * ( ( abs ( ( ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2 ) * ( ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2 ) - ( \"Bore Flat\" - \"Bore Diameter\" / 2 + \"Bore Allowance\" / 2 ) * ( \"Bore Flat\" - \"Bore Diameter\" / 2 + \"Bore Allowance\" / 2 ) ) ) ^ 0.5 )"
+     ],
+     "link_values": [
+      4.15,
+      4.8989794855663575
+     ],
+     "globals": {
+      "Bore Diameter": 8.0,
+      "Bore Allowance": 0.3,
+      "Bore Flat": 7.2
+     },
+     "boxes": {
+      "cylinders": 1,
+      "flats": 1,
+      "round_x": [
+       -4.15,
+       3.35
+      ],
+      "padding_beyond_minus_r": 0.0,
+      "round_past_the_flat": 0.0,
+      "flat_span": 4.899,
+      "chord": 4.899
+     },
+     "tip_lands": {
+      "nearest_above": 6.207,
+      "nearest_below": -6.207,
+      "half_pitch": 6.207,
+      "crossing_plus_x": 0,
+      "space_on_plus_x": true
+     },
+     "link_value_units": [
+      "mm",
+      "mm"
+     ]
+    },
+    "problems": []
+   },
+   "seconds": 1880,
+   "failed": []
+  },
+  "hub": {
+   "modes": {
+    "H": {
+     "slide_read": 55.5,
+     "slide_recorded": -55.5,
+     "origin_z": -55.5,
+     "frame_gap": 6.580016531643196e-10,
+     "bands": {
+      "start": [
+       -55.5,
+       -50.5
+      ],
+      "end": [
+       -34.5,
+       -29.5
+      ]
+     },
+     "dogs": {
+      "HighDog": [
+       -34.5,
+       -29.5
+      ],
+      "LowDog": [
+       -19.5,
+       -14.5
+      ]
+     },
+     "hub": [
+      -55.5,
+      -35.5
+     ],
+     "interferences": [],
+     "errors": {},
+     "not_free": {},
+     "engaged": [
+      "HighDog"
+     ],
+     "least": 10.0
+    },
+    "N": {
+     "slide_read": 48.0,
+     "slide_recorded": -48.0,
+     "origin_z": -48.0,
+     "frame_gap": 6.580016531643196e-10,
+     "bands": {
+      "start": [
+       -48.0,
+       -43.0
+      ],
+      "end": [
+       -27.0,
+       -22.0
+      ]
+     },
+     "dogs": {
+      "HighDog": [
+       -34.5,
+       -29.5
+      ],
+      "LowDog": [
+       -19.5,
+       -14.5
+      ]
+     },
+     "hub": [
+      -55.5,
+      -35.5
+     ],
+     "interferences": [],
+     "errors": {},
+     "not_free": {},
+     "engaged": [],
+     "least": 2.5
+    },
+    "L": {
+     "slide_read": 40.5,
+     "slide_recorded": -40.5,
+     "origin_z": -40.5,
+     "frame_gap": 6.580016531643196e-10,
+     "bands": {
+      "start": [
+       -40.5,
+       -35.5
+      ],
+      "end": [
+       -19.5,
+       -14.5
+      ]
+     },
+     "dogs": {
+      "HighDog": [
+       -34.5,
+       -29.5
+      ],
+      "LowDog": [
+       -19.5,
+       -14.5
+      ]
+     },
+     "hub": [
+      -55.5,
+      -35.5
+     ],
+     "interferences": [],
+     "errors": {},
+     "not_free": {},
+     "engaged": [
+      "LowDog"
+     ],
+     "least": 1.0
+    }
+   },
+   "clean": true,
+   "interferences": {
+    "H": [],
+    "N": [],
+    "L": []
+   },
+   "hub_hole": {
+    "facts": {
+     "in_error": [],
+     "sketch": 3,
+     "volume": 5540.551810716242,
+     "coaxial_radii": [
+      4.1,
+      8.875,
+      11.875
+     ],
+     "side_planes": [
+      [
+       9.942365,
+       [
+        -0.09148495,
+        -0.995806459,
+        -0.0
+       ]
+      ],
+      [
+       9.942365,
+       [
+        -0.09148495,
+        0.995806459,
+        0.0
+       ]
+      ],
+      [
+       8.941018,
+       [
+        -0.44503396,
+        -0.895513693,
+        -0.0
+       ]
+      ],
+      [
+       9.60094,
+       [
+        0.274419609,
+        0.961610045,
+        0.0
+       ]
+      ],
+      [
+       7.962855,
+       [
+        0.603262279,
+        0.797542866,
+        0.0
+       ]
+      ],
+      [
+       6.732138,
+       [
+        -0.738478667,
+        -0.674276841,
+        -0.0
+       ]
+      ]
+     ],
+     "links": [
+      "\"Bore@Bore Sketch\"= ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2",
+      "\"Flat@Bore Sketch\"= 2 * ( ( abs ( ( ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2 ) * ( ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2 ) - ( \"Bore Flat\" - \"Bore Diameter\" / 2 + \"Bore Allowance\" / 2 ) * ( \"Bore Flat\" - \"Bore Diameter\" / 2 + \"Bore Allowance\" / 2 ) ) ) ^ 0.5 )"
+     ],
+     "link_values": [
+      4.1,
+      5.3665631459994945
+     ],
+     "globals": {
+      "Bore Diameter": 8.0,
+      "Bore Allowance": 0.2,
+      "Bore Flat": 7.0
+     },
+     "boxes": {
+      "cylinders": 1,
+      "flats": 1,
+      "round_x": [
+       -4.1,
+       3.1
+      ],
+      "padding_beyond_minus_r": 0.0,
+      "round_past_the_flat": 0.0,
+      "flat_span": 5.3666,
+      "chord": 5.3666
+     },
+     "tip_lands": {
+      "nearest_above": 10.588,
+      "nearest_below": -10.588,
+      "half_pitch": 10.588,
+      "crossing_plus_x": 0,
+      "space_on_plus_x": true
+     },
+     "link_value_units": [
+      "mm",
+      "mm"
+     ]
+    },
+    "problems": []
+   },
+   "seconds": 244,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {},
+ "switch": "True",
+ "revision": [
+  32,
+  5,
+  0
+ ],
+ "snapshot": "771f492bb7ec7aba93de233c6b69115072f82101",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": true,
+  "allowance_seconds": 60.0,
+  "close_outlived": {
+   "asked": true,
+   "in_force": true,
+   "within_seconds": 10.0,
+   "buttons": [
+    "&Close",
+    "Close"
+   ]
+  }
+ },
+ "fails": [],
+ "notes": [
+  "SolidWorks' notification box came up while GetNextFeature was in progress (exempt by the coordinator's ruling; nothing answers it)"
+ ]
+}
