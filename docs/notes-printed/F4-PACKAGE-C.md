@@ -12,6 +12,8 @@ tooth is rated to take. Written beside package B in this worktree, against F4-0'
 3. `6eb13dd`: `design/UI-DESIGN.md` (section *What a tooth is rated to take (F4)*), `design/canvas/gen.py`, the new
    board `PrintedStrength`, the three printed strip boards regenerated, `canvas.json`.
 4. This note.
+5. After B landed: `design/UI-DESIGN.md` brought to B's words, `WorkbookStrength` and `WorkbookPrinted` written by
+   `gen.py`, `canvas.json`, and this note (below).
 
 **No existing test changed.** Suite at `50efc82` with B's work in progress uncommitted in the worktree: **5523 passed,
 1 skipped, 5 failed**: the known Tk font test; the three cases of `test_printed_workbook.py:296-311` (B's file, B's
@@ -95,16 +97,23 @@ The README's section and UI-DESIGN's are in the files; the README's key phrases 
 - **§5.4's form row did not consider width** (choice 3).
 - **Outside gears past range** (choice 2).
 
-## Needs the other package before it can be shown working
+## Needs the other package before it can be shown working: done after B landed
 
-- **`WorkbookStrength`'s board, its `canvas.json` entry, and every Workbook board B's warnings reach.** The reducer
-  boards read their gearbox with a blank Process, so printed, at 10 N·m: with B's code in the worktree, `gen.py`
-  already gives `WorkbookPrinted` *2 new warnings (Meshes!A2, Meshes!A3)*. I committed none of those; run
-  `gen.py` once B's module is committed and commit the Workbook boards it changes (check the diff: `READ_STAMP` takes
-  today's date, so unrelated boards may differ by a date only).
-- **The README's *In a workbook* bullet and UI-DESIGN's warning and Results paragraphs** describe B's work: UI-DESIGN
-  quotes F4-INTERFACES §6.1 and §6.3 as drafted (already B's in-progress words differ: *Meshes!A2: G1 and G2: …*). Bring
-  them to B's final words when B lands.
+Package B landed (`f004334`, note `F4-PACKAGE-B.md`) and F4-0's stub asserts were retired by their owner (`7053532`).
+At the coordinator's word, in a fifth commit (design files and this note):
+
+- **UI-DESIGN.md's warning and Results paragraphs** now give B's words as built, read from B's code and its note: the
+  warning in each variant B pins (a planet, an idler at 34 MPa, not two-way, a ring past range, a ring not rated with the
+  pinion under and past 100 %, neither gear rated), and the Results block's seven states, B's seventh, `UNWORKED`, with
+  its wording *the torque here is not given (past a split, not worked out)*, then *Worst share* (with *(its torque is not
+  given)* among the meshes not worked out), *Allowable stress (MPa)* in its three forms and the note row.
+- **`gen.py` run with B in.** It changed one existing board, `WorkbookPrinted` (the reducer read printed at 10 N·m, now
+  *2 new warnings (Meshes!A2, Meshes!A3)*, G1–G2 14.3 times), a real change, committed; no board differed by a date
+  only. `WorkbookStrength` is written with exactly one strength warning (*Meshes!A2: G1 and G2: Printed, these teeth
+  take about 133 N at the pitch circle, 3.5 times the 39 N G1's teeth are rated to take once at 17 MPa …*) beside G2's
+  own form-diameter warning from spur (z 40 at module 1.5, as F4-0 found for Idler_Train's G3), and its `canvas.json`
+  entry is in. The PNG renders are still for the Mac.
+- The README's *In a workbook* bullet already matched B as built and is unchanged.
 
 ## What the reviewer should look at hardest
 
