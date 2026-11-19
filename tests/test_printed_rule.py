@@ -13,11 +13,15 @@ what a machined gear is.
 - what Update, the strip and Build again… say of a record written before F1: nothing.
 
 The link record's own `link_schema_version` is left out of the record's pin: F1 moves it to 11 for every record by
-ruling (§1.2), and its pins are elsewhere. Pins are by sha256, as BEFORE_W7 and BEFORE_W8 are.
+ruling (§1.2), and its pins are elsewhere. Pins are by sha256, as BEFORE_W7 and BEFORE_W8 are, with the text each was
+taken over stored beside it so that they hold under Windows' python.exe too (the block after _sha).
 """
 
 import hashlib
 import json
+import math
+import re
+import sys
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -38,6 +42,84 @@ OUT = "C:\\Out\\"
 
 def _sha(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()
+
+
+# -- the pins under any Python (the coordinator's ruling of 2026-11-19 on F3-DEMONSTRATION-RUNS-REVIEW §4) -----------
+# -- Each hash below was taken on Linux over text that prints every float to its last bit, and libm's last bit is not
+# -- the Windows CRT's: under Windows' python.exe a sin or a cos one ulp off changes the hash with nothing the pin is
+# -- about changed. So beside each hash the text it was taken over is stored (tests/fixtures/printed/pinned.json, made
+# -- on Linux at 12440a3, 1afc1f0's code, where every hash below holds, and held to its hash by a test). On Linux
+# -- the hash is the pin, as it always was; on every platform the text is also compared with the stored one, every
+# -- float to a relative 1e-12 (and 1e-12 absolute, for a figure that cancels to about nothing) and everything else
+# -- exactly; where the platform is not Linux that comparison is the pin. docs/notes-printed/PINS-ON-WINDOWS.md.
+
+PINNED = json.loads((Path(__file__).resolve().parent / "fixtures" / "printed" / "pinned.json").read_text(
+    encoding="utf-8"))["pins"]
+HASHED_HERE = sys.platform.startswith("linux")
+REL_TOL = ABS_TOL = 1e-12
+PIN_HOW = ("by hash, as taken on Linux" if HASHED_HERE else
+           f"by the stored text, floats to {REL_TOL:g} and all else exactly, on {sys.platform}")
+# A number standing on its own (not inside a name such as Gear_m1.5_N25): a float as repr or float.hex writes it, or an
+# integer. Only two floats are compared to a tolerance; an integer, and a float against an integer, exactly.
+_NUMBER = re.compile(r"(?<![\w.])-?(?:0x[0-9a-f]+(?:\.[0-9a-f]*)?p[-+]\d+|(?:\d+\.\d*|\.\d+|\d+)(?:[eE][-+]?\d+)?)"
+                     r"(?![\w.])")
+
+
+def _pieces(text: str) -> list:
+    """The text cut into words and numbers in turn: [words, number, words, number, ..., words]."""
+    out, last = [], 0
+    for m in _NUMBER.finditer(text):
+        out += [text[last:m.start()], m.group(0)]
+        last = m.end()
+    return out + [text[last:]]
+
+
+def _is_float(token: str) -> bool:
+    return "x" in token or any(c in token for c in ".eE")
+
+
+def _same_number(a: str, b: str) -> bool:
+    if a == b:
+        return True
+    if not (_is_float(a) and _is_float(b)):
+        return False
+    x, y = (float.fromhex(t) if "x" in t else float(t) for t in (a, b))
+    return math.isclose(x, y, rel_tol=REL_TOL, abs_tol=ABS_TOL)
+
+
+def text_difference(stored: str, text: str) -> str:
+    """'' when `text` is `stored` but for floats within REL_TOL (or ABS_TOL); else where they first part."""
+    a, b = _pieces(stored), _pieces(text)
+    for i, (x, y) in enumerate(zip(a, b)):
+        if x != y and (i % 2 == 0 or not _same_number(x, y)):
+            at, made_at = len("".join(a[:i])), len("".join(b[:i]))
+            if i % 2 == 0:              # words: to the first character that differs
+                same = next((j for j, (p, q) in enumerate(zip(x, y)) if p != q), min(len(x), len(y)))
+                at, made_at = at + same, made_at + same
+            return (f"at character {at} of the stored text, {'words' if i % 2 == 0 else 'a number'}: stored "
+                    f"{stored[max(0, at - 50):at + 30]!r}, made {text[max(0, made_at - 50):made_at + 30]!r}")
+    if len(a) != len(b):
+        return f"stored {len(a) // 2} numbers, made {len(b) // 2}: {stored[-60:]!r} against {text[-60:]!r}"
+    return ""
+
+
+def pin_problem(group: str, key, text: str) -> str:
+    """'' when `text` holds the pin `group`[`key`] (`key` None for a pin that is one hash): on Linux its hash is the
+    pinned one; on every platform it is the stored text, floats to REL_TOL. Else what fails, as a sentence."""
+    digest = globals()[group] if key is None else globals()[group][key]
+    stored = PINNED[group] if key is None else PINNED[group][key]
+    name = group if key is None else f"{group}[{key!r}]"
+    if _sha(stored) != digest:
+        return f"{name}: the stored text is not the text the pin was taken over (its hash {_sha(stored)})"
+    if HASHED_HERE and _sha(text) != digest:
+        return f"{name}: hash {_sha(text)}, pinned {digest}; {text_difference(stored, text) or 'the text as stored'}"
+    differs = text_difference(stored, text)
+    return f"{name}: {differs}" if differs else ""
+
+
+def assert_pinned(group: str, key, text: str) -> None:
+    problem = pin_problem(group, key, text)
+    assert not problem, problem
 
 
 # -- the gears, one of each kind the strip and a workbook build ------------------------------------------------------
@@ -80,7 +162,7 @@ MACHINED = (dict(process="machined"), dict(process="Machined"), dict(process=" M
             dict(process=""))
 
 
-def strip_print(name: str, **marked: str) -> str:
+def strip_text(name: str, **marked: str) -> str:
     """Everything the strip makes and says of one gear: its file name, warnings, globals in both trig variants and
     every step of each recipe's plan, described in both."""
     spec = _spec(name, **marked)
@@ -99,7 +181,11 @@ def strip_print(name: str, **marked: str) -> str:
         out.append(repr(plan))
         for trig in (DEGREES, RADIANS):
             out.append("\n".join(describe(op, trig) for op in plan.ops))
-    return _sha("\n".join(out))
+    return "\n".join(out)
+
+
+def strip_print(name: str, **marked: str) -> str:
+    return _sha(strip_text(name, **marked))
 
 
 STRIP = {
@@ -131,18 +217,51 @@ STRIP = {
 
 @pytest.mark.parametrize("name", sorted(GEARS))
 def test_every_kind_and_recipe_plans_says_and_names_as_at_the_cut(name):
-    assert strip_print(name) == STRIP[name]
+    assert_pinned("STRIP", name, strip_text(name))
 
 
 @pytest.mark.parametrize("marked", MACHINED, ids=repr)
 @pytest.mark.parametrize("name", sorted(GEARS))
 def test_a_gear_marked_machined_plans_says_and_names_as_at_the_cut(name, marked):
-    assert strip_print(name, **marked) == STRIP[name]
+    assert_pinned("STRIP", name, strip_text(name, **marked))
+
+
+# -- the stored text of every pin is the text its hash was taken over (any platform: sha256 is the same everywhere) ---
+
+def test_the_stored_text_of_every_pin_is_the_text_its_hash_was_taken_over():
+    groups = ("STRIP", "ASSEMBLIES", "SOLVE", "FIXTURES", "SIDECARS", "ENTRIES", "RECORD_BEFORE_F1", "K11", "CARD",
+              "RESULTS")
+    assert sorted(PINNED) == sorted(groups)
+    for group in groups:
+        pins = globals()[group]
+        if isinstance(pins, str):
+            assert _sha(PINNED[group]) == pins, group
+        else:
+            assert sorted(PINNED[group]) == sorted(pins), group
+            assert {k: _sha(t) for k, t in PINNED[group].items()} == pins, group
+
+
+def test_the_text_comparison_takes_a_floats_last_bits_and_nothing_more():
+    """What the comparison that is the pin off Linux lets through: a float within 1e-12 (or a residual within 1e-12 of
+    nothing), as libm and the Windows CRT differ; never a word, an integer, a float made an integer, or a float 1e-11
+    off. The figures are this file's pins' own, as Linux and python.exe print them (a dimension's label one ulp off)."""
+    stored = "Dimension(name='OD', at=(16.440232662587228, -4.596194077712559), teeth=20, h=0x1.8p+3, e=0.0) m1.5_N25"
+    assert text_difference(stored, stored) == ""
+    for made in (stored.replace("16.440232662587228", "16.44023266258723"),
+                 stored.replace("-4.596194077712559", "-4.59619407771256"),
+                 stored.replace("e=0.0", "e=7.105427357601002e-15"),
+                 stored.replace("0x1.8p+3", "0x1.8000000000001p+3")):
+        assert text_difference(stored, made) == "", made
+    for made in (stored.replace("16.440232662587228", "16.4402326627"), stored.replace("teeth=20", "teeth=21"),
+                 stored.replace("teeth=20", "teeth=20.0"), stored.replace("e=0.0", "e=2e-12"),
+                 stored.replace("'OD'", "'0D'"), stored.replace("m1.5_N25", "m1.50_N25"), stored + " ",
+                 stored.replace("0x1.8p+3", "0x1.9p+3"), stored.replace(", e=0.0", "")):
+        assert text_difference(stored, made) != "", made
 
 
 # -- the three pair assembly plans -------------------------------------------------------------------------------
 
-def assembly_prints():
+def assembly_texts():
     a, b = GearSpec(teeth="20"), GearSpec(teeth="40")
     ring_a, ring_b = GearSpec(teeth="20", bore="8"), GearSpec(teeth="60", teeth_side="internal", bore="")
     ha, hb = GearSpec(kind="helical", helix_angle="45", teeth="20"), GearSpec(kind="helical", helix_angle="45",
@@ -157,8 +276,12 @@ def assembly_prints():
         "crossed_fixed": pair.crossed_assembly_plan(ha, hb, *paths, 90.0, route=pair.ROUTE_FIXED),
         "bevel": pair.bevel_assembly_plan(ba, bb, *paths),
     }
-    return {k: _sha(repr(p) + "\n" + "\n".join(describe(op, t) for t in (DEGREES, RADIANS) for op in p.ops))
+    return {k: repr(p) + "\n" + "\n".join(describe(op, t) for t in (DEGREES, RADIANS) for op in p.ops)
             for k, p in plans.items()}
+
+
+def assembly_prints():
+    return {k: _sha(text) for k, text in assembly_texts().items()}
 
 
 ASSEMBLIES = {
@@ -172,7 +295,10 @@ ASSEMBLIES = {
 
 
 def test_the_three_pair_assembly_plans_are_as_at_the_cut():
-    assert assembly_prints() == ASSEMBLIES
+    texts = assembly_texts()
+    assert sorted(texts) == sorted(ASSEMBLIES)
+    for name, text in texts.items():
+        assert_pinned("ASSEMBLIES", name, text)
 
 
 # -- Solve's rows ------------------------------------------------------------------------------------------------
@@ -194,7 +320,7 @@ SOLVES = {
 }
 
 
-def solve_print(name: str) -> str:
+def solve_text(name: str) -> str:
     rows = pair.solve_spec(SOLVES[name])
     out = [repr(rows)]
     pairs = SOLVES[name]
@@ -206,7 +332,11 @@ def solve_print(name: str) -> str:
             out.append(f"{type(exc).__name__}: {exc}")
             continue
         out.append(repr((a.to_dict(), b.to_dict(), pair.mesh_warnings(g1, g2))))
-    return _sha("\n".join(out))
+    return "\n".join(out)
+
+
+def solve_print(name: str) -> str:
+    return _sha(solve_text(name))
 
 
 SOLVE = {
@@ -223,18 +353,23 @@ SOLVE = {
 
 @pytest.mark.parametrize("name", sorted(SOLVES))
 def test_solves_rows_and_what_their_pair_is_told_are_as_at_the_cut(name):
-    assert solve_print(name) == SOLVE[name]
+    assert_pinned("SOLVE", name, solve_text(name))
 
 
 # -- the W8 fixtures, RangeBox and RangeBox_Fixed ------------------------------------------------------------------
 
-def fixture_prints():
-    from test_workbook_planetary import _fingerprint
+def fixture_texts():
+    from test_workbook_planetary import _fingerprint_text
     from workbook_fixtures import e4_transfer_case, range_box, range_box_fixed, transfer_case_parallel
     makes = {"transfer_case_parallel": transfer_case_parallel, "e4_transfer_case": e4_transfer_case,
              "range_box": range_box, "range_box_fixed": range_box_fixed}
-    return {name: _fingerprint(assess.assess(replace(make(), source_path="C:\\B\\W.xlsx"), [], OUT))
+    return {name: _fingerprint_text(assess.assess(replace(make(), source_path="C:\\B\\W.xlsx"), [], OUT))
             for name, make in makes.items()}
+
+
+def fixture_prints():
+    """Each fixture's test_workbook_planetary._fingerprint."""
+    return {name: _sha(text) for name, text in fixture_texts().items()}
 
 
 FIXTURES = {
@@ -247,7 +382,10 @@ FIXTURES = {
 
 def test_the_w8_fixtures_and_rangebox_plan_bit_for_bit_as_at_the_cut(monkeypatch):
     monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", "entity senses", raising=False)
-    assert fixture_prints() == FIXTURES
+    texts = fixture_texts()
+    assert sorted(texts) == sorted(FIXTURES)
+    for name, text in texts.items():
+        assert_pinned("FIXTURES", name, text)
 
 
 # -- the record: a machined part's whole .gear.json, and its entry in a link record --------------------------------
@@ -323,16 +461,16 @@ ENTRIES = {
 @pytest.mark.parametrize("name", RECORDED)
 def test_a_machined_parts_gear_json_and_record_entry_are_byte_for_byte_as_at_the_cut(name):
     text = sidecar_text(name)
-    assert _sha(text) == SIDECARS[name]
+    assert_pinned("SIDECARS", name, text)
     assert json.loads(text)["schemaVersion"] == (2 if name == "sleeve_banded" else 1)
-    assert _sha(entry_text(name)) == ENTRIES[name]
+    assert_pinned("ENTRIES", name, entry_text(name))
 
 
 @pytest.mark.parametrize("marked", MACHINED, ids=repr)
 @pytest.mark.parametrize("name", RECORDED)
 def test_a_part_marked_machined_is_recorded_byte_for_byte_as_at_the_cut(name, marked):
-    assert _sha(sidecar_text(name, **marked)) == SIDECARS[name]
-    assert _sha(entry_text(name, **marked)) == ENTRIES[name]
+    assert_pinned("SIDECARS", name, sidecar_text(name, **marked))
+    assert_pinned("ENTRIES", name, entry_text(name, **marked))
 
 
 # -- a record written before F1: Update, the strip and Build again… find nothing to do ----------------------------
@@ -377,7 +515,7 @@ def test_a_record_written_before_f1_is_nothing_to_update_or_make_again(monkeypat
     from test_workbook_model import reducer
     _gearbox_findings(monkeypatch)
     disk, record, text = built_reducer()
-    assert _sha(text) == RECORD_BEFORE_F1
+    assert_pinned("RECORD_BEFORE_F1", None, text)
     assert all("process" not in p.spec and "nozzle" not in p.spec for p in record.parts)
     plan, again, columns, matches = nothing_to_do(record, disk, assessed(reducer()))
     assert (plan.refusal, plan.structural, plan.missing, plan.replaced, plan.moved_shafts) == ("", (), (), (), ())
@@ -410,7 +548,8 @@ def test_a_record_written_before_f1_is_nothing_to_do_against_a_workbook_marked_m
     from test_workbook_model import reducer
     _gearbox_findings(monkeypatch)
     disk, record, text = built_reducer()
-    assert _sha(text) == RECORD_BEFORE_F1 and assess.blank_process(record) == "machined"
+    assert_pinned("RECORD_BEFORE_F1", None, text)
+    assert assess.blank_process(record) == "machined"
     read = replace(reducer(), box=replace(reducer().box, process=box_process), source_path=WORKBOOK)
     a = assess.assess(read, [], FOLDER, blank_process=assess.blank_process(record))
     assert a.lay_out_refusal() == "" and a.read.box.process == a.spec.box.process == (box_process or "machined")
@@ -671,7 +810,7 @@ CARD = {
 
 @pytest.mark.parametrize("name", TOLD)
 def test_what_k11_tells_of_a_machined_gear_is_as_at_the_cut(name):
-    assert _sha("\n".join(k11_sentences(name))) == K11[name]
+    assert_pinned("K11", name, "\n".join(k11_sentences(name)))
 
 
 def test_k11_says_a_machined_blank_backlash_and_fillet_as_their_equations():
@@ -686,7 +825,7 @@ def test_k11_says_a_machined_blank_backlash_and_fillet_as_their_equations():
 
 @pytest.mark.parametrize("name", TOLD)
 def test_the_card_of_a_machined_gear_is_as_at_the_cut(name):
-    assert _sha(card_text(name)) == CARD[name]
+    assert_pinned("CARD", name, card_text(name))
 
 
 def test_the_card_says_a_machined_blank_backlash_is_0_3_module():
@@ -1215,8 +1354,11 @@ def test_a_machined_gear_read_as_built_from_its_record_plans_says_and_names_as_a
     kind = kind_for(spec)
     held = [[v.name, v.expression_for(DEGREES)] for v in kind.variables(spec, kind.derive(spec))]
     assert as_built(spec, held).built_allowance == "0"
-    assert strip_print(name, built_allowance="0") == STRIP[name]
-    assert _sha(sidecar_text(name, built_allowance="0")) == SIDECARS.get(name, _sha(sidecar_text(name)))
+    assert_pinned("STRIP", name, strip_text(name, built_allowance="0"))
+    if name in SIDECARS:
+        assert_pinned("SIDECARS", name, sidecar_text(name, built_allowance="0"))
+    else:
+        assert sidecar_text(name, built_allowance="0") == sidecar_text(name)
 
 
 def _f2_entries():
@@ -1302,7 +1444,7 @@ def test_the_stubs_are_importable_and_neutral_until_their_packages_fill_them():
 
 # -- F4-0 (PLAN-PRINTED §5.6 item 1): what a machined gearbox's Results sheet and diagnostics say, pinned at abdf450 ----
 
-def results_prints():
+def results_texts():
     """Each gearbox's Results sheet rows and note, `results_sheet` called with a fixed `when` so its timestamp does not
     break the hash, and every diagnostic its assessment gives, in order, as level, sentence and field. RangeBox,
     RangeBox_Fixed and planetary_4to1 as built in code (machined, each with its typed torque: 10, 10 and 2 N·m); the
@@ -1323,9 +1465,13 @@ def results_prints():
     for name, a in out.items():
         sheet = export.results_sheet(a.spec, a.report, when=STAMP)
         told = [[d.level, d.message, d.field] for d in a.diagnostics]
-        prints[name] = _sha(json.dumps({"rows": sheet.rows, "note": sheet.note, "told": told}, ensure_ascii=False,
-                                       default=repr))
+        prints[name] = json.dumps({"rows": sheet.rows, "note": sheet.note, "told": told}, ensure_ascii=False,
+                                  default=repr)
     return prints
+
+
+def results_prints():
+    return {name: _sha(text) for name, text in results_texts().items()}
 
 
 RESULTS = {
@@ -1341,4 +1487,7 @@ def test_a_machined_gearboxs_results_and_diagnostics_are_as_before_f4(monkeypatc
     """§5.5: every machined gearbox is told exactly what it was, and its Results sheet is what it is today. F4's check
     runs for printed gearboxes only, so these hold at every commit of F4."""
     monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", "entity senses", raising=False)
-    assert results_prints() == RESULTS
+    texts = results_texts()
+    assert sorted(texts) == sorted(RESULTS)
+    for name, text in texts.items():
+        assert_pinned("RESULTS", name, text)

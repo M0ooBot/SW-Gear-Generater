@@ -367,7 +367,8 @@ def test_a_mount_that_loops_and_copies_below_one_are_the_reads_errors(tmp_path):
 
 # -- every workbook before W7 plans bit for bit as it did (D7's rule, carried over) ---------------------------------
 
-def _fingerprint(a):
+def _fingerprint_text(a):
+    """What _fingerprint hashes (split out for test_printed_rule's stored content of its W8 pins; unchanged)."""
     r = a.report
     out = [repr([d.message for d in a.diagnostics]), r.worked_out_as, r.unchecked]
     out.append(repr({k: v.hex() for k, v in sorted(r.theta.items())}))
@@ -382,7 +383,11 @@ def _fingerprint(a):
     out.append(plan.refusal)
     if not plan.refusal:
         out.append(repr(plan.build_kwargs()))
-    return hashlib.sha256("\n".join(out).encode()).hexdigest()
+    return "\n".join(out)
+
+
+def _fingerprint(a):
+    return hashlib.sha256(_fingerprint_text(a).encode()).hexdigest()
 
 
 # Taken at 5d5d51d (W7's interface commit, before any of B's W7 code), with the turned read-back finding set.
