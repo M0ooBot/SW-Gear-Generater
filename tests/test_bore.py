@@ -7,6 +7,7 @@ on with monkeypatch.
 """
 
 import math
+import re
 
 import pytest
 
@@ -548,6 +549,35 @@ def test_the_bounds_sentences_word_for_word():
     assert (ERROR, "flat", "Your shaft's flat is 0.2 mm deep (Bore 8 less Flat 7.8), under the 0.3 mm a printed D "
                            "needs to hold; type a Flat of at most 7.7 mm, which leaves the flat a little play, or use "
                            "a round bore.") in shallow
+
+
+def _advised(message, words):
+    """The figure a bound's sentence advises, read back off the sentence."""
+    return re.search(words + r" (-?[0-9.]+) mm", message).group(1)
+
+
+def test_the_advised_flat_typed_back_is_always_accepted():
+    """F3-REVIEW S1: the least Flat is said rounded up and the most rounded down at the shown thousandth, so typing the
+    figure a sentence advises clears that bound, for a sweep of shafts and allowances (at -0.1 the least is 5.0375,
+    said 5.038, where rounding to nearest said 5.037, which is refused)."""
+    checked = 0
+    for bore in (2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.5, 10.0, 12.0, 15.0, 20.0, 25.0):
+        for allowance in (-0.3, -0.25, -0.15, -0.1, -0.05, 0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4):
+            base = dict(module="2", teeth="40", bore=repr(bore), drive="flat", bore_allowance=repr(allowance))
+            near = [m[2] for m in messages(spec(**base, flat=repr(bore / 2.0)), ERROR) if "from the axis" in m[2]]
+            least = _advised(near[0], "at least")
+            assert float(least) >= (5.0 * bore - 3.0 * allowance) / 8.0 - 1e-9
+            assert not [m for m in messages(spec(**base, flat=least), ERROR) if "from the axis" in m[2]], (bore, allowance)
+            deep = [m[2] for m in messages(spec(**base, flat=repr(bore - 0.1)), ERROR) if "deep" in m[2]]
+            most = _advised(deep[0], "at most")
+            assert float(most) <= bore - 0.3 + 1e-9
+            assert not [m for m in messages(spec(**base, flat=most), ERROR) if "deep" in m[2]], (bore, allowance)
+            checked += 1
+    assert checked == 13 * 14
+    found = messages(spec(drive="flat", flat="5", bore_allowance="-0.1"), ERROR)
+    assert any("type a Flat of at least 5.038 mm" in m[2] for m in found)
+    assert not [m for m in messages(spec(drive="flat", flat="5.038", bore_allowance="-0.1"), ERROR) if m[1] == "flat"]
+    assert [m for m in messages(spec(drive="flat", flat="5.037", bore_allowance="-0.1"), ERROR) if m[1] == "flat"]
 
 
 def test_the_least_flat_is_where_h_is_a_quarter_of_r():

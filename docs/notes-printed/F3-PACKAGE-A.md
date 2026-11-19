@@ -10,8 +10,10 @@ as the app makes them), and no file but package A's is touched.
 1. `e855b36`: `gears/spur.py`, `helical.py`, `bevel.py`, `internal.py`, `clutch.py` and `tests/test_bore.py` (new). Its
    message says 145 tests; there are **139** (the message's count is wrong, the commit is not).
 2. This note.
-3. The coordinator's two rulings on this note: the chord's link with its power bracketed (code, tests, PLAN-PRINTED
-   §4.2, F3-INTERFACES §3), and the switch's commit written down below.
+3. `bea3a45`: the coordinator's two rulings on this note: the chord's link with its power bracketed (code, tests,
+   PLAN-PRINTED §4.2, F3-INTERFACES §3), and the switch's commit written down below.
+4. F3-REVIEW's should-fix S1 (the advised Flat rounded so it is always accepted) and the rulings on the review recorded
+   here; S2 prepared and held (*After F3's review*, below).
 
 No existing test was changed; F3-0's printed-bevel fixture commit (`21cac8b`) was in the log before `e855b36`.
 
@@ -178,6 +180,145 @@ Two changes, one commit, with the whole suite run there:
    ```
 
    The block replaces lines 97 to 107 whole.
+
+## After F3's review (`d394a85`) and the coordinator's rulings, 2026-11-18
+
+**The rulings, as recorded** (each the user's to overrule): package A's choices 1 to 8 are accepted as the review
+recommends, and 9 was ruled before (the power bracketed, `bea3a45`). B's choices 1 to 5 and 8 and all of C's are
+accepted (K3's wording included, the interface following it); B's 6 becomes *rows on record are read as built for the
+checks only, the jobs planned as typed*, and B's 7 *the allowance compared as built, as a number*. Guard 5
+(`tests/test_swbuild_user_work.py:578-579`) has its hand-built input corrected to what a real Update carries,
+`_values(as_built(printed, _recorded(S17)))`, every assertion unchanged, the worker unchanged. **The switch commit holds
+exactly**: the switch on, package A's two-case rim test (below), the review's M1 (`pre_f3_desk` building with the switch
+off) and M3 (guard 5's input), and the design boards `gen.py` regenerates (the review names PrintedGear and PrintedSpan;
+package C's `2edbe17` leaves PrintedBore to it too). It is package A's to make on the coordinator's word, not before.
+
+**S1, done.** The bounds' sentences advised the least and the most Flat rounded to nearest, so the advice could be
+refused: at a −0.1 allowance on D 8 the least is (5 × 8 + 0.3) / 8 = 5.0375, said 5.037, and 5.037 is refused. Now the
+least is rounded up and the most down at the thousandth shown (`spur._up`, `spur._down`), each giving back the bounds'
+own 1e-9 mm, so a bound on a whole thousandth (4.925, 7.7) is said as it is. The test
+(`test_the_advised_flat_typed_back_is_always_accepted`) reads the advised figure off each sentence and types it back
+for 13 shafts (2 to 25 mm) by 14 allowances (−0.3 to 0.4): every least clears the quarter-radius bound and every most
+the depth bound; 5.038 is said at −0.1 and passes, 5.037 is refused.
+
+**The suite** with S1 (a scratch copy of `5a72057` with A's two files, since package B had uncommitted edits in the
+worktree): switch off **5385 passed, 1 skipped, 1 failed** (the known Tk font test); the guards, `test_bore.py` and
+`test_bore_form.py` with the switch on: 800 passed, guard 5 alone failing, which the switch commit's M3 corrects.
+
+**S2, prepared and held, for a ruling.** The rim sentences are to name the hole as cut, as the root check does: *The
+bore, 33 mm with its 0.2 mm allowance (33.2 mm as cut), leaves 0.9 mm of rim under the teeth, thinner than one module
+(2 mm).* and *Printed, the bore, 20 mm with its 0.2 mm allowance (20.2 mm as cut), leaves 0.78 mm of rim under the
+teeth, under three nozzle widths (1.2 mm).*, F1's sentences word for word with no allowance (the bevel's printed rim
+the same). Written and green in A's files, it turns **package C's**
+`tests/test_bore_form.py::test_the_windows_warnings_for_a_gearbox_built_before_f3_are_unchanged_with_the_default_on`
+red: its last assertion (line 362) quotes the rim sentence a new row would get at the default, *Gears!J2: G1: The bore
+leaves 1.425 mm of rim under the teeth, thinner than one module (1.5 mm).*, which S2 makes *Gears!J2: G1: The bore,
+18.7 mm with its 0.2 mm allowance (18.9 mm as cut), leaves 1.425 mm of rim under the teeth, thinner than one module
+(1.5 mm).* (the same assertion, the sentence reworded). That file is not package A's, and a commit may not leave the
+suite red, so S2 is not in this commit. It wants one commit holding A's patch below and that one line of C's, by
+whoever the coordinator names. With S2 in, the switch commit's rim test (below) takes S2's words in its default case:
+*The bore, 33 mm with its 0.2 mm allowance (33.2 mm as cut), leaves 0.9 mm …*, *Printed, the bore, 20 mm with its 0.2
+mm allowance (20.2 mm as cut), leaves 0.78 mm …* and *Printed, the bore, 21 mm with its 0.2 mm allowance (21.2 mm as
+cut), leaves 0.28 mm …*; its typed-0 case keeps F1's words.
+
+S2's patch to package A's files, against this commit (`git apply` from the worktree's root):
+
+```diff
+--- a/src/gear_generator/gears/spur.py
++++ b/src/gear_generator/gears/spur.py
+@@ -1007,11 +1007,11 @@
+         if g.printed and PRINTED_RIM_NOZZLES * g.nozzle > g.module:
+             # §2.2: printed, the stricter floor is said; above 3 nozzle widths of module that is today's one module.
+             if rim < PRINTED_RIM_NOZZLES * g.nozzle - PRINTED_TOLERANCE:
+-                out.append(printed_rim_warning(rim, g.nozzle))
++                out.append(printed_rim_warning(rim, g.nozzle, g.bore, g.bore_allowance))
+         elif rim < g.module:
+             out.append(Diagnostic(WARNING, (
+-                f"The bore leaves {_num(rim)} mm of rim under the teeth, thinner "
+-                f"than one module ({_num(g.module)} mm)."), "bore"))
++                f"{_the_bore('The bore', g.bore, g.bore_allowance)} leaves {_num(rim)} mm of rim under the "
++                f"teeth, thinner than one module ({_num(g.module)} mm)."), "bore"))
+     if g.tip_thickness < TIP_THICKNESS_WARNING * g.module:
+         out.append(Diagnostic(WARNING, (
+             f"The tooth tip is {_num(g.tip_thickness)} mm thick, under 0.3 × module "
+@@ -1063,11 +1063,20 @@
+         f"{_num(nozzle)} mm nozzle rounds the profile off."), "module")
+ 
+ 
+-def printed_rim_warning(rim: float, nozzle: float) -> Diagnostic:
+-    """F1 (§2.2): the wall between a printed gear's bore and its root, said when under three nozzle widths."""
++def printed_rim_warning(rim: float, nozzle: float, bore: float = 0.0, allowance: float = 0.0) -> Diagnostic:
++    """F1 (§2.2): the wall between a printed gear's bore and its root, said when under three nozzle widths. F3: a bore
++    cut with an allowance is named with it, the rim being measured on the hole as cut (F3-REVIEW S2); with none the
++    sentence is F1's."""
+     return Diagnostic(WARNING, (
+-        f"Printed, the bore leaves {_num(rim)} mm of rim under the teeth, under three nozzle widths "
+-        f"({_num(PRINTED_RIM_NOZZLES * nozzle)} mm)."), "bore")
++        f"Printed, {_the_bore('the bore', bore, allowance)} leaves {_num(rim)} mm of rim under the teeth, under three "
++        f"nozzle widths ({_num(PRINTED_RIM_NOZZLES * nozzle)} mm)."), "bore")
++
++
++def _the_bore(lead: str, bore: float, allowance: float) -> str:
++    """A rim sentence's subject: ``lead`` alone with no allowance, as before F3, else
++    ``the bore, 20 mm with its 0.2 mm allowance (20.2 mm as cut),`` (F3-REVIEW S2), so the rim is said of the hole as
++    cut, as the bore's check against the root says it."""
++    return f"{lead}, {bore_size_words(bore, allowance)}," if allowance else lead
+ 
+ 
+ def printed_section_warnings(g: SpurDerived) -> List[Diagnostic]:
+--- a/src/gear_generator/gears/bevel.py
++++ b/src/gear_generator/gears/bevel.py
+@@ -660,7 +660,7 @@
+     elif g.printed and g.bore > 0.0:
+         rim = toe_root_radius(g) - g.bore_as_cut / 2.0
+         if rim < spur.PRINTED_RIM_NOZZLES * g.section.nozzle - spur.PRINTED_TOLERANCE:
+-            out.append(spur.printed_rim_warning(rim, g.section.nozzle))
++            out.append(spur.printed_rim_warning(rim, g.section.nozzle, g.bore, g.bore_allowance))
+     if g.face_width > g.cone_distance / 3.0 or g.face_width > 10.0 * g.module:
+         out.append(Diagnostic(WARNING, (
+             f"A face width of {_num(g.face_width)} mm is more than the Gleason limit of the smaller of a third of the "
+--- a/tests/test_bore.py
++++ b/tests/test_bore.py
+@@ -641,8 +641,13 @@
+     bore = g.df - 2.0 * g.module + 0.1            # a rim 0.05 under one module once a 0.2 allowance is cut
+     assert not [m for m in messages(spec(bore=repr(round(bore - 0.2, 9)))) if "rim" in m[2]]
+     rims = [m for m in messages(spec(bore=repr(round(bore - 0.2, 9)), bore_allowance="0.2")) if "rim" in m[2]]
+-    assert rims and rims[0][2] == (f"The bore leaves {spur._num((g.df - bore) / 2.0)} mm of rim under the teeth, "
++    shaft = round(bore - 0.2, 9)
++    assert rims and rims[0][2] == (f"The bore, {spur._num(shaft)} mm with its 0.2 mm allowance ({spur._num(bore)} mm "
++                                   f"as cut), leaves {spur._num((g.df - bore) / 2.0)} mm of rim under the teeth, "
+                                    f"thinner than one module ({spur._num(g.module)} mm).")
++    # With no allowance the sentence is the one a gear said before F3 (F3-REVIEW S2 names the hole only when cut so).
++    plain = [m for m in messages(spec(bore=repr(round(bore, 9)))) if "rim" in m[2]]
++    assert plain[0][2].startswith(f"The bore leaves {spur._num((g.df - bore) / 2.0)} mm of rim under the teeth")
+ 
+ 
+ def test_the_printed_rim_is_measured_from_the_hole_as_cut(monkeypatch):
+@@ -654,7 +659,22 @@
+     assert not [m for m in messages(base) if "three nozzle widths" in m[2]]
+     monkeypatch.setattr(spur, "PRINTED_DEFAULT_IN_PLANS", True)       # the printed default is cut
+     said = [m for m in messages(base) if "three nozzle widths" in m[2]]
+-    assert said and said[0][2].startswith(f"Printed, the bore leaves {spur._num((g.df - bore) / 2.0)} mm of rim")
++    assert said and said[0][2] == (f"Printed, the bore, {spur._num(bore - 0.2)} mm with its 0.2 mm allowance "
++                                   f"({spur._num(bore)} mm as cut), leaves {spur._num((g.df - bore) / 2.0)} mm of rim "
++                                   "under the teeth, under three nozzle widths (1.2 mm).")
++    typed_0 = [m for m in messages(base.with_values(bore_allowance="0")) if "three nozzle widths" in m[2]]
++    assert not typed_0                                                  # F1's figure, 1.15 mm, passes
++
++
++def test_a_printed_bevels_rim_names_the_hole_as_cut():
++    s = GearSpec(**{**BEVEL, "process": "printed", "module": "1", "face_width": "6"})
++    g = kind_of(s).derive(s)
++    bore = 2.0 * (bevel.toe_root_radius(g) - 1.0) - 0.4         # rim 1.2 mm before the cut, 1.1 once 0.2 is cut
++    cut = s.with_values(bore=repr(round(bore, 9)), bore_allowance="0.2")
++    said = [m[2] for m in messages(cut) if "three nozzle widths" in m[2]]
++    assert said == [f"Printed, the bore, {spur._num(bore)} mm with its 0.2 mm allowance ({spur._num(bore + 0.2)} mm as "
++                    f"cut), leaves {spur._num(bevel.toe_root_radius(g) - (bore + 0.2) / 2.0)} mm of rim under the teeth, "
++                    "under three nozzle widths (1.2 mm)."]
+ 
+ 
+ def test_the_herringbones_groove_floor_is_against_the_hole_as_cut():
+```
 
 ## What needs the other packages before it can be shown working
 

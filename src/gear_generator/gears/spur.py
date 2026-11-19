@@ -1650,14 +1650,29 @@ def bore_checks(spec: GearSpec, kind: str = KIND, cut: bool = True) -> List[Diag
     if d.h < FLAT_LEAST_H * d.radius - 1e-9:
         out.append(Diagnostic(ERROR, (
             f"The flat is {_num(d.h)} mm from the axis, under a quarter of the hole's radius "
-            f"({_num(FLAT_LEAST_H * d.radius)} mm); type a Flat of at least {_num(d.least_flat)} mm, or use a round "
+            f"({_num(FLAT_LEAST_H * d.radius)} mm); type a Flat of at least {_num(_up(d.least_flat))} mm, or use a "
+            "round "
             "bore."), "flat"))
     if bore - flat < FLAT_LEAST_DEPTH - 1e-9:
         out.append(Diagnostic(ERROR, (
             f"Your shaft's flat is {_num(bore - flat)} mm deep (Bore {_num(bore)} less Flat {_num(flat)}), under the "
-            f"{_num(FLAT_LEAST_DEPTH)} mm a printed D needs to hold; type a Flat of at most {_num(d.most_flat)} mm, "
+            f"{_num(FLAT_LEAST_DEPTH)} mm a printed D needs to hold; type a Flat of at most {_num(_down(d.most_flat))} mm, "
             "which leaves the flat a little play, or use a round bore."), "flat"))
     return out
+
+
+def _up(value: float, places: int = 3) -> float:
+    """A least figure as advised: rounded up at the shown precision, so typed back it is never refused (F3-REVIEW S1:
+    at a −0.1 allowance the least Flat 5.0375 was said 5.037, which is refused). The 1e-9 mm given back is the bounds'
+    own tolerance, so a bound that is a whole thousandth (4.925) is said as it is."""
+    scale = 10 ** places
+    return math.ceil(value * scale - 1e-9 * scale) / scale
+
+
+def _down(value: float, places: int = 3) -> float:
+    """A most figure as advised: rounded down at the shown precision, as :func:`_up` rounds a least one up."""
+    scale = 10 ** places
+    return math.floor(value * scale + 1e-9 * scale) / scale
 
 
 _BEVEL_FLAT = ("A bevel gear's bore is the edge of its revolved blank and takes no flat: use a round bore, or a hub "
