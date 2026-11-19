@@ -1254,6 +1254,25 @@ def sidecar_of(path):
     return where, text, sidecar_schema(text)
 
 
+# The strip's quiet Update values is held to make no call that changes or marks the part (the coordinator's ruling of
+# 2026-11-19 on F3-DEMONSTRATION-RUNS-REVIEW section 3, fixed in b668cf0). Its calls are counted by member through F2's
+# counted call (F2.CALLS), and the indexed put that sets a global (swcom._put_indexed, an Invoke, not a call) is counted
+# beside them here; nothing else changes. The members below are those through which update_variables' changing steps
+# reach SolidWorks (detect_trig_units' Add2 and Delete, a global's put, a rebuild, a save, a suppression).
+CHANGING_CALLS = {"Add2", "Add3", "Delete", "put Equation", "ForceRebuild3", "EditRebuild3", "Save3", "SaveAs",
+                  "SaveAs3", "SetSaveFlag", "SetSuppression2", "EditSuppress2", "EditUnsuppress2"}
+_PREV_PUT = swcom._put_indexed  # noqa: SLF001
+
+
+def _counted_put(obj, name, index, value):
+    if F2.CALLS["on"]:
+        F2.CALLS["log"].append(f"put {name}")
+    return _PREV_PUT(obj, name, index, value)
+
+
+swcom._put_indexed = _counted_put  # noqa: SLF001
+
+
 def app_runner(what):
     """The strip's worker for Update values and Build: the job on this run's worker under W9a's watch, as an app job
     (the What's Wrong rule applying)."""
@@ -1756,18 +1775,27 @@ def section_built(out):
               f"built: Coupon_F2 opened with the switch on reads as built: Update values counts {count}, Bore as cut "
               f"{rows.get('Bore as cut')!r}, the hole planned with {held_a} allowance")
         flags = flags_in("built, before the quiet Update values", folder)
-        seen = strip_press(app, strand, {}, snapshot)
+        F2.CALLS.update(on=True, log=[])
+        try:
+            seen = strip_press(app, strand, {}, snapshot)
+        finally:
+            F2.CALLS["on"] = False
+        quiet_calls = list(F2.CALLS["log"])
+        by_member = {m: quiet_calls.count(m) for m in sorted(set(quiet_calls))}
+        changing_calls = sorted(set(quiet_calls) & CHANGING_CALLS)
+        say(f"fact    built: the quiet Update values' job: SolidWorks calls by member {by_member}")
         r = seen["jobs"][-1]["value"] if seen["jobs"] else None
         files_now, record_now, flags_now = F2.sw_files(folder), F2.sha(where), flags_in("built, after", folder)
         # Each part of the judgement said apart (SolidWorks 2026's first run failed it with none of them shown).
         moved = {k: (prints[0].get(k), files_now.get(k)) for k in set(prints[0]) | set(files_now)
                  if prints[0].get(k) != files_now.get(k)}
         check(r is not None and r.ok and not r.changed and files_now == prints[0] and record_now == prints[1]
-              and flags_now == flags,
+              and flags_now == flags and bool(quiet_calls) and not changing_calls,
               f"built: a quiet Update values on Coupon_F2 writes nothing: changed {r and list(r.changed)}, no file or "
               f"record written, no save flag turned: {seen['status']!r}; jobs {len(seen['jobs'])}, ok "
               f"{r is not None and r.ok}; SolidWorks files moved {moved or 'none'}; the .gear.json "
-              f"{'the same' if record_now == prints[1] else 'changed'}; save flags {flags} before, {flags_now} after")
+              f"{'the same' if record_now == prints[1] else 'changed'}; save flags {flags} before, {flags_now} after; "
+              f"changing calls {changing_calls or 'none'} of {len(quiet_calls)}")
         seen = strip_press(app, strand, {"bore_allowance": TYPED_G2}, snapshot)
         check(seen["status"] == SAID_ALLOWANCE and not seen["jobs"] and seen["count"] == 0
               and F2.sha(where) == prints[1],
