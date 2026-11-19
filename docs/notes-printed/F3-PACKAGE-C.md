@@ -56,3 +56,23 @@ switch on** (`_update_target` derives again from the as-built spec), and so do t
 
 `_update_target` and `held_spec` against `_f2_strip_form` and `strip_form` (the stand-ins have no `_held_spec`); the
 ruling-11 Build when a record stays open while the user designs something else; the placeholder's figure source.
+
+## The coordinator's rulings on F3's review (`F3-REVIEW.md`, `d394a85`; 2026-11-18, each the user's to overrule)
+
+- **All of C's choices are accepted** as the review recommends: a pair never read as built; no Drive or Flat on a bevel
+  gear; Flat sent blank while Drive is round; **K3's wording** (*type 0.2 in Gears!V2*, never *clear … again*, no
+  *again*), the interface's draft following it. The note that the cards say 0.2 while plans cut 0 is moot after the
+  switch.
+- B's choice 6 is changed to rows on record checked as built with their jobs planned as typed (B's `60e58b5`), which
+  needs nothing from the window: `workbook_gui._assess` keeps passing the record. Guard 5's input is corrected by the
+  coordinator in the switch commit.
+
+**Done for them, by C:**
+- `2edbe17`: S4, the Drive card carries the README's caveat (*on a helical gear at its section plane, one overrun behind
+  the face; on a herringbone at its middle*); UI-DESIGN.md's copy and C's own pin `DRIVE_COPY` follow.
+- `5a72057`: S5, PLAN-PRINTED §4.1.1 and §4.4 and F3-INTERFACES §6 and §9 brought to C's K3 words, with a dated record.
+- `4812df9`: S2 by ruling, package A's held patch applied exactly as F3-PACKAGE-A.md gives it (`spur.py`, `bevel.py` and
+  A's `tests/test_bore.py`, all three in the patch) with C's one pinned line in `tests/test_bore_form.py` following A's
+  sentence.
+- The boards (`PrintedGear`, `PrintedSpan`, and `PrintedBore` for S4's card text) are left to package A's switch commit,
+  which runs `gen.py`.
