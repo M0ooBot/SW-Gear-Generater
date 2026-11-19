@@ -286,6 +286,20 @@
       "x": 39844,
       "y": 0,
       "w": 484
+    },
+    {
+      "file": "PrintedStrength.dc.html",
+      "title": "Gear pair · printed, a pinion in a ring: what a tooth is rated to take once",
+      "x": 40408,
+      "y": 0,
+      "w": 484
+    },
+    {
+      "file": "WorkbookStrength.dc.html",
+      "title": "Workbook · a printed mesh asked to take more than its teeth are rated to",
+      "x": 40972,
+      "y": 0,
+      "w": 1080
     }
   ],
   "annotations": [

@@ -13,6 +13,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
+from ..gears.strength import ALLOWABLE_DEFAULT
 from ..spec import BORE_ALLOWANCE_DEFAULT, DRIVES, PROCESS_MACHINED, PROCESS_PRINTED
 
 FORMAT = "1"
@@ -120,6 +121,12 @@ BOX_SETTINGS: Tuple[Setting, ...] = (
     Setting("process", "Process", words=PROCESS_WORDS,
             note="Printed or Machined; blank: Printed for a new gearbox, as built for one already built"),
     Setting("nozzle", "Nozzle", unit="mm", default="0.4", numeric=True, note="the printer's line width; blank: 0.4"),
+    # F4 (PLAN-PRINTED §5.4): the root stress a printed tooth is rated to take once. Not a gear's field: no record,
+    # sidecar or plan sees it, and a machined gearbox reads it and uses none of it.
+    Setting("allowable", "Allowable stress", unit="MPa", default=f"{ALLOWABLE_DEFAULT:g}", numeric=True,
+            note=f"printed teeth only: the root stress a tooth is rated to take once; blank: {ALLOWABLE_DEFAULT:g}, "
+                 "provisional (about half a printed PLA data sheet's 35 MPa within the layers) until you type your own "
+                 "figure here"),
     Setting("units", "Units", default="mm · degrees · rpm · N·m", note="fixed; shown so the file explains itself"),
 )
 BOX = SheetDef("Box", (

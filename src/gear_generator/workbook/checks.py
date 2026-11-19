@@ -18,7 +18,7 @@ from typing import Dict, List, Optional, Tuple
 
 from ..gears import helical, internal as internal_gears, pair as pairs, spur
 from ..gears.base import ERROR, WARNING, Diagnostic
-from . import fixes as fixes_mod, geometry, kinematics, modes as modes_mod, planetary
+from . import fixes as fixes_mod, geometry, kinematics, modes as modes_mod, planetary, strength as strength_mod
 from .fixes import Fix
 from .geometry import Layout, Placed
 from .model import GearboxSpec
@@ -80,6 +80,9 @@ class Report:
     # Why the gearbox was not checked at all ("" when it was): a carrier or a turned axis, laid out in a later
     # phase. Then ``diagnostics`` is empty because nothing was looked at, not because nothing is wrong.
     unchecked: str = ""
+    # F4 (package B; PLAN-PRINTED §5.2, F4-INTERFACES §4): every Meshes row's teeth in every mode, against what they
+    # are rated to take (strength.mesh_strengths); () for a machined gearbox or one whose first input has no torque.
+    strength: Tuple[strength_mod.MeshStrength, ...] = ()
 
     @property
     def checked(self) -> bool:
@@ -220,8 +223,24 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
                 _error(report, spec.cell("Gears", gears[row].row, "id"), sentence)
             continue
         _warning(report, spec.cell("Gears", gears[row].row, "id"), sentence)
+    _check_strength(report, spec)
     report.worked_out_as = _worked_out_as(spec, report)
     return report
+
+
+def _check_strength(report: Report, spec: GearboxSpec) -> None:
+    """F4 (package B; PLAN-PRINTED §5.2, §5.4): a printed gearbox's teeth against what they are rated to take, mode by
+    mode, kept in ``report.strength`` for the Results sheet, and one warning at a Meshes row whose share passes 100 %
+    in some mode or that has a ring not rated in a loaded mode (``strength.warning_sentence``), the pair first as F1's
+    clearance warning is said. A machined gearbox, or one whose first input has no torque, is told nothing."""
+    report.strength = strength_mod.mesh_strengths(spec, report)
+    if not report.strength:
+        return
+    allowable, typed = strength_mod.allowable_of(spec)
+    for mesh in spec.meshes:
+        sentence = strength_mod.warning_sentence([r for r in report.strength if r.row == mesh.row], allowable, typed)
+        if sentence:
+            _warning(report, spec.cell("Meshes", mesh.row, "a"), f"{mesh.a} and {mesh.b}: {sentence}")
 
 
 def _mode_report(report: Report, spec: GearboxSpec, skip_gears, senses, placed: Dict[str, Placed],

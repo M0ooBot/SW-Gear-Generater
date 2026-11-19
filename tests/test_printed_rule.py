@@ -532,7 +532,9 @@ def test_the_box_says_process_and_nozzle_and_a_gearbox_built_in_code_is_written_
     from test_workbook_model import reducer
     settings = {s.key: s for s in schema.BOX_SETTINGS}
     keys = [s.key for s in schema.BOX_SETTINGS]
-    assert keys.index("process") == keys.index("efficiency") + 1 and keys.index("units") == keys.index("nozzle") + 1
+    # F4 (PLAN-PRINTED §5.4, §5.5): Allowable stress after Nozzle, Units after Allowable.
+    assert keys.index("process") == keys.index("efficiency") + 1 and keys.index("allowable") == keys.index("nozzle") + 1
+    assert keys.index("units") == keys.index("allowable") + 1
     assert settings["process"].words == ("printed", "machined") and not settings["process"].numeric
     assert settings["process"].note == ("Printed or Machined; blank: Printed for a new gearbox, as built for one "
                                         "already built")
@@ -1296,3 +1298,47 @@ def test_the_stubs_are_importable_and_neutral_until_their_packages_fill_them():
     for stub, owner in ((swbuild.structural_change, "package B"), (gb.as_built_job, "package B"),
                         (printout.bore_figures, "package B")):
         assert "F3-0's stub" in stub.__doc__ and owner in stub.__doc__
+
+
+# -- F4-0 (PLAN-PRINTED §5.6 item 1): what a machined gearbox's Results sheet and diagnostics say, pinned at abdf450 ----
+
+def results_prints():
+    """Each gearbox's Results sheet rows and note, `results_sheet` called with a fixed `when` so its timestamp does not
+    break the hash, and every diagnostic its assessment gives, in order, as level, sentence and field. RangeBox,
+    RangeBox_Fixed and planetary_4to1 as built in code (machined, each with its typed torque: 10, 10 and 2 N·m); the
+    committed Risky_Placements and Reducer_12to1 read and marked machined, as `BEFORE_W8` reads them."""
+    import os
+    from test_workbook_planetary import planetary_4to1
+    from workbook_fixtures import machined, range_box, range_box_fixed
+    from gear_generator.workbook import export, model, xlsx
+    made = {"range_box": range_box, "range_box_fixed": range_box_fixed, "planetary_4to1": planetary_4to1}
+    out = {}
+    for name, make in made.items():
+        out[name] = assess.assess(replace(make(), source_path="C:\\B\\W.xlsx"), [], OUT)
+    here = os.path.join(os.path.dirname(__file__), "fixtures", "excel-windows")
+    for name in ("Risky_Placements", "Reducer_12to1"):
+        spec, diagnostics = model.from_book(xlsx.read(os.path.join(here, f"{name}.xlsx")))
+        out[name] = assess.assess(machined(spec), diagnostics, OUT)
+    prints = {}
+    for name, a in out.items():
+        sheet = export.results_sheet(a.spec, a.report, when=STAMP)
+        told = [[d.level, d.message, d.field] for d in a.diagnostics]
+        prints[name] = _sha(json.dumps({"rows": sheet.rows, "note": sheet.note, "told": told}, ensure_ascii=False,
+                                       default=repr))
+    return prints
+
+
+RESULTS = {
+    "range_box": "806d0a8d1998c366399e4381786e84b3157b6e4a42723622bbd658e968415b68",
+    "range_box_fixed": "31265f8bb4354d899c117c92d5b3b9b00d00ca6b35a9e7ee2b38906d6c7bed91",
+    "planetary_4to1": "d2072566bdf29847d9ce15aa64240cdcc043ab6c770bcd8c64488bbfc23f5e5c",
+    "Risky_Placements": "53ed74582370e5c11ebb9dc8060da7a30808f7c802293f2bdcfe515a132f127a",
+    "Reducer_12to1": "95321b859470e41ff6020a17605f1973dbb7bc6cbb237991d6d38c47e7510c19",
+}
+
+
+def test_a_machined_gearboxs_results_and_diagnostics_are_as_before_f4(monkeypatch):
+    """§5.5: every machined gearbox is told exactly what it was, and its Results sheet is what it is today. F4's check
+    runs for printed gearboxes only, so these hold at every commit of F4."""
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", "entity senses", raising=False)
+    assert results_prints() == RESULTS

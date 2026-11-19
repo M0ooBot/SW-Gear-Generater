@@ -42,6 +42,9 @@ class Box:
     # Workbook panel says "(add a row labelled Process)" when it is "", since process is "" both for a blank cell and
     # for no row. Where it was read is not what the gearbox is, so it is left out of ==, as GearboxSpec.columns is.
     process_cell: str = field(default="", compare=False)
+    # F4 (PLAN-PRINTED §5.4): the Box's Allowable stress, MPa, as typed: "" is the provisional 17
+    # (strength.ALLOWABLE_DEFAULT). Not a gear's field, so no spec, record, sidecar or plan sees it.
+    allowable: str = ""
 
     def pressure_angle_text(self) -> str:
         return self.pressure_angle.strip() or "20"
@@ -68,6 +71,13 @@ def checked_nozzle(box: Box) -> str:
     except ValueError:
         return ""
     return text if math.isfinite(value) and value > 0 else ""
+
+
+def checked_allowable(box: Box) -> str:
+    """The Box's Allowable stress as the checks take it (F4, §5.4): the text when it reads as a number above zero,
+    else ``""``, the provisional 17 MPa (``strength.allowable_mpa`` reads either). One that does not is an error at
+    its Box cell (:func:`_read_box`), said there once, as Nozzle's is."""
+    return checked_nozzle(replace(box, nozzle=box.allowable))
 
 
 @dataclass(frozen=True)
@@ -412,8 +422,8 @@ def _read_box(reader: _Reader, sheet: Optional[Sheet]) -> Box:
             column = Column(setting.key, setting.name, setting.unit, numeric=True)
             before = len(reader.diagnostics)
             text = _check_value(reader, where, column, text, bool(value_cell and value_cell.percent))
-            if setting.key == "nozzle" and len(reader.diagnostics) == before and float(text) <= 0:
-                reader.error(where, f"Nozzle must be more than zero (got {text!r}).")
+            if setting.key in ("nozzle", "allowable") and len(reader.diagnostics) == before and float(text) <= 0:
+                reader.error(where, f"{setting.name} must be more than zero (got {text!r}).")   # F4: Allowable too
         elif setting.words and text:
             text = _check_word(reader, where, setting, text)
         values[setting.key] = text
@@ -439,7 +449,7 @@ def _read_box(reader: _Reader, sheet: Optional[Sheet]) -> Box:
                assembly_template=values.get("assembly_template", ""),
                pressure_angle=values.get("pressure_angle", ""), efficiency=values.get("efficiency", ""),
                format=fmt, process=values.get("process", ""), nozzle=values.get("nozzle", ""),
-               process_cell=at("process") if "process" in rows else "")
+               process_cell=at("process") if "process" in rows else "", allowable=values.get("allowable", ""))
 
 
 def from_book(book: Book) -> Tuple[GearboxSpec, List[Diagnostic]]:
@@ -670,7 +680,9 @@ def to_sheets(spec: GearboxSpec) -> List[NewSheet]:
                   "efficiency": spec.box.efficiency,
                   # F1: the word as held, so a gearbox built in code is written machined, never with a blank Process
                   # that would read back Printed (PLAN-PRINTED §2.8 item 5).
-                  "process": spec.box.process, "nozzle": spec.box.nozzle}
+                  "process": spec.box.process, "nozzle": spec.box.nozzle,
+                  # F4: the Allowable stress as held, blank for a gearbox built in code (§5.4).
+                  "allowable": spec.box.allowable}
     for setting in schema.BOX_SETTINGS:
         value = box_values.get(setting.key, setting.default if setting.key == "units" else "")
         if setting.numeric and value:
@@ -706,5 +718,6 @@ def to_sheets(spec: GearboxSpec) -> List[NewSheet]:
 
 def template(name: str = "Gearbox") -> GearboxSpec:
     """A blank workbook's model: the Box filled, every other sheet a header only. F1 (PLAN-PRINTED §1.3, D2): a new
-    gearbox is printed, so *New workbook…* writes Process printed and a 0.4 mm Nozzle."""
-    return GearboxSpec(box=Box(name=name, process=PROCESS_PRINTED, nozzle="0.4"))
+    gearbox is printed, so *New workbook…* writes Process printed and a 0.4 mm Nozzle. F4 (§5.4): and the provisional
+    17 MPa Allowable stress, so the user sees where their own figure goes."""
+    return GearboxSpec(box=Box(name=name, process=PROCESS_PRINTED, nozzle="0.4", allowable="17"))

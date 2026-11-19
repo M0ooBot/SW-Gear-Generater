@@ -249,16 +249,33 @@ def value_row(label_text, values, widths=(104, 96)):
     return f'<div style="display: flex; align-items: center; gap: 8px; height: 18px;">{cells}</div>'
 
 
-def rows_with_span(d, reading):
-    """GearApp._rows_with_span: the Derived rows, with the span row after Tooth at pitch when it has a figure (F2)."""
+def holds_of(spec, d, crossed=False):
+    """GearApp._rating_of and _holding (F4): the rating a gear's Holds once row words, None for no row."""
+    return ui_text.holds_rating(spec, d, kind_for(spec).recipe_for(spec), crossed=crossed)
+
+
+def rows_with_span(d, reading, rating=None):
+    """GearApp._rows_with_span: the Derived rows, with the span row after Tooth at pitch when it has a figure (F2), and
+    a printed gear's Holds once row last (F4)."""
     rows = list(ui_text.derived_rows(d))
-    if reading is None or reading.kind != spans.KIND_SPAN:
-        return rows
-    at = next((i + 1 for i, (label, _) in enumerate(rows) if label == "Tooth at pitch"), len(rows))
-    return rows[:at] + [ui_text.span_rows(reading, None, 0.0, 0.0)[0]] + rows[at:]
+    holds = ui_text.holds_row(rating)
+    if reading is not None and reading.kind == spans.KIND_SPAN:
+        at = next((i + 1 for i, (label, _) in enumerate(rows) if label == "Tooth at pitch"), len(rows))
+        rows = rows[:at] + [ui_text.span_rows(reading, None, 0.0, 0.0)[0]] + rows[at:]
+    return rows + [holds] if holds else rows
 
 
-def derived_table(deriveds, tags, readings=None, measured=None, focused=False):
+# GearApp._show_derived lays the Holds once value into its column's room (ui_text.holds_value_lines), measured in the
+# window's mono_tiny; here a character of mono 11.5 px stands for it.
+MONO_CHAR = 6.9
+
+
+def holds_cell(text, columns):
+    room = (434 - 104 - columns * 8) / columns - 8
+    return ui_text.holds_value_lines(text, room, lambda s: len(s) * MONO_CHAR).replace("\n", "<br>")
+
+
+def derived_table(deriveds, tags, readings=None, measured=None, focused=False, ratings=None):
     """Every label once, in the order it first appears, and a dash where a gear has none — as the window does.
 
     A grid, as Tk's is: a column widens to its longest value and the others keep in line. F2: each gear's span row
@@ -266,15 +283,18 @@ def derived_table(deriveds, tags, readings=None, measured=None, focused=False):
     figure, holding ``measured`` (the text typed, per gear) and the caret when ``focused``.
     """
     readings = readings or [None] * len(deriveds)
-    rows_of = [rows_with_span(d, r) for d, r in zip(deriveds, readings)]
+    ratings = ratings or [None] * len(deriveds)
+    rows_of = [rows_with_span(d, r, h) for d, r, h in zip(deriveds, readings, ratings)]
     columns = [dict(rows) for rows in rows_of]
     labels = list(dict.fromkeys(label for rows in rows_of for label, _ in rows))
     cells = ['<span></span>'] + [f'<span style="font-size: 11px; color: {READOUT}; line-height: 16px;">{tag}</span>'
                                  for tag in tags]
     for label_text in labels:
+        holds = label_text == ui_text.HOLDS_LABEL
         cells.append(f'<span style="font-size: 12px; color: {LABEL}; line-height: 18px;">{label_text}</span>')
         cells += [f'<span style="font-family: {MONO}; font-size: 11.5px; color: {INK}; line-height: 18px; '
-                  f'white-space: nowrap;">{c.get(label_text, "—")}</span>' for c in columns]
+                  f'white-space: nowrap;">{holds_cell(c.get(label_text, "—"), len(columns)) if holds else c.get(label_text, "—")}'
+                  f'</span>' for c in columns]
     if any(r is not None and r.kind == spans.KIND_SPAN for r in readings):
         cells.append(f'<span style="font-size: 12px; color: {LABEL}; line-height: 30px;">{ui_text.MEASURED_LABEL}</span>')
         for i, r in enumerate(readings):
@@ -453,8 +473,9 @@ def side_panel(title, spec, d, stem, focused="", card=None, pair=None, side="a")
     return panel(title, ui_text.gear_readout(spec), rows)
 
 
-def measured_lines(deriveds, readings, measured, tags):
-    """GearApp._measured_lines: why a printed gear shows no span, and what a reading typed tells (F2)."""
+def measured_lines(deriveds, readings, measured, tags, ratings=None):
+    """GearApp._measured_lines: why a printed gear shows no span, and what a reading typed tells (F2); then a Holds
+    once row's full sentence where it has one (F4)."""
     out = []
     for i, (d, r) in enumerate(zip(deriveds, readings)):
         prefix = f"{tags[i]}: " if len(deriveds) > 1 else ""
@@ -464,11 +485,15 @@ def measured_lines(deriveds, readings, measured, tags):
         elif r is not None and r.kind == spans.KIND_SPAN and (measured or [""] * len(deriveds))[i]:
             alpha = getattr(d, "normal_pressure_angle_deg", d.pressure_angle_deg)
             out.append(prefix + ui_text.span_rows(r, float(measured[i]), alpha, d.module)[-1][1])
+    for i, rating in enumerate(ratings or []):
+        line = ui_text.holds_line(rating)
+        if line:
+            out.append(f"{tags[i]}: {line}" if len(deriveds) > 1 else line)
     return out
 
 
 def derived_panel(gears, tags, diagnostics, readout, pair_rows=None, note="", readings=None, measured=None,
-                  focused=False):
+                  focused=False, ratings=None):
     body = [picture(gears, labels=tags, note=note)]
     if pair_rows:
         body.append('<div style="display: flex; flex-direction: column;">' + "".join(value_row(k, [v]) for k, v in pair_rows) + '</div>')
@@ -476,8 +501,8 @@ def derived_panel(gears, tags, diagnostics, readout, pair_rows=None, note="", re
     deriveds = [d for d, _ in gears]
     readings = readings or [spans.span(d, "A") for d in deriveds]
     body.append(derived_table(deriveds, [f"{t} · mm" for t in tags] if len(gears) > 1 else ["mm"], readings,
-                              measured, focused))
-    for text in measured_lines(deriveds, readings, measured, tags):
+                              measured, focused, ratings))
+    for text in measured_lines(deriveds, readings, measured, tags, ratings):
         body.append(f'<div style="font-size: 12px; color: {INK}; line-height: 1.35;">{text}</div>')
     for text, error in diagnostics:
         body.append(warning(text, error))
@@ -608,7 +633,8 @@ def pair_board(title_kind, pair, chosen=None, focus=("a", "module"), card=None, 
         derived_panel([(d_a, o_a), (d_b, o_b)], ("A", "B"), diagnostics,
                       ui_text.pair_derived_readout(centre, ratio, eps, symbol), pair_rows=rows, note=note,
                       readings=[spans.span(d_a, kind_for(spec_a).recipe_for(spec_a)),
-                                spans.span(d_b, kind_for(spec_b).recipe_for(spec_b))]),
+                                spans.span(d_b, kind_for(spec_b).recipe_for(spec_b))],
+                      ratings=[holds_of(spec_a, d_a, crossed), holds_of(spec_b, d_b, crossed)]),
         output_panel(True),
         sw_bar(ui_text.mode_note("pair", [stem_a, stem_b, stem_pair]), manual),
         footer(status or "Both gears now carry the chosen module and teeth."),
@@ -627,7 +653,7 @@ def single_board(spec, focus="module", status="Type a gear, or switch to Gear pa
         gear_kind_panel(spec.kind, "Single gear", spec),
         side_panel("Gear", spec, d, stem, focused=focus, card=focus),
         derived_panel([(d, o)], ("",), diagnostics_of([("", diagnostics)]), ui_text.derived_line(d),
-                      readings=[reading], measured=[measured], focused=focus == "span"),
+                      readings=[reading], measured=[measured], focused=focus == "span", ratings=[holds_of(spec, d)]),
         output_panel(False),
         sw_bar(ui_text.mode_note("single", [stem]),
                ui_text.manual_steps_line([f"Assign a material to {stem}; the build leaves it unset."]), printing),
@@ -1482,6 +1508,31 @@ d_shaft = GearSpec(module="1.5", teeth="20", face_width="8", bore="8", process="
                    drive="flat", flat="7", name="Pinion_D8")
 boards["PrintedBore"] = ("Single gear · printed, on a D-shaft: Bore allowance, Drive and Flat", single_board(
     d_shaft, "drive"))
+
+# F4 (PLAN-PRINTED §5.4; F4-INTERFACES §5, §6.2). A printed pinion in a printed ring, module 1, 20 in 54, face 10: each
+# gear's Holds once row last in its own column, each value laid into its column's room as the window lays it, the ring's
+# saying its stress factor is past its range, and the ring's full sentence under the rows, B: before it.
+strength_base = PairSpec(mode="pair", centre_distance="17", ratio="2.7", mesh="internal",
+                         gear_a=GearSpec(module="1", teeth="20", face_width="10", bore="6", process="printed"),
+                         gear_b=GearSpec(module="1", teeth="54", face_width="10", teeth_side="internal",
+                                         process="printed"))
+chosen, strength_pair = chosen_row(strength_base, lambda c: (c.module, c.teeth_driver, c.teeth_driven) == (1, 20, 54))
+boards["PrintedStrength"] = ("Gear pair · printed, a pinion in a ring: what a tooth is rated to take once",
+                             pair_board("spur", strength_pair, chosen, ("pair", "mesh"), "mesh"))
+
+# F4 (PLAN-PRINTED §5.2, §5.4; F4-INTERFACES §6.1). A printed gearbox of one mesh, read: In (input, 1000 rpm, 2 N·m) and
+# Out (output) at X 45, spur gears of module 1.5 and face 10, G1 of 20 teeth meshing G2 of 40. Its Checks list carries
+# package B's one warning at Meshes row 2, these teeth taking about 133 N at the pitch circle where G1's are rated to
+# take 39 N once. Drawn from B's workbook.strength, so the board shows the warning once B's module is in.
+one_mesh = wb_model.GearboxSpec(
+    box=wb_model.Box(name="One_Mesh", output_folder="C:\\Parts\\One_Mesh", efficiency="98", process="printed"),
+    shafts=(wb_model.Shaft("In", "frame", "0", "0", "0", "Z+", "input", "", "1000", "2"),
+            wb_model.Shaft("Out", "frame", "45", "0", "0", "Z+", "output")),
+    gears=(wb_model.Gear("G1", "In", "5", "spur", "external", "20", "1.5", "", "10", "6"),
+           wb_model.Gear("G2", "Out", "5", "spur", "external", "40", "1.5", "", "10", "8")),
+    meshes=(wb_model.Mesh("G1", "G2"),))
+boards["WorkbookStrength"] = ("Workbook · a printed mesh asked to take more than its teeth are rated to",
+                              workbook_board(one_mesh), WINDOW_WIDTH)
 
 layout = []
 x = 0

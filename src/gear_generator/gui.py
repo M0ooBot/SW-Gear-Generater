@@ -64,6 +64,12 @@ DEBOUNCE_MS = 120
 # and padding and the 56 px diagram beside it.
 EXPLAINER_TEXT_WIDTH = STRIP_WIDTH - 114
 
+# The Derived panel's rows: the panel body, less its 12 px padding a side and the panel's 1 px border; their label
+# column. F4's Holds once value is laid into what is left of it (ui_text.holds_value_lines).
+DERIVED_ROWS_WIDTH = STRIP_WIDTH - 26
+DERIVED_LABEL_WIDTH = 104
+DERIVED_VALUE_WIDTH = 96
+
 SIDES = ("a", "b")
 
 # F2: the card the Measured entry brings up (ui_text.span_explainer), and the diagram it borrows: widgets draws none of
@@ -242,6 +248,9 @@ class GearApp(ttk.Frame):
         # under it (the calipers' reading: the form's only, never saved) and what a reading typed tells; and the
         # SolidWorks bar's line naming the file Print files would write.
         self._spans: Dict[str, Any] = {side: spans.NONE for side in SIDES}
+        # F4 (PLAN-PRINTED §5.4): each printed gear's tooth rating (gears.strength.rate, through ui_text.holds_rating),
+        # None for a gear that shows no Holds once row.
+        self._ratings: Dict[str, Any] = {side: None for side in SIDES}
         self.measured = {side: tk.StringVar(value="") for side in SIDES}
         self.measured_text = tk.StringVar(value="")
         self.print_line = tk.StringVar(value="")
@@ -749,9 +758,9 @@ class GearApp(ttk.Frame):
 
         self.derived_rows = tk.Frame(body, bg=theme.WHITE)
         self.derived_rows.grid(row=3, column=0, sticky="nw")
-        self.derived_rows.columnconfigure(0, minsize=theme.px(104))
+        self.derived_rows.columnconfigure(0, minsize=theme.px(DERIVED_LABEL_WIDTH))
         for column in (1, 2):
-            self.derived_rows.columnconfigure(column, minsize=theme.px(96))
+            self.derived_rows.columnconfigure(column, minsize=theme.px(DERIVED_VALUE_WIDTH))
         self._derived_widgets: List[tk.Widget] = []
 
         # F2: the Measured entry, one per gear, laid into the rows under the span row by _show_derived. Made once, so
@@ -1331,6 +1340,7 @@ class GearApp(ttk.Frame):
             self._side_fields(side)["name"].set_placeholder(self._side_stems[side])
             self._derived[side], self._outlines[side], self._diagnostics[side] = None, [], []
             self._spans[side] = spans.NONE
+            self._ratings[side] = None
             kind = kind_for(spec)
             if kind is None:
                 self._diagnostics[side] = [Diagnostic("error", "That kind of gear comes in a later version.")]
@@ -1344,6 +1354,7 @@ class GearApp(ttk.Frame):
                 self._derived[side] = derived
                 self._outlines[side] = kind.outline(spec, derived)
                 self._spans[side] = self._span_of(kind, spec, derived)
+                self._ratings[side] = self._rating_of(kind, spec, derived)
             except (GeometryError, InputError, ValueError) as exc:
                 self._diagnostics[side] = [Diagnostic("error", str(exc))]
                 self._derived[side] = None
@@ -1380,21 +1391,38 @@ class GearApp(ttk.Frame):
         except Exception:  # noqa: BLE001 - A's span never raises; this keeps the form up if it ever does
             return spans.NONE
 
+    @staticmethod
+    def _rating_of(kind: Any, spec: GearSpec, derived: Any) -> Any:
+        """F4: the gear's tooth rating for its Holds once row (ui_text.holds_rating), by its kind's recipe; None for a
+        gear that shows none, and never a fault that takes the panel with it."""
+        try:
+            return ui_text.holds_rating(spec, derived, kind.recipe_for(spec))
+        except Exception:  # noqa: BLE001 - A's rate never raises; this keeps the form up if it ever does
+            return None
+
+    def _holding(self, side: str) -> Any:
+        """The rating the Holds once row words for this gear as the form stands: none for either gear of a crossed
+        pair, whose teeth meet at a point and are not rated (PLAN-PRINTED §5.1)."""
+        return None if self._crossed() else self._ratings[side]
+
     def _rows_with_span(self, side: str) -> List[Tuple[str, str]]:
         """The gear's Derived rows (ui_text.derived_rows, unchanged), with its span row after Tooth at pitch when it
         has a figure (§3.0). A machined gear, a ring, a sleeve and a bevel gear have none; a printed gear withheld
-        one says why under the rows (_measured_lines)."""
+        one says why under the rows (_measured_lines). F4 (§5.4): a printed gear's Holds once row last, after every
+        row of derived_rows, whose last rows are pinned; none for a gear holds_rating gives no rating."""
         rows = list(ui_text.derived_rows(self._derived[side]))
+        holds = ui_text.holds_row(self._holding(side))
         reading = self._spans[side]
-        if reading.kind != spans.KIND_SPAN:
-            return rows
-        span_row = ui_text.span_rows(reading, None, 0.0, 0.0)[0]
-        at = next((i + 1 for i, (label, _) in enumerate(rows) if label == "Tooth at pitch"), len(rows))
-        return rows[:at] + [span_row] + rows[at:]
+        if reading.kind == spans.KIND_SPAN:
+            span_row = ui_text.span_rows(reading, None, 0.0, 0.0)[0]
+            at = next((i + 1 for i, (label, _) in enumerate(rows) if label == "Tooth at pitch"), len(rows))
+            rows = rows[:at] + [span_row] + rows[at:]
+        return rows + [holds] if holds else rows
 
     def _measured_lines(self) -> List[str]:
         """Under the rows: why a printed gear shows no span, and what a reading typed in Measured tells (§3.0), one
-        line a gear, prefixed A: and B: in a pair."""
+        line a gear, prefixed A: and B: in a pair; then F4's: a Holds once row's full sentence, where it has one (YS
+        past its range, a ring not rated), after every line of F2's."""
         sides = self._active_sides()
         out: List[str] = []
         for side in sides:
@@ -1418,6 +1446,10 @@ class GearApp(ttk.Frame):
                 continue
             alpha = getattr(derived, "normal_pressure_angle_deg", derived.pressure_angle_deg)
             out.append(prefix + ui_text.span_rows(reading, value, alpha, derived.module)[-1][1])
+        for side in sides:
+            line = ui_text.holds_line(self._holding(side)) if self._derived[side] is not None else ""
+            if line:
+                out.append(f"{side.upper()}: {line}" if len(sides) > 1 else line)
         return out
 
     def _show_measured(self) -> None:
@@ -1565,15 +1597,26 @@ class GearApp(ttk.Frame):
                                 font=self.fonts.tiny, anchor="w")
                 head.grid(row=0, column=1 + index, sticky="w", padx=(theme.px(8), 0))
                 self._derived_widgets.append(head)
+            # F4: the Holds once row's value, long beside the others, laid into the room its column has, so that two
+            # columns of it in a pair keep to the strip's width (ui_text.holds_value_lines); its label at its top.
+            # Each value label's own border and padding (a few px) come off the room as well. With one gear the second
+            # column, empty, keeps no width of its own (it kept 96 px of blank before F4, which no row needed).
+            room = (theme.px(DERIVED_ROWS_WIDTH - DERIVED_LABEL_WIDTH) - len(shown) * theme.px(8)) / len(shown) \
+                - theme.px(8)
+            self.derived_rows.columnconfigure(2, minsize=theme.px(DERIVED_VALUE_WIDTH) if len(shown) > 1 else 0)
             for row, label in enumerate(labels, start=1):
+                holds = label == ui_text.HOLDS_LABEL
                 name = tk.Label(self.derived_rows, text=label, bg=theme.WHITE, fg=theme.LABEL,
                                 font=self.fonts.hint, anchor="w")
-                name.grid(row=row, column=0, sticky="w")
+                name.grid(row=row, column=0, sticky="nw" if holds else "w")
                 self._derived_widgets.append(name)
                 for index, values in enumerate(columns):
-                    value = tk.Label(self.derived_rows, text=values.get(label, "—"), bg=theme.WHITE, fg=theme.INK,
-                                     font=self.fonts.mono_tiny, anchor="w")
-                    value.grid(row=row, column=1 + index, sticky="w", padx=(theme.px(8), 0))
+                    text = values.get(label, "—")
+                    if holds:
+                        text = ui_text.holds_value_lines(text, room, self.fonts.mono_tiny.measure)
+                    value = tk.Label(self.derived_rows, text=text, bg=theme.WHITE, fg=theme.INK,
+                                     font=self.fonts.mono_tiny, anchor="w", justify="left")
+                    value.grid(row=row, column=1 + index, sticky="nw" if holds else "w", padx=(theme.px(8), 0))
                     self._derived_widgets.append(value)
             # F2 (§3.0): the Measured entry under the rows, in the column of each gear with a span figure.
             measuring = [side for side in shown if self._spans[side].kind == spans.KIND_SPAN]

@@ -7254,3 +7254,98 @@ def _same_path(a: str, b: str) -> bool:
     """Two paths compared as Windows compares them (``store.same_path``), imported late as ``ui_text`` keeps ``store``."""
     from .store import same_path
     return same_path(a, b)
+
+
+# -- F4 (PLAN-PRINTED §5.4; F4-INTERFACES §5): what a printed tooth is rated to take, once, on the form's Derived panel --
+
+HOLDS_LABEL = "Holds once"
+# The kinds whose printed gears show the row (§5.1): a spur, helical or herringbone gear, outside or a ring. Never a
+# bevel gear, nor a dog, a hub or a sleeve (their couplings are splines, not meshes; the strip never offers them).
+HOLDS_KINDS = ("spur", "helical", "herringbone")
+HOLDS_PAST_RANGE = "stress factor past its range"
+
+
+def holds_rating(spec: GearSpec, derived, recipe: str, crossed: bool = False):
+    """The rating the *Holds once* row words for one gear on the form (`gears.strength.rate`), or None when the gear
+    shows no row (F4-INTERFACES §5): a machined gear, a bevel gear, a dog, a hub or a sleeve, either gear of a crossed
+    pair (``crossed``: its teeth meet at a point, §5.1), a gear that does not work out, and a gear not rated for any
+    reason but a ring's tips inside its base circle (M1), which shows *not rated*: every other reason is a gear that
+    does not validate and is never built."""
+    from .gears import strength
+    if derived is None or crossed or not getattr(derived, "printed", False):
+        return None
+    if str(getattr(spec, "kind", "")).strip().lower() not in HOLDS_KINDS:
+        return None
+    rating = strength.rate(derived, recipe)
+    if rating.rated or rating.short == strength.SHORT_TIPS_INSIDE_BASE:
+        return rating
+    return None
+
+
+def holds_row(rating, allowable: Optional[float] = None) -> Optional[Tuple[str, str]]:
+    """The Derived panel's row for one printed gear, (label, value), from `gears.strength.rate`'s rating:
+
+    - rated: *Holds once* — *about 0.58 N·m · 39 N at 17 MPa* (A1): the torque about the gear's own axis, then the
+      force at its pitch circle, at its own toothed width, for a single load, at ``allowable`` (blank: the 17 MPa of
+      `strength.ALLOWABLE_DEFAULT`, the form having no Box), each rounded by `gears.strength`'s one home;
+    - YS carried past its range (a ring's 0.15 × module fillet, or a fillet typed that sharp): the same, then
+      *· stress factor past its range* (A6);
+    - a ring whose tips lie inside its base circle (M1): *not rated: tips inside the base circle* (A10).
+
+    None for no rating and for a gear not rated for any other reason (`holds_rating` gives none of those). The body is
+    package C's, over F4-0's stub."""
+    from .gears import strength
+    if rating is None:
+        return None
+    if not rating.rated:
+        if rating.short != strength.SHORT_TIPS_INSIDE_BASE:
+            return None
+        return HOLDS_LABEL, f"not rated: {rating.short}"
+    stress = strength.ALLOWABLE_DEFAULT if allowable is None else allowable
+    force = strength.holds(rating, stress)
+    value = (f"about {strength.newton_metres(strength.torque_held(rating, force))} N·m · {strength.newtons(force)} N "
+             f"at {strength.megapascals(stress)} MPa")
+    if rating.past_range:
+        value += f" · {HOLDS_PAST_RANGE}"
+    return HOLDS_LABEL, value
+
+
+def holds_value_lines(value: str, room: float, measure) -> str:
+    """The row's value laid into a column ``room`` wide (``measure(text)`` its width in the same units), lines
+    joined by newlines: whole phrases first, a new line starting *· * where the value's own *·* falls, and a phrase
+    too long for a line wrapped at its spaces. A value that fits is returned as it is. The value is a long one beside
+    the other rows' figures, and two columns of it in a pair would otherwise widen the strip past its 460 px."""
+    if measure(value) <= room:
+        return value
+    lines: List[str] = []
+    for index, phrase in enumerate(value.split(" · ")):
+        piece = phrase if index == 0 else "· " + phrase
+        if lines and index and measure(lines[-1] + " " + piece) <= room:
+            lines[-1] += " " + piece
+            continue
+        line = ""
+        for word in piece.split(" "):
+            if line and measure(line + " " + word) > room:
+                lines.append(line)
+                line = word
+            else:
+                line = f"{line} {word}" if line else word
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def holds_line(rating) -> str:
+    """The row's full sentence, on its own line under the Derived rows (after any of F2's), or "" when the row says it
+    all: *Holds once: the ring's 0.15 mm fillet is sharper than the stress factor's range, which is carried past it.*
+    (YS past its range; *the gear's* for an outside gear with a fillet typed that sharp), or *Holds once: not rated:
+    its tips lie inside its base circle (…), so …* with `ToothRating.why`, package A's clause (M1). The window puts
+    *A:* or *B:* before it in a pair."""
+    if rating is None:
+        return ""
+    if not rating.rated:
+        return f"{HOLDS_LABEL}: not rated: {rating.why}." if holds_row(rating) else ""
+    if rating.past_range:
+        whose = "ring" if rating.ring else "gear"
+        return (f"{HOLDS_LABEL}: the {whose}'s {_n(rating.rho_f)} mm fillet is sharper than the stress factor's range, "
+                "which is carried past it.")
+    return ""
