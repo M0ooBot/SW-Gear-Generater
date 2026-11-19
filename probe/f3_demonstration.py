@@ -2248,14 +2248,22 @@ def section_userwork(out):
         remade = {r[0]: r[1] for r in (cr.remade if cr else [])}
         named = [n.item for n in (cr.named if cr else [])]
         codes = mates_now("userwork, the new revision", desk.record.gearbox.assembly)
-        new_name = remade.get(BORE_MATE)
-        onto = carried_face("userwork: the carried bore mate's face", desk, new_name,
-                            d_expected(8, 0.3, 7.2)["R"]) if new_name else ["not remade"]
-        check(new_name is not None and BORE_MATE not in named and codes.get(new_name, (1, True)) == (0, False)
-              and not onto,
-              f"userwork: the mate on Sun's bore face is carried (W9d's \"bore\": the D's arc at (D + a)/2, as built), "
-              f"made again as {new_name} on SunGear's face of radius 4.15 by mate_definition, in no error: remade "
-              f"{sorted(remade)}, named {named}; {onto or 'its face as said'}")
+        # K5, as W9D-INTERFACES section 4.4 rules it: a face of an app part made new is never re-found, but named
+        # (WHY_PART_NEW), whatever made the part new; only a gear mate's face is read for its axis there (swbuild's
+        # M1 walk), so a concentric's face on the old Sun is not read and is said as "a face of Sun". The script at
+        # c5d4391 expected the mate remade; SolidWorks 2026's run named it so, with the eight others remade.
+        bore_named = [n for n in (cr.named if cr else []) if n.item == BORE_MATE]
+        subjects = tuple(bore_named[0].subjects) if bore_named else ()
+        say(f"fact    userwork: the carry's reading of the bore mate's entity on the old Sun: {subjects} (where "
+            f"{subjects[3] if len(subjects) > 3 else None!r}: \"bore\" only for a face read coaxial, and a face of a part "
+            f"made new is read so for a gear mate only)")
+        check(cr is not None and BORE_MATE not in remade and named == [BORE_MATE]
+              and bore_named[0].why == swbuild.WHY_PART_NEW and len(subjects) >= 3 and subjects[2] == "face"
+              and "Part name" in str(subjects[1]) and sorted(remade) == users_mates
+              and all(codes.get(n, (1, True))[0] == 0 for n in users_mates),
+              f"userwork: the mate on Sun's bore face is named, not made again, Sun's part being new for its Part name "
+              f"(K5, W9D-INTERFACES section 4.4), and the user's eight other mates made again in no error: remade "
+              f"{sorted(remade)}, named {[(n.item, n.why, tuple(n.subjects)) for n in (cr.named if cr else [])]}")
         A.users_in_copy("userwork, after", desk, copy, users)
     finally:
         if not W.HUNG["on"]:
