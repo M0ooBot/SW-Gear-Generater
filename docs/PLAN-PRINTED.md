@@ -6,7 +6,8 @@ user's answers; revised on 2026-11-18 against the code as W9 leaves it, read at 
 `docs/PLAN-PRINTED-REVIEW.md`, `158b06f`, which read the code at `51870ca`, the same as `c2d95cc` in `src`); and once more to its third check (`d2e34a6`)
 and the coordinating session's ruling on the ring pair check.**
 
-**Where it stands (2026-11-18, evening; read at `f28cb75` on `printed`).**
+**Where it stands (2026-11-19, read at `1afc1f0` on `printed`, the merge of branch `f4`). Every stage of this plan is
+built.** What remains is the user's (the closing section, *The plan closes*).
 
 - **W9 is closed** and merged into `printed` (`138d646`).
 - **F1 is closed:** built, reviewed, shown on SolidWorks 2026 and confirmed on 2024 (`5e2f386`, runs reviewed in
@@ -20,9 +21,16 @@ and the coordinating session's ruling on the ring pair check.**
       printed backlash and F3's bore allowance, on the user's word (U4);
     - standing caveats, none blocking (`F2-DEMONSTRATION-RUNS-REVIEW.md` §5).
   - **Nothing of the printed work is merged into `workbook`.** It lives on `printed`.
-- **F3 is built and reviewed** (`11f2a25`, 2026-11-19); its SolidWorks demonstration is about to run.
-- **F4 is made ready in §5.6** (pure maths, no SolidWorks); it does not wait on the user, and asks nothing of them
-  before code (§5.7).
+- **F3 is closed** (2026-11-19): built (F3-0 and packages A, B and C, with their reviews, `F3-REVIEW.md`), the printed
+  default switched on (`262c0f7`), and shown on SolidWorks 2026 and confirmed on 2024 (`F3-DEMONSTRATION.md`, its runs'
+  review `c641f3d`, and `F3-CLOSE-REVIEW.md`, `30ecc7a`: done by its *Done when*). What it leaves open is in §4's head.
+- **A fault older than F3**, found by its demonstration, is fixed: a quiet Update values marked the part modified
+  (`b668cf0`, reviewed in `SAVE-FLAG-FIX-REVIEW.md`). One related edge is ruled a known caveat, not fixed now (§4's
+  head).
+- **F4 is closed** (2026-11-19): built on its own branch `f4` and merged (`1afc1f0`), reviewed (`F4-0-REVIEW.md`,
+  `F4-REVIEW.md`: done, no must-fix). It is pure maths and needed no SolidWorks.
+- **Still the user's:** §3.2's step and the figures that come from it; the coordinating session's rulings made for them;
+  F4's allowable stress and its questions for afterwards (§5.7); and **whether `printed` is merged into `workbook`**.
 
 D11 is ruled (B) by the coordinating session, the user's to overrule. D3, D6 and D7 stand as assumed.
 
@@ -1540,6 +1548,28 @@ them, since each is something they will see.
 
 ## 4. Stage F3 — the bore (existing ops only)
 
+**Closed 2026-11-19.** Done by §4.6's *Done when* (`F3-CLOSE-REVIEW.md`, `30ecc7a`):
+- F3-0 and its review (`F3-0-REVIEW.md`); packages A, B and C with their notes and `F3-REVIEW.md` (`d394a85`, re-check
+  `11f2a25`); the printed default switched on (`262c0f7`).
+- The demonstration (`probe/f3_demonstration.py`, `F3-DEMONSTRATION.md`) run on SolidWorks 2026 34.1.1 and 2024 32.5.0
+  (`ab998d3`), its runs reviewed (`F3-DEMONSTRATION-RUNS-REVIEW.md`, `c641f3d`), `built` and `userwork` rerun clean after the
+  fix below (`f8c8bcd`, from `c53d6c6`), and the reruns reviewed: every section clean on both versions.
+- **The fault the demonstration found, older than F3:** the strip's quiet Update values measured the trig units before
+  it knew anything was to be set, and so marked the part modified; Print files then refused it. Fixed in `b668cf0`
+  (the equations read first), reviewed in `SAVE-FLAG-FIX-REVIEW.md` (no must-fix), and shown live on both versions by
+  the reruns (no changing call, the save flag unmoved).
+- **Ruled a known caveat by the coordinating session, not fixed now:** where `_evaluates` measures a part's trig units
+  and the job then refuses or stops, the part stays marked with nothing written. It needs values that evaluate in one
+  unit only, so it is rare, and it is older than F3 (`SAVE-FLAG-FIX-REVIEW.md` §5).
+- **Left open and unmeasured** (`F3-CLOSE-REVIEW.md` §3): the fix's setting path not yet run on SolidWorks since
+  `b668cf0`; the carry's coaxial-face read on a D's partial cylinder; K2 over a user mate on a D face, read once under
+  the old check; K11's blank-cell words live; K3 with a user feature in the bore; a D on a helical gear; a D printed and
+  fitted, and the allowance's figure from the user's coupons (V1); a What's Wrong box outliving a job on 2026 and either
+  memory floor's STOP; the demonstration under Windows' `python.exe`, whose hashed pins hold on Linux only until the
+  commit making them hold under Windows Python too. The boards' PNG renders wait for the Mac.
+- F4's merge touches no path a SolidWorks build, Update or export takes (`F3-CLOSE-REVIEW.md` §4), so F3's evidence
+  stands for the merged branch by that reading; the demonstration has not been run on the merged tree.
+
 Read against the code at `f28cb75` on `printed` (F1 closed, F2 closed short of §3.2); `src` is unchanged at `fec1cfe`.
 Lines below are as of that commit. §4.1 to §4.5 say what F3 builds and why; §4.6 makes it ready to execute. Revised
 to F3's review (the last section of `docs/PLAN-PRINTED-REVIEW.md`, `fec1cfe`) and the coordinating session's two
@@ -2063,6 +2093,18 @@ and the list. Each meets the others through F3-0's names.
 
 
 ## 5. Stage F4 — what a tooth can carry
+
+**Closed 2026-11-19.** Built on its own branch `f4` while F3's demonstration ran here, and merged (`1afc1f0`):
+- F4-0 with package A's maths whole (pins `2893224`, interface `0496e85`, rows `6d81160`, note `F4-0.md`), reviewed in
+  `F4-0-REVIEW.md` (`0b886c5`);
+- package B, the workbook (`f004334`, `6331975`, `F4-PACKAGE-B.md`), and package C, the form, README and design
+  (`50efc82`, `fda18e7`, `6eb13dd`, `4bba7e5`, `F4-PACKAGE-C.md`);
+- `F4-REVIEW.md` (`be19cc5`): done by §5.6's *Done when*, no must-fix. A1 to A10 and B1 to B8 are pinned, exactly §5.5's
+  three pinned lines moved, and the suite at `4bba7e5` was 5560 passed, 1 skipped, the known Tk font failure. Its four
+  should-fixes are in (`ae9a8e4`, `de9e795`).
+- **No SolidWorks was needed**: F4 writes nothing a part, record or plan sees.
+- **Left for the user:** their own allowable stress (U-a, one Box cell), and U-b to U-e of §5.7, above all U-c (the
+  committed gearboxes' torques, typed for steel). The boards' PNG renders wait for the Mac.
 
 Read against the code at `11f2a25` on `printed` (F1 closed, F2 closed short of §3.2, F3 built and reviewed with its
 SolidWorks demonstration still to run). Lines below are as of that commit. §5.1 to §5.5 say what F4 works out, where the
@@ -3373,3 +3415,36 @@ on it. Each change is by section, with why.
   files then refused it as changed and not saved. The fault predates F3 (to `0c48a61`, 2026-09-14). By the
   coordinator's ruling of 2026-11-19 it is fixed in `swbuild.update_variables`: the equations are read first, and the
   units are measured only when something is to be set, as the workbook's Update already did.
+
+
+## The plan closes
+
+2026-11-19, read at `1afc1f0` on `printed` against its log and `docs/notes-printed/`.
+
+**Every stage of this plan is built.**
+- **F1** closed 2026-11-18 (§2's head).
+- **F2** closed 2026-11-18, short of §3.2, the user's own step (§3's head).
+- **F3** closed 2026-11-19 (§4's head): built, the printed default switched on (`262c0f7`), shown on SolidWorks 2026 and
+  confirmed on 2024, done by its *Done when* (`F3-CLOSE-REVIEW.md`, `30ecc7a`).
+- **F4** closed 2026-11-19 (§5's head): built on branch `f4`, reviewed (`F4-0-REVIEW.md`, `F4-REVIEW.md`: done, no
+  must-fix), merged (`1afc1f0`); no SolidWorks needed.
+- **A fault older than F3**, found by its demonstration, is fixed: a quiet Update values marked the part modified
+  (`b668cf0`, `SAVE-FLAG-FIX-REVIEW.md`). **Ruled a known caveat, not fixed now:** where `_evaluates` measures a part's
+  trig units and the job then refuses or stops, the part stays marked with nothing written (older than F3, rare).
+
+**What remains is the user's.**
+- **§3.2's step:** the coupons built, exported and printed; Bambu Studio opening the STEP files (U5); the measurements;
+  and from them D3's printed backlash (U4) and F3's allowance default (V1), each one constant and its pins.
+- **Every ruling the coordinating session made for them**, each theirs to overrule: gathered in
+  `docs/HANDOFF-WORKBOOK.md`, *Questions waiting for the user* (question 19 and those it points to), with D11, the ring
+  pair check, F3's rulings 1 and 2, and F4's M1 and R1 recorded in this plan where they were made.
+- **F4's questions for afterwards** (§5.7): their own allowable stress, derating across layers, the committed
+  gearboxes' torques (typed for steel), the form's inputs, and a warning near the limit.
+- **Whether branch `printed` is merged into `workbook`.** It changes what the app does for a user (Printed by default,
+  the bore allowance, the strength warnings), so it waits for their word. Nothing of this plan is in `workbook` yet.
+
+**Waiting on other things, not on the user:**
+- the design boards' PNG renders, which need the Mac's Chrome;
+- a commit making the hashed pins hold under Windows Python as well as Linux, being made as this is written and not
+  yet in the log read here;
+- the caveats `F3-CLOSE-REVIEW.md` §3 lists as unmeasured (§4's head).
