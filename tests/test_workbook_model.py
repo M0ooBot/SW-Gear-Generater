@@ -26,7 +26,8 @@ def test_the_columns_are_the_ones_the_plan_settled():
     assert [c.title for c in schema.MESHES.columns] == ["Gear A", "Gear B", "Efficiency (%)", "Notes"]
     assert [s.title for s in schema.BOX_SETTINGS] == [
         "Format", "Name", "Output folder", "Part template", "Assembly template", "Pressure angle (°)",
-        "Efficiency per mesh (%)", "Process", "Nozzle (mm)", "Units"]          # F1: Process and Nozzle (PLAN-PRINTED §1.3)
+        "Efficiency per mesh (%)", "Process", "Nozzle (mm)", "Allowable stress (MPa)", "Units"]
+    # F1: Process and Nozzle (PLAN-PRINTED §1.3); F4: Allowable stress after Nozzle (§5.4, §5.5)
     assert schema.SHEET_ORDER == ("Box", "Shafts", "Gears", "Meshes", "Modes", "Results")
 
 

@@ -7254,3 +7254,16 @@ def _same_path(a: str, b: str) -> bool:
     """Two paths compared as Windows compares them (``store.same_path``), imported late as ``ui_text`` keeps ``store``."""
     from .store import same_path
     return same_path(a, b)
+
+
+# -- F4 (PLAN-PRINTED §5.4; F4-INTERFACES §5): what a printed tooth holds, once, on the form's Derived panel ----------
+
+HOLDS_LABEL = "Holds once"
+
+
+def holds_row(rating, allowable: float = 17.0) -> Optional[Tuple[str, str]]:
+    """The Derived panel's row for one printed gear, (label, value): *Holds once* — *about 0.58 N·m · 39 N at 17 MPa*
+    (A1), from `gears.strength.rate`'s rating; None when the gear shows no row.
+
+    F4-0's stub, package C's to write (with the line under the rows and `gui._rows_with_span`): shows no row."""
+    return None

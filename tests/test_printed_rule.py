@@ -532,7 +532,9 @@ def test_the_box_says_process_and_nozzle_and_a_gearbox_built_in_code_is_written_
     from test_workbook_model import reducer
     settings = {s.key: s for s in schema.BOX_SETTINGS}
     keys = [s.key for s in schema.BOX_SETTINGS]
-    assert keys.index("process") == keys.index("efficiency") + 1 and keys.index("units") == keys.index("nozzle") + 1
+    # F4 (PLAN-PRINTED §5.4, §5.5): Allowable stress after Nozzle, Units after Allowable.
+    assert keys.index("process") == keys.index("efficiency") + 1 and keys.index("allowable") == keys.index("nozzle") + 1
+    assert keys.index("units") == keys.index("allowable") + 1
     assert settings["process"].words == ("printed", "machined") and not settings["process"].numeric
     assert settings["process"].note == ("Printed or Machined; blank: Printed for a new gearbox, as built for one "
                                         "already built")
