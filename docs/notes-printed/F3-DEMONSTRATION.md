@@ -594,3 +594,49 @@ its job, and either memory floor's STOP.
 said Machined; the structural refusal's changed part; the quiet Update values' conjuncts said apart; userwork's keyway read after
 the open and its bore mate made after the in-place Update) and `771f492` (the bore mate named, by K5). Self-check after each: 18
 checks, 0 failed (Linux).
+
+## The rerun after the quiet Update values' fix (2026-11-19, from c53d6c6 over 741c3da)
+
+The review (`F3-DEMONSTRATION-RUNS-REVIEW.md`, `c641f3d`) ruled the quiet Update values' save flag a fault from before F3,
+fixed in `b668cf0` (`update_variables` reads the equations first and measures the trig units only when something is to be
+set), and PLAN-PRINTED §2.8 corrected to K2 (`741c3da`). **One script change first, `c53d6c6`**: the ruling asks that the
+quiet Update values make no changing call, which the script did not read, so its job now runs with F2's counted call on and
+the indexed put of a global counted beside it; the calls are logged by member and the check fails on any of Add2, Add3,
+Delete, a put of Equation, ForceRebuild3, EditRebuild3, Save3, SaveAs, SaveAs3, SetSaveFlag or a suppression, or on none
+counted. Nothing else in the script moved since `771f492`. Self-check: 18 ok on Linux; on Windows `python.exe` the pins check
+alone fails, as ruled expected until F3-0's pins are made to hold on both.
+
+**Setup.** Run folders `<probe folder>\f3-demo-sw2026-20261119-002650` and `…\f3-demo-sw2024-20261119-005326`, each `snap` a
+`git archive` of `c53d6c6` with `SNAPSHOT_COMMIT` (log heads 3). Before, `tasklist` showed no SLDWORKS.exe, Excel or
+python.exe (the two `sldworks_fs.exe` services only). One fresh session per version, started in the background and exited
+after: 2026 PID 57896 with `--sections built,userwork --user-master <W9a's 2026 setup.master>`; 2024 PID 49476 with
+`--sections built --close-outlived-whats-wrong`. Each run started and quit its own Excel. The masters' hashes (34 files) and the
+probe folder's listing outside the `f3-demo-*` folders (50,415 entries) were taken before the 2026 run and after the 2024
+run, outside the script, and kept in the runner's `~/f3-runner-evidence` (not a scratch folder): the hashes match exactly, and
+the listings differ only in the probe folder's own mtime (the 2024 run folder made in it). Nothing in the user's Documents or
+Desktop, two levels down, is newer than the rerun's start. Logs `probe/results/f3-demo-sw2026-20261119-4-built-userwork-clean.log`
+(JSON `f3-demo-20261119-002811.json`) and `probe/results/sw2024/f3-demo-sw2024-20261119-3-built-clean.log` (`…-005450.json`).
+SolidWorks time about 26 min on 2026 and 9 on 2024.
+
+| Section | Version | Time | ok | FAIL | STOP | SolidWorks private, peak logged | Free, least logged |
+|---|---|---|---|---|---|---|---|
+| built (three reducers built here) | 2026 | 407 s | 95 | 0 | 0 | 1.54 GB | 9.31 GB |
+| userwork | 2026 | 1059 s | 47 | 0 | 0 | 2.21 GB | 9.63 GB |
+| built (three reducers built here) | 2024 | 404 s | 95 | 0 | 0 | 6.86 GB | 9.80 GB |
+
+**The quiet Update values, the fix shown on both versions** (2026 and 2024 alike, lines 112-113 of each log): one job, *Nothing to
+update: every value in Coupon_F2.SLDPRT already matches the form.*, the save flag `False` before and `False` after, no SolidWorks
+file moved, the .gear.json the same, and **no changing call** of the 133 counted: `{'ActiveDoc': 3, 'Equation': 60, 'GetCount': 2,
+'GetEquationMgr': 2, 'GetPathName': 1, 'GetTitle': 1, 'GetType': 1, 'GetUserPreferenceToggle': 1, 'SetUserPreferenceToggle': 2,
+'Value': 60}`. The two `SetUserPreferenceToggle` are `begin_build`'s and `end_build`'s dimension-dialog preference, turned off
+and put back (an application setting, not the part), a fact and not judged.
+
+**Everything else in built and userwork as before**, on both versions where run: the structural sentence for G2's allowance on
+F2's 12 : 1 (699 on 2026, 697 on 2024); G2 in place to 12 + 0.3, its hole 6.15 (1287); K11 naming Gears!V3 (1299); the machined
+12 : 1 planned machined (1311) and its Backlash written with no F3 global (1869 on 2026, 1871 on 2024). userwork on 2026 (1872-2724),
+now at the script of `771f492`: Sun in place D 8, a 0.3, F 7.2 (2345) over the user's keyway and eight mates (2347); the bore
+mate on the 4.15 face (2351); SunGear keeping 0.3 as built (2719); UserBoreMate named `part new` for the Part name, its subjects
+`('Sun', 'its Part name changed', 'face', '')`, the eight remade (2720-2721).
+
+**Windows.** No What's Wrong box on either version and no notification box; progress boxes only (*Opening*, *Loading…*,
+*Calculating Interference Detection*, the untitled *Post load updating* and *Open Components* boxes). The close path never acted.

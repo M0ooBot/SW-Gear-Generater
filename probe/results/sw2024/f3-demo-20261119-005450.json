@@ -1,0 +1,36 @@
+{
+ "sections": {
+  "built": {
+   "k11": [
+    "Bore Allowance in Gear_m1.5_N68_P is 0.5 in SolidWorks and 0.3 in the workbook: type 0.5 in Gears!V3, or set it back to 0.3 in SolidWorks, and press Update SolidWorks again."
+   ],
+   "seconds": 404,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {},
+ "switch": "True",
+ "revision": [
+  32,
+  5,
+  0
+ ],
+ "snapshot": "c53d6c603a6a4f99ada4d0254613ce5568e4b421",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": true,
+  "allowance_seconds": 60.0,
+  "close_outlived": {
+   "asked": true,
+   "in_force": true,
+   "within_seconds": 10.0,
+   "buttons": [
+    "&Close",
+    "Close"
+   ]
+  }
+ },
+ "fails": [],
+ "notes": []
+}
