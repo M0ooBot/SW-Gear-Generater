@@ -243,3 +243,46 @@ self-checks are 0 failed. M2 should land before it (it is not caught by the suit
 - *Change*: B 6, to checks only (M2). B 7, either compare as built or accept with a sentence in the plan (S3).
 - *Moot after the switch*: C's note that the cards say 0.2 while plans cut 0.
 - *Guard 5*: correct the input (M3).
+
+
+## Re-check of the round after this review (read at `262c0f7`)
+
+Read: B `60e58b5` (with its note `0a36ffa`), A `d03c681`, C `2edbe17`, `5a72057`, `4812df9` (with its note `8f7fb68`) and the
+switch commit `262c0f7`. No code changed. Runs were made in a scratch copy (`git archive 262c0f7`, import path checked,
+switch read True), deleted afterwards.
+
+- **The suite at `262c0f7`**: **5390 passed, 1 skipped, 1 failed**, the known Tk font test. The coordinator's figure.
+- **M1, fixed at its cause.** `pre_f3_desk` (`tests/test_bore_workbook.py:48-61`) turns the switch off for the build
+  alone and puts it back in a `finally`; it still asserts that no part holds `"Bore Allowance"`. B's tests pass with the
+  switch committed on.
+- **M2, fixed at its cause.** `build.plan_parts` checks a row on record as built and plans its job as typed
+  (`build.py:158-170`). Only a typed row that does not work out is planned as built. The window's wiring is unchanged and
+  needs nothing. B's new tests show it: `Sun2` identical to `Sun` on RangeBox_Fixed built before F3 is one job
+  `("Sun", "Sun2")`, gives no error, and `plan_gearbox` reuses the old part for both with no `"Bore Allowance"`; a row
+  that truly differs (Face width 12, or 0.3 typed) is still *not the same gear*. Reuse, `made_new_job` and
+  `update._part` still read each part as built from its own entry, so nothing needed the jobs as built.
+- **M3, guard 5.** Its input is `_values(as_built(printed, _recorded(S17)))`, and the worker is unchanged. **It still
+  guards what it guarded.** Three mutations of the worker, each in a copy and each alone, all turn it red: the printed
+  default's words in `_wanted_words`; its exact IIF set-back in `_back_words`; and no K11 edit made at all. Put back, it
+  passes. The old hand-built input against the unchanged worker still raises `NotAsBuilt` (*"Bore Allowance" is not in
+  this part*), so W9a's check is intact.
+- **The switch commit holds exactly what §7 listed, and nothing else.** It has the switch (`spur.py:119`, its comment
+  reworded), the rim test's two cases (now with S2's words at the default, F1's figures and the equality with the
+  machined sentence kept at a typed 0), guard 5's input, and `PrintedGear.dc.html` and `PrintedSpan.dc.html`. §7's
+  item 4 (M1) landed in B's `60e58b5` beforehand. Its records are in `5a72057` and the package notes.
+- **S1 to S5.** All done. The advised Flat is rounded so it is always accepted: 5.038 at −0.1, with 5.037 still
+  refused, checked across 13 × 14 shafts and allowances. The rim sentences name the hole as cut only when there is an
+  allowance, so F1's are word for word. The allowance is compared as built as a number, with the pins' calls (no
+  globals) unchanged in meaning. The Drive card has the caveat. K3's words are in the plan and the interface.
+- **Nothing pinned moved.** `tests/test_printed_rule.py`, its fixture and `test_findings.py` are untouched since `d394a85`.
+  The tests that changed are the switch commit's two, and the packages' own F3 tests, each following its package's
+  change (`test_bore.py`, `test_bore_form.py:362`, `test_ui_text.py`'s `DRIVE_COPY`, `test_bore_workbook.py`). With the
+  switch on as committed, every pin passes: every machined plan, record and `.gear.json`, and every part F1 and F2 built,
+  through every caller.
+- **One loose end, should-fix.** `design/canvas/PrintedBore.dc.html` is stale at `262c0f7`: `gen.py` rewrites its Drive
+  card with `2edbe17`'s caveat, the same with the switch off or on. The switch commit rightly left it out, but no commit
+  has taken it. Regenerate it in its own commit (C). The PNG renders are still owed to the Mac.
+
+**Verdict: F3 is fit for its SolidWorks demonstration.** No must-fix is open. `probe/f3_demonstration.py` was committed
+during this re-check (`fb5346b`); it was not read here and wants its own review. Note that F1's and F2's demonstration
+scripts now build printed parts at 0.2 and sidecar 4 if rerun.
