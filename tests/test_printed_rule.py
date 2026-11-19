@@ -57,6 +57,13 @@ PINNED = json.loads((Path(__file__).resolve().parent / "fixtures" / "printed" / 
     encoding="utf-8"))["pins"]
 HASHED_HERE = sys.platform.startswith("linux")
 REL_TOL = ABS_TOL = 1e-12
+# Linux-only pins (the coordinator's ruling of 2026-11-19): FIXTURES' and RECORD_BEFORE_F1's texts hold paths the
+# gearbox planner joins with os.path.join (workbook/build.py, workbook/gearbox.py), which on Linux is posixpath and
+# writes C:\Out\/Gear_m2_N17.SLDPRT where ntpath writes C:\Out\Gear_m2_N17.SLDPRT: a difference not of last bits,
+# so their five tests are skipped off Linux, saying why, and no second text is stored.
+LINUX_PATHS = pytest.mark.skipif(not sys.platform.startswith("linux"), reason=(
+    "a Linux-only pin: its text holds paths joined by Linux's os.path (C:\\Out\\/Gear_...), which ntpath joins "
+    "C:\\Out\\Gear_...; the coordinator's ruling of 2026-11-19, PINS-ON-WINDOWS.md"))
 PIN_HOW = ("by hash, as taken on Linux" if HASHED_HERE else
            f"by the stored text, floats to {REL_TOL:g} and all else exactly, on {sys.platform}")
 # A number standing on its own (not inside a name such as Gear_m1.5_N25): a float as repr or float.hex writes it, or an
@@ -380,6 +387,7 @@ FIXTURES = {
 }
 
 
+@LINUX_PATHS
 def test_the_w8_fixtures_and_rangebox_plan_bit_for_bit_as_at_the_cut(monkeypatch):
     monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", "entity senses", raising=False)
     texts = fixture_texts()
@@ -510,6 +518,7 @@ def nothing_to_do(record, disk, a):
     return plan, again, columns, matches
 
 
+@LINUX_PATHS
 def test_a_record_written_before_f1_is_nothing_to_update_or_make_again(monkeypatch):
     from test_workbook_gearbox import assessed
     from test_workbook_model import reducer
@@ -539,6 +548,7 @@ def test_a_strip_record_written_before_f1_has_nothing_for_update_values(name):
     assert gui.GearApp._update_target(strip_form(sidecar, form))[0] == 0
 
 
+@LINUX_PATHS
 @pytest.mark.parametrize("box_process", ["", "machined", "Machined"])
 def test_a_record_written_before_f1_is_nothing_to_do_against_a_workbook_marked_machined_or_left_blank(
         monkeypatch, box_process):

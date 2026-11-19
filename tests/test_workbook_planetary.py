@@ -69,6 +69,7 @@ def test_the_stage_is_a_frozen_record_of_its_members():
 
 import hashlib  # noqa: E402
 import os  # noqa: E402
+import sys  # noqa: E402
 from fractions import Fraction  # noqa: E402
 
 from gear_generator import findings  # noqa: E402
@@ -400,6 +401,10 @@ BEFORE_W7 = {
 }
 
 
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason=(
+    "a Linux-only pin: W7's hashes were taken on Linux over float.hex of figures whose last bit libm and the Windows CRT "
+    "differ in, and over paths joined by Linux's os.path; left as they are by the coordinator's ruling of 2026-11-19 "
+    "(PINS-ON-WINDOWS.md)"))
 @pytest.mark.parametrize("name", sorted(BEFORE_W7))
 def test_every_workbook_before_w7_plans_bit_for_bit_as_it_did(name, monkeypatch):
     monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", "entity senses", raising=False)
