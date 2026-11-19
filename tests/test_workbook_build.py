@@ -11,6 +11,7 @@ from gear_generator.workbook import assess, build, geometry, link, model, xlsx
 from gear_generator.workbook.model import Gear
 from test_swbuild import FakeSolidWorks, never_exists
 from test_workbook_model import reducer, transfer_case, write
+from workbook_fixtures import machined, machined_reads
 
 FOLDER = "C:\\Parts\\Reducer_12to1"
 
@@ -74,10 +75,11 @@ def test_two_gears_one_name_is_caught(tmp_path):
     spec = model.replace(spec, gears=spec.gears + (wider,))
     parts = build.plan_parts(from_file(write(tmp_path, spec)), FOLDER)
     # Build waits for the error...
-    assert assess.build_refusal(parts, parts.diagnostics, FOLDER).startswith("Fix the workbook before building: Gears!V6")
+    # Part name is column Y since F3's three bore columns came before it (W9b's bands made it V).
+    assert assess.build_refusal(parts, parts.diagnostics, FOLDER).startswith("Fix the workbook before building: Gears!Y6")
     assert [j.gear_ids for j in parts.jobs] == [("G1",), ("G2",), ("G3",), ("G4",)]   # ...the good gears still plan
     (error,) = parts.errors
-    assert error.field == "Gears!V6"                 # Part name, after the two bands (W9b)
+    assert error.field == "Gears!Y6"                 # Part name, after the two bands (W9b) and the bore's three (F3)
     assert "G5 and G1 would both be Gear_m1.5_N17.SLDPRT" in error.message and "Part name" in error.message
 
 
@@ -771,8 +773,8 @@ def test_problems_follow_their_rows_when_a_row_is_inserted(tmp_path):
     old, new = assessed(tmp_path, before, "b.xlsx"), assessed(tmp_path, after, "c.xlsx")
     did = link.consequence(old, new)
     changes = link.describe_changes(old.read, new.read)
-    # Part name is column V since W9b's two bands came before it.
-    assert ui_text.workbook_change_lines(changes, did) == ["gear G5 added (Gears row 3) · 1 new error (Gears!V3)"]
+    # Part name is column Y since W9b's two bands and F3's three bore columns came before it.
+    assert ui_text.workbook_change_lines(changes, did) == ["gear G5 added (Gears row 3) · 1 new error (Gears!Y3)"]
 
 
 def test_a_mesh_the_chosen_fix_puts_right_says_so(tmp_path):
@@ -828,10 +830,11 @@ def window_for(tmp_path, path):
     return root, window
 
 
-def test_the_window_asks_for_another_export_after_a_formula_held_results_back(tmp_path):
+def test_the_window_asks_for_another_export_after_a_formula_held_results_back(tmp_path, monkeypatch):
     """Review item 7a: S3's X is a formula in the Excel fixture; the move writes S2 and leaves S3 to Excel."""
     import shutil
     from test_workbook_model import FIXTURES
+    machined_reads(monkeypatch)                                     # PLAN-PRINTED §2.7: a committed workbook
     path = tmp_path / "excel.xlsx"
     shutil.copy(FIXTURES / "excel" / "Reducer_12to1.xlsx", path)
     xlsx.write_cells(str(path), {"Shafts": {"C3": 64}})
@@ -904,11 +907,13 @@ def test_a_provisional_read_offers_no_fix_and_lays_nothing_out(tmp_path):
     from gear_generator.workbook import export
     path = excel_saved_s2_at_64(tmp_path)
     read_spec, diagnostics = model.from_book(xlsx.read(path))
+    read_spec = machined(read_spec)                                 # PLAN-PRINTED §2.7: a committed workbook
     first = assess.assess(read_spec, diagnostics, FOLDER)
     move = first.report.fixes["Meshes!A2"][0]
     done = export.export(str(path), read_spec, [move], assess.assess(read_spec, diagnostics, FOLDER, chosen=[move]).report)
     assert done.written == ["Shafts!C3"] and done.has_formulas            # the window's recalc wait starts
     read_spec, diagnostics = model.from_book(xlsx.read(path))
+    read_spec = machined(read_spec)
     stale = assess.assess(read_spec, diagnostics, FOLDER)
     assert stale.report.fixes and stale.errors[0].field == "Meshes!A3"      # what the old read offered: wrong
     held = assess.assess(read_spec, diagnostics, FOLDER, provisional=True)
@@ -947,9 +952,10 @@ def recalculated(path, s3):
     touch_later(path)
 
 
-def test_the_window_holds_checks_fixes_and_export_while_excel_recalculates(tmp_path):
+def test_the_window_holds_checks_fixes_and_export_while_excel_recalculates(tmp_path, monkeypatch):
     """Re-review N1 in the window: between the Export and Excel's save the read is provisional — said in Checks,
     no fix offered, Export and Export as… held — and after the save it is all live again, Results due."""
+    machined_reads(monkeypatch)                                     # PLAN-PRINTED §2.7: a committed workbook
     path = excel_saved_s2_at_64(tmp_path)
     root, window = window_for(tmp_path, path)
     try:
@@ -975,9 +981,10 @@ def test_the_window_holds_checks_fixes_and_export_while_excel_recalculates(tmp_p
         root.destroy()
 
 
-def test_the_window_keeps_the_fix_when_nothing_could_be_written(tmp_path):
+def test_the_window_keeps_the_fix_when_nothing_could_be_written(tmp_path, monkeypatch):
     """Re-review N2 (repro v5): both targets are formulas, nothing is written, so the fix stays chosen, the
     sentence is a fault, and nothing waits for Excel."""
+    machined_reads(monkeypatch)                                     # PLAN-PRINTED §2.7: a committed workbook
     from test_workbook_export import excel_saved, with_formula
     from test_workbook_model import FIXTURES
     source = excel_saved(FIXTURES / "excel-windows" / "Reducer_12to1.xlsx", tmp_path / "s.xlsx", {"C4": 132})

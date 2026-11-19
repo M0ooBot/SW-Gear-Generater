@@ -1,0 +1,1063 @@
+awake   display and system held awake for the run (previous state -0x80000000)
+run     2026-11-18 08:19:09; F1 demonstration from C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2026-20261118-081411\snap\src (snapshot: c1c9046); sections ['spur', 'pair', 'rangebox']; masters {'rangebox': '', 'setup': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9a-final-sw2026-20261117-023433\\out\\setup.master', 'reducer': ''}; redo False
+ok      the app's settings and Recent list go into this run's folder, not the user's: C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2026-20261118-081411\out\appdata\Gear Generator\recent.json
+attach  SolidWorks 2026 (revision 34.1.1) (revision 34.1.1), PID 38876; SolidWorks 0.70 GB private, 10.26 GB free
+open    before: []
+findings USER_MATE_PUT_ROUTE "put along, the user's locks left on", USER_TIE_RULE 'not COMPONENT_UNDER_DEFINED', WHATS_WRONG_OPENS_ON_PART_REBUILD False, the branches {'USER_MATE_PUT_FIXED_GEAR_ON_2024': None, 'USER_MATE_PUT_FIXED_GEAR_ON_2026': None, 'USER_MATE_PUT_HELD_GEAR_ON_2024': None, 'USER_MATE_PUT_HELD_GEAR_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2024': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_ON_2024': True, 'USER_MATE_PUT_NO_CARRIER_ON_2026': True, 'USER_MATE_PUT_SUBASSEMBLY_ON_2024': None, 'USER_MATE_PUT_SUBASSEMBLY_ON_2026': None}
+rule    What's Wrong: swbuild.whats_wrong_shows_in_update reads False; What's Wrong during a job is a STOP, as any dialog
+fact    a SolidWorks balloon tip ['Check1', 'Simplified Interface', 'The Simplified Interface provides a minimalist layout for quick and basic modeling. It can be customized similarly to the standard interface.\n\nShow how to turn off the Simplified Interface.'] came up while no SolidWorks call was in progress (left standing, never answered)
+excel   started our own Excel, PID 6288, 16.0 build 20527.0
+== spur  the strip's form as it opens (Printed, Gear_m1.5_N25_P), then Machined beside it, then both at module 0.8: built by the form's own plan and job, its record by its own finish; each read back: the name, Backlash's text and value, the tooth (small_pinion_check), the .gear.json
+form    the strip's GearApp made with its link to SolidWorks not started: this run's worker runs its jobs
+ok      spur: the form opens Printed and names its gear Gear_m1.5_N25_P ('printed')
+form    spur printed m1.5: Process printed, Module 1.5: the form plans Gear_m1.5_N25_P.SLDPRT; its diagnostics none
+ok      spur printed m1.5: the form names it Gear_m1.5_N25_P.SLDPRT (_P), a new file
+fact    a SolidWorks balloon tip ['Check1', 'The sketch is no longer over defined.'] came up while AddDimension2 was in progress (left standing, never answered)
+        build   Part1 · spur · recipe A · trig degrees
+        ok      new part Part1
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 25
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N25_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2026-20261118-081411\out\spur\printed-m1.5\Gear_m1.5_N25_P.SLDPRT
+status  spur printed m1.5: Built Gear_m1.5_N25_P.SLDPRT. 1 thing to do by hand: Assign a material to Gear_m1.5_N25_P; the build leaves it unset.
+ok      spur printed m1.5: built and saved by the form's job (Gear_m1.5_N25_P.SLDPRT): ok True, failures []
+ok      spur printed m1.5: Backlash reads '"Backlash"= IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )' and SolidWorks evaluates it to 0.3, the app's 0.3 at module 1.5: holds
+        spur printed m1.5: volume 9842.48517 mm³ (outline's 9842.32583, off +0.0016 %); bodies 1; feature errors []; Equation Manager Status 0; largest vertex radius 20.251106 for an outer radius 20.250000; vertices just inside the tips 0
+ok      spur printed m1.5: the rebuild is clean, no feature in error: []
+ok      spur printed m1.5: the volume within 0.1 % of the outline's (+0.0016 %)
+ok      spur printed m1.5: one solid body, the tips intact: 100 tip corners for 25 teeth (4 each), the farthest 1.11e-03 mm beyond the outer radius 20.250000 (within 0.005), no vertex just inside it: []
+ok      spur printed m1.5: its .gear.json at sidecar 3 printed, its process, its 0.4 nozzle and the IIF: holds
+ok      spur printed m1.5: closed, nothing left open under its folder: []
+form    spur machined m1.5: Process machined, Module 1.5: the form plans Gear_m1.5_N25.SLDPRT; its diagnostics none
+ok      spur machined m1.5: the form names it Gear_m1.5_N25.SLDPRT (no _P), a new file
+        build   Part2 · spur · recipe A · trig degrees
+        ok      new part Part2
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 25
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N25; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2026-20261118-081411\out\spur\machined-m1.5\Gear_m1.5_N25.SLDPRT
+status  spur machined m1.5: Built Gear_m1.5_N25.SLDPRT. 1 thing to do by hand: Assign a material to Gear_m1.5_N25; the build leaves it unset.
+ok      spur machined m1.5: built and saved by the form's job (Gear_m1.5_N25.SLDPRT): ok True, failures []
+ok      spur machined m1.5: Backlash reads '"Backlash"= 0.3 * "Module"' and SolidWorks evaluates it to 0.44999999999999996, the app's 0.45 at module 1.5: holds
+        spur machined m1.5: volume 9717.12500 mm³ (outline's 9717.02941, off +0.0010 %); bodies 1; feature errors []; Equation Manager Status 0; largest vertex radius 20.251162 for an outer radius 20.250000; vertices just inside the tips 0
+ok      spur machined m1.5: the rebuild is clean, no feature in error: []
+ok      spur machined m1.5: the volume within 0.1 % of the outline's (+0.0010 %)
+ok      spur machined m1.5: one solid body, the tips intact: 100 tip corners for 25 teeth (4 each), the farthest 1.16e-03 mm beyond the outer radius 20.250000 (within 0.005), no vertex just inside it: []
+ok      spur machined m1.5: its .gear.json at sidecar 1 as W9 records a machined part (no process, no nozzle, 0.3 * "Module"): holds
+ok      spur machined m1.5: closed, nothing left open under its folder: []
+form    spur printed m0.8: Process printed, Module 0.8: the form plans Gear_m0.8_N25_P.SLDPRT; its diagnostics ['Printed, the tooth tip is 0.317 mm thick after backlash, under one 0.4 mm nozzle line, so the slicer will drop or round it; use a larger module or more teeth.', 'Printed, a module of 0.8 mm is under 2.5 nozzle widths (1 mm), below which a 0.4 mm nozzle rounds the profile off.']
+ok      spur printed m0.8: the form names it Gear_m0.8_N25_P.SLDPRT (_P), a new file
+        build   Part3 · spur · recipe A · trig degrees
+        ok      new part Part3
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 25
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m0.8_N25_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2026-20261118-081411\out\spur\printed-m0.8\Gear_m0.8_N25_P.SLDPRT
+status  spur printed m0.8: Built Gear_m0.8_N25_P.SLDPRT. 1 thing to do by hand: Assign a material to Gear_m0.8_N25_P; the build leaves it unset.
+ok      spur printed m0.8: built and saved by the form's job (Gear_m0.8_N25_P.SLDPRT): ok True, failures []
+ok      spur printed m0.8: Backlash reads '"Backlash"= IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )' and SolidWorks evaluates it to 0.24, the app's 0.24 at module 0.8: holds
+        spur printed m0.8: volume 2170.45716 mm³ (outline's 2170.57521, off -0.0054 %); bodies 1; feature errors []; Equation Manager Status 0; largest vertex radius 10.800621 for an outer radius 10.800000; vertices just inside the tips 0
+ok      spur printed m0.8: the rebuild is clean, no feature in error: []
+ok      spur printed m0.8: the volume within 0.1 % of the outline's (-0.0054 %)
+ok      spur printed m0.8: one solid body, the tips intact: 100 tip corners for 25 teeth (4 each), the farthest 6.21e-04 mm beyond the outer radius 10.800000 (within 0.005), no vertex just inside it: []
+ok      spur printed m0.8: its .gear.json at sidecar 3 printed, its process, its 0.4 nozzle and the IIF: holds
+ok      spur printed m0.8: closed, nothing left open under its folder: []
+form    spur machined m0.8: Process machined, Module 0.8: the form plans Gear_m0.8_N25.SLDPRT; its diagnostics none
+ok      spur machined m0.8: the form names it Gear_m0.8_N25.SLDPRT (no _P), a new file
+        build   Part4 · spur · recipe A · trig degrees
+        ok      new part Part4
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 25
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m0.8_N25; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2026-20261118-081411\out\spur\machined-m0.8\Gear_m0.8_N25.SLDPRT
+status  spur machined m0.8: Built Gear_m0.8_N25.SLDPRT. 1 thing to do by hand: Assign a material to Gear_m0.8_N25; the build leaves it unset.
+ok      spur machined m0.8: built and saved by the form's job (Gear_m0.8_N25.SLDPRT): ok True, failures []
+ok      spur machined m0.8: Backlash reads '"Backlash"= 0.3 * "Module"' and SolidWorks evaluates it to 0.24, the app's 0.24 at module 0.8: holds
+        spur machined m0.8: volume 2170.45716 mm³ (outline's 2170.57521, off -0.0054 %); bodies 1; feature errors []; Equation Manager Status 0; largest vertex radius 10.800621 for an outer radius 10.800000; vertices just inside the tips 0
+ok      spur machined m0.8: the rebuild is clean, no feature in error: []
+ok      spur machined m0.8: the volume within 0.1 % of the outline's (-0.0054 %)
+ok      spur machined m0.8: one solid body, the tips intact: 100 tip corners for 25 teeth (4 each), the farthest 6.21e-04 mm beyond the outer radius 10.800000 (within 0.005), no vertex just inside it: []
+ok      spur machined m0.8: its .gear.json at sidecar 1 as W9 records a machined part (no process, no nozzle, 0.3 * "Module"): holds
+ok      spur machined m0.8: closed, nothing left open under its folder: []
+ok      spur m1.5 printed: its volume 9842.4852 mm³ is its own outline's (9842.3258) and not the other process's (9717.0294), to 0.001: told apart
+ok      spur m1.5 machined: its volume 9717.1250 mm³ is its own outline's (9717.0294) and not the other process's (9842.3258), to 0.001: told apart
+fact    spur m1.5: printed less machined +125.3602 mm³ measured, +125.2964 by the app's outlines
+ok      spur m0.8: printed and machined are the same solid (2170.457157, 2170.457157 mm³), as the two backlashes are one value there: the same
+time    spur: 78 s; 0 failed; SolidWorks 0.97 GB private, 9.73 GB free
+== pair  the strip's form as a pair (25 / 50, module 1.5, motion gear mate), Printed then Machined, built by the form's own plan and job; each driven by gear_pairs_check's drive; each part's Backlash and .gear.json
+form    pair printed: Process printed, motion gear mate: the form plans ['Pinion_m1.5_N25_P.SLDPRT', 'Gear_m1.5_N50_P.SLDPRT', 'Pair_m1.5_25T_50T_P.SLDASM']
+ok      pair printed: both parts and the assembly named with _P, new files: ['Pinion_m1.5_N25_P', 'Gear_m1.5_N50_P', 'Pair_m1.5_25T_50T_P']
+        build   Part5 · spur · recipe A · trig degrees
+        ok      new part Part5
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 25
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Pinion_m1.5_N25_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2026-20261118-081411\out\pair\printed\Pinion_m1.5_N25_P.SLDPRT
+        build   Part6 · spur · recipe A · trig degrees
+        ok      new part Part6
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 50
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N50_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2026-20261118-081411\out\pair\printed\Gear_m1.5_N50_P.SLDPRT
+        build   Assem1 · pair · recipe  · trig degrees
+        ok      new assembly Assem1
+        ok      trig units measured: degrees
+        ok      global "Centre Distance"
+        ok      global "Ratio"
+        ok      component Pinion_m1.5_N25_P-1
+        ok      component Gear_m1.5_N50_P-1
+        ok      placed gear1
+        ok      placed gear2
+        ok      unfixed gear1
+        ok      mate coincident gear1:plane1 ~ asm:plane1
+        ok      mate coincident gear1:Gear Axis ~ asm:plane2
+        ok      mate coincident gear1:Gear Axis ~ asm:plane3
+        ok      mate coincident gear2:plane1 ~ gear1:plane1
+        ok      mate coincident gear2:Gear Axis ~ asm:plane2
+        ok      mate distance gear2:Gear Axis ~ asm:plane3 as Centre Distance
+        ok      link "D1@Centre Distance"
+        ok      mate gear gear1:Gear Axis ~ gear2:Gear Axis as Gear Mate
+        ok      2 globals read back and match the maths
+        ok      no interference between the gears
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2026-20261118-081411\out\pair\printed\Pair_m1.5_25T_50T_P.SLDASM
+status  pair printed: Built Pinion_m1.5_N25_P.SLDPRT, Gear_m1.5_N50_P.SLDPRT and Pair_m1.5_25T_50T_P.SLDASM. 2 things to do by hand: Assign a material to Pinion_m1.5_N25_P; the build leaves it unset; Assign a material to Gear_m1.5_N50_P; the build leaves it unset.
+ok      pair printed: the pair built by the form's job: ok True, skipped ''
+fact    pair printed: Pinion_m1.5_N25_P-1 turned -30.000000°, Gear_m1.5_N50_P-1 15.000000°; interference at 10° (0, 0.0), at 40° (0, 0.0)
+ok      pair printed: driven by gear_pairs_check's drive, gear A turns 30° and gear B -0.5 of it, no interference at either end: holds
+ok      pair printed Pinion_m1.5_N25_P: Backlash reads '"Backlash"= IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )' and SolidWorks evaluates it to 0.3, the app's 0.3 at module 1.5: holds
+ok      pair printed Pinion_m1.5_N25_P: its .gear.json at sidecar 3 printed, its process, its 0.4 nozzle and the IIF: holds
+ok      pair printed Gear_m1.5_N50_P: Backlash reads '"Backlash"= IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )' and SolidWorks evaluates it to 0.3, the app's 0.3 at module 1.5: holds
+ok      pair printed Gear_m1.5_N50_P: its .gear.json at sidecar 3 printed, its process, its 0.4 nozzle and the IIF: holds
+ok      pair printed: closed without saving the drive, nothing left open under its folder: []
+form    pair machined: Process machined, motion gear mate: the form plans ['Pinion_m1.5_N25.SLDPRT', 'Gear_m1.5_N50.SLDPRT', 'Pair_m1.5_25T_50T.SLDASM']
+ok      pair machined: both parts and the assembly named without _P, new files: ['Pinion_m1.5_N25', 'Gear_m1.5_N50', 'Pair_m1.5_25T_50T']
+        build   Part7 · spur · recipe A · trig degrees
+        ok      new part Part7
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 25
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Pinion_m1.5_N25; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2026-20261118-081411\out\pair\machined\Pinion_m1.5_N25.SLDPRT
+        build   Part8 · spur · recipe A · trig degrees
+        ok      new part Part8
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 50
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N50; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2026-20261118-081411\out\pair\machined\Gear_m1.5_N50.SLDPRT
+        build   Assem2 · pair · recipe  · trig degrees
+        ok      new assembly Assem2
+        ok      trig units measured: degrees
+        ok      global "Centre Distance"
+        ok      global "Ratio"
+        ok      component Pinion_m1.5_N25-1
+        ok      component Gear_m1.5_N50-1
+        ok      placed gear1
+        ok      placed gear2
+        ok      unfixed gear1
+        ok      mate coincident gear1:plane1 ~ asm:plane1
+        ok      mate coincident gear1:Gear Axis ~ asm:plane2
+        ok      mate coincident gear1:Gear Axis ~ asm:plane3
+        ok      mate coincident gear2:plane1 ~ gear1:plane1
+        ok      mate coincident gear2:Gear Axis ~ asm:plane2
+        ok      mate distance gear2:Gear Axis ~ asm:plane3 as Centre Distance
+        ok      link "D1@Centre Distance"
+        ok      mate gear gear1:Gear Axis ~ gear2:Gear Axis as Gear Mate
+        ok      2 globals read back and match the maths
+        ok      no interference between the gears
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2026-20261118-081411\out\pair\machined\Pair_m1.5_25T_50T.SLDASM
+status  pair machined: Built Pinion_m1.5_N25.SLDPRT, Gear_m1.5_N50.SLDPRT and Pair_m1.5_25T_50T.SLDASM. 2 things to do by hand: Assign a material to Pinion_m1.5_N25; the build leaves it unset; Assign a material to Gear_m1.5_N50; the build leaves it unset.
+ok      pair machined: the pair built by the form's job: ok True, skipped ''
+DIALOG  SolidWorks shows 'Calculating Interference Detection': ['Cancel', 'Calculating Interference Detection'] (a progress box that closes itself; not logged again)
+fact    pair machined: Pinion_m1.5_N25-1 turned -30.000000°, Gear_m1.5_N50-1 15.000000°; interference at 10° (0, 0.0), at 40° (0, 0.0)
+ok      pair machined: driven by gear_pairs_check's drive, gear A turns 30° and gear B -0.5 of it, no interference at either end: holds
+ok      pair machined Pinion_m1.5_N25: Backlash reads '"Backlash"= 0.3 * "Module"' and SolidWorks evaluates it to 0.44999999999999996, the app's 0.45 at module 1.5: holds
+ok      pair machined Pinion_m1.5_N25: its .gear.json at sidecar 1 as W9 records a machined part (no process, no nozzle, 0.3 * "Module"): holds
+ok      pair machined Gear_m1.5_N50: Backlash reads '"Backlash"= 0.3 * "Module"' and SolidWorks evaluates it to 0.44999999999999996, the app's 0.45 at module 1.5: holds
+ok      pair machined Gear_m1.5_N50: its .gear.json at sidecar 1 as W9 records a machined part (no process, no nozzle, 0.3 * "Module"): holds
+ok      pair machined: closed without saving the drive, nothing left open under its folder: []
+ok      pair: the printed pair turns as the machined pair does (each by the same judgement)
+fact    pair: the backlash in the mesh is not measured in SolidWorks (no script measures it); the parts' Backlash globals are what is read
+time    pair: 113 s; 0 failed; SolidWorks 0.98 GB private, 9.55 GB free
+== rangebox  a copy of W9a's setup.master (RangeBox with the user's work, built before F1): opened as built (Machined, nothing written, D11 (B)); then a row labelled Process with Printed typed on its Box sheet; one Update SolidWorks: every part's Backlash in place, every user item as W9a reads it, nothing saved, the record, the sentence; saved and closed as the user would, a second Update quiet
+ok      rangebox: the master's own record was written before F1: link schema 7, no part saying a process: holds
+copy    setup.master -> rangebox: 17 files, mtimes kept
+        RangeBox.xlsx's record: 21 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.carriers[0].path', 'record.gearbox.user_work.assembly', 'record.gearbox.user_work.features[0].path', 'record.gearbox.user_work.features[1].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      rangebox: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+probe   W6-PLAN §7.1: RangeBox.SLDASM of rangebox, whose stored references name a folder that is gone, opened under the dialog watch (120 s at most)
+fact    rangebox: the copy's assembly opened in 2.9 s; marked modified straight after the open: {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'Sprocket.SLDPRT': False, 'Housing.SLDPRT': False, 'RangeBox.SLDASM': False}
+fact    W6-PLAN §7.1: dialogs while the copied assembly opened: none
+ok      rangebox: SolidWorks found all 9 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+fact    rangebox: the copy's record now at link schema 11 (W8's copy_built writes it forward through store's writer to put its paths onto the copy; the app's own open below writes nothing)
+-- rangebox  the workbook opened as built: read and planned through the window's own path
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side. This workbook's Gears sheet has no Start band (mm) and End band (mm) columns, which give a sleeve toothed bands with a relief between them: type both headers on row 1 of the Gears sheet (after Slides, as a new workbook has them) and save.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      rangebox: the copy reads as built from this workbook, its assembly in the copy
+ok      rangebox, as built: no Process row, the blank read 'machined' (D11 (B)), 5 gears planned machined with no _P, Update with nothing to do: holds
+footer  (rangebox, opened as built) [green] SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move. It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. Carrier (the carrier) is axes and planes only, so it has nothing to drag. As read at 02:52 on 2026-11-17, Update SolidWorks leaves your Sprocket-3, Sprocket-4, Sprocket-1, 2 other components and 8 mates as they are, and your User Keyway Sketch and User Keyway in Gear_m1.25_N29 too.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      rangebox, as built: the footer is W9's for a built gearbox with nothing changed, and says nothing of Process: holds
+panel   Process: Machined, as built: type Printed beside Process on the Box sheet to print it (add a row labelled Process)
+ok      rangebox, as built: the Workbook panel's Process line says to add the row: 'Machined, as built: type Printed beside Process on the Box sheet to print it (add a row labelled Process)'
+ok      rangebox, as built: nothing written by the open and its planning (the record, the .gear.json files, the workbook and every SolidWorks file, by size, time and sha256): none
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+-- rangebox  the user's work as W9a's go reads it, before
+DIALOG  SolidWorks shows 'Opening': ['Close', 'Opening Component 2 of 15', 'Update\nAssembly', 'Update\nGraphics', 'Opening File: C:\\Use...rangebox\\Ring_m1.25_N55.SLDPRT', 'Elapsed time: 0s', 'This file was last opened in 2 seconds.', 'For more information, view: '] (a progress box that closes itself; not logged again)
+ok      rangebox: the user's components ['Housing-1', 'Sprocket-1', 'Sprocket-2', 'Sprocket-3', 'Sprocket-4'] are there, each loaded from the copy ({'Sprocket-1': 'Sprocket.SLDPRT', 'Sprocket-4': 'Sprocket.SLDPRT', 'Housing-1': 'Housing.SLDPRT', 'Sprocket-2': 'Sprocket.SLDPRT', 'Sprocket-3': 'Sprocket.SLDPRT'})
+ok      rangebox: the record holds setup's inventory of the user's work
+ok      rangebox: the user's 8 mates as set up: ['UserAngle4', 'UserAxis1', 'UserAxis2', 'UserAxis4', 'UserDist4', 'UserLock1', 'UserLock2', 'UserLock3']
+ok      rangebox as copied, H shown: every app body at its frame on record (6.6e-10 at Planet copy 2); each locked sprocket on its gear as set up {'Sprocket-1': '0.0e+00', 'Sprocket-3': '0.0e+00', 'Sprocket-2': '0.0e+00'}; mates in error none; Sprocket-4 -90.000000000 mm from Sprocket-3 (as set up -90.000000000); the train free True
+ok      rangebox as copied, N shown: every app body at its frame on record (6.6e-10 at Planet copy 2); each locked sprocket on its gear as set up {'Sprocket-1': '0.0e+00', 'Sprocket-3': '0.0e+00', 'Sprocket-2': '0.0e+00'}; mates in error none; Sprocket-4 -90.000000000 mm from Sprocket-3 (as set up -90.000000000); the train free True
+ok      rangebox as copied, L shown: every app body at its frame on record (6.6e-10 at Planet copy 2); each locked sprocket on its gear as set up {'Sprocket-1': '0.0e+00', 'Sprocket-3': '0.0e+00', 'Sprocket-2': '7.1e-15'}; mates in error none; Sprocket-4 -90.000000000 mm from Sprocket-3 (as set up -90.000000000); the train free True
+ok      rangebox as copied: every user mate is on in the modes it was on in: as set
+read    rangebox, before: the user's mates' entities (active H; front document RangeBox.SLDASM): mates in error none; not free {'Ring': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked ['RangeBox.SLDASM']; rebuild state 0
+ok      rangebox: the User Keyway in Sun's part, code 0
+-- rangebox  Printed typed on the Box sheet in Excel, in a row labelled Process (the panel's line asks for it)
+person  rangebox: adds a row labelled Process at Box row 10: [('Box', 'A10', 'Process'), ('Box', 'B10', 'Printed')]
+excel   Box!A10 := 'Process'
+excel   Box!B10 := 'Printed'
+excel   saved RangeBox.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Box Process blank → printed
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17. Printed, the gear is made as drawn, with no undercut; whether a mate's tip clears its flank below the base circle is not checked here, so turn the pair in SolidWorks. A profile shift of 0.24 or more would clear it.
+        warning Gears!Q4: Ring: Printed, the ring's 0.188 mm root fillet is 0.15 × module, under the 0.3 × module printed gears are given; it is kept small so the pinion's tips clear it.
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!Q7: RangeSlv: Printed, the ring's 0.188 mm root fillet is 0.15 × module, under the 0.3 × module printed gears are given; it is kept small so the pinion's tips clear it.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side. This workbook's Gears sheet has no Start band (mm) and End band (mm) columns, which give a sleeve toothed bands with a relief between them: type both headers on row 1 of the Gears sheet (after Slides, as a new workbook has them) and save.
+        5 shafts · 6 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.25_N29.SLDPRT', 'Gear_m1.25_N13.SLDPRT', 'Ring_m1.25_N55.SLDPRT', 'Dog_m1.25_N17.SLDPRT', 'Sleeve_m1.25_N17.SLDPRT']; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted []
+summary Update SolidWorks will change the values in Gear_m1.25_N29 (Sun), Gear_m1.25_N13 (Planet), Ring_m1.25_N55 (Ring), Dog_m1.25_N17 (HighDog, LowDog) and Sleeve_m1.25_N17 (RangeSlv).
+ok      rangebox, Printed: the Box reads 'printed' at 'Box!B10', resolved 'printed', no error 
+panel   Process: Printed, 0.4 mm nozzle
+ok      rangebox, Printed: the Process line reads 'Printed, 0.4 mm nozzle'
+ok      rangebox, Printed: classify plans one Update in place, every part changing its Backlash alone (0.3 * "Module" to the printed IIF), no structural change, no new part, every file keeping its name: holds
+footer  (rangebox, Printed, before the press) [green] Update SolidWorks will change the values in Gear_m1.25_N29 (Sun), Gear_m1.25_N13 (Planet), Ring_m1.25_N55 (Ring), Dog_m1.25_N17 (HighDog, LowDog) and Sleeve_m1.25_N17 (RangeSlv). It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. Carrier (the carrier) is axes and planes only, so it has nothing to drag. As read at 02:52 on 2026-11-17, Update SolidWorks rebuilds your User Keyway Sketch and User Keyway in Gear_m1.25_N29 after the app's features, moves your Sprocket-1 and Sprocket-3 with Sun, which your UserLock1 and UserLock3 hold them to, moves your Sprocket-2 with RangeSlv, which your UserLock2 holds it to, asks SolidWorks, when pressed, whether the 8 mates of yours on Sun's train leave it free to turn (if not, it changes nothing and names the mates to suppress), and leaves your Sprocket-4 and Housing-1 as they are.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [green] As read at 02:52 on 2026-11-17, Update SolidWorks rebuilds your User Keyway Sketch and User Keyway in Gear_m1.25_N29 after the app's features, moves your Sprocket-1 and Sprocket-3 with Sun, which your UserLock1 and UserLock3 hold them to, moves your Sprocket-2 with RangeSlv, which your UserLock2 holds it to, asks SolidWorks, when pressed, whether the 8 mates of yours on Sun's train leave it free to turn (if not, it changes nothing and names the mates to suppress), and leaves your Sprocket-4 and Housing-1 as they are.
+        predicted: carried [('Sun', [('Sprocket-1', ('UserLock1', 'UserLock3')), ('Sprocket-3', ('UserLock1', 'UserLock3'))]), ('RangeSlv', [('Sprocket-2', ('UserLock2',))])]; problems []; refused (recorded) []; changed since False; unread ties [(('Carrier carrier', 'Sun', 'Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'HighDog', 'LowDog', 'RangeSlv'), ('UserLock1', 'UserLock2', 'UserLock3', 'UserDist4', 'UserAngle4', 'UserAxis1', 'UserAxis2', 'UserAxis4'))]
+ok      rangebox, Printed, before the press: the footer says the user-work line as the window would: 'As read at 02:52 on 2026-11-17, Update SolidWorks rebuilds your User Keyway Sket'…
+ok      rangebox, Printed: the footer before the press names every part: 'Update SolidWorks will change the values in Gear_m1.25_N29 (Sun), Gear_m1.25_N13 (Planet), Ring_m1.25_N55 (Ring), Dog_m1.25_N17 (HighDog, LowDog) and Sleeve_m1.'…
+ok      rangebox, Printed: the footer foresees nothing of the user's stopping the press: []
+-- rangebox  one Update SolidWorks
+ok      rangebox: Printed, one Update: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.13 GB private, 9.42 GB free
+        in 162.6 s; SolidWorks 1.50 GB private, 9.43 GB free; loaded from disk []
+        W9a: carried [('Sprocket-1', 'Sun', 'N'), ('Sprocket-3', 'Sun', 'N'), ('Sprocket-2', 'RangeSlv', 'N'), ('Sprocket-1', 'Sun', 'L'), ('Sprocket-3', 'Sun', 'L'), ('Sprocket-2', 'RangeSlv', 'L'), ('Sprocket-1', 'Sun', 'H'), ('Sprocket-3', 'Sun', 'H'), ('Sprocket-2', 'RangeSlv', 'H')]; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] Updated SolidWorks: changed 1 variable in Gear_m1.25_N29, changed 1 variable in Gear_m1.25_N13, changed 1 variable in Ring_m1.25_N55, changed 1 variable in Dog_m1.25_N17, changed 1 variable in Sleeve_m1.25_N17, re-placed Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your Sprocket-1 went with Sun in every mode, which your locks hold it to. Your Sprocket-3 went with Sun in every mode, which your locks hold it to. Your Sprocket-2 went with RangeSlv in every mode, which your locks hold it to. The 5 parts now printed keep their file names, without the _P a part built printed is named with: Update SolidWorks never renames a file, and Build again… makes new parts named with _P if you want the mark. Save Gear_m1.25_N29, Gear_m1.25_N13, Ring_m1.25_N55, Dog_m1.25_N17, Sleeve_m1.25_N17 and RangeBox in SolidWorks to keep them.
+fact    rangebox: Printed, one Update: the press took 162.7 s; SolidWorks calls by member {'OpenDoc6': 14, 'IsSuppressed2': 262, 'GetSystemValue3': 4, 'ForceRebuild3': 51, 'ShowConfiguration2': 3, 'SetSuppression2': 40, 'put': 33}
+        shows and puts in order: [('ShowConfiguration2', 'N'), ('put', 'RangeBox_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1'), ('put', 'Sprocket-1'), ('put', 'Sprocket-3'), ('put', 'Sprocket-2'), ('ShowConfiguration2', 'L'), ('put', 'RangeBox_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1'), ('put', 'Sprocket-1'), ('put', 'Sprocket-3'), ('put', 'Sprocket-2'), ('ShowConfiguration2', 'H'), ('put', 'RangeBox_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1'), ('put', 'Sprocket-1'), ('put', 'Sprocket-3'), ('put', 'Sprocket-2')]
+        configuration 'H'; visited ['N', 'L']; put_in ['N', 'L', 'H']; placed ['Carrier carrier', 'Sun', 'Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'HighDog', 'LowDog', 'RangeSlv']; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures []
+        post-check of N: turned False; out of step []; off axis []; clashes []; interference error ''
+        post-check of L: turned False; out of step []; off axis []; clashes []; interference error ''
+        post-check of H: turned False; out of step []; off axis []; clashes []; interference error ''
+fact    rangebox: Printed, one Update: the press took 163 s
+        update  Gear_m1.25_N29.SLDPRT · trig degrees
+        ok      set "Backlash"
+        ok      rebuilt once
+        update  Gear_m1.25_N13.SLDPRT · trig degrees
+        ok      set "Backlash"
+        ok      rebuilt once
+        update  Ring_m1.25_N55.SLDPRT · trig degrees
+        ok      set "Backlash"
+        ok      rebuilt once
+        update  Dog_m1.25_N17.SLDPRT · trig degrees
+        ok      set "Backlash"
+        ok      rebuilt once
+        update  Sleeve_m1.25_N17.SLDPRT · trig degrees
+        ok      set "Backlash"
+        ok      rebuilt once
+        update  RangeBox_Layout.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  RangeBox_Carrier_Carrier.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        ok      re-placed Carrier carrier, Sun, Planet copy 1, Planet copy 2, Planet copy 3, HighDog, LowDog, RangeSlv
+        ok      worked in H, the configuration that was active, and showed N, L too
+        ok      gears put in N, L, H
+        CHECK   your components, left as they are but where put with a gear: Sprocket-1, Sprocket-4, Housing-1, Sprocket-2, Sprocket-3
+        CHECK   your mates, left on as they are: UserAxis1, UserAxis2, UserLock1, UserLock2, UserLock3, UserAxis4, UserDist4, UserAngle4
+        CHECK   your features in Gear_m1.25_N29.SLDPRT, kept: User Keyway Sketch, User Keyway
+        ok      put Sprocket-1 with Sun in N
+        ok      put Sprocket-3 with Sun in N
+        ok      put Sprocket-2 with RangeSlv in N
+        ok      put Sprocket-1 with Sun in L
+        ok      put Sprocket-3 with Sun in L
+        ok      put Sprocket-2 with RangeSlv in L
+        ok      put Sprocket-1 with Sun in H
+        ok      put Sprocket-3 with Sun in H
+        ok      put Sprocket-2 with RangeSlv in H
+        mate    Sun on Input Axis
+        mate    Sun along Input
+        mate    HighDog locked to Sun
+        mate    Carrier carrier on Carrier Axis
+        mate    Carrier carrier along Carrier
+        mate    LowDog locked to Carrier carrier
+        mate    Planet copy 1 on Planet copy 1 Axis
+        mate    Planet copy 1 along Planet copy 1
+        mate    Planet copy 2 on Planet copy 2 Axis
+        mate    Planet copy 2 along Planet copy 2
+        mate    Planet copy 3 on Planet copy 3 Axis
+        mate    Planet copy 3 along Planet copy 3
+        mate    RangeSlv on Output Axis
+        mate    RangeSlv along Output
+        mate    Sun meshes Planet copy 1
+        mate    Sun meshes Planet copy 2
+        mate    Sun meshes Planet copy 3
+        mate    Planet copy 1 meshes Ring
+        mate    RangeSlv engages HighDog
+        mate    RangeSlv engages LowDog · suppressed
+        mate    UserAxis1
+        mate    UserAxis2
+        mate    UserLock1
+        mate    UserLock2
+        mate    UserLock3
+        mate    UserAxis4
+        mate    UserDist4
+        mate    UserAngle4
+        ok      assembly rebuilt once
+        ok      no interference between the gears
+        not saved: Gear_m1.25_N29.SLDPRT, Gear_m1.25_N13.SLDPRT, Ring_m1.25_N55.SLDPRT, Dog_m1.25_N17.SLDPRT, Sleeve_m1.25_N17.SLDPRT, RangeBox.SLDASM changed in SolidWorks; save there to keep it
+ok      rangebox: the Update ended ok and wrote Backlash alone in each of the five parts, nothing in the layout or the carrier: failures []; holds
+ok      rangebox: nothing made new or inserted in place: {'inserted': [], 'built': [], 'deleted': [], 'bands_added': [], 'modes_added': []}
+ok      rangebox: what the press carried is what the footer foresaw (said [('Sprocket-1', 'Sun'), ('Sprocket-2', 'RangeSlv'), ('Sprocket-3', 'Sun')], did [('Sprocket-1', 'Sun'), ('Sprocket-2', 'RangeSlv'), ('Sprocket-3', 'Sun')])
+fact    rangebox: the press put ['Dog_m1.25_N17-1', 'Dog_m1.25_N17-2', 'Gear_m1.25_N13-1', 'Gear_m1.25_N13-2', 'Gear_m1.25_N13-3', 'Gear_m1.25_N29-1', 'RangeBox_Carrier_Carrier-1', 'Sleeve_m1.25_N17-1', 'Sprocket-1', 'Sprocket-2', 'Sprocket-3']; carried [('Sprocket-1', 'Sun'), ('Sprocket-2', 'RangeSlv'), ('Sprocket-3', 'Sun')]
+ok      rangebox: nothing of the user's in error after: [] []
+ok      rangebox: no SolidWorks file saved by the app (sizes, times and sha256 of every part and the assembly as before the press): none
+ok      rangebox: the result says package C's sentence once, and not the stale name clause: holds
+-- rangebox  read back: every part's Backlash, the record, the user's work as W9a's go reads it
+ok      rangebox Gear_m1.25_N29: Backlash reads '"Backlash"= IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )' and SolidWorks evaluates it to 0.3, the app's 0.3 at module 1.25: holds
+ok      rangebox Gear_m1.25_N13: Backlash reads '"Backlash"= IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )' and SolidWorks evaluates it to 0.3, the app's 0.3 at module 1.25: holds
+ok      rangebox Ring_m1.25_N55: Backlash reads '"Backlash"= IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )' and SolidWorks evaluates it to 0.3, the app's 0.3 at module 1.25: holds
+ok      rangebox Dog_m1.25_N17: Backlash reads '"Backlash"= IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )' and SolidWorks evaluates it to 0.3, the app's 0.3 at module 1.25: holds
+ok      rangebox Sleeve_m1.25_N17: Backlash reads '"Backlash"= IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )' and SolidWorks evaluates it to 0.3, the app's 0.3 at module 1.25: holds
+ok      rangebox: Backlash read from SolidWorks in each of the five parts: ['Gear_m1.25_N29', 'Gear_m1.25_N13', 'Ring_m1.25_N55', 'Dog_m1.25_N17', 'Sleeve_m1.25_N17']
+ok      rangebox: the record on disk at link 11, the same five part files, each printed with the IIF, each .gear.json at sidecar 3: holds
+read    rangebox, after: the user's mates' entities (active H; front document RangeBox.SLDASM): mates in error none; not free {'Ring': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked ['Dog_m1.25_N17.SLDPRT', 'Gear_m1.25_N13.SLDPRT', 'Gear_m1.25_N29.SLDPRT', 'RangeBox.SLDASM', 'Ring_m1.25_N55.SLDPRT', 'Sleeve_m1.25_N17.SLDPRT']; rebuild state 0
+ok      rangebox: every one of the user's eight mates joins what it joined before the press: the same; all eight read both times
+ok      rangebox after the press, H shown: every app body at its frame on record (6.6e-10 at Planet copy 2); each locked sprocket on its gear as set up {'Sprocket-1': '0.0e+00', 'Sprocket-3': '0.0e+00', 'Sprocket-2': '0.0e+00'}; mates in error none; Sprocket-4 -90.000000000 mm from Sprocket-3 (as set up -90.000000000); the train free True
+ok      rangebox after the press, N shown: every app body at its frame on record (6.6e-10 at Planet copy 2); each locked sprocket on its gear as set up {'Sprocket-1': '0.0e+00', 'Sprocket-3': '0.0e+00', 'Sprocket-2': '0.0e+00'}; mates in error none; Sprocket-4 -90.000000000 mm from Sprocket-3 (as set up -90.000000000); the train free True
+ok      rangebox after the press, L shown: every app body at its frame on record (6.6e-10 at Planet copy 2); each locked sprocket on its gear as set up {'Sprocket-1': '0.0e+00', 'Sprocket-3': '0.0e+00', 'Sprocket-2': '7.1e-15'}; mates in error none; Sprocket-4 -90.000000000 mm from Sprocket-3 (as set up -90.000000000); the train free True
+ok      rangebox after the press: every user mate is on in the modes it was on in: as set
+ok      rangebox: the User Keyway rebuilt in Sun's part after the press, code 0
+ok      rangebox, after: the user's components ['Housing-1', 'Sprocket-1', 'Sprocket-2', 'Sprocket-3', 'Sprocket-4'] are there, each loaded from the copy ({'Sprocket-1': 'Sprocket.SLDPRT', 'Sprocket-4': 'Sprocket.SLDPRT', 'Housing-1': 'Housing.SLDPRT', 'Sprocket-2': 'Sprocket.SLDPRT', 'Sprocket-3': 'Sprocket.SLDPRT'})
+footer  (rangebox, after the press) [green] Updated SolidWorks: changed 1 variable in Gear_m1.25_N29, changed 1 variable in Gear_m1.25_N13, changed 1 variable in Ring_m1.25_N55, changed 1 variable in Dog_m1.25_N17, changed 1 variable in Sleeve_m1.25_N17, re-placed Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your Sprocket-1 went with Sun in every mode, which your locks hold it to. Your Sprocket-3 went with Sun in every mode, which your locks hold it to. Your Sprocket-2 went with RangeSlv in every mode, which your locks hold it to. The 5 parts now printed keep their file names, without the _P a part built printed is named with: Update SolidWorks never renames a file, and Build again… makes new parts named with _P if you want the mark. Save Gear_m1.25_N29, Gear_m1.25_N13, Ring_m1.25_N55, Dog_m1.25_N17, Sleeve_m1.25_N17 and RangeBox in SolidWorks to keep them.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [green] As read at 08:24, Update SolidWorks leaves your Sprocket-1, Sprocket-4, Housing-1, 2 other components and 8 mates as they are, and your User Keyway Sketch and User Keyway in Gear_m1.25_N29 too.
+        predicted: carried []; problems []; refused (recorded) []; changed since False; unread ties []
+-- rangebox  saved and closed as the user would; a second Update with nothing changed
+person  saved in SolidWorks (the Update's result): ['Gear_m1.25_N29.SLDPRT', 'Gear_m1.25_N13.SLDPRT', 'Ring_m1.25_N55.SLDPRT', 'Dog_m1.25_N17.SLDPRT', 'Sleeve_m1.25_N17.SLDPRT', 'RangeBox.SLDASM']
+ok      rangebox: everything of the copy closed after the save: left []
+ok      rangebox: with the record printed and the workbook Printed, Update plans nothing changed: []
+ok      rangebox: a second press: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.28 GB private, 9.36 GB free
+DIALOG  SolidWorks shows '': ['Close', 'Open\nComponents', 'Update\nAssembly', 'Update\nGraphics', ' ', 'Elapsed time: 0s', 'This file was last opened in 2 seconds.', 'For more information, view: ']
+        in 109.1 s; SolidWorks 1.67 GB private, 9.12 GB free; loaded from disk ['Gear_m1.25_N29.SLDPRT', 'Gear_m1.25_N13.SLDPRT', 'Ring_m1.25_N55.SLDPRT', 'Dog_m1.25_N17.SLDPRT', 'Sleeve_m1.25_N17.SLDPRT', 'RangeBox_Layout.SLDPRT', 'RangeBox_Carrier_Carrier.SLDPRT', 'RangeBox.SLDASM']
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] SolidWorks already matches the workbook: nothing was changed. It worked in H, the configuration that was active; it did not show the other modes, since nothing in H needed changing.
+fact    rangebox: a second press: the press took 109.2 s; SolidWorks calls by member {'OpenDoc6': 9, 'IsSuppressed2': 112, 'GetSystemValue3': 1}
+        shows and puts in order: []
+        configuration 'H'; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures []
+fact    rangebox: a second press: the press took 109 s
+ok      rangebox: the second press changes nothing and says 'SolidWorks already matches the workbook: nothing was changed.', without the name sentence: 'SolidWorks already matches the workbook: nothing was changed. It worked in H, the configuration that was active; it did not show the other modes, since nothing '
+ok      rangebox: the second press: read from SolidWorks, every gear stands where it stood before the press (largest 0.0e+00 at -)
+fact    rangebox: the second press: GetSaveFlag before the press {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'RangeBox.SLDASM': False}, after it {'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'RangeBox.SLDASM': False}
+ok      rangebox: the second press: every document reads GetSaveFlag False before and after an Update that changed nothing (GEAR_MATE_DEFINITION_READ_MARKS 'nothing'): marked before [], after []
+ok      rangebox: the record on disk after the second press holds no unsaved or mismatched document: unsaved [], mismatched []
+ok      rangebox, the copy's end: rangebox ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox.xlsx']), no open document by a file name it holds ([])
+time    rangebox: 458 s; 0 failed; SolidWorks 1.20 GB private, 9.34 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 1.06 GB private, 9.50 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 2, 'Updating...': 0, 'Opening': 1, 'Loading...': 0}; other windows the watch logged: 0
+awake   display and system released (previous state -0x7ffffffd)
+result  written to C:\Users\M0obo\Documents\GearGeneratorProbe\f1-demo-sw2026-20261118-081411\f1-demo-20261118-081909.json; masters kept {'rangebox': '', 'setup': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9a-final-sw2026-20261117-023433\\out\\setup.master', 'reducer': ''}
+done    0 failed: []; 0 noted; 0 STOP(s), a hung worker included: []

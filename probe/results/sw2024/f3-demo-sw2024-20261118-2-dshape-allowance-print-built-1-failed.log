@@ -1,0 +1,2525 @@
+switch  the run's head: spur.PRINTED_DEFAULT_IN_PLANS reads True (on: a printed gear's blank Bore allowance on a part not yet built plans 0.2 mm)
+awake   display and system held awake for the run (previous state -0x80000000)
+run     2026-11-18 23:41:57; F3 demonstration from C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\snap\src (snapshot: 771f492bb7ec7aba93de233c6b69115072f82101); sections ['dshape', 'allowance', 'print', 'built']; masters {'rangebox': '', 'setup': '', 'reducer': ''}; redo False
+ok      the app's settings and Recent list go into this run's folder, not the user's: C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\appdata\Gear Generator\recent.json
+attach  SolidWorks 2024 (revision 32.5.0) (revision 32.5.0), PID 18504; SolidWorks 0.66 GB private, 10.65 GB free
+open    before: []
+findings USER_MATE_PUT_ROUTE "put along, the user's locks left on", USER_TIE_RULE 'not COMPONENT_UNDER_DEFINED', WHATS_WRONG_OPENS_ON_PART_REBUILD False, the branches {'USER_MATE_PUT_FIXED_GEAR_ON_2024': None, 'USER_MATE_PUT_FIXED_GEAR_ON_2026': None, 'USER_MATE_PUT_HELD_GEAR_ON_2024': None, 'USER_MATE_PUT_HELD_GEAR_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2024': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_ON_2024': True, 'USER_MATE_PUT_NO_CARRIER_ON_2026': True, 'USER_MATE_PUT_SUBASSEMBLY_ON_2024': None, 'USER_MATE_PUT_SUBASSEMBLY_ON_2026': None}
+rule    What's Wrong: swbuild.whats_wrong_shows_in_update reads True; a What's Wrong box owned by SolidWorks' frame during any job the script waits on is logged as a fact (under an app Update or Build, as the app's Update shows it; under the script's own steps and W8's helpers, as SolidWorks shows it when a person does this), the job waited for, and at its end the box must go within 60 s and the frame be enabled (else a STOP)
+rule    --close-outlived-whats-wrong: a What's Wrong owned by SolidWorks' frame, the frame enabled, still up 60 s after a job is said to have outlived it and closed with its own Close button, to be gone within 10 s; anything else stays the STOP (the coordinator's ruling of 2026-11-18, SolidWorks 2024 only): in force here
+excel   started our own Excel, PID 34684, 16.0 build 20527.0
+== dshape  the D's Updates measured first (S6): a printed spur with a D bore built by the strip's form, then Flat, Bore and Bore allowance changed by the form's own Update values across their range, to and past each bound, back, and to a press fit; the allowance to 0 and Drive to round refused; then D to round and back, each made new by the form's Build; every state read by its faces, its links, its globals and its volume against the same gear built from scratch
+switch  dshape (typed figures only: judged whatever it reads): spur.PRINTED_DEFAULT_IN_PLANS reads True (on: a printed gear's blank Bore allowance on a part not yet built plans 0.2 mm)
+ok      dshape: the form shows Bore as cut '8.2 · 8 + 0.2' and Flat as cut '7.2 · 7 + 0.2'
+ok      dshape: DShape: the form plans DShape.SLDPRT, a new file
+        build   Part1 · spur · recipe A · trig degrees
+        ok      new part Part1
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Bore Allowance"
+        ok      global "Bore Flat"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      arc bore_arc
+        ok      line bore_flat
+        ok      coincident bore_arc.centre origin
+        ok      coincident bore_flat.start bore_arc.end (already one point)
+        ok      coincident bore_flat.end bore_arc.start (already one point)
+        ok      vertical bore_flat
+        ok      dimension Bore
+        ok      dimension Flat
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      link "Flat@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      26 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to DShape; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\dshape\DShape.SLDPRT
+status  dshape: DShape: Built DShape.SLDPRT. 1 thing to do by hand: Assign a material to DShape; the build leaves it unset.
+ok      dshape: DShape: built and saved by the form's job, every sketch fully defined, its .gear.json written by the form: ok True, failures [], not fully defined none
+ok      dshape: DShape's .gear.json at schema 4 (4: it holds the bore's globals)
+fact    dshape: as built: twin 1 (Twin1): built ok True, failures [], not fully defined none, {'volume': 4983.981521093568, 'in_error': []}; left open []
+ok      dshape: as built: twin 1 built from scratch clean and closed
+fact    dshape: as built: {'in_error': [], 'sketch': 3, 'volume': 4983.981521093568, 'coaxial_radii': [4.1, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [4.1, 5.3665631459994945], 'globals': {'Bore Diameter': 8.0, 'Bore Allowance': 0.2, 'Bore Flat': 7.0}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-4.1, 3.1], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': 0.0, 'flat_span': 5.3666, 'chord': 5.3666}, 'tip_lands': {'nearest_above': 9.0, 'nearest_below': -9.0, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 4983.981521093568
+ok      dshape: as built: D 8, a 0.2, Flat 7: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, Flat 7 to 5 (value)
+status  dshape, Flat 7 to 5: Changed 1 variable in DShape.SLDPRT and rebuilt it.
+ok      dshape, Flat 7 to 5: the strip counted 1 and Update values set ['Bore Flat'] in one rebuild, its record following: changed ['Bore Flat'], failures []
+fact    dshape, Flat 7 to 5: twin 2 (Twin2): built ok True, failures [], not fully defined none, {'volume': 5094.535869063759, 'in_error': []}; left open []
+ok      dshape, Flat 7 to 5: twin 2 built from scratch clean and closed
+fact    dshape, Flat 7 to 5: {'in_error': [], 'sketch': 3, 'volume': 5094.535869063759, 'coaxial_radii': [4.1, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [4.1, 7.899367063252599], 'globals': {'Bore Diameter': 8.0, 'Bore Allowance': 0.2, 'Bore Flat': 5.0}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-4.1, 1.1], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': -0.0, 'flat_span': 7.8994, 'chord': 7.8994}, 'tip_lands': {'nearest_above': 9.0, 'nearest_below': -9.0, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 5094.535869063759
+ok      dshape, Flat 7 to 5: D 8, a 0.2, Flat 5: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, Flat 5 to 7.6 (value)
+status  dshape, Flat 5 to 7.6: Changed 1 variable in DShape.SLDPRT and rebuilt it.
+ok      dshape, Flat 5 to 7.6: the strip counted 1 and Update values set ['Bore Flat'] in one rebuild, its record following: changed ['Bore Flat'], failures []
+fact    dshape, Flat 5 to 7.6: twin 3 (Twin3): built ok True, failures [], not fully defined none, {'volume': 4962.1930678309245, 'in_error': []}; left open []
+ok      dshape, Flat 5 to 7.6: twin 3 built from scratch clean and closed
+fact    dshape, Flat 5 to 7.6: {'in_error': [], 'sketch': 3, 'volume': 4962.1930678309245, 'coaxial_radii': [4.1, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [4.1, 3.532704346531139], 'globals': {'Bore Diameter': 8.0, 'Bore Allowance': 0.2, 'Bore Flat': 7.6}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-4.1, 3.7], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': -0.0, 'flat_span': 3.5327, 'chord': 3.5327}, 'tip_lands': {'nearest_above': 9.0, 'nearest_below': -9.0, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 4962.1930678309245
+ok      dshape, Flat 5 to 7.6: D 8, a 0.2, Flat 7.6: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, Flat 7.6 to 7 (value)
+status  dshape, Flat 7.6 to 7: Changed 1 variable in DShape.SLDPRT and rebuilt it.
+ok      dshape, Flat 7.6 to 7: the strip counted 1 and Update values set ['Bore Flat'] in one rebuild, its record following: changed ['Bore Flat'], failures []
+fact    dshape, Flat 7.6 to 7: {'in_error': [], 'sketch': 3, 'volume': 4983.981521093569, 'coaxial_radii': [4.1, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [4.1, 5.3665631459994945], 'globals': {'Bore Diameter': 8.0, 'Bore Allowance': 0.2, 'Bore Flat': 7.0}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-4.1, 3.1], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': -0.0, 'flat_span': 5.3666, 'chord': 5.3666}, 'tip_lands': {'nearest_above': 9.0, 'nearest_below': -9.0, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 4983.981521093568
+ok      dshape, Flat 7.6 to 7: D 8, a 0.2, Flat 7: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, Bore 8 to 10 with Flat 7 to 9 (value)
+status  dshape, Bore 8 to 10 with Flat 7 to 9: Changed 2 variables in DShape.SLDPRT and rebuilt it.
+ok      dshape, Bore 8 to 10 with Flat 7 to 9: the strip counted 2 and Update values set ['Bore Diameter', 'Bore Flat'] in one rebuild, its record following: changed ['Bore Diameter', 'Bore Flat'], failures []
+fact    dshape, Bore 8 to 10 with Flat 7 to 9: twin 4 (Twin4): built ok True, failures [], not fully defined none, {'volume': 4756.405069502962, 'in_error': []}; left open []
+ok      dshape, Bore 8 to 10 with Flat 7 to 9: twin 4 built from scratch clean and closed
+fact    dshape, Bore 8 to 10 with Flat 7 to 9: {'in_error': [], 'sketch': 3, 'volume': 4756.405069502962, 'coaxial_radii': [5.1, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [5.1, 6.06630035524124], 'globals': {'Bore Diameter': 10.0, 'Bore Allowance': 0.2, 'Bore Flat': 9.0}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-5.1, 4.1], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': 0.0, 'flat_span': 6.0663, 'chord': 6.0663}, 'tip_lands': {'nearest_above': 9.0, 'nearest_below': -9.0, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 4756.405069502962
+ok      dshape, Bore 8 to 10 with Flat 7 to 9: D 10, a 0.2, Flat 9: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, allowance 0.2 to 0.4 (value)
+status  dshape, allowance 0.2 to 0.4: Changed 1 variable in DShape.SLDPRT and rebuilt it.
+ok      dshape, allowance 0.2 to 0.4: the strip counted 1 and Update values set ['Bore Allowance'] in one rebuild, its record following: changed ['Bore Allowance'], failures []
+fact    dshape, allowance 0.2 to 0.4: twin 5 (Twin5): built ok True, failures [], not fully defined none, {'volume': 4730.860929612999, 'in_error': []}; left open []
+ok      dshape, allowance 0.2 to 0.4: twin 5 built from scratch clean and closed
+fact    dshape, allowance 0.2 to 0.4: {'in_error': [], 'sketch': 3, 'volume': 4730.860929612999, 'coaxial_radii': [5.2, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [5.2, 6.131883886702357], 'globals': {'Bore Diameter': 10.0, 'Bore Allowance': 0.4, 'Bore Flat': 9.0}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-5.2, 4.2], 'padding_beyond_minus_r': -0.0, 'round_past_the_flat': -0.0, 'flat_span': 6.1319, 'chord': 6.1319}, 'tip_lands': {'nearest_above': 9.0, 'nearest_below': -9.0, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 4730.860929612999
+ok      dshape, allowance 0.2 to 0.4: D 10, a 0.4, Flat 9: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, Flat 9 to 6.1, h at 0.25 R exactly (value)
+status  dshape, Flat 9 to 6.1, h at 0.25 R exactly: Changed 1 variable in DShape.SLDPRT and rebuilt it.
+ok      dshape, Flat 9 to 6.1, h at 0.25 R exactly: the strip counted 1 and Update values set ['Bore Flat'] in one rebuild, its record following: changed ['Bore Flat'], failures []
+fact    dshape, Flat 9 to 6.1, h at 0.25 R exactly: twin 6 (Twin6): built ok True, failures [], not fully defined none, {'volume': 4930.244082938635, 'in_error': []}; left open []
+ok      dshape, Flat 9 to 6.1, h at 0.25 R exactly: twin 6 built from scratch clean and closed
+fact    dshape, Flat 9 to 6.1, h at 0.25 R exactly: {'in_error': [], 'sketch': 3, 'volume': 4930.244082938636, 'coaxial_radii': [5.2, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [5.2, 10.069756700139283], 'globals': {'Bore Diameter': 10.0, 'Bore Allowance': 0.4, 'Bore Flat': 6.1000000000000005}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-5.2, 1.3], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': 0.0, 'flat_span': 10.0698, 'chord': 10.0698}, 'tip_lands': {'nearest_above': 9.0, 'nearest_below': -9.0, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 4930.244082938635
+ok      dshape, Flat 9 to 6.1, h at 0.25 R exactly: D 10, a 0.4, Flat 6.1: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, Flat 6, past h >= 0.25 R (bound)
+status  dshape, Flat 6, past h >= 0.25 R: The gear on the form does not work out yet, so nothing was updated.
+ok      dshape, Flat 6, past h >= 0.25 R: refused by the form at Flat in A's words ("The flat is 1.2 mm from the axis, under a quarter of the hole's radius (1.3 mm); type a Flat of at least 6.1 mm, or use a round bore."), Update values saying 'The gear on the form does not work out yet, so nothing was updated.', nothing sent, the part's globals and record as they were: errors ["The flat is 1.2 mm from the axis, under a quarter of the hole's radius (1.3 mm); type a Flat of at least 6.1 mm, or use a round bore."]
+-- dshape, Flat 6.1 to 9.7, the flat 0.3 deep exactly (value)
+status  dshape, Flat 6.1 to 9.7, the flat 0.3 deep exactly: Changed 1 variable in DShape.SLDPRT and rebuilt it.
+ok      dshape, Flat 6.1 to 9.7, the flat 0.3 deep exactly: the strip counted 1 and Update values set ['Bore Flat'] in one rebuild, its record following: changed ['Bore Flat'], failures []
+fact    dshape, Flat 6.1 to 9.7, the flat 0.3 deep exactly: twin 7 (Twin7): built ok True, failures [], not fully defined none, {'volume': 4703.075106914326, 'in_error': []}; left open []
+ok      dshape, Flat 6.1 to 9.7, the flat 0.3 deep exactly: twin 7 built from scratch clean and closed
+fact    dshape, Flat 6.1 to 9.7, the flat 0.3 deep exactly: {'in_error': [], 'sketch': 3, 'volume': 4703.075106914326, 'coaxial_radii': [5.2, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [5.2, 3.4813790371058366], 'globals': {'Bore Diameter': 10.0, 'Bore Allowance': 0.4, 'Bore Flat': 9.700000000000001}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-5.2, 4.9], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': 0.0, 'flat_span': 3.4814, 'chord': 3.4814}, 'tip_lands': {'nearest_above': 9.0, 'nearest_below': -9.0, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 4703.075106914326
+ok      dshape, Flat 6.1 to 9.7, the flat 0.3 deep exactly: D 10, a 0.4, Flat 9.7: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, Flat 9.8, past 0.3 deep (bound)
+status  dshape, Flat 9.8, past 0.3 deep: The gear on the form does not work out yet, so nothing was updated.
+ok      dshape, Flat 9.8, past 0.3 deep: refused by the form at Flat in A's words ("Your shaft's flat is 0.2 mm deep (Bore 10 less Flat 9.8), under the 0.3 mm a printed D needs to hold; type a Flat of at most 9.7 mm, which leaves the flat a little play, or use a round bore."), Update values saying 'The gear on the form does not work out yet, so nothing was updated.', nothing sent, the part's globals and record as they were: errors ["Your shaft's flat is 0.2 mm deep (Bore 10 less Flat 9.8), under the 0.3 mm a printed D needs to hold; type a Flat of at most 9.7 mm, which leaves the flat a little play, or use a round bore."]
+-- dshape, back: Bore 10 to 8, Flat 9.7 to 7, allowance 0.4 to 0.2 (value)
+status  dshape, back: Bore 10 to 8, Flat 9.7 to 7, allowance 0.4 to 0.2: Changed 3 variables in DShape.SLDPRT and rebuilt it.
+ok      dshape, back: Bore 10 to 8, Flat 9.7 to 7, allowance 0.4 to 0.2: the strip counted 3 and Update values set ['Bore Allowance', 'Bore Diameter', 'Bore Flat'] in one rebuild, its record following: changed ['Bore Diameter', 'Bore Allowance', 'Bore Flat'], failures []
+fact    dshape, back: Bore 10 to 8, Flat 9.7 to 7, allowance 0.4 to 0.2: {'in_error': [], 'sketch': 3, 'volume': 4983.9815210935685, 'coaxial_radii': [4.1, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [4.1, 5.3665631459994945], 'globals': {'Bore Diameter': 8.0, 'Bore Allowance': 0.2, 'Bore Flat': 7.0}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-4.1, 3.1], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': -0.0, 'flat_span': 5.3666, 'chord': 5.3666}, 'tip_lands': {'nearest_above': 9.0, 'nearest_below': -9.0, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 4983.981521093568
+ok      dshape, back: Bore 10 to 8, Flat 9.7 to 7, allowance 0.4 to 0.2: D 8, a 0.2, Flat 7: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, allowance 0.2 to -0.1, a press fit (value)
+status  dshape, allowance 0.2 to -0.1, a press fit: Changed 1 variable in DShape.SLDPRT and rebuilt it.
+ok      dshape, allowance 0.2 to -0.1, a press fit: the strip counted 1 and Update values set ['Bore Allowance'] in one rebuild, its record following: changed ['Bore Allowance'], failures []
+fact    dshape, allowance 0.2 to -0.1, a press fit: twin 8 (Twin8): built ok True, failures [], not fully defined none, {'volume': 5013.74281224123, 'in_error': []}; left open []
+ok      dshape, allowance 0.2 to -0.1, a press fit: twin 8 built from scratch clean and closed
+fact    dshape, allowance 0.2 to -0.1, a press fit: {'in_error': [], 'sketch': 3, 'volume': 5013.74281224123, 'coaxial_radii': [3.95, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [3.95, 5.253570214625479], 'globals': {'Bore Diameter': 8.0, 'Bore Allowance': -0.1, 'Bore Flat': 7.0}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-3.95, 2.95], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': 0.0, 'flat_span': 5.2536, 'chord': 5.2536}, 'tip_lands': {'nearest_above': 9.0, 'nearest_below': -9.0, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 5013.74281224123
+ok      dshape, allowance 0.2 to -0.1, a press fit: D 8, a -0.1, Flat 7: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, allowance -0.1 to 0 (structural)
+status  dshape, allowance -0.1 to 0: A bore allowance cannot be added to or taken out of a built part through its values; build it again as a new part.
+ok      dshape, allowance -0.1 to 0: refused by Update values in B's words ('A bore allowance cannot be added to or taken out of a built part through its values; build it again as a new part.'), nothing sent, the part's globals and record as they were
+-- dshape, Drive flat to round (structural)
+status  dshape, Drive flat to round: The drive changed from 'flat' to 'round'; build it again as a new part.
+ok      dshape, Drive flat to round: refused by Update values in B's words ("The drive changed from 'flat' to 'round'; build it again as a new part."), nothing sent, the part's globals and record as they were
+-- dshape  from D to round and back: Drive is structural, so each is made new by the form's Build with the record open (the ruling on decision 11 keeps nothing here: the allowance is typed)
+ok      dshape: DShape_Round: the form plans DShape_Round.SLDPRT, a new file
+        build   Part10 · spur · recipe A · trig degrees
+        ok      new part Part10
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Bore Allowance"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      25 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to DShape_Round; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\dshape\DShape_Round.SLDPRT
+status  dshape: DShape_Round: Built DShape_Round.SLDPRT. 1 thing to do by hand: Assign a material to DShape_Round; the build leaves it unset.
+ok      dshape: DShape_Round: built and saved by the form's job, every sketch fully defined, its .gear.json written by the form: ok True, failures [], not fully defined none
+fact    dshape: round: twin 9 (Twin9): built ok True, failures [], not fully defined none, {'volume': 4954.579891929212, 'in_error': []}; left open []
+ok      dshape: round: twin 9 built from scratch clean and closed
+fact    dshape: round: {'in_error': [], 'sketch': 3, 'volume': 4954.579891929211, 'coaxial_radii': [4.1, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= "Bore Diameter" + "Bore Allowance"'], 'link_values': [8.2], 'globals': {'Bore Diameter': 8.0, 'Bore Allowance': 0.2}, 'boxes': {'cylinders': 1, 'flats': 0, 'round_x': [-4.1, 4.1], 'padding_beyond_minus_r': 0.0}, 'tip_lands': {'nearest_above': 9.0, 'nearest_below': -9.0, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm']}; its twin's volume 4954.579891929212
+ok      dshape: round: D 8, a 0.2, round: nothing in error, the Bore Sketch fully defined, the bore by its faces (round, no flat), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+ok      dshape: Drive flat on the round part refused by Update values in B's words, nothing sent: "The drive changed from 'round' to 'flat'; build it again as a new part."
+ok      dshape: DShape_D: the form plans DShape_D.SLDPRT, a new file
+        build   Part12 · spur · recipe A · trig degrees
+        ok      new part Part12
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Bore Allowance"
+        ok      global "Bore Flat"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      arc bore_arc
+        ok      line bore_flat
+        ok      coincident bore_arc.centre origin
+        ok      coincident bore_flat.start bore_arc.end (already one point)
+        ok      coincident bore_flat.end bore_arc.start (already one point)
+        ok      vertical bore_flat
+        ok      dimension Bore
+        ok      dimension Flat
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      link "Flat@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      26 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to DShape_D; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\dshape\DShape_D.SLDPRT
+status  dshape: DShape_D: Built DShape_D.SLDPRT. 1 thing to do by hand: Assign a material to DShape_D; the build leaves it unset.
+ok      dshape: DShape_D: built and saved by the form's job, every sketch fully defined, its .gear.json written by the form: ok True, failures [], not fully defined none
+fact    dshape: round to D: {'in_error': [], 'sketch': 3, 'volume': 4983.981521093569, 'coaxial_radii': [4.1, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [4.1, 5.3665631459994945], 'globals': {'Bore Diameter': 8.0, 'Bore Allowance': 0.2, 'Bore Flat': 7.0}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-4.1, 3.1], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': 0.0, 'flat_span': 5.3666, 'chord': 5.3666}, 'tip_lands': {'nearest_above': 9.0, 'nearest_below': -9.0, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 4983.981521093568
+ok      dshape: round to D: D 8, a 0.2, Flat 7: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+ok      dshape: its documents closed unsaved: left []
+time    dshape: 312 s; 0 failed; SolidWorks 1.87 GB private, 9.87 GB free
+== allowance  a printed spur, helical and bevel gear and a hub, each built with the default allowance and with one typed, and machined beside: the hole as cut by its faces, the global as SolidWorks holds it, the .gear.json's schema; the machined parts as F3-0's pins hold them
+switch  allowance: spur.PRINTED_DEFAULT_IN_PLANS reads True (on: a printed gear's blank Bore allowance on a part not yet built plans 0.2 mm)
+fact    allowance, spur default: Gear_m1.5_N25_P.SLDPRT: the hole by its faces 5.1; the F3 globals {'Bore Allowance': 0.2}; schema 4; left open []
+ok      allowance, spur default: the hole as cut 10 + 0.2, radius 5.1000 to 0.0001 by its faces, "Bore Allowance" 0.2 in SolidWorks, schema 4: as said
+fact    allowance, spur typed: Gear_m1.5_N25_P.SLDPRT: the hole by its faces 4.95; the F3 globals {'Bore Allowance': -0.1}; schema 4; left open []
+ok      allowance, spur typed: the hole as cut 10 + -0.1, radius 4.9500 to 0.0001 by its faces, "Bore Allowance" -0.1 in SolidWorks, schema 4: as said
+fact    allowance, spur machined: Gear_m1.5_N25.SLDPRT: the hole by its faces 5.0; the F3 globals {}; schema 1; left open []
+ok      allowance, spur machined: the hole as cut 10 + 0, radius 5.0000 to 0.0001 by its faces, no F3 global, schema 1, its record F3-0's pin: as said
+fact    allowance, helical default: Helical_m1.5_N25_20R_P.SLDPRT: the hole by its faces 5.1; the F3 globals {'Bore Allowance': 0.2}; schema 4; left open []
+ok      allowance, helical default: the hole as cut 10 + 0.2, radius 5.1000 to 0.0001 by its faces, "Bore Allowance" 0.2 in SolidWorks, schema 4: as said
+fact    allowance, helical typed: Helical_m1.5_N25_20R_P.SLDPRT: the hole by its faces 5.15; the F3 globals {'Bore Allowance': 0.3}; schema 4; left open []
+ok      allowance, helical typed: the hole as cut 10 + 0.3, radius 5.1500 to 0.0001 by its faces, "Bore Allowance" 0.3 in SolidWorks, schema 4: as said
+fact    allowance, helical machined: Helical_m1.5_N25_20R.SLDPRT: the hole by its faces 5.0; the F3 globals {}; schema 1; left open []
+ok      allowance, helical machined: the hole as cut 10 + 0, radius 5.0000 to 0.0001 by its faces, no F3 global, schema 1, its record F3-0's pin: as said
+fact    allowance, herringbone default: Herringbone_m2_N20_30R_P.SLDPRT: the hole by its faces 5.1; the F3 globals {'Bore Allowance': 0.2}; schema 4; left open []
+ok      allowance, herringbone default: the hole as cut 10 + 0.2, radius 5.1000 to 0.0001 by its faces, "Bore Allowance" 0.2 in SolidWorks, schema 4: as said
+fact    allowance, herringbone typed: Herringbone_m2_N20_30R_P.SLDPRT: the hole by its faces 5.15; the F3 globals {'Bore Allowance': 0.3}; schema 4; left open []
+ok      allowance, herringbone typed: the hole as cut 10 + 0.3, radius 5.1500 to 0.0001 by its faces, "Bore Allowance" 0.3 in SolidWorks, schema 4: as said
+fact    allowance, herringbone machined: Herringbone_m2_N20_30R.SLDPRT: the hole by its faces 5.0; the F3 globals {}; schema 1; left open []
+ok      allowance, herringbone machined: the hole as cut 10 + 0, radius 5.0000 to 0.0001 by its faces, no F3 global, schema 1, its record F3-0's pin: as said
+fact    allowance, bevel default: Bevel_m1.5_N20_M40_P.SLDPRT: the hole by its faces 5.1; the F3 globals {'Bore Allowance': 0.2}; schema 4; left open []
+ok      allowance, bevel default: the hole as cut 10 + 0.2, radius 5.1000 to 0.0001 by its faces, "Bore Allowance" 0.2 in SolidWorks, schema 4: as said
+fact    allowance, bevel typed: Bevel_m1.5_N20_M40_P.SLDPRT: the hole by its faces 5.15; the F3 globals {'Bore Allowance': 0.3}; schema 4; left open []
+ok      allowance, bevel typed: the hole as cut 10 + 0.3, radius 5.1500 to 0.0001 by its faces, "Bore Allowance" 0.3 in SolidWorks, schema 4: as said
+fact    allowance, bevel machined: Bevel_m1.5_N20_M40.SLDPRT: the hole by its faces 5.0; the F3 globals {}; schema 1; left open []
+ok      allowance, bevel machined: the hole as cut 10 + 0, radius 5.0000 to 0.0001 by its faces, no F3 global, schema 1, its record F3-0's pin: as said
+fact    allowance, hub default: Hub_m1.25_N17_P.SLDPRT: the hole by its faces 4.1; the F3 globals {'Bore Allowance': 0.2}; schema 4; left open []
+ok      allowance, hub default: the hole as cut 8 + 0.2, radius 4.1000 to 0.0001 by its faces, "Bore Allowance" 0.2 in SolidWorks, schema 4: as said
+fact    allowance, hub typed: Hub_m1.25_N17_P.SLDPRT: the hole by its faces 4.125; the F3 globals {'Bore Allowance': 0.25}; schema 4; left open []
+ok      allowance, hub typed: the hole as cut 8 + 0.25, radius 4.1250 to 0.0001 by its faces, "Bore Allowance" 0.25 in SolidWorks, schema 4: as said
+fact    allowance, hub machined: Hub_m1.25_N17.SLDPRT: the hole by its faces 4.0; the F3 globals {}; schema 1; left open []
+ok      allowance, hub machined: the hole as cut 8 + 0, radius 4.0000 to 0.0001 by its faces, no F3 global, schema 1, its record F3-0's pin: as said
+time    allowance: 560 s; 0 failed; SolidWorks 2.82 GB private, 10.18 GB free
+== print  Print files on the strip's form: a printed D with its allowance typed, and a printed round bore at the default; each press judged whole by F2's judges, the bore read from the STEP file, the list's bore line
+switch  print: spur.PRINTED_DEFAULT_IN_PLANS reads True (on: a printed gear's blank Bore allowance on a part not yet built plans 0.2 mm)
+findings print: {'SAVE_AS_COPY': 2, 'STEP_EXPORT': True, 'STEP_EXPORT_NEEDS_ACTIVE': False, 'STEP_EXPORT_FROM_COMPONENT': True, 'OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN': True, 'PART_WINDOW_READ': 'Visible'}; EXTENT_MEASURED True; document route 'walk'
+ok      print, D: the form plans Print_D.SLDPRT, a new file
+        build   Part28 · spur · recipe A · trig degrees
+        ok      new part Part28
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Bore Allowance"
+        ok      global "Bore Flat"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      arc bore_arc
+        ok      line bore_flat
+        ok      coincident bore_arc.centre origin
+        ok      coincident bore_flat.start bore_arc.end (already one point)
+        ok      coincident bore_flat.end bore_arc.start (already one point)
+        ok      vertical bore_flat
+        ok      dimension Bore
+        ok      dimension Flat
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      link "Flat@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      26 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Print_D; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\print\Print_D.SLDPRT
+status  print, D: Built Print_D.SLDPRT. 1 thing to do by hand: Assign a material to Print_D; the build leaves it unset.
+ok      print, D: built and saved by the form's job, every sketch fully defined, its .gear.json written by the form: ok True, failures [], not fully defined none
+ok      print, D: the form's Derived panel shows Span over 3 teeth '11.209'; this script works W 11.2088 (W_t 11.2088, the jaws at diameter 30.337), package A 11.2088 over 3: as said
+        the job's calls by member {'ActiveDoc': 3, 'Equation': 33, 'Extension': 1, 'FirstFeature': 1, 'GetCount': 1, 'GetEquationMgr': 1, 'GetErrorCode2': 25, 'GetFirstDocument': 5, 'GetNext': 5, 'GetNextFeature': 25, 'GetPathName': 11, 'GetSaveFlag': 3, 'GetTitle': 8, 'GetType': 8, 'GetTypeName2': 25, 'Name': 25, 'SaveAs': 1, 'Value': 33}
+bar     print, D: 'Print files will write Print_D.step from the active part.' (shown)
+status  print, D: Print files wrote Print_D.step and its print list in C:\…\out\print\print\2026-11-18 23.56.47.
+ok      print, D: every part written and checked by the app, none failed, the active document as it was, no save flag turned on: written ['Print_D'], refusal None, failed [], active restored True, flags turned on []
+ok      print, D: a new folder of its own in the Output folder's print folder, named by the press's date and time, holding the STEP files and print list.txt alone, every earlier folder as it was: '2026-11-18 23.56.47' ['Print_D.step', 'print list.txt']: as said
+ok      print, D: the status is C's: 'Print files wrote Print_D.step and its print list in C:\\…\\out\\print\\print\\2026-11-18 23.56.47.'
+fact    print, D: Print_D.step: 882364 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 346 vertices reaching radius 16.500000 over 8.000009 along Z (the gear's 16.5 and 8.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      print, D: Print_D.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+ok      print, D: print list.txt names every part with its rows, how many to print, its span, what the check read and the user's features, the settings once: as said
+ok      print, D: SolidWorks as it was: no document opened, closed, renamed or marked, every window and the active document as they were; no SolidWorks file saved: the same; no file changed
+ok      print, D: the job called {'SaveAs': 1}, as its way of reaching each part says: as expected
+fact    print, D: the STEP file's faces: 175, of them planes 43 and cylinders 92
+ok      print, D: the bore read from the STEP file itself: one cylinder of radius 4.1000 about Z, one plane on x = h, the flat's corners at x = h, the least vertex radius the hole's, to 0.01 mm: as said
+ok      print, D: the print list's bore line says 'bore 8 mm + 0.2 mm allowance (8.2 mm as cut), D-flat 7 mm (7.2 mm as cut)': ['  Module 1.5 · 20 teeth · face 8 mm · bore 8 mm + 0.2 mm allowance (8.2 mm as cut), D-flat 7 mm (7.2 mm as cut) · backlash 0.3 mm, printed default']
+ok      print, round: the form plans Print_R.SLDPRT, a new file
+        build   Part29 · spur · recipe A · trig degrees
+        ok      new part Part29
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Bore Allowance"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      25 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Print_R; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\print\Print_R.SLDPRT
+status  print, round: Built Print_R.SLDPRT. 1 thing to do by hand: Assign a material to Print_R; the build leaves it unset.
+ok      print, round: built and saved by the form's job, every sketch fully defined, its .gear.json written by the form: ok True, failures [], not fully defined none
+ok      print, round: the form's Derived panel shows Span over 3 teeth '11.209'; this script works W 11.2088 (W_t 11.2088, the jaws at diameter 30.337), package A 11.2088 over 3: as said
+        the job's calls by member {'ActiveDoc': 3, 'Equation': 31, 'Extension': 1, 'FirstFeature': 1, 'GetCount': 1, 'GetEquationMgr': 1, 'GetErrorCode2': 25, 'GetFirstDocument': 5, 'GetNext': 10, 'GetNextFeature': 25, 'GetPathName': 16, 'GetSaveFlag': 5, 'GetTitle': 10, 'GetType': 10, 'GetTypeName2': 25, 'Name': 25, 'SaveAs': 1, 'Value': 31}
+bar     print, round: 'Print files will write Print_R.step from the active part.' (shown)
+status  print, round: Print files wrote Print_R.step and its print list in C:\…\out\print\print\2026-11-18 23.57.05.
+ok      print, round: every part written and checked by the app, none failed, the active document as it was, no save flag turned on: written ['Print_R'], refusal None, failed [], active restored True, flags turned on []
+ok      print, round: a new folder of its own in the Output folder's print folder, named by the press's date and time, holding the STEP files and print list.txt alone, every earlier folder as it was: '2026-11-18 23.57.05' ['Print_R.step', 'print list.txt']: as said
+ok      print, round: the status is C's: 'Print files wrote Print_R.step and its print list in C:\\…\\out\\print\\print\\2026-11-18 23.57.05.'
+fact    print, round: Print_R.step: 882666 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 346 vertices reaching radius 16.500000 over 8.000009 along Z (the gear's 16.5 and 8.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      print, round: Print_R.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+ok      print, round: print list.txt names every part with its rows, how many to print, its span, what the check read and the user's features, the settings once: as said
+ok      print, round: SolidWorks as it was: no document opened, closed, renamed or marked, every window and the active document as they were; no SolidWorks file saved: the same; no file changed
+ok      print, round: the job called {'SaveAs': 1}, as its way of reaching each part says: as expected
+fact    print, round: the STEP file's faces: 175, of them planes 42 and cylinders 93
+ok      print, round: the bore read from the STEP file itself: one cylinder of radius 4.1000 about Z, no plane, the least vertex radius the hole's, to 0.01 mm: as said
+ok      print, round: the print list's bore line says 'bore 8 mm + 0.2 mm allowance (8.2 mm as cut)': ['  Module 1.5 · 20 teeth · face 8 mm · bore 8 mm + 0.2 mm allowance (8.2 mm as cut) · backlash 0.3 mm, printed default']
+ok      print: its documents closed unsaved: left []
+time    print: 39 s; 0 failed; SolidWorks 2.98 GB private, 10.14 GB free
+== built  nothing built before F3 moves: a printed coupon and the printed 12 : 1 built with the switch off (F2's code) and read with it on; an allowance typed on each refused as structural; then the printed 12 : 1 built with the switch on: G2's allowance in place by one Update, and K11 when it is changed by hand
+switch  built: spur.PRINTED_DEFAULT_IN_PLANS reads True (on: a printed gear's blank Bore allowance on a part not yet built plans 0.2 mm)
+switch  built: the coupon built as F2's code built it, in this process only
+patch   in this process only: {'PRINTED_DEFAULT_IN_PLANS': False} (as committed: {'PRINTED_DEFAULT_IN_PLANS': True})
+ok      built: Coupon_F2: the form plans Coupon_F2.SLDPRT, a new file
+        build   Part30 · spur · recipe A · trig degrees
+        ok      new part Part30
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Coupon_F2; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\built\Coupon_F2.SLDPRT
+status  built: Coupon_F2: Built Coupon_F2.SLDPRT. 1 thing to do by hand: Assign a material to Coupon_F2; the build leaves it unset.
+ok      built: Coupon_F2: built and saved by the form's job, every sketch fully defined, its .gear.json written by the form: ok True, failures [], not fully defined none
+patch   put back: {'PRINTED_DEFAULT_IN_PLANS': True}
+ok      built: Coupon_F2's .gear.json at schema 3 with no F3 global, as F2 wrote one
+switch  built, the coupon opened: spur.PRINTED_DEFAULT_IN_PLANS reads True (on: a printed gear's blank Bore allowance on a part not yet built plans 0.2 mm)
+ok      built: Coupon_F2 opened with the switch on reads as built: Update values counts 0, Bore as cut '8', the hole planned with 0.0 allowance
+FAIL    built: a quiet Update values on Coupon_F2 writes nothing: changed [], no file or record written, no save flag turned: 'Nothing to update: every value in Coupon_F2.SLDPRT already matches the form.'; jobs 1, ok True; SolidWorks files moved none; the .gear.json the same; save flags {'Coupon_F2.SLDPRT': False} before, {'Coupon_F2.SLDPRT': True} after
+ok      built: an allowance typed on Coupon_F2 is refused by Update values in B's words, nothing sent: 'A bore allowance cannot be added to or taken out of a built part through its values; build it again as a new part.'
+ok      built: the coupon closed unsaved: left []
+-- built  the printed 12 : 1 built by F2's code, read with the switch on
+switch  f3-reducer-off: in this process only, so the printed 12 : 1 is built as F2's code built it: a blank allowance plans none
+patch   in this process only: {'PRINTED_DEFAULT_IN_PLANS': False} (as committed: {'PRINTED_DEFAULT_IN_PLANS': True})
+write   Reducer_12to1.xlsx by the app's own write_new, its Output folder blank (the strip's is C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off)
+ok      Excel opened Reducer_12to1.xlsx with no dialog or repair: []
+excel   saved Reducer_12to1.xlsx
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      f3-reducer-off: the four parts plan printed: {'G1': 'printed', 'G2': 'printed', 'G3': 'printed', 'G4': 'printed'}
+footer  (f3-reducer-off, read) [green] Ready: Build makes 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM in C:\…\out\f3-reducer-off. Its gears are mated to their shafts and to each other, so they turn together in SolidWorks.
+        button 'Build' on primary; Update SolidWorks hidden
+plan    revision 0 Reducer_12to1: refusal ''; reason ''; turning True; static reason ''
+        layout C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\Reducer_12to1_Layout.SLDPRT; assembly C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\Reducer_12to1.SLDASM
+        build Gear_m1.5_N17_P for G1 at C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\Gear_m1.5_N17_P.SLDPRT (83 ops)
+        build Gear_m1.5_N68_P for G2 at C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\Gear_m1.5_N68_P.SLDPRT (83 ops)
+        build Gear_m2_N17_P for G3 at C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\Gear_m2_N17_P.SLDPRT (83 ops)
+        build OutputGear for G4 at C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\OutputGear.SLDPRT (83 ops)
+        shaft S1: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; S1 Axis
+        shaft S2: (63.75, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X plus 'S2 X', Y base '', Z  ''; line ''; S2 Axis
+        shaft S3: (131.75, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X plus 'S3 X', Y base '', Z  ''; line ''; S3 Axis
+        frame G1: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 0.0]
+        frame G2: R [0.998932975, -0.046183459, 0.0, 0.046183459, 0.998932975, 0.0, 0.0, 0.0, 1.0] at [63.75, 0.0, 0.0]
+        frame G3: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [63.75, 0.0, 17.0]
+        frame G4: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [131.75, 0.0, 17.0]
+        motion: trains [('S1', 'S2', 'S3')]; drag ['G1']; fixed []; unmated []
+        mate 'G1 on S1 Axis': axis ['G1'] S1 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G1 along S1': along ['G1'] S1 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G2 on S2 Axis': axis ['G2'] S2 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G2 along S2': along ['G2'] S2 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G3 locked to G2': lock ['G2', 'G3']  ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G4 on S3 Axis': axis ['G4'] S3 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G4 along S3': along ['G4'] S3 ratio [] face 'G4 Face Z' z_front 17 plane 'front' sense 0
+        mate 'G1 meshes G2': mesh ['G1', 'G2']  ratio [17, 68] face '' z_front 0 plane 'front' sense 1
+        mate 'G3 meshes G4': mesh ['G3', 'G4']  ratio [17, 51] face '' z_front 0 plane 'front' sense 1
+        ops of Reducer_12to1_Layout.SLDPRT:
+          new     NewPart from (default template)
+          global  "S2 X"= 63.75
+          global  "S3 X"= 131.75
+          axis    'S1 Axis' through planes 2 and 3
+          plane   'S2 X Plane' 63.75 mm from plane 3 (Offset)
+          link    "Offset@S2 X Plane"= "S2 X"
+          axis    'S2 Axis' through plane 2 and x2
+          plane   'S3 X Plane' 131.75 mm from plane 3 (Offset)
+          link    "Offset@S3 X Plane"= "S3 X"
+          axis    'S3 Axis' through plane 2 and x3
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\Reducer_12to1_Layout.SLDPRT
+        ops of Reducer_12to1.SLDASM:
+          new     NewAssembly from (default template)
+          global  "G4 Face Z"= 17
+          insert  layout C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\Reducer_12to1_Layout.SLDPRT at (0, 0, 0)
+          place   layout at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     layout
+          insert  gear1 C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\Gear_m1.5_N17_P.SLDPRT at (0, 0, 0)
+          place   gear1 at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear1
+          insert  gear2 C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\Gear_m1.5_N68_P.SLDPRT at (63.75, 0, 0)
+          place   gear2 at (63.75, 0, 0) turned (0.998933, -0.046183, 0, 0.046183, 0.998933, 0, 0, 0, 1)
+          fix     gear2
+          insert  gear3 C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\Gear_m2_N17_P.SLDPRT at (63.75, 0, 17)
+          place   gear3 at (63.75, 0, 17) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear3
+          insert  gear4 C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\OutputGear.SLDPRT at (131.75, 0, 17)
+          place   gear4 at (131.75, 0, 17) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear4
+          unfix   gear1
+          mate    coincident gear1:Gear Axis ~ layout:S1 Axis as 'G1 on S1 Axis'
+          mate    point gear1:origin ~ layout:plane1 as 'G1 along S1'
+          unfix   gear2
+          mate    coincident gear2:Gear Axis ~ layout:S2 Axis as 'G2 on S2 Axis'
+          mate    point gear2:origin ~ layout:plane1 as 'G2 along S2'
+          unfix   gear3
+          mate    lock gear2 ~ gear3 as 'G3 locked to G2'
+          unfix   gear4
+          mate    coincident gear4:Gear Axis ~ layout:S3 Axis as 'G4 on S3 Axis'
+          mate    point distance 17 gear4:origin ~ layout:plane1 as 'G4 along S3'
+          link    "D1@G4 along S3"= "G4 Face Z"
+          mate    gear 17:68 gear1:Gear Axis ~ gear2:Gear Axis as 'G1 meshes G2'
+          mate    gear 17:51 gear3:Gear Axis ~ gear4:Gear Axis as 'G3 meshes G4'
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\Reducer_12to1.SLDASM
+ok      f3-reducer-off: the plan turns (W5): static reason ''
+journal written: 6 paths
+build   Reducer_12to1: SolidWorks 2.78 GB private, 10.10 GB free
+        build   Part31 · spur · recipe A · trig degrees
+        ok      new part Part31
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 17
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N17_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\Gear_m1.5_N17_P.SLDPRT
+        build   Part32 · spur · recipe A · trig degrees
+        ok      new part Part32
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 68
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N68_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\Gear_m1.5_N68_P.SLDPRT
+        build   Part33 · spur · recipe A · trig degrees
+        ok      new part Part33
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 17
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m2_N17_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\Gear_m2_N17_P.SLDPRT
+        build   Part34 · spur · recipe A · trig degrees
+        ok      new part Part34
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 51
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to OutputGear; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\OutputGear.SLDPRT
+        build   Part35 · layout · recipe  · trig degrees
+        ok      new part Part35
+        ok      trig units measured: degrees
+        ok      global "S2 X"
+        ok      global "S3 X"
+        ok      axis S1 Axis
+        ok      plane S2 X Plane
+        ok      link "Offset@S2 X Plane"
+        ok      axis S2 Axis
+        ok      plane S3 X Plane
+        ok      link "Offset@S3 X Plane"
+        ok      axis S3 Axis
+        ok      2 globals read back and match the maths
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\Reducer_12to1_Layout.SLDPRT
+        build   Assem1 · assembly · recipe  · trig degrees
+        ok      new assembly Assem1
+        ok      trig units measured: degrees
+        ok      global "G4 Face Z"
+        ok      component Reducer_12to1_Layout-1
+        ok      placed layout
+        ok      fixed layout
+        ok      component Gear_m1.5_N17_P-1
+        ok      placed gear1
+        ok      fixed gear1
+        ok      component Gear_m1.5_N68_P-1
+        ok      placed gear2
+        ok      fixed gear2
+        ok      component Gear_m2_N17_P-1
+        ok      placed gear3
+        ok      fixed gear3
+        ok      component OutputGear-1
+        ok      placed gear4
+        ok      fixed gear4
+        ok      unfixed gear1
+        ok      mate coincident gear1:Gear Axis ~ layout:S1 Axis as G1 on S1 Axis
+        ok      mate point gear1:origin ~ layout:plane1 as G1 along S1
+        ok      unfixed gear2
+        ok      mate coincident gear2:Gear Axis ~ layout:S2 Axis as G2 on S2 Axis
+        ok      mate point gear2:origin ~ layout:plane1 as G2 along S2
+        ok      unfixed gear3
+        ok      mate lock gear2 ~ gear3 as G3 locked to G2
+        ok      unfixed gear4
+        ok      mate coincident gear4:Gear Axis ~ layout:S3 Axis as G4 on S3 Axis
+        ok      mate point distance gear4:origin ~ layout:plane1 as G4 along S3
+        ok      link "D1@G4 along S3"
+        ok      mate gear gear1:Gear Axis ~ gear2:Gear Axis as G1 meshes G2
+        ok      mate gear gear3:Gear Axis ~ gear4:Gear Axis as G3 meshes G4
+        ok      1 globals read back and match the maths
+        ok      every mate sound, every gear free to turn
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G1 meshes G2
+        mate    G3 meshes G4
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-off\Reducer_12to1.SLDASM
+        ok      no interference between the gears
+        in 78.3 s; SolidWorks 5.27 GB private, 9.67 GB free; kind 'motion'; turned round (made again with the other Flip) []
+        steps [('part', 'Gear_m1.5_N17_P', 1, 4), ('part', 'Gear_m1.5_N68_P', 2, 4), ('part', 'Gear_m2_N17_P', 3, 4), ('part', 'OutputGear', 4, 4), ('layout', 'Reducer_12to1_Layout', 0, 0), ('assembly', 'Reducer_12to1', 0, 0), ('interference', 'Reducer_12to1', 0, 0)]
+        progress words ['Building in SolidWorks: part 1 of 4, Gear_m1.5_N17_P…', 'Building in SolidWorks: checking interference…']
+record  4 sidecar(s) written; record written; notes []
+status  [green] Built 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 4 parts; the build leaves it unset.
+ok      f3-reducer-off: 4 part(s), the layout part and the assembly built and saved, turning: ok True, parts built 4, kind 'motion'
+ok      f3-reducer-off: no interference: []
+ok      f3-reducer-off: on SolidWorks 2024 every gear mate reads right as first made (probe ring_mate_sense): turned round []
+ok      f3-reducer-off: the record holds a turning gearbox built from this read
+ok      f3-reducer-off: the record's mates are the plan's: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G1 meshes G2', 'G3 meshes G4']
+ok      f3-reducer-off: the build's sentence says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+footer  (f3-reducer-off, built) [green] Built 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 4 parts; the build leaves it unset.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      f3-reducer-off: the footer says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+tag     ' · built from this version'
+ok      f3-reducer-off: 6 files on disk
+        marked modified in SolidWorks right after the build: {'Gear_m1.5_N17_P.SLDPRT': False, 'Gear_m1.5_N68_P.SLDPRT': False, 'Gear_m2_N17_P.SLDPRT': False, 'OutputGear.SLDPRT': False, 'Reducer_12to1_Layout.SLDPRT': False, 'Reducer_12to1.SLDASM': True}
+ok      f3-reducer-off: the assembly is marked after the build (a read after its save)
+ok      f3-reducer-off, right after the build and its saves: SolidWorks marks modified exactly ['Reducer_12to1.SLDASM']
+ok      f3-reducer-off: every part's sketches fully defined: []
+patch   put back: {'PRINTED_DEFAULT_IN_PLANS': True}
+        f3-reducer-off, the builder's end: SolidWorks 2024, this run's modified documents saved before the close: ['Reducer_12to1.SLDASM']
+ok      f3-reducer-off, the builder's end: f3-reducer-off ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Reducer_12to1.xlsx']), no open document by a file name it holds ([])
+master  f3-reducer-off renamed f3-reducer-off.master: it stays so for the rest of the run
+copy    f3-reducer-off.master -> built-f2: 12 files, mtimes kept
+        Reducer_12to1.xlsx's record: 12 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part']
+        Gear_m1.5_N17_P.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.5_N68_P.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m2_N17_P.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        OutputGear.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      built-f2: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+probe   W6-PLAN §7.1: Reducer_12to1.SLDASM of built-f2, whose stored references name a folder that is gone, opened under the dialog watch (120 s at most)
+DIALOG  SolidWorks shows '': ['Close', 'Opened 5\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 1 seconds', 'For more information, view: ']
+fact    built-f2: the copy's assembly opened in 2.6 s; marked modified straight after the open: {'Reducer_12to1_Layout.SLDPRT': False, 'Gear_m1.5_N17_P.SLDPRT': False, 'Gear_m1.5_N68_P.SLDPRT': False, 'Gear_m2_N17_P.SLDPRT': False, 'OutputGear.SLDPRT': False, 'Reducer_12to1.SLDASM': False}
+fact    W6-PLAN §7.1: dialogs while the copied assembly opened: none
+ok      built-f2: SolidWorks found all 5 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      built-f2: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened Reducer_12to1.xlsx with no dialog or repair: []
+ok      built-f2: the four parts' .gear.json at schema 3 with no F3 global, as F2 wrote them: {'G1': (3, False), 'G2': (3, False), 'G3': (3, False), 'G4': (3, False)}
+switch  built-f2: the footer read as F2's code reads it, in this process only
+patch   in this process only: {'PRINTED_DEFAULT_IN_PLANS': False} (as committed: {'PRINTED_DEFAULT_IN_PLANS': True})
+patch   put back: {'PRINTED_DEFAULT_IN_PLANS': True}
+footer  (built-f2, the switch on) [green] SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move. It was built with its gears mated to turn: drag G1 in SolidWorks and the rest of its train follow.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      built-f2: with the switch on Update plans nothing and the footer is word for word as with it off: 'SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move. It was built with its gears mated to turn: drag G1 in SolidWorks and the rest of its train follow.'
+DIALOG  SolidWorks shows 'Opening': ['Close', 'Opening Component 2 of 5', 'Update\nAssembly', 'Update\nGraphics', 'Opening File: C:\\Use...uilt-f2\\Gear_m1.5_N17_P.SLDPRT', 'Elapsed time: 0s', 'This file was last opened in 1 seconds', 'For more information, view: '] (a progress box that closes itself; not logged again)
+ok      built-f2: the quiet Update: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 4.94 GB private, 9.93 GB free
+        in 18.6 s; SolidWorks 6.93 GB private, 9.92 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] SolidWorks already matches the workbook: nothing was changed.
+fact    built-f2: the quiet Update: the press took 18.6 s; SolidWorks calls by member {'OpenDoc6': 7, 'IsSuppressed2': 9}
+        shows and puts in order: []
+        configuration ''; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration None; failures []
+fact    built-f2: the quiet Update: the press took 19 s
+ok      built-f2: the quiet Update writes nothing: changed [], placed []; every file, .gear.json and the record's parts as they were; marked [] (the Update's own rebuild: [])
+excel   Gears!V3 := 0.3
+excel   saved Reducer_12to1.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!V3 G2 Bore allowance blank → 0.3
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.5_N68_P.SLDPRT']; moved []; re-place []; structural ['Gear_m1.5_N68_P (G2): A bore allowance cannot be added to or taken out of a built part through its values; build it again as a new part.']; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['S2 X = 63.75', 'S3 X = 131.75']
+summary Gear_m1.5_N68_P (G2): A bore allowance cannot be added to or taken out of a built part through its values, so it needs a new part. Update SolidWorks offers to build again as a new revision.
+footer  (built-f2, G2's allowance typed) [green] Gear_m1.5_N68_P (G2): A bore allowance cannot be added to or taken out of a built part through its values, so it needs a new part. Update SolidWorks offers to build again as Reducer_12to1_r2. It was built with its gears mated to turn: drag G1 in SolidWorks and the rest of its train follow.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      built-f2: an allowance typed on G2 (built before F3, no global) is structural (G4): Update would make G2's part new, naming it alone, and the window offers Build again...: ['Gear_m1.5_N68_P (G2): A bore allowance cannot be added to or taken out of a built part through its values; build it again as a new part.']; changed parts ['Gear_m1.5_N68_P.SLDPRT']; the footer's action 'again'
+excel   Gears!V3 := None
+excel   saved Reducer_12to1.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!V3 G2 Bore allowance 0.3 → blank
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+classify parts changed []; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['S2 X = 63.75', 'S3 X = 131.75']
+summary SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move.
+ok      built-f2: the allowance cleared, Update plans nothing again; nothing was written
+ok      built-f2, the copy's end: built-f2 ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Reducer_12to1.xlsx']), no open document by a file name it holds ([])
+-- built  the printed 12 : 1 built with the switch on: G2's allowance changed in place by one Update; K11
+switch  f3-reducer-on: on, as committed after F3: a blank allowance plans the default
+patch   in this process only: {'PRINTED_DEFAULT_IN_PLANS': True} (as committed: {'PRINTED_DEFAULT_IN_PLANS': True})
+write   Reducer_12to1.xlsx by the app's own write_new, its Output folder blank (the strip's is C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on)
+ok      Excel opened Reducer_12to1.xlsx with no dialog or repair: []
+excel   saved Reducer_12to1.xlsx
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      f3-reducer-on: the four parts plan printed: {'G1': 'printed', 'G2': 'printed', 'G3': 'printed', 'G4': 'printed'}
+footer  (f3-reducer-on, read) [green] Ready: Build makes 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM in C:\…\out\f3-reducer-on. Its gears are mated to their shafts and to each other, so they turn together in SolidWorks.
+        button 'Build' on primary; Update SolidWorks hidden
+plan    revision 0 Reducer_12to1: refusal ''; reason ''; turning True; static reason ''
+        layout C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\Reducer_12to1_Layout.SLDPRT; assembly C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\Reducer_12to1.SLDASM
+        build Gear_m1.5_N17_P for G1 at C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\Gear_m1.5_N17_P.SLDPRT (84 ops)
+        build Gear_m1.5_N68_P for G2 at C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\Gear_m1.5_N68_P.SLDPRT (84 ops)
+        build Gear_m2_N17_P for G3 at C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\Gear_m2_N17_P.SLDPRT (84 ops)
+        build OutputGear for G4 at C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\OutputGear.SLDPRT (84 ops)
+        shaft S1: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; S1 Axis
+        shaft S2: (63.75, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X plus 'S2 X', Y base '', Z  ''; line ''; S2 Axis
+        shaft S3: (131.75, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X plus 'S3 X', Y base '', Z  ''; line ''; S3 Axis
+        frame G1: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 0.0]
+        frame G2: R [0.998932975, -0.046183459, 0.0, 0.046183459, 0.998932975, 0.0, 0.0, 0.0, 1.0] at [63.75, 0.0, 0.0]
+        frame G3: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [63.75, 0.0, 17.0]
+        frame G4: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [131.75, 0.0, 17.0]
+        motion: trains [('S1', 'S2', 'S3')]; drag ['G1']; fixed []; unmated []
+        mate 'G1 on S1 Axis': axis ['G1'] S1 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G1 along S1': along ['G1'] S1 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G2 on S2 Axis': axis ['G2'] S2 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G2 along S2': along ['G2'] S2 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G3 locked to G2': lock ['G2', 'G3']  ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G4 on S3 Axis': axis ['G4'] S3 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G4 along S3': along ['G4'] S3 ratio [] face 'G4 Face Z' z_front 17 plane 'front' sense 0
+        mate 'G1 meshes G2': mesh ['G1', 'G2']  ratio [17, 68] face '' z_front 0 plane 'front' sense 1
+        mate 'G3 meshes G4': mesh ['G3', 'G4']  ratio [17, 51] face '' z_front 0 plane 'front' sense 1
+        ops of Reducer_12to1_Layout.SLDPRT:
+          new     NewPart from (default template)
+          global  "S2 X"= 63.75
+          global  "S3 X"= 131.75
+          axis    'S1 Axis' through planes 2 and 3
+          plane   'S2 X Plane' 63.75 mm from plane 3 (Offset)
+          link    "Offset@S2 X Plane"= "S2 X"
+          axis    'S2 Axis' through plane 2 and x2
+          plane   'S3 X Plane' 131.75 mm from plane 3 (Offset)
+          link    "Offset@S3 X Plane"= "S3 X"
+          axis    'S3 Axis' through plane 2 and x3
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\Reducer_12to1_Layout.SLDPRT
+        ops of Reducer_12to1.SLDASM:
+          new     NewAssembly from (default template)
+          global  "G4 Face Z"= 17
+          insert  layout C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\Reducer_12to1_Layout.SLDPRT at (0, 0, 0)
+          place   layout at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     layout
+          insert  gear1 C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\Gear_m1.5_N17_P.SLDPRT at (0, 0, 0)
+          place   gear1 at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear1
+          insert  gear2 C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\Gear_m1.5_N68_P.SLDPRT at (63.75, 0, 0)
+          place   gear2 at (63.75, 0, 0) turned (0.998933, -0.046183, 0, 0.046183, 0.998933, 0, 0, 0, 1)
+          fix     gear2
+          insert  gear3 C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\Gear_m2_N17_P.SLDPRT at (63.75, 0, 17)
+          place   gear3 at (63.75, 0, 17) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear3
+          insert  gear4 C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\OutputGear.SLDPRT at (131.75, 0, 17)
+          place   gear4 at (131.75, 0, 17) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear4
+          unfix   gear1
+          mate    coincident gear1:Gear Axis ~ layout:S1 Axis as 'G1 on S1 Axis'
+          mate    point gear1:origin ~ layout:plane1 as 'G1 along S1'
+          unfix   gear2
+          mate    coincident gear2:Gear Axis ~ layout:S2 Axis as 'G2 on S2 Axis'
+          mate    point gear2:origin ~ layout:plane1 as 'G2 along S2'
+          unfix   gear3
+          mate    lock gear2 ~ gear3 as 'G3 locked to G2'
+          unfix   gear4
+          mate    coincident gear4:Gear Axis ~ layout:S3 Axis as 'G4 on S3 Axis'
+          mate    point distance 17 gear4:origin ~ layout:plane1 as 'G4 along S3'
+          link    "D1@G4 along S3"= "G4 Face Z"
+          mate    gear 17:68 gear1:Gear Axis ~ gear2:Gear Axis as 'G1 meshes G2'
+          mate    gear 17:51 gear3:Gear Axis ~ gear4:Gear Axis as 'G3 meshes G4'
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\Reducer_12to1.SLDASM
+ok      f3-reducer-on: the plan turns (W5): static reason ''
+journal written: 6 paths
+build   Reducer_12to1: SolidWorks 3.51 GB private, 9.93 GB free
+        build   Part36 · spur · recipe A · trig degrees
+        ok      new part Part36
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Bore Allowance"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 17
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      25 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N17_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\Gear_m1.5_N17_P.SLDPRT
+        build   Part37 · spur · recipe A · trig degrees
+        ok      new part Part37
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Bore Allowance"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 68
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      25 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N68_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\Gear_m1.5_N68_P.SLDPRT
+        build   Part38 · spur · recipe A · trig degrees
+        ok      new part Part38
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Bore Allowance"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 17
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      25 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m2_N17_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\Gear_m2_N17_P.SLDPRT
+        build   Part39 · spur · recipe A · trig degrees
+        ok      new part Part39
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Bore Allowance"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 51
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      25 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to OutputGear; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\OutputGear.SLDPRT
+        build   Part40 · layout · recipe  · trig degrees
+        ok      new part Part40
+        ok      trig units measured: degrees
+        ok      global "S2 X"
+        ok      global "S3 X"
+        ok      axis S1 Axis
+        ok      plane S2 X Plane
+        ok      link "Offset@S2 X Plane"
+        ok      axis S2 Axis
+        ok      plane S3 X Plane
+        ok      link "Offset@S3 X Plane"
+        ok      axis S3 Axis
+        ok      2 globals read back and match the maths
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\Reducer_12to1_Layout.SLDPRT
+        build   Assem2 · assembly · recipe  · trig degrees
+        ok      new assembly Assem2
+        ok      trig units measured: degrees
+        ok      global "G4 Face Z"
+        ok      component Reducer_12to1_Layout-1
+        ok      placed layout
+        ok      fixed layout
+        ok      component Gear_m1.5_N17_P-1
+        ok      placed gear1
+        ok      fixed gear1
+        ok      component Gear_m1.5_N68_P-1
+        ok      placed gear2
+        ok      fixed gear2
+        ok      component Gear_m2_N17_P-1
+        ok      placed gear3
+        ok      fixed gear3
+        ok      component OutputGear-1
+        ok      placed gear4
+        ok      fixed gear4
+        ok      unfixed gear1
+        ok      mate coincident gear1:Gear Axis ~ layout:S1 Axis as G1 on S1 Axis
+        ok      mate point gear1:origin ~ layout:plane1 as G1 along S1
+        ok      unfixed gear2
+        ok      mate coincident gear2:Gear Axis ~ layout:S2 Axis as G2 on S2 Axis
+        ok      mate point gear2:origin ~ layout:plane1 as G2 along S2
+        ok      unfixed gear3
+        ok      mate lock gear2 ~ gear3 as G3 locked to G2
+        ok      unfixed gear4
+        ok      mate coincident gear4:Gear Axis ~ layout:S3 Axis as G4 on S3 Axis
+        ok      mate point distance gear4:origin ~ layout:plane1 as G4 along S3
+        ok      link "D1@G4 along S3"
+        ok      mate gear gear1:Gear Axis ~ gear2:Gear Axis as G1 meshes G2
+        ok      mate gear gear3:Gear Axis ~ gear4:Gear Axis as G3 meshes G4
+        ok      1 globals read back and match the maths
+        ok      every mate sound, every gear free to turn
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G1 meshes G2
+        mate    G3 meshes G4
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-on\Reducer_12to1.SLDASM
+        ok      no interference between the gears
+        in 79.7 s; SolidWorks 5.78 GB private, 9.57 GB free; kind 'motion'; turned round (made again with the other Flip) []
+        steps [('part', 'Gear_m1.5_N17_P', 1, 4), ('part', 'Gear_m1.5_N68_P', 2, 4), ('part', 'Gear_m2_N17_P', 3, 4), ('part', 'OutputGear', 4, 4), ('layout', 'Reducer_12to1_Layout', 0, 0), ('assembly', 'Reducer_12to1', 0, 0), ('interference', 'Reducer_12to1', 0, 0)]
+        progress words ['Building in SolidWorks: part 1 of 4, Gear_m1.5_N17_P…', 'Building in SolidWorks: checking interference…']
+record  4 sidecar(s) written; record written; notes []
+status  [green] Built 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 4 parts; the build leaves it unset.
+ok      f3-reducer-on: 4 part(s), the layout part and the assembly built and saved, turning: ok True, parts built 4, kind 'motion'
+ok      f3-reducer-on: no interference: []
+ok      f3-reducer-on: on SolidWorks 2024 every gear mate reads right as first made (probe ring_mate_sense): turned round []
+ok      f3-reducer-on: the record holds a turning gearbox built from this read
+ok      f3-reducer-on: the record's mates are the plan's: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G1 meshes G2', 'G3 meshes G4']
+ok      f3-reducer-on: the build's sentence says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+footer  (f3-reducer-on, built) [green] Built 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 4 parts; the build leaves it unset.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      f3-reducer-on: the footer says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+tag     ' · built from this version'
+ok      f3-reducer-on: 6 files on disk
+        marked modified in SolidWorks right after the build: {'Gear_m1.5_N17_P.SLDPRT': False, 'Gear_m1.5_N68_P.SLDPRT': False, 'Gear_m2_N17_P.SLDPRT': False, 'OutputGear.SLDPRT': False, 'Reducer_12to1_Layout.SLDPRT': False, 'Reducer_12to1.SLDASM': True}
+ok      f3-reducer-on: the assembly is marked after the build (a read after its save)
+ok      f3-reducer-on, right after the build and its saves: SolidWorks marks modified exactly ['Reducer_12to1.SLDASM']
+ok      f3-reducer-on: every part's sketches fully defined: []
+patch   put back: {'PRINTED_DEFAULT_IN_PLANS': True}
+        f3-reducer-on, the builder's end: SolidWorks 2024, this run's modified documents saved before the close: ['Reducer_12to1.SLDASM']
+ok      f3-reducer-on, the builder's end: f3-reducer-on ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Reducer_12to1.xlsx']), no open document by a file name it holds ([])
+master  f3-reducer-on renamed f3-reducer-on.master: it stays so for the rest of the run
+copy    f3-reducer-on.master -> built-f3: 12 files, mtimes kept
+        Reducer_12to1.xlsx's record: 12 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part']
+        Gear_m1.5_N17_P.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.5_N68_P.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m2_N17_P.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        OutputGear.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      built-f3: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+DIALOG  SolidWorks shows '': ['Close', 'Opened 5\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 1 seconds', 'For more information, view: ']
+fact    built-f3: the copy's assembly opened in 2.7 s; marked modified straight after the open: {'Reducer_12to1_Layout.SLDPRT': False, 'Gear_m1.5_N17_P.SLDPRT': False, 'Gear_m1.5_N68_P.SLDPRT': False, 'Gear_m2_N17_P.SLDPRT': False, 'OutputGear.SLDPRT': False, 'Reducer_12to1.SLDASM': False}
+ok      built-f3: SolidWorks found all 5 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      built-f3: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened Reducer_12to1.xlsx with no dialog or repair: []
+ok      built-f3: every part built with the default holds "Bore Allowance" 0.2 on record
+excel   Gears!V3 := 0.3
+excel   saved Reducer_12to1.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!V3 G2 Bore allowance blank → 0.3
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.5_N68_P.SLDPRT']; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['S2 X = 63.75', 'S3 X = 131.75']
+summary Update SolidWorks will change G2's values (Gear_m1.5_N68_P).
+ok      built-f3: G2's allowance typed 0.3 is a value: Update changes G2's part alone: ['Gear_m1.5_N68_P.SLDPRT']
+ok      built-f3: G2's allowance, one Update: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 6.75 GB private, 9.87 GB free
+        in 22.6 s; SolidWorks 7.67 GB private, 9.56 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] Updated SolidWorks: changed 1 variable in Gear_m1.5_N68_P; no interference between the gears where they stand. Save Gear_m1.5_N68_P in SolidWorks to keep it.
+fact    built-f3: G2's allowance, one Update: the press took 22.6 s; SolidWorks calls by member {'OpenDoc6': 8, 'IsSuppressed2': 18, 'ForceRebuild3': 2}
+        shows and puts in order: []
+        configuration ''; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration None; failures []
+fact    built-f3: G2's allowance, one Update: the press took 23 s
+ok      built-f3: G2's bore changed in place to 12 + 0.3 (its hole by its faces 6.15), "Bore Allowance" 0.3 in SolidWorks and 0.3 on record; the Update changed ['Gear_m1.5_N68_P.SLDPRT'], the other parts' globals as they were, nothing saved
+-- built  K11: G2's allowance set by hand in SolidWorks, saved by the person; Update pressed again
+person  saved in SolidWorks (K11: the person's change saved): ['Gear_m1.5_N68_P.SLDPRT', 'Reducer_12to1.SLDASM']
+ok      built-f3: K11: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 7.90 GB private, 9.81 GB free
+        raised UserWorkRefused in 11.6 s: Bore Allowance in Gear_m1.5_N68_P is 0.5 in SolidWorks and 0.3 in the workbook: type 0.5 in Gears!V3, or set it back to 0.3 in SolidWorks, and press Update SolidWorks again.
+status  [red] Bore Allowance in Gear_m1.5_N68_P is 0.5 in SolidWorks and 0.3 in the workbook: type 0.5 in Gears!V3, or set it back to 0.3 in SolidWorks, and press Update SolidWorks again.
+record  the window's _record_refusal ran
+fact    built-f3: K11: the press took 11.6 s; SolidWorks calls by member {'OpenDoc6': 6, 'IsSuppressed2': 9}
+        shows and puts in order: []
+fact    built-f3: K11: the press took 12 s
+        value: Bore Allowance in Gear_m1.5_N68_P is 0.5 in SolidWorks and 0.3 in the workbook: type 0.5 in Gears!V3, or set it back to 0.3 in SolidWorks, and press Update SolidWorks again.
+ok      built-f3: the Update stops and names "Bore Allowance" with its cell Gears!V3 (K11), nothing written: [('Bore Allowance', '0.5', '0.3', 'Gears!V3')]
+ok      built-f3, the copy's end: built-f3 ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Reducer_12to1.xlsx']), no open document by a file name it holds ([])
+-- built  a machined 12 : 1 built before F3, Printed typed and one Update (guard 4, live): Backlash written, no "Bore Allowance" added
+switch  f3-reducer-machined: in this process only: the machined 12 : 1 built as before F3 (a machined blank plans none either way)
+patch   in this process only: {'PRINTED_DEFAULT_IN_PLANS': False} (as committed: {'PRINTED_DEFAULT_IN_PLANS': True})
+write   Reducer_12to1.xlsx by the app's own write_new, its Output folder blank (the strip's is C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined)
+ok      Excel opened Reducer_12to1.xlsx with no dialog or repair: []
+excel   saved Reducer_12to1.xlsx
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      f3-reducer-machined: the four parts plan machined: {'G1': 'machined', 'G2': 'machined', 'G3': 'machined', 'G4': 'machined'}
+footer  (f3-reducer-machined, read) [green] Ready: Build makes 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM in C:\…\out\f3-reducer-machined. Its gears are mated to their shafts and to each other, so they turn together in SolidWorks.
+        button 'Build' on primary; Update SolidWorks hidden
+plan    revision 0 Reducer_12to1: refusal ''; reason ''; turning True; static reason ''
+        layout C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\Reducer_12to1_Layout.SLDPRT; assembly C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\Reducer_12to1.SLDASM
+        build Gear_m1.5_N17 for G1 at C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\Gear_m1.5_N17.SLDPRT (83 ops)
+        build Gear_m1.5_N68 for G2 at C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\Gear_m1.5_N68.SLDPRT (83 ops)
+        build Gear_m2_N17 for G3 at C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\Gear_m2_N17.SLDPRT (83 ops)
+        build OutputGear for G4 at C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\OutputGear.SLDPRT (83 ops)
+        shaft S1: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; S1 Axis
+        shaft S2: (63.75, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X plus 'S2 X', Y base '', Z  ''; line ''; S2 Axis
+        shaft S3: (131.75, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X plus 'S3 X', Y base '', Z  ''; line ''; S3 Axis
+        frame G1: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 0.0]
+        frame G2: R [0.998932975, -0.046183459, 0.0, 0.046183459, 0.998932975, 0.0, 0.0, 0.0, 1.0] at [63.75, 0.0, 0.0]
+        frame G3: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [63.75, 0.0, 17.0]
+        frame G4: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [131.75, 0.0, 17.0]
+        motion: trains [('S1', 'S2', 'S3')]; drag ['G1']; fixed []; unmated []
+        mate 'G1 on S1 Axis': axis ['G1'] S1 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G1 along S1': along ['G1'] S1 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G2 on S2 Axis': axis ['G2'] S2 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G2 along S2': along ['G2'] S2 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G3 locked to G2': lock ['G2', 'G3']  ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G4 on S3 Axis': axis ['G4'] S3 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G4 along S3': along ['G4'] S3 ratio [] face 'G4 Face Z' z_front 17 plane 'front' sense 0
+        mate 'G1 meshes G2': mesh ['G1', 'G2']  ratio [17, 68] face '' z_front 0 plane 'front' sense 1
+        mate 'G3 meshes G4': mesh ['G3', 'G4']  ratio [17, 51] face '' z_front 0 plane 'front' sense 1
+        ops of Reducer_12to1_Layout.SLDPRT:
+          new     NewPart from (default template)
+          global  "S2 X"= 63.75
+          global  "S3 X"= 131.75
+          axis    'S1 Axis' through planes 2 and 3
+          plane   'S2 X Plane' 63.75 mm from plane 3 (Offset)
+          link    "Offset@S2 X Plane"= "S2 X"
+          axis    'S2 Axis' through plane 2 and x2
+          plane   'S3 X Plane' 131.75 mm from plane 3 (Offset)
+          link    "Offset@S3 X Plane"= "S3 X"
+          axis    'S3 Axis' through plane 2 and x3
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\Reducer_12to1_Layout.SLDPRT
+        ops of Reducer_12to1.SLDASM:
+          new     NewAssembly from (default template)
+          global  "G4 Face Z"= 17
+          insert  layout C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\Reducer_12to1_Layout.SLDPRT at (0, 0, 0)
+          place   layout at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     layout
+          insert  gear1 C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\Gear_m1.5_N17.SLDPRT at (0, 0, 0)
+          place   gear1 at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear1
+          insert  gear2 C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\Gear_m1.5_N68.SLDPRT at (63.75, 0, 0)
+          place   gear2 at (63.75, 0, 0) turned (0.998933, -0.046183, 0, 0.046183, 0.998933, 0, 0, 0, 1)
+          fix     gear2
+          insert  gear3 C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\Gear_m2_N17.SLDPRT at (63.75, 0, 17)
+          place   gear3 at (63.75, 0, 17) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear3
+          insert  gear4 C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\OutputGear.SLDPRT at (131.75, 0, 17)
+          place   gear4 at (131.75, 0, 17) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear4
+          unfix   gear1
+          mate    coincident gear1:Gear Axis ~ layout:S1 Axis as 'G1 on S1 Axis'
+          mate    point gear1:origin ~ layout:plane1 as 'G1 along S1'
+          unfix   gear2
+          mate    coincident gear2:Gear Axis ~ layout:S2 Axis as 'G2 on S2 Axis'
+          mate    point gear2:origin ~ layout:plane1 as 'G2 along S2'
+          unfix   gear3
+          mate    lock gear2 ~ gear3 as 'G3 locked to G2'
+          unfix   gear4
+          mate    coincident gear4:Gear Axis ~ layout:S3 Axis as 'G4 on S3 Axis'
+          mate    point distance 17 gear4:origin ~ layout:plane1 as 'G4 along S3'
+          link    "D1@G4 along S3"= "G4 Face Z"
+          mate    gear 17:68 gear1:Gear Axis ~ gear2:Gear Axis as 'G1 meshes G2'
+          mate    gear 17:51 gear3:Gear Axis ~ gear4:Gear Axis as 'G3 meshes G4'
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\Reducer_12to1.SLDASM
+ok      f3-reducer-machined: the plan turns (W5): static reason ''
+journal written: 6 paths
+build   Reducer_12to1: SolidWorks 4.09 GB private, 9.97 GB free
+        build   Part41 · spur · recipe A · trig degrees
+        ok      new part Part41
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 17
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N17; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\Gear_m1.5_N17.SLDPRT
+        build   Part42 · spur · recipe A · trig degrees
+        ok      new part Part42
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 68
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N68; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\Gear_m1.5_N68.SLDPRT
+        build   Part43 · spur · recipe A · trig degrees
+        ok      new part Part43
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 17
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m2_N17; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\Gear_m2_N17.SLDPRT
+        build   Part44 · spur · recipe A · trig degrees
+        ok      new part Part44
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 51
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to OutputGear; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\OutputGear.SLDPRT
+        build   Part45 · layout · recipe  · trig degrees
+        ok      new part Part45
+        ok      trig units measured: degrees
+        ok      global "S2 X"
+        ok      global "S3 X"
+        ok      axis S1 Axis
+        ok      plane S2 X Plane
+        ok      link "Offset@S2 X Plane"
+        ok      axis S2 Axis
+        ok      plane S3 X Plane
+        ok      link "Offset@S3 X Plane"
+        ok      axis S3 Axis
+        ok      2 globals read back and match the maths
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\Reducer_12to1_Layout.SLDPRT
+        build   Assem3 · assembly · recipe  · trig degrees
+        ok      new assembly Assem3
+        ok      trig units measured: degrees
+        ok      global "G4 Face Z"
+        ok      component Reducer_12to1_Layout-1
+        ok      placed layout
+        ok      fixed layout
+        ok      component Gear_m1.5_N17-1
+        ok      placed gear1
+        ok      fixed gear1
+        ok      component Gear_m1.5_N68-1
+        ok      placed gear2
+        ok      fixed gear2
+        ok      component Gear_m2_N17-1
+        ok      placed gear3
+        ok      fixed gear3
+        ok      component OutputGear-1
+        ok      placed gear4
+        ok      fixed gear4
+        ok      unfixed gear1
+        ok      mate coincident gear1:Gear Axis ~ layout:S1 Axis as G1 on S1 Axis
+        ok      mate point gear1:origin ~ layout:plane1 as G1 along S1
+        ok      unfixed gear2
+        ok      mate coincident gear2:Gear Axis ~ layout:S2 Axis as G2 on S2 Axis
+        ok      mate point gear2:origin ~ layout:plane1 as G2 along S2
+        ok      unfixed gear3
+        ok      mate lock gear2 ~ gear3 as G3 locked to G2
+        ok      unfixed gear4
+        ok      mate coincident gear4:Gear Axis ~ layout:S3 Axis as G4 on S3 Axis
+        ok      mate point distance gear4:origin ~ layout:plane1 as G4 along S3
+        ok      link "D1@G4 along S3"
+        ok      mate gear gear1:Gear Axis ~ gear2:Gear Axis as G1 meshes G2
+        ok      mate gear gear3:Gear Axis ~ gear4:Gear Axis as G3 meshes G4
+        ok      1 globals read back and match the maths
+        ok      every mate sound, every gear free to turn
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G1 meshes G2
+        mate    G3 meshes G4
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\out\f3-reducer-machined\Reducer_12to1.SLDASM
+        ok      no interference between the gears
+        in 78.0 s; SolidWorks 6.31 GB private, 9.63 GB free; kind 'motion'; turned round (made again with the other Flip) []
+        steps [('part', 'Gear_m1.5_N17', 1, 4), ('part', 'Gear_m1.5_N68', 2, 4), ('part', 'Gear_m2_N17', 3, 4), ('part', 'OutputGear', 4, 4), ('layout', 'Reducer_12to1_Layout', 0, 0), ('assembly', 'Reducer_12to1', 0, 0), ('interference', 'Reducer_12to1', 0, 0)]
+        progress words ['Building in SolidWorks: part 1 of 4, Gear_m1.5_N17…', 'Building in SolidWorks: checking interference…']
+record  4 sidecar(s) written; record written; notes []
+status  [green] Built 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 4 parts; the build leaves it unset.
+ok      f3-reducer-machined: 4 part(s), the layout part and the assembly built and saved, turning: ok True, parts built 4, kind 'motion'
+ok      f3-reducer-machined: no interference: []
+ok      f3-reducer-machined: on SolidWorks 2024 every gear mate reads right as first made (probe ring_mate_sense): turned round []
+ok      f3-reducer-machined: the record holds a turning gearbox built from this read
+ok      f3-reducer-machined: the record's mates are the plan's: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G1 meshes G2', 'G3 meshes G4']
+ok      f3-reducer-machined: the build's sentence says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+footer  (f3-reducer-machined, built) [green] Built 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 4 parts; the build leaves it unset.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      f3-reducer-machined: the footer says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+tag     ' · built from this version'
+ok      f3-reducer-machined: 6 files on disk
+        marked modified in SolidWorks right after the build: {'Gear_m1.5_N17.SLDPRT': False, 'Gear_m1.5_N68.SLDPRT': False, 'Gear_m2_N17.SLDPRT': False, 'OutputGear.SLDPRT': False, 'Reducer_12to1_Layout.SLDPRT': False, 'Reducer_12to1.SLDASM': True}
+ok      f3-reducer-machined: the assembly is marked after the build (a read after its save)
+ok      f3-reducer-machined, right after the build and its saves: SolidWorks marks modified exactly ['Reducer_12to1.SLDASM']
+ok      f3-reducer-machined: every part's sketches fully defined: []
+patch   put back: {'PRINTED_DEFAULT_IN_PLANS': True}
+        f3-reducer-machined, the builder's end: SolidWorks 2024, this run's modified documents saved before the close: ['Reducer_12to1.SLDASM']
+ok      f3-reducer-machined, the builder's end: f3-reducer-machined ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Reducer_12to1.xlsx']), no open document by a file name it holds ([])
+master  f3-reducer-machined renamed f3-reducer-machined.master: it stays so for the rest of the run
+copy    f3-reducer-machined.master -> built-machined: 12 files, mtimes kept
+        Reducer_12to1.xlsx's record: 12 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part']
+        Gear_m1.5_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.5_N68.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m2_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        OutputGear.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      built-machined: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+fact    built-machined: the copy's assembly opened in 2.7 s; marked modified straight after the open: {'Reducer_12to1_Layout.SLDPRT': False, 'Gear_m1.5_N17.SLDPRT': False, 'Gear_m1.5_N68.SLDPRT': False, 'Gear_m2_N17.SLDPRT': False, 'OutputGear.SLDPRT': False, 'Reducer_12to1.SLDASM': False}
+ok      built-machined: SolidWorks found all 5 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      built-machined: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened Reducer_12to1.xlsx with no dialog or repair: []
+excel   Box!B9 := 'Printed'
+excel   saved Reducer_12to1.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Box Process machined → printed
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.5_N17.SLDPRT', 'Gear_m1.5_N68.SLDPRT', 'Gear_m2_N17.SLDPRT', 'OutputGear.SLDPRT']; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['S2 X = 63.75', 'S3 X = 131.75']
+summary Update SolidWorks will change the values in Gear_m1.5_N17 (G1), Gear_m1.5_N68 (G2), Gear_m2_N17 (G3) and OutputGear (G4).
+ok      built-machined: Printed typed: Update changes the 4 parts in place, none made new: ['Gear_m1.5_N17.SLDPRT', 'Gear_m1.5_N68.SLDPRT', 'Gear_m2_N17.SLDPRT', 'OutputGear.SLDPRT']
+ok      built-machined: Printed, one Update: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 7.84 GB private, 9.75 GB free
+        in 24.1 s; SolidWorks 8.30 GB private, 9.62 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] Updated SolidWorks: changed 1 variable in Gear_m1.5_N17, changed 1 variable in Gear_m1.5_N68, changed 1 variable in Gear_m2_N17, changed 1 variable in OutputGear; no interference between the gears where they stand. The 3 parts now printed keep their file names, without the _P a part built printed is named with: Update SolidWorks never renames a file, and Build again… makes new parts named with _P if you want the mark. Save Gear_m1.5_N17, Gear_m1.5_N68, Gear_m2_N17 and OutputGear in SolidWorks to keep them.
+fact    built-machined: Printed, one Update: the press took 24.2 s; SolidWorks calls by member {'OpenDoc6': 11, 'IsSuppressed2': 18, 'ForceRebuild3': 5}
+        shows and puts in order: []
+        configuration ''; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration None; failures []
+fact    built-machined: Printed, one Update: the press took 24 s
+ok      built-machined: the Update wrote each part's Backlash ({'G1': (0.44999999999999996, 0.3), 'G2': (0.44999999999999996, 0.3), 'G3': (0.6, 0.3), 'G4': (0.6, 0.3)}) and no F3 global, in SolidWorks ({'G1': [], 'G2': [], 'G3': [], 'G4': []}) or on record ({'Gear_m1.5_N17.SLDPRT': [], 'Gear_m1.5_N68.SLDPRT': [], 'Gear_m2_N17.SLDPRT': [], 'OutputGear.SLDPRT': []}); each .gear.json below schema 4 ({'G1': 3, 'G2': 3, 'G3': 3, 'G4': 3})
+ok      built-machined, the copy's end: built-machined ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Reducer_12to1.xlsx']), no open document by a file name it holds ([])
+time    built: 415 s; 1 failed; SolidWorks 4.86 GB private, 9.86 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 4.63 GB private, 10.02 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 0, 'Updating...': 0, 'Opening': 1, 'Loading...': 0}; other windows the watch logged: 0
+awake   display and system released (previous state -0x7ffffffd)
+result  written to C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2024-20261118-230231\f3-demo-20261118-234157.json; masters kept {'rangebox': '', 'setup': '', 'reducer': ''}
+done    1 failed: ["built: a quiet Update values on Coupon_F2 writes nothing: changed [], no file or record written, no save flag turned: 'Nothing to update: every value in Coupon_F2.SLDPRT already matches the form.'; jobs 1, ok True; SolidWorks files moved none; the .gear.json the same; save flags {'Coupon_F2.SLDPRT': False} before, {'Coupon_F2.SLDPRT': True} after"]; 0 noted; 0 STOP(s), a hung worker included: []

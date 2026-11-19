@@ -67,7 +67,6 @@ from .spur import (
     BACKLASH,
     BLANK,
     BLANK_SKETCH,
-    BACKLASH_FACTOR,
     BORE,
     DEPTH,
     FACE_WIDTH,
@@ -229,6 +228,27 @@ class RackSection:
     s: float
     p: float
     teeth: float = math.inf
+    # F1 (PLAN-PRINTED §1.1): the line width in mm when printed, None when not; left out of the record while None.
+    nozzle: Optional[float] = None
+    # F3 (PLAN-PRINTED §4.1; F3-INTERFACES §2), as on spur.SpurDerived: the allowance the bore is cut with, mm, left out
+    # of the record while 0. A bevel gear takes no D-flat (G5), so its bore_flat stays None, left out likewise.
+    bore_allowance: float = 0.0
+    bore_flat: Optional[float] = None
+
+    @property
+    def printed(self) -> bool:
+        """Whether the crown gear is made printed (F1): it then carries its nozzle."""
+        return self.nozzle is not None
+
+    @property
+    def bore_as_cut(self) -> float:
+        """The hole's diameter as cut, mm (F3): the bore plus its allowance, 0 with no bore."""
+        return self.bore + self.bore_allowance if self.bore > 0 else 0.0
+
+    @property
+    def backlash_printed(self) -> bool:
+        """Printed, with the Backlash left blank: the printed default (§2.1)."""
+        return self.printed and not self.backlash_typed
 
     @property
     def h(self) -> float:
@@ -341,6 +361,21 @@ class BevelDerived:
     def ring(self) -> bool:
         return self.form == FORM_INTERNAL
 
+    # F3 (§4.1): the hole as cut. The allowance is on the section, as every kind's is (F3-INTERFACES §3); the bore is
+    # the gear's own, since a cone's heel section has none. No D on a bevel gear (G5), and none cut in a ring.
+    @property
+    def bore_allowance(self) -> float:
+        return getattr(self.section, "bore_allowance", 0.0)
+
+    @property
+    def bore_flat(self) -> Optional[float]:
+        return None
+
+    @property
+    def bore_as_cut(self) -> float:
+        """The hole's diameter as cut, mm: the bore plus its allowance, 0 with no bore or in a ring, which cuts none."""
+        return self.bore + self.bore_allowance if self.bore > 0 and not self.ring else 0.0
+
     def values(self) -> Dict[str, float]:
         """The value of every global variable, by name."""
         s = self.section
@@ -391,8 +426,18 @@ class BevelDerived:
             return {k: (None if isinstance(v, float) and not math.isfinite(v) else v) for k, v in data.items()}
 
         data = finite({key: value for key, value in asdict(self).items() if key != "section"})
-        data["section"] = finite(asdict(self.section))
+        data["section"] = finite(spur.derived_dict(self.section))
         return data
+
+    @property
+    def printed(self) -> bool:
+        """Whether the gear is made printed (F1): its section's."""
+        return self.section.printed
+
+    @property
+    def backlash_printed(self) -> bool:
+        """Its section's: printed, with the Backlash left blank (F1)."""
+        return self.section.backlash_printed
 
 
 def _field_errors(spec: GearSpec) -> List[Diagnostic]:
@@ -449,9 +494,13 @@ def derive(spec: GearSpec) -> BevelDerived:
     cos_delta = 0.0 if form == FORM_CROWN else math.cos(math.radians(delta))
     typed_backlash = spec.backlash_mm()
     typed_fillet = spec.fillet_mm()
-    j = BACKLASH_FACTOR * m if typed_backlash is None else typed_backlash
+    j = spur.blank_backlash(spec, m) if typed_backlash is None else typed_backlash
+    nozzle = spur.spec_nozzle(spec)
     space_change = -2.0 * (ha - m) * math.tan(math.radians(alpha))
     section: Any
+    # F3 (§4.1): the allowance the blank's bore is cut with, on the section as every kind's is; an internal bevel gear
+    # is a ring and cuts no bore. A bevel gear takes no D (G5), so its section's bore_flat stays None.
+    allowance = 0.0 if form == FORM_INTERNAL else spur.bore_allowance_of(spec)
     if form == FORM_CROWN:
         virtual = virtual_radius = math.inf
         space = m * math.pi / 2.0 + j + space_change
@@ -460,6 +509,7 @@ def derive(spec: GearSpec) -> BevelDerived:
             fillet=FILLET_FACTOR * m if typed_fillet is None else typed_fillet,
             backlash_typed=typed_backlash is not None, fillet_typed=typed_fillet is not None,
             alpha=math.radians(alpha), addendum=ha, dedendum=hf, space=space, s=m * math.pi - space, p=m * math.pi,
+            nozzle=nozzle, bore_allowance=allowance,
         )
     elif form == FORM_INTERNAL:
         # The back cone's ring: Nv = N / |cos δ| teeth, its centre on the tips' side of the pitch cone.
@@ -468,6 +518,7 @@ def derive(spec: GearSpec) -> BevelDerived:
         section = internal.section(
             virtual, m, alpha, width, None, j, RING_FILLET_FACTOR * m if typed_fillet is None else typed_fillet,
             backlash_typed=typed_backlash is not None, fillet_typed=typed_fillet is not None, whole_depth=ha + hf,
+            nozzle=nozzle,
         )
     else:
         virtual = n / cos_delta
@@ -475,7 +526,7 @@ def derive(spec: GearSpec) -> BevelDerived:
         section = spur.profile(
             virtual, m, alpha, width, 0.0, j, FILLET_FACTOR * m if typed_fillet is None else typed_fillet,
             backlash_typed=typed_backlash is not None, fillet_typed=typed_fillet is not None,
-            addendum=ha, whole_depth=ha + hf, space_change=space_change,
+            addendum=ha, whole_depth=ha + hf, space_change=space_change, nozzle=nozzle, bore_allowance=allowance,
         )
     sin_delta = math.sin(math.radians(delta))
     return BevelDerived(
@@ -557,6 +608,12 @@ def toe_root_radius(g: BevelDerived) -> float:
     return along * math.sin(math.radians(g.delta)) - g.dedendum * (along / g.cone_distance) * math.cos(math.radians(g.delta))
 
 
+def toe_tip_thickness(g: BevelDerived) -> float:
+    """The tooth's tip thickness at the toe, mm, backlash included (F1, PLAN-PRINTED §2.1): the heel section's, scaled
+    as the whole tooth is toward the apex, by ``(R − b) / R``."""
+    return g.section.tip_thickness * g.toe_scale
+
+
 def validate(spec: GearSpec, derived: Optional[BevelDerived] = None, recipe: str = "A") -> List[Diagnostic]:
     problems = _field_errors(spec)
     if problems:
@@ -571,26 +628,44 @@ def validate(spec: GearSpec, derived: Optional[BevelDerived] = None, recipe: str
             f"A face width of {_num(g.face_width)} mm is half the cone distance of {_num(g.cone_distance)} mm or more; "
             "the teeth would shrink to nothing toward the apex."), "face_width"))
         return out
+    # F1 (PLAN-PRINTED §2.1, §2.2): a printed bevel gear's tip is judged at its toe, where the tooth is smallest, so
+    # the heel section's own tip sentence is set aside for the toe's.
+    heel_tip = (spur.printed_tip_warning(g.section.tip_thickness, g.section.nozzle, "ring" if g.ring else "gear")
+                if g.printed and not g.crown else None)
     if g.crown:
         out.extend(rack_diagnostics(g.section))
     elif g.ring:
-        out.extend(d for d in internal.section_diagnostics(g.section, recipe) if d.field not in ("rim", "bore"))
+        out.extend(d for d in internal.section_diagnostics(g.section, recipe) if d.field not in ("rim", "bore")
+                   and d != heel_tip)
     else:
         out.extend(d for d in spur.section_diagnostics(g.section, recipe, g.undercut_limit, suggest_shift=False)
-                   if d.field != "bore")
+                   if d.field != "bore" and d != heel_tip)
+    if g.printed and not any(d.is_error for d in out):
+        toe = spur.printed_tip_warning(toe_tip_thickness(g), g.section.nozzle, "toe")
+        if toe is not None:
+            out.append(toe)
+        if g.crown:
+            module = spur.printed_module_warning(g.module, g.section.nozzle)
+            if module is not None:
+                out.append(module)
     if g.ring:
         if g.bore > 0.0:
             out.append(Diagnostic(WARNING, (
                 f"An internal bevel gear is a ring, {_num(2.0 * ring_outer_radius(g))} mm across its back, and has "
                 "no bore; the Bore is not cut."), "bore"))
-    elif g.bore > 0.0 and g.bore / 2.0 >= toe_root_radius(g) - g.module:
+    elif g.bore > 0.0 and g.bore_as_cut / 2.0 >= toe_root_radius(g) - g.module:   # F3: on the hole as cut
         out.append(Diagnostic(ERROR, (
-            f"Bore of {_num(g.bore)} mm reaches within a module of the root at the toe, "
+            f"{spur.bore_words(g.bore, g.bore_allowance)} reaches within a module of the root at the toe, "
             f"{_num(2.0 * toe_root_radius(g))} mm across; it must be smaller."), "bore"))
+    elif g.printed and g.bore > 0.0:
+        rim = toe_root_radius(g) - g.bore_as_cut / 2.0
+        if rim < spur.PRINTED_RIM_NOZZLES * g.section.nozzle - spur.PRINTED_TOLERANCE:
+            out.append(spur.printed_rim_warning(rim, g.section.nozzle, g.bore, g.bore_allowance))
     if g.face_width > g.cone_distance / 3.0 or g.face_width > 10.0 * g.module:
         out.append(Diagnostic(WARNING, (
             f"A face width of {_num(g.face_width)} mm is more than the Gleason limit of the smaller of a third of the "
             f"cone distance and ten modules ({_num(min(g.cone_distance / 3.0, 10.0 * g.module))} mm)."), "face_width"))
+    out.extend(spur.bore_checks(spec, KIND_BEVEL, cut=not g.ring))   # F3: the allowance, and no D (G5)
     return out
 
 
@@ -637,7 +712,7 @@ def variables(spec: GearSpec, g: BevelDerived) -> List[GlobalVariable]:
     if g.crown:
         # The formula's denominator is zero at a crown gear; it is built as exactly 90°.
         pitch_cone = GlobalVariable(PITCH_CONE, "90")
-    backlash = equations.literal(s.backlash) if s.backlash_typed else f"{BACKLASH_FACTOR} * {m}"
+    backlash = spur.backlash_expression(s, m)
     factor = RING_FILLET_FACTOR if g.ring else FILLET_FACTOR
     fillet = equations.literal(s.fillet) if s.fillet_typed else f"{factor} * {m}"
     # A ring's back cone is on the far side of its axis: its pitch cone's supplement is what it is square to.
@@ -667,6 +742,7 @@ def variables(spec: GearSpec, g: BevelDerived) -> List[GlobalVariable]:
         GlobalVariable(TEETH, equations.literal(g.teeth)),
         GlobalVariable(MODULE, equations.literal(g.module)),
         GlobalVariable(BORE, equations.literal(g.bore)),
+        *spur.bore_globals(g),          # F3: "Bore Allowance" when the blank's bore is cut with one; never a flat (G5)
         GlobalVariable(PRESSURE_ANGLE, equations.literal(g.pressure_angle_deg)),
         GlobalVariable(SHAFT, equations.literal(g.shaft_angle)),
         GlobalVariable(MATE_TEETH, equations.literal(g.mate_teeth)),
@@ -775,7 +851,7 @@ def blank_points(g: BevelDerived) -> BlankPoints:
     heel_rim_length, toe_rim_length = rim_lengths(g)
     heel_rim = along(radius, -heel_rim_length)
     toe_rim = along(radius - width, -toe_rim_length)
-    bore = g.bore / 2.0
+    bore = (g.bore + g.bore_allowance) / 2.0     # F3: the blank's inner edge is the hole as cut
     return BlankPoints(
         pitch=along(radius, 0.0), toe_pitch=along(radius - width, 0.0),
         heel_tip=along(radius, g.addendum), heel_rim=heel_rim,
@@ -818,6 +894,8 @@ def _blank_ops(g: BevelDerived) -> List[Op]:
     nx, nz = math.cos(math.radians(d)), -math.sin(math.radians(d))
     if g.crown:
         nx, nz = 0.0, -1.0
+    # F3 (§4.1): the blank's bore, its radius as cut in the two links, "Bore Diameter" with no allowance as before.
+    half_bore = (f"( {_q(BORE)} + {_q(spur.BORE_ALLOWANCE)} ) / 2" if g.bore_allowance else f"{_q(BORE)} / 2")
     toe_root = f"{_q(DEDENDUM)} - {_q(FACE_WIDTH)} * tan ( {_q(DEDENDUM_ANGLE)} )"
     toe_root_r = f"{_q(DEDENDUM)} - {_q(FACE_WIDTH)} * tan ( {_q(DEDENDUM_ANGLE)} * pi / 180 )"
     if g.ring:
@@ -831,22 +909,22 @@ def _blank_ops(g: BevelDerived) -> List[Op]:
         heel_rim_len = heel_rim_len_r = f"{_q(DEDENDUM)} + {equations.literal(CROWN_BACK_MODULES)} * {m}"
         toe_rim_len = f"{toe_root} + {equations.literal(CROWN_FRONT_MODULES)} * {m}"
         toe_rim_len_r = f"{toe_root_r} + {equations.literal(CROWN_FRONT_MODULES)} * {m}"
-        back = back_r = f"{_q(CONE_DISTANCE)} - {_q(BORE)} / 2"
-        front = front_r = f"{_q(CONE_DISTANCE)} - {_q(FACE_WIDTH)} - {_q(BORE)} / 2"
+        back = back_r = f"{_q(CONE_DISTANCE)} - {half_bore}"
+        front = front_r = f"{_q(CONE_DISTANCE)} - {_q(FACE_WIDTH)} - {half_bore}"
     else:
         heel_rim_len = f"{_q(DEDENDUM)} + {m} / cos ( {cone} )"
         heel_rim_len_r = f"{_q(DEDENDUM)} + {m} / cos ( {cone_r} )"
         toe_rim_len = f"{toe_root} + {m} / cos ( {cone} )"
         toe_rim_len_r = f"{toe_root_r} + {m} / cos ( {cone_r} )"
-        back = f"{_q(CONE_DISTANCE)} * sin ( {cone} ) - {_q(DEDENDUM)} * cos ( {cone} ) - {m} - {_q(BORE)} / 2"
-        back_r = f"{_q(CONE_DISTANCE)} * sin ( {cone_r} ) - {_q(DEDENDUM)} * cos ( {cone_r} ) - {m} - {_q(BORE)} / 2"
+        back = f"{_q(CONE_DISTANCE)} * sin ( {cone} ) - {_q(DEDENDUM)} * cos ( {cone} ) - {m} - {half_bore}"
+        back_r = f"{_q(CONE_DISTANCE)} * sin ( {cone_r} ) - {_q(DEDENDUM)} * cos ( {cone_r} ) - {m} - {half_bore}"
         front = (f"( {_q(CONE_DISTANCE)} - {_q(FACE_WIDTH)} ) * sin ( {cone} ) - ( {toe_rim_len} ) * cos ( {cone} ) - "
-                 f"{_q(BORE)} / 2")
+                 f"{half_bore}")
         front_r = (f"( {_q(CONE_DISTANCE)} - {_q(FACE_WIDTH)} ) * sin ( {cone_r} ) - ( {toe_rim_len_r} ) * "
-                   f"cos ( {cone_r} ) - {_q(BORE)} / 2")
+                   f"cos ( {cone_r} ) - {half_bore}")
     heel_rim_value, _ = rim_lengths(g)
-    s_heel = p.heel_rim[0] - g.bore / 2.0
-    s_toe = p.toe_rim[0] - g.bore / 2.0
+    s_heel = p.heel_rim[0] - p.back_bore[0]
+    s_toe = p.toe_rim[0] - p.front_bore[0]
     ring = g.ring
     # A ring's back runs straight from the heel's rim to the toe's; everything else's runs in to the bore.
     back_lines: List[Op] = [Line("L4", _top(*p.heel_rim), _top(*p.toe_rim))] if ring else [

@@ -1,0 +1,1503 @@
+"""PLAN-PRINTED §2.7: the rule F1 keeps, pinned before F1's first line.
+
+*A gear marked Machined builds exactly what every gear builds today, is told exactly what it is told today, and is
+recorded exactly as it is recorded today.* Every value here was taken at f3c4873, the commit the branch `printed` was
+cut from (W9d), before any of F1's code, and must hold at every commit of F1 (§2.8). A gear the code builds without
+saying its process is machined (§1), so nothing below says one: these are the specs W9 built, and after F1 they are
+what a machined gear is.
+
+- every strip plan of every kind and recipe, its steps in both trig variants, its warnings and its file name;
+- the three pair assembly plans; Solve's rows for spur, helical, ring, bevel and crossed pairs;
+- the W8 fixtures' fingerprints (`test_workbook_planetary._fingerprint`), RangeBox and RangeBox_Fixed with them;
+- the whole `.gear.json` of a machined part, its spec and derived both, and its entry in a link record;
+- what Update, the strip and Build again… say of a record written before F1: nothing.
+
+The link record's own `link_schema_version` is left out of the record's pin: F1 moves it to 11 for every record by
+ruling (§1.2), and its pins are elsewhere. Pins are by sha256, as BEFORE_W7 and BEFORE_W8 are, with the text each was
+taken over stored beside it so that they hold under Windows' python.exe too (the block after _sha).
+"""
+
+import hashlib
+import json
+import math
+import re
+import sys
+from dataclasses import replace
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+from gear_generator import findings, gui, store
+from gear_generator.gears import kind_for, pair
+from gear_generator.gears.base import GeometryError, describe
+from gear_generator.gears.equations import DEGREES, RADIANS
+from gear_generator.spec import GearSpec, PairSpec
+from gear_generator.workbook import assess, gearbox, motion, update
+
+STAMP = "2026-11-18T00:00:00Z"
+TEMPLATE = "C:\\T\\Part.prtdot"
+OUT = "C:\\Out\\"
+
+
+def _sha(text: str) -> str:
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+# -- the pins under any Python (the coordinator's ruling of 2026-11-19 on F3-DEMONSTRATION-RUNS-REVIEW §4) -----------
+# -- Each hash below was taken on Linux over text that prints every float to its last bit, and libm's last bit is not
+# -- the Windows CRT's: under Windows' python.exe a sin or a cos one ulp off changes the hash with nothing the pin is
+# -- about changed. So beside each hash the text it was taken over is stored (tests/fixtures/printed/pinned.json, made
+# -- on Linux at 12440a3, 1afc1f0's code, where every hash below holds, and held to its hash by a test). On Linux
+# -- the hash is the pin, as it always was; on every platform the text is also compared with the stored one, every
+# -- float to a relative 1e-12 (and 1e-12 absolute, for a figure that cancels to about nothing) and everything else
+# -- exactly; where the platform is not Linux that comparison is the pin. docs/notes-printed/PINS-ON-WINDOWS.md.
+
+PINNED = json.loads((Path(__file__).resolve().parent / "fixtures" / "printed" / "pinned.json").read_text(
+    encoding="utf-8"))["pins"]
+HASHED_HERE = sys.platform.startswith("linux")
+REL_TOL = ABS_TOL = 1e-12
+# Linux-only pins (the coordinator's ruling of 2026-11-19): FIXTURES' and RECORD_BEFORE_F1's texts hold paths the
+# gearbox planner joins with os.path.join (workbook/build.py, workbook/gearbox.py), which on Linux is posixpath and
+# writes C:\Out\/Gear_m2_N17.SLDPRT where ntpath writes C:\Out\Gear_m2_N17.SLDPRT: a difference not of last bits,
+# so their five tests are skipped off Linux, saying why, and no second text is stored.
+LINUX_PATHS = pytest.mark.skipif(not sys.platform.startswith("linux"), reason=(
+    "a Linux-only pin: its text holds paths joined by Linux's os.path (C:\\Out\\/Gear_...), which ntpath joins "
+    "C:\\Out\\Gear_...; the coordinator's ruling of 2026-11-19, PINS-ON-WINDOWS.md"))
+PIN_HOW = ("by hash, as taken on Linux" if HASHED_HERE else
+           f"by the stored text, floats to {REL_TOL:g} and all else exactly, on {sys.platform}")
+# A number standing on its own (not inside a name such as Gear_m1.5_N25): a float as repr or float.hex writes it, or an
+# integer. Only two floats are compared to a tolerance; an integer, and a float against an integer, exactly.
+_NUMBER = re.compile(r"(?<![\w.])-?(?:0x[0-9a-f]+(?:\.[0-9a-f]*)?p[-+]\d+|(?:\d+\.\d*|\.\d+|\d+)(?:[eE][-+]?\d+)?)"
+                     r"(?![\w.])")
+
+
+def _pieces(text: str) -> list:
+    """The text cut into words and numbers in turn: [words, number, words, number, ..., words]."""
+    out, last = [], 0
+    for m in _NUMBER.finditer(text):
+        out += [text[last:m.start()], m.group(0)]
+        last = m.end()
+    return out + [text[last:]]
+
+
+def _is_float(token: str) -> bool:
+    return "x" in token or any(c in token for c in ".eE")
+
+
+def _same_number(a: str, b: str) -> bool:
+    if a == b:
+        return True
+    if not (_is_float(a) and _is_float(b)):
+        return False
+    x, y = (float.fromhex(t) if "x" in t else float(t) for t in (a, b))
+    return math.isclose(x, y, rel_tol=REL_TOL, abs_tol=ABS_TOL)
+
+
+def text_difference(stored: str, text: str) -> str:
+    """'' when `text` is `stored` but for floats within REL_TOL (or ABS_TOL); else where they first part."""
+    a, b = _pieces(stored), _pieces(text)
+    for i, (x, y) in enumerate(zip(a, b)):
+        if x != y and (i % 2 == 0 or not _same_number(x, y)):
+            at, made_at = len("".join(a[:i])), len("".join(b[:i]))
+            if i % 2 == 0:              # words: to the first character that differs
+                same = next((j for j, (p, q) in enumerate(zip(x, y)) if p != q), min(len(x), len(y)))
+                at, made_at = at + same, made_at + same
+            return (f"at character {at} of the stored text, {'words' if i % 2 == 0 else 'a number'}: stored "
+                    f"{stored[max(0, at - 50):at + 30]!r}, made {text[max(0, made_at - 50):made_at + 30]!r}")
+    if len(a) != len(b):
+        return f"stored {len(a) // 2} numbers, made {len(b) // 2}: {stored[-60:]!r} against {text[-60:]!r}"
+    return ""
+
+
+def pin_problem(group: str, key, text: str) -> str:
+    """'' when `text` holds the pin `group`[`key`] (`key` None for a pin that is one hash): on Linux its hash is the
+    pinned one; on every platform it is the stored text, floats to REL_TOL. Else what fails, as a sentence."""
+    digest = globals()[group] if key is None else globals()[group][key]
+    stored = PINNED[group] if key is None else PINNED[group][key]
+    name = group if key is None else f"{group}[{key!r}]"
+    if _sha(stored) != digest:
+        return f"{name}: the stored text is not the text the pin was taken over (its hash {_sha(stored)})"
+    if HASHED_HERE and _sha(text) != digest:
+        return f"{name}: hash {_sha(text)}, pinned {digest}; {text_difference(stored, text) or 'the text as stored'}"
+    differs = text_difference(stored, text)
+    return f"{name}: {differs}" if differs else ""
+
+
+def assert_pinned(group: str, key, text: str) -> None:
+    problem = pin_problem(group, key, text)
+    assert not problem, problem
+
+
+# -- the gears, one of each kind the strip and a workbook build ------------------------------------------------------
+
+GEARS = {
+    "spur": dict(),
+    "spur_m1_z12": dict(module="1", teeth="12"),                               # undercut and thin-tip territory
+    "spur_m0.5_z30": dict(module="0.5", teeth="30", bore="2"),
+    "spur_m3_z40": dict(module="3", teeth="40", bore="20"),
+    "spur_shifted": dict(module="2", teeth="15", profile_shift="0.3"),
+    "spur_typed": dict(backlash="0.1", fillet="0.4", bore=""),
+    "spur_named": dict(name="MyGear", teeth="31"),
+    "helical": dict(kind="helical", helix_angle="20"),
+    "helical_shifted": dict(kind="helical", helix_angle="15", hand="left", teeth="15", profile_shift="0.2"),
+    "herringbone": dict(kind="herringbone", helix_angle="30", module="2", teeth="20"),
+    "herringbone_grooved": dict(kind="herringbone", helix_angle="30", module="2", teeth="20", groove="4"),
+    "ring": dict(teeth_side="internal", teeth="60", bore=""),
+    "ring_rim": dict(teeth_side="internal", teeth="55", module="1.25", rim="90", bore=""),
+    "ring_helical": dict(kind="helical", teeth_side="internal", teeth="60", helix_angle="15", bore=""),
+    "ring_herringbone": dict(kind="herringbone", teeth_side="internal", teeth="60", helix_angle="25", bore=""),
+    "bevel": dict(kind="bevel", teeth="20", mate_teeth="40"),
+    "bevel_s80": dict(kind="bevel", teeth="20", mate_teeth="30", shaft_angle="80", module="2"),
+    "bevel_crown": dict(kind="bevel", teeth="40", mate_teeth="20", shaft_angle="120", bore="8"),
+    "bevel_internal": dict(kind="bevel", teeth="40", mate_teeth="16", shaft_angle="120", bore=""),
+    "sleeve": dict(kind="sleeve", teeth_side="internal", module="1.25", teeth="17", face_width="26", bore=""),
+    "sleeve_banded": dict(kind="sleeve", teeth_side="internal", module="1.25", teeth="17", face_width="26", bore="",
+                          start_band="6", end_band="6"),
+    "dog": dict(kind="dog", module="1.25", teeth="17", face_width="8", bore="8"),
+    "hub": dict(kind="hub", module="1.25", teeth="17", face_width="20", bore="8"),
+}
+
+
+def _spec(name: str, **marked: str) -> GearSpec:
+    return GearSpec(**{**GEARS[name], **marked})
+
+
+# F1-0's interface commit: the same gears said machined in so many words, as the form's row and a workbook's Box
+# write them (§1.3), and with a nozzle typed, which a machined gear does not read. Each must be the pin.
+MACHINED = (dict(process="machined"), dict(process="Machined"), dict(process=" MACHINED ", nozzle="0.6"),
+            dict(process=""))
+
+
+def strip_text(name: str, **marked: str) -> str:
+    """Everything the strip makes and says of one gear: its file name, warnings, globals in both trig variants and
+    every step of each recipe's plan, described in both."""
+    spec = _spec(name, **marked)
+    kind = kind_for(spec)
+    derived = kind.derive(spec)
+    out = [spec.default_stem(), spec.stem(), repr(kind.recipe_for(spec))]
+    out.append(repr([(d.level, d.message, d.field) for d in kind.validate(spec, derived)]))
+    for trig in (DEGREES, RADIANS):
+        out.append(repr([(v.name, v.expression_for(trig)) for v in kind.variables(spec, derived)]))
+    for recipe in sorted(kind.recipes):
+        try:
+            plan = kind.plan(spec, derived, recipe, TEMPLATE, OUT + spec.stem() + ".SLDPRT")
+        except GeometryError as exc:        # a recipe that cannot draw this gear is pinned as its sentence
+            out.append(f"{recipe}: {exc}")
+            continue
+        out.append(repr(plan))
+        for trig in (DEGREES, RADIANS):
+            out.append("\n".join(describe(op, trig) for op in plan.ops))
+    return "\n".join(out)
+
+
+def strip_print(name: str, **marked: str) -> str:
+    return _sha(strip_text(name, **marked))
+
+
+STRIP = {
+    "bevel": "11cb1d53527c2f3d4d83eb9084143818bd7181df5b9929c5b47244440ff4c7fd",
+    "bevel_crown": "011ecb96029d836d9f146b1e652a19ac745fd06ff43ed5ed11b033dd0d19bf0a",
+    "bevel_internal": "b96c95c2414f4e3a79098495ddc78dc7b096fac6a01386be12b41dc99ac2d903",
+    "bevel_s80": "cc7c79e394ea3ef2aea918fe33c1ba934a5cbf73e5c213414337cca70fa0d460",
+    "dog": "c2ba802d645d25b9ab5087f64211f8eb36ea3d813c96e0324ef88931f938ed6d",
+    "helical": "8458036f12ee8612b8ad56897a0d251059aa8780bf215edc55332a04b5a3ff66",
+    "helical_shifted": "b18caa91ac55ec4d8cb8b2a3cd2a00aafbdd8a59c10be970480e0d95871eacd4",
+    "herringbone": "a29baff4fd21b07e8667367f6dd19f69e8a400ab593cb5218b201b9b60080f11",
+    "herringbone_grooved": "2ab3cd8ec5370a114a8913d7c1380d3d43e7cea76509933346d64f4e497a266b",
+    "hub": "c5ca3099745c80251bd3e018227dd96ed54e62fd4287f878a3ae091791fc025d",
+    "ring": "38fe55191c4d9abeadf4b154773b1ddd473e8f7b31b26ec29d72670d96250ee2",
+    "ring_helical": "8772c732dc7d0a4ee518d5db934c8a56f0e7641ed5a1292f7cbe47c007bc72d0",
+    "ring_herringbone": "646c399b61f7f32f2e068fce6815e469457d785f76ade0b465657436ee276728",
+    "ring_rim": "56d6f7ea67c4fc75b1e9517dd4869393122b91ff25ef326000b01ebd68cf1e7e",
+    "sleeve": "3651a132729c86d788f43cbedb3b9892d5c786f6c024f16681f370983f86ac94",
+    "sleeve_banded": "41498da9a834e6411106da984ccaa190ec358fe742bedd234d6ae3c0509380b8",
+    "spur": "9c15ec70f318d7e10d04b278dbde8b0d3f51dadb2e9da8b29685f4a1a674a8ee",
+    "spur_m0.5_z30": "d2880bf1a93ae9288b3e91b7848db92de5b1ccc96f4ae5ec6114ff7e12276fc5",
+    "spur_m1_z12": "0e6e9bc1381b7a5250b0fce9d75bca9b823d4567812b0b3f60ddd30530720277",
+    "spur_m3_z40": "3a0212379e0c193505360c0b4bd4db2cb56883165686e7ff46dbbadaf5a00596",
+    "spur_named": "f4071c9a1d590cd08e5b47328a6e206df6f6120fc1edb729ed1fbaee8a1eb8d5",
+    "spur_shifted": "ccb0f58946384057ebc0bedbde959f8df11295ca5a8c8ae659e88393832a0708",
+    "spur_typed": "0745b35f07eaeff8c2ff0b9e6bb337cc24e5e064068575483807d7feca7e3261",
+}
+
+
+@pytest.mark.parametrize("name", sorted(GEARS))
+def test_every_kind_and_recipe_plans_says_and_names_as_at_the_cut(name):
+    assert_pinned("STRIP", name, strip_text(name))
+
+
+@pytest.mark.parametrize("marked", MACHINED, ids=repr)
+@pytest.mark.parametrize("name", sorted(GEARS))
+def test_a_gear_marked_machined_plans_says_and_names_as_at_the_cut(name, marked):
+    assert_pinned("STRIP", name, strip_text(name, **marked))
+
+
+# -- the stored text of every pin is the text its hash was taken over (any platform: sha256 is the same everywhere) ---
+
+def test_the_stored_text_of_every_pin_is_the_text_its_hash_was_taken_over():
+    groups = ("STRIP", "ASSEMBLIES", "SOLVE", "FIXTURES", "SIDECARS", "ENTRIES", "RECORD_BEFORE_F1", "K11", "CARD",
+              "RESULTS")
+    assert sorted(PINNED) == sorted(groups)
+    for group in groups:
+        pins = globals()[group]
+        if isinstance(pins, str):
+            assert _sha(PINNED[group]) == pins, group
+        else:
+            assert sorted(PINNED[group]) == sorted(pins), group
+            assert {k: _sha(t) for k, t in PINNED[group].items()} == pins, group
+
+
+def test_the_text_comparison_takes_a_floats_last_bits_and_nothing_more():
+    """What the comparison that is the pin off Linux lets through: a float within 1e-12 (or a residual within 1e-12 of
+    nothing), as libm and the Windows CRT differ; never a word, an integer, a float made an integer, or a float 1e-11
+    off. The figures are this file's pins' own, as Linux and python.exe print them (a dimension's label one ulp off)."""
+    stored = "Dimension(name='OD', at=(16.440232662587228, -4.596194077712559), teeth=20, h=0x1.8p+3, e=0.0) m1.5_N25"
+    assert text_difference(stored, stored) == ""
+    for made in (stored.replace("16.440232662587228", "16.44023266258723"),
+                 stored.replace("-4.596194077712559", "-4.59619407771256"),
+                 stored.replace("e=0.0", "e=7.105427357601002e-15"),
+                 stored.replace("0x1.8p+3", "0x1.8000000000001p+3")):
+        assert text_difference(stored, made) == "", made
+    for made in (stored.replace("16.440232662587228", "16.4402326627"), stored.replace("teeth=20", "teeth=21"),
+                 stored.replace("teeth=20", "teeth=20.0"), stored.replace("e=0.0", "e=2e-12"),
+                 stored.replace("'OD'", "'0D'"), stored.replace("m1.5_N25", "m1.50_N25"), stored + " ",
+                 stored.replace("0x1.8p+3", "0x1.9p+3"), stored.replace(", e=0.0", "")):
+        assert text_difference(stored, made) != "", made
+
+
+# -- the three pair assembly plans -------------------------------------------------------------------------------
+
+def assembly_texts():
+    a, b = GearSpec(teeth="20"), GearSpec(teeth="40")
+    ring_a, ring_b = GearSpec(teeth="20", bore="8"), GearSpec(teeth="60", teeth_side="internal", bore="")
+    ha, hb = GearSpec(kind="helical", helix_angle="45", teeth="20"), GearSpec(kind="helical", helix_angle="45",
+                                                                              teeth="30")
+    ba, bb = GearSpec(kind="bevel", teeth="20", mate_teeth="40"), GearSpec(kind="bevel", teeth="40", mate_teeth="20")
+    paths = ("C:\\Out\\A.SLDPRT", "C:\\Out\\B.SLDPRT", TEMPLATE, "C:\\Out\\Pair.SLDASM")
+    plans = {
+        "parallel_fixed": pair.assembly_plan(a, b, *paths),
+        "parallel_gear_mate": pair.assembly_plan(a, b, *paths, motion="gear mate"),
+        "ring": pair.assembly_plan(ring_a, ring_b, *paths),
+        "crossed_mates": pair.crossed_assembly_plan(ha, hb, *paths, 90.0, route=pair.ROUTE_MATES),
+        "crossed_fixed": pair.crossed_assembly_plan(ha, hb, *paths, 90.0, route=pair.ROUTE_FIXED),
+        "bevel": pair.bevel_assembly_plan(ba, bb, *paths),
+    }
+    return {k: repr(p) + "\n" + "\n".join(describe(op, t) for t in (DEGREES, RADIANS) for op in p.ops)
+            for k, p in plans.items()}
+
+
+def assembly_prints():
+    return {k: _sha(text) for k, text in assembly_texts().items()}
+
+
+ASSEMBLIES = {
+    "bevel": "a105d876794b6060f12a1e5bd9975663dfab422918d6dcdd2789783ce05a5a8b",
+    "crossed_fixed": "bfb11d36e777cf6ba415578e500df9ee5c28d5f5d432ba1c778827260c1862ab",
+    "crossed_mates": "a9d1213e40d7ef45dea40074f947ee992eb8c320a347f5a19e379d533b309926",
+    "parallel_fixed": "7846e0baf276eb78ca45196d3e1ec2d19734eb314298444043de75932242010a",
+    "parallel_gear_mate": "a46cdef5e628899140d69e918d91774bd35bc1019d50181cf54a303ed9a33ebe",
+    "ring": "297a510196eba42eef93f0df8aeb8def08e4e863a04b0e85546ed9d93ae67a43",
+}
+
+
+def test_the_three_pair_assembly_plans_are_as_at_the_cut():
+    texts = assembly_texts()
+    assert sorted(texts) == sorted(ASSEMBLIES)
+    for name, text in texts.items():
+        assert_pinned("ASSEMBLIES", name, text)
+
+
+# -- Solve's rows ------------------------------------------------------------------------------------------------
+
+SOLVES = {
+    "spur": PairSpec(mode="pair", centre_distance="60", ratio="3"),
+    "spur_near": PairSpec(mode="pair", centre_distance="61.3", ratio="2.5", min_teeth="12"),
+    "spur_module": PairSpec(mode="pair", centre_distance="45", ratio="2", module="1"),
+    "helical": PairSpec(mode="pair", centre_distance="60", ratio="3", gear_a=GearSpec(kind="helical"),
+                        gear_b=GearSpec(kind="helical")),
+    "herringbone": PairSpec(mode="pair", centre_distance="80", ratio="2", gear_a=GearSpec(kind="herringbone"),
+                            gear_b=GearSpec(kind="herringbone")),
+    "ring": PairSpec(mode="pair", centre_distance="30", ratio="4", mesh="internal",
+                     gear_b=GearSpec(teeth_side="internal")),
+    "bevel": PairSpec(mode="pair", cone_distance="50", ratio="2", gear_a=GearSpec(kind="bevel"),
+                      gear_b=GearSpec(kind="bevel")),
+    "crossed": PairSpec(mode="pair", centre_distance="40", ratio="2", shafts="crossed",
+                        gear_a=GearSpec(kind="helical"), gear_b=GearSpec(kind="helical")),
+}
+
+
+def solve_text(name: str) -> str:
+    rows = pair.solve_spec(SOLVES[name])
+    out = [repr(rows)]
+    pairs = SOLVES[name]
+    for row in rows[:3]:                    # each row applied to the form, and what the pair is told
+        a, b = pair.apply(row, pairs.gear_a, pairs.gear_b)
+        try:
+            g1, g2 = kind_for(a).derive(a), kind_for(b).derive(b)
+        except Exception as exc:            # noqa: BLE001 -- a row that does not derive is pinned as its sentence
+            out.append(f"{type(exc).__name__}: {exc}")
+            continue
+        out.append(repr((a.to_dict(), b.to_dict(), pair.mesh_warnings(g1, g2))))
+    return "\n".join(out)
+
+
+def solve_print(name: str) -> str:
+    return _sha(solve_text(name))
+
+
+SOLVE = {
+    "bevel": "ea91fcaf7216df31db7edaeff8575fa21d4fb551ed835e8bde4dcbd226830ae0",
+    "crossed": "62813d8cfbf118d30024d4263aeda5dbd016dc175d16699a720c0aad2d21c273",
+    "helical": "36a647d7f42b9e2b8ab812d9ae5eff364af067d56c2da8790e2fcdd80065ac5a",
+    "herringbone": "16201c5e839c5b1d15dcbcd530d6012073d8bc53be8d46c669ac60fa9ca1cdad",
+    "ring": "31c961bb9caf3ebf965378db588fdb58f7753a2324e8cecc6fef7683356e05f2",
+    "spur": "69c7843a5a80840deff78a3bd109b14bad1d780f171b506015ebe6006238bcba",
+    "spur_module": "d0e9cd2f4cf8eb456f0a2308791547832c97bf7e3f34fb95910cd767e2398c3f",
+    "spur_near": "513c33239056da0c42959001a43f8a711203d960b37679f85d9378e3f38a03a5",
+}
+
+
+@pytest.mark.parametrize("name", sorted(SOLVES))
+def test_solves_rows_and_what_their_pair_is_told_are_as_at_the_cut(name):
+    assert_pinned("SOLVE", name, solve_text(name))
+
+
+# -- the W8 fixtures, RangeBox and RangeBox_Fixed ------------------------------------------------------------------
+
+def fixture_texts():
+    from test_workbook_planetary import _fingerprint_text
+    from workbook_fixtures import e4_transfer_case, range_box, range_box_fixed, transfer_case_parallel
+    makes = {"transfer_case_parallel": transfer_case_parallel, "e4_transfer_case": e4_transfer_case,
+             "range_box": range_box, "range_box_fixed": range_box_fixed}
+    return {name: _fingerprint_text(assess.assess(replace(make(), source_path="C:\\B\\W.xlsx"), [], OUT))
+            for name, make in makes.items()}
+
+
+def fixture_prints():
+    """Each fixture's test_workbook_planetary._fingerprint."""
+    return {name: _sha(text) for name, text in fixture_texts().items()}
+
+
+FIXTURES = {
+    "e4_transfer_case": "9fb7a6c1c19cb57c2c3162959b9b92497f852d3639b04dc0a7642c7ef772e1b6",
+    "range_box": "b1d010f97e062dcbc8c8fd59c8a217e3e07ea40e828ab654f406868dacd2071a",
+    "range_box_fixed": "c97cbfffc9c7e639b3b00e908fdb2019764b0196625396640f27db9a7945d82f",
+    "transfer_case_parallel": "8fef58f5f5339e6fb004bb2813905a00871a47444f329eb23023163c04e0b027",
+}
+
+
+@LINUX_PATHS
+def test_the_w8_fixtures_and_rangebox_plan_bit_for_bit_as_at_the_cut(monkeypatch):
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", "entity senses", raising=False)
+    texts = fixture_texts()
+    assert sorted(texts) == sorted(FIXTURES)
+    for name, text in texts.items():
+        assert_pinned("FIXTURES", name, text)
+
+
+# -- the record: a machined part's whole .gear.json, and its entry in a link record --------------------------------
+
+RECORDED = ("spur", "spur_shifted", "helical", "herringbone_grooved", "ring", "ring_helical", "bevel", "bevel_crown",
+            "sleeve", "sleeve_banded", "hub",
+            # F3-0 (PLAN-PRINTED §4.6 item 1): every kind with a bore, which F3's allowance and D-flat reach, recorded;
+            # these two taken at 08db5ba, the commit F3-0 starts from.
+            "herringbone", "dog")
+
+
+def sidecar_text(name: str, **marked: str) -> str:
+    """The .gear.json the strip writes for this gear (`gui.GearApp._write_sidecar`'s call), with a fixed id and stamp."""
+    spec = _spec(name, **marked)
+    kind = kind_for(spec)
+    derived = kind.derive(spec)
+    plan = kind.plan(spec, derived, kind.recipe_for(spec), TEMPLATE, OUT + spec.stem() + ".SLDPRT")
+    path = plan.path or OUT + spec.stem() + ".SLDPRT"
+    previous = store.Sidecar(part_path=path, record=store.GearRecord(record_id="gear-0000f1f1", created=STAMP))
+    sidecar = store.built_sidecar(
+        path, spec.stem() + ".SLDPRT", kind=spec.kind, recipe=plan.recipe, spec=spec.to_dict(),
+        derived=derived.to_dict(), variables=[[v.name, v.expression_for(DEGREES)] for v in kind.variables(spec, derived)],
+        features=["Gear"], dimensions=[], manual_steps=[], template=TEMPLATE, trig=DEGREES,
+        written_by="gear-generator test", previous=previous, stamp=STAMP)
+    return store.to_json(sidecar)
+
+
+def entry_text(name: str, **marked: str) -> str:
+    """The part's entry in a link record, as `link_record_to_json` writes it."""
+    spec = _spec(name, **marked)
+    kind = kind_for(spec)
+    derived = kind.derive(spec)
+    entry = store.PartEntry(path=OUT + spec.stem() + ".SLDPRT", gears=["G1"], revision=0, kind=spec.kind,
+                            spec=spec.to_dict(), trig=DEGREES,
+                            variables=[[v.name, v.expression_for(DEGREES)] for v in kind.variables(spec, derived)])
+    raw = json.loads(store.link_record_to_json(store.LinkRecord(workbook="C:\\B\\W.xlsx", parts=[entry])))
+    return json.dumps(raw["parts"][0], indent=2, sort_keys=True, ensure_ascii=False)
+
+
+SIDECARS = {
+    "bevel": "8ccb02fc9fc94142350e13ca8e2a7e4c4d6baaae9405fdcaa9ade3441742554f",
+    "bevel_crown": "20f1699a71df250674e1d536e14ddf85d2d925ffb7564ec3c0c38ec489048bb8",
+    "dog": "f17bf6c35487f864d4ff2a8386bcb7b2ce1d3f3a3dcab3d602c47d0d25d4913c",
+    "helical": "c658a3dd6730d8cd84fbfc67c123880ea0ce2d2c19b3cc1a5cfdd9ec4e1379e0",
+    "herringbone": "e8381cdbc1eb9182c655c7e9daa088e224e54a6944f0853e45441ac0e66826aa",
+    "herringbone_grooved": "d553001d4046499e47b72dcb24ab741b40a074ef54b3cfd61f9b4d59b49b34ac",
+    "hub": "7b90e15ecc47ef5e4a93ec744b1678566400c5ae27e86baa463362ee1e1fa846",
+    "ring": "bf8e36c5b3e2acb3505df40227b95a229800c9e3af9fca778041410a6d0f1f3d",
+    "ring_helical": "beef40b5c4c590890ca8360df3c88acb74adef5e3c77994a73371b27db1360e2",
+    "sleeve": "6051bc4f9ff771f27dbbdadba9e8813a7389cdfe4f82e3902fe57f527b992b66",
+    "sleeve_banded": "9633805e9fefafb7ca88a30a5926fb85e0ad829d0da9fd9e9c250fc6a4fc7ffa",
+    "spur": "548d8e41b2b124e4a0434fb8c0d390b7692877dddecbd29f052bbc2eaacbd341",
+    "spur_shifted": "88a9923c62e8fa414c35039f2b2568140b7476e64e84e816647ab0c45b908d06",
+}
+
+ENTRIES = {
+    "bevel": "926e716bc3e56a42244e93f33d305ce961b15767f7dd23b9b71423249d91edf8",
+    "bevel_crown": "8acf3b2157aa4dacfd17205f5896e6c66a76f26e31f3d43877aa3c490e65ee77",
+    "dog": "66573b8926b09a2831496fba72ece6dd713c3b5c06304d131764c5cd59f57ebf",
+    "helical": "0d609801f853893547e0637c38c0014f98c3a302589ce705fd4c362e47709225",
+    "herringbone": "ec349f8f6ce74837c4251298e130e21918912635c3a308288d1c41b3d8905824",
+    "herringbone_grooved": "9adf4dafc6458932bcacdf75332b9907d9a9d9701c2ba747b9aa5fd51cea0ab1",
+    "hub": "7bf72979a0668f2427f88686097b980f8aa08faa953c775c735bc088a9ed1f75",
+    "ring": "eea6014af803541cc4ac933a280b5a08e1c0ebab97cc4e59505d00ca8a534ac4",
+    "ring_helical": "6c6fa94c85b947162973ccfa51b48f5467f6a9750df0fbf20a19abba97d20a55",
+    "sleeve": "40daedd5bd241cd65737af53a03de512cc55380be601baaef9f47e7c64a798f2",
+    "sleeve_banded": "86bc69492df871f5a3f149fa7a2d51c81dd0fcd43f95a1969176738750e91ac2",
+    "spur": "f1b7d49d58e267ff826d794d9cce045d8e86cadd99efcd2497ca615867a87516",
+    "spur_shifted": "40f3503bcf6832695c859c4eefe70e4b127bc055200cb2fd39679f4c83e2bfd2",
+}
+
+
+@pytest.mark.parametrize("name", RECORDED)
+def test_a_machined_parts_gear_json_and_record_entry_are_byte_for_byte_as_at_the_cut(name):
+    text = sidecar_text(name)
+    assert_pinned("SIDECARS", name, text)
+    assert json.loads(text)["schemaVersion"] == (2 if name == "sleeve_banded" else 1)
+    assert_pinned("ENTRIES", name, entry_text(name))
+
+
+@pytest.mark.parametrize("marked", MACHINED, ids=repr)
+@pytest.mark.parametrize("name", RECORDED)
+def test_a_part_marked_machined_is_recorded_byte_for_byte_as_at_the_cut(name, marked):
+    assert_pinned("SIDECARS", name, sidecar_text(name, **marked))
+    assert_pinned("ENTRIES", name, entry_text(name, **marked))
+
+
+# -- a record written before F1: Update, the strip and Build again… find nothing to do ----------------------------
+
+def _gearbox_findings(monkeypatch):
+    """The findings the W4 gearbox tests pin (test_workbook_gearbox), and its static assembly."""
+    import test_workbook_gearbox as w4
+    for name, value in {**w4.TIER_7, **w4.SETTLED}.items():
+        monkeypatch.setattr(findings, name, value, raising=name in w4.SETTLED)
+    monkeypatch.setattr(motion, "motion_reason", lambda: w4.STATIC_FOR_W4)
+    monkeypatch.setattr(store, "new_record_id", lambda: "gear-0000f1f1")
+
+
+def built_reducer():
+    """The 12 : 1 reducer built once on the fake disk, as W4's tests build it: (disk, record, record's text)."""
+    from test_workbook_gearbox import Disk, assessed, build
+    from test_workbook_model import reducer
+    disk = Disk()
+    _, _, record = build(assessed(reducer()), None, disk)
+    raw = json.loads(store.link_record_to_json(record))
+    raw.pop(store.LINK_SCHEMA_KEY)
+    return disk, record, json.dumps(raw, indent=2, sort_keys=True, ensure_ascii=False)
+
+
+RECORD_BEFORE_F1 = "5abe227ca98f6a810ff1bf80dd5fe819eb4ad066647c1a102e7f89af2b8576e6"
+
+
+def nothing_to_do(record, disk, a):
+    """What Update, Build again… and W9d's carry say of `record` against the assessment `a`: (Update's plan, its
+    fingerprint, the parts Build again… makes, the parts it reuses, the columns that changed for each part)."""
+    plan = update.classify(record, a, exists=disk.exists)
+    again = gearbox.plan_gearbox(a, record, exists=disk.exists, read_sidecar=disk.read_sidecar)
+    jobs = {j.gear_ids[0]: j for j in gearbox.plan_gearbox(a, None, exists=lambda p: False,
+                                                           read_sidecar=lambda p: None).build}
+    columns = [update._changed_columns(p.spec, jobs[p.gears[0]].spec.to_dict()) for p in record.current_parts()]
+    matches = [gearbox._matches(p.spec, p.variables, p.trig, jobs[p.gears[0]]) for p in record.current_parts()]
+    return plan, again, columns, matches
+
+
+@LINUX_PATHS
+def test_a_record_written_before_f1_is_nothing_to_update_or_make_again(monkeypatch):
+    from test_workbook_gearbox import assessed
+    from test_workbook_model import reducer
+    _gearbox_findings(monkeypatch)
+    disk, record, text = built_reducer()
+    assert_pinned("RECORD_BEFORE_F1", None, text)
+    assert all("process" not in p.spec and "nozzle" not in p.spec for p in record.parts)
+    plan, again, columns, matches = nothing_to_do(record, disk, assessed(reducer()))
+    assert (plan.refusal, plan.structural, plan.missing, plan.replaced, plan.moved_shafts) == ("", (), (), (), ())
+    assert [p.changed for p in plan.parts] == [False] * 4 and plan.record_matches
+    assert again.refusal == "" and list(again.build) == [] and len(again.reuse) == 4
+    assert columns == [[]] * 4 and matches == [True] * 4
+
+
+def strip_form(sidecar, spec):
+    """What `gui.GearApp._update_target` reads of the strip: the record opened, its part active, the form's gear."""
+    return SimpleNamespace(_loaded=sidecar, _snapshot={"path": sidecar.part_path, "title": "Gear_m1.5_N25"},
+                           mode=SimpleNamespace(get=lambda: gui.MODE_SINGLE),
+                           _derived={"a": kind_for(spec).derive(spec)}, _gear_spec=lambda which: spec)
+
+
+@pytest.mark.parametrize("name", RECORDED)
+def test_a_strip_record_written_before_f1_has_nothing_for_update_values(name):
+    sidecar = store.from_json(sidecar_text(name))
+    assert "process" not in sidecar.record.spec
+    form = GearSpec.from_dict(sidecar.record.spec)
+    assert gui.GearApp._update_target(strip_form(sidecar, form))[0] == 0
+
+
+@LINUX_PATHS
+@pytest.mark.parametrize("box_process", ["", "machined", "Machined"])
+def test_a_record_written_before_f1_is_nothing_to_do_against_a_workbook_marked_machined_or_left_blank(
+        monkeypatch, box_process):
+    """D11 ruled (B): against a Box whose Process is blank, a gearbox built before F1 is Machined, as built, and
+    nothing changes; against one marked Machined, nothing changes either (§2.7). F1-0's interface commit."""
+    from test_workbook_gearbox import FOLDER, WORKBOOK
+    from test_workbook_model import reducer
+    _gearbox_findings(monkeypatch)
+    disk, record, text = built_reducer()
+    assert_pinned("RECORD_BEFORE_F1", None, text)
+    assert assess.blank_process(record) == "machined"
+    read = replace(reducer(), box=replace(reducer().box, process=box_process), source_path=WORKBOOK)
+    a = assess.assess(read, [], FOLDER, blank_process=assess.blank_process(record))
+    assert a.lay_out_refusal() == "" and a.read.box.process == a.spec.box.process == (box_process or "machined")
+    plan, again, columns, matches = nothing_to_do(record, disk, a)
+    assert (plan.refusal, plan.structural, plan.missing, plan.replaced, plan.moved_shafts) == ("", (), (), (), ())
+    assert [p.changed for p in plan.parts] == [False] * 4 and plan.record_matches
+    assert again.refusal == "" and list(again.build) == [] and len(again.reuse) == 4
+    assert columns == [[]] * 4 and matches == [True] * 4
+
+
+@pytest.mark.parametrize("marked", MACHINED, ids=repr)
+@pytest.mark.parametrize("name", RECORDED)
+def test_a_strip_record_written_before_f1_against_a_form_marked_machined_has_nothing_for_update_values(name, marked):
+    sidecar = store.from_json(sidecar_text(name))
+    form = replace(GearSpec.from_dict(sidecar.record.spec), **marked)
+    assert gui.GearApp._update_target(strip_form(sidecar, form))[0] == 0
+
+
+# -- F1-0's interface (PLAN-PRINTED §2.8 items 1 to 7; docs/notes-printed/F1-INTERFACES.md), held so that packages A,
+# -- B and C build on it. Each package tests its own work in its own files; these hold only what F1-0 lands.
+
+def test_the_spec_says_its_process_and_leaves_both_keys_out_unless_printed():
+    from gear_generator import spec as spec_module
+    from gear_generator.spec import InputError
+    assert (spec_module.PROCESS_PRINTED, spec_module.PROCESS_MACHINED, spec_module.NOZZLE_DEFAULT) == (
+        "printed", "machined", 0.4)
+    assert (GearSpec().process, GearSpec().nozzle) == ("machined", "")
+    for word in ("", "machined", "Machined", "wood", "  "):
+        values = GearSpec(process=word, nozzle="0.6").to_dict()          # never raises, whatever the word
+        assert "process" not in values and "nozzle" not in values
+    assert GearSpec(process="Printed").to_dict()["process"] == "Printed"
+    assert GearSpec(process="printed").to_dict()["nozzle"] == ""
+    assert [GearSpec(process=w).is_printed() for w in ("printed", " PRINTED ", "machined", "", "wood")] == [
+        True, True, False, False, False]
+    assert [GearSpec(process=w).process_value() for w in ("Printed", "machined", "")] == [
+        "printed", "machined", "machined"]
+    with pytest.raises(InputError, match=r"Process must be printed or machined \(got 'wood'\)\."):
+        GearSpec(process="wood").process_value()
+    assert GearSpec().nozzle_mm() == 0.4 and GearSpec(nozzle="0.6").nozzle_mm() == 0.6
+    for bad, said in (("x", r"Nozzle must be a number"), ("0", r"Nozzle must be more than zero")):
+        with pytest.raises(InputError, match=said):
+            GearSpec(nozzle=bad).nozzle_mm()
+    assert GearSpec(process="printed").default_stem() == "Gear_m1.5_N25_P"
+    assert GearSpec(process="printed", teeth="15", profile_shift="0.09").default_stem() == "Gear_m1.5_N15_x0.09_P"
+    assert GearSpec(process="printed", name="Mine").stem() == "Mine"
+    assert GearSpec.from_dict(GearSpec(process="printed", nozzle="0.6").to_dict()) == GearSpec(
+        process="printed", nozzle="0.6")
+
+
+def test_the_record_is_at_link_schema_12_and_a_printed_part_at_sidecar_schema_3_or_4_by_its_globals():
+    """F1's link 11 and sidecar 3, moved by F3 (PLAN-PRINTED §4.3): the link record to 12 whatever its parts, with F1's
+    11 kept beside it, and a part whose globals hold "Bore Allowance" or "Bore Flat" to sidecar 4 (M2), decided from
+    those globals; a printed part without them, as every part built before F3, stays at 3, and so does a spec asked
+    alone (no globals given)."""
+    assert (store.LINK_SCHEMA_VERSION, store._F1_LINK_SCHEMA, store._W9D_LINK_SCHEMA) == (12, 11, 10)
+    assert (store.SCHEMA_VERSION, store.BORE_SCHEMA, store.PRINTED_SCHEMA, store.BANDED_SCHEMA, store.PLAIN_SCHEMA) == (
+        4, 4, 3, 2, 1)
+    assert store.sidecar_schema(GearSpec(process="printed").to_dict()) == 3
+    printed = GearSpec(process="printed")
+    kind = kind_for(printed)
+    held = [[v.name, v.expression] for v in kind.variables(printed, kind.derive(printed)) if v.name != "Bore Allowance"]
+    assert store.sidecar_schema(printed.to_dict(), held) == 3                                      # built before F3
+    assert store.sidecar_schema(printed.to_dict(), held + [["Bore Allowance", "0.2"]]) == 4
+    assert store.sidecar_schema(GearSpec().to_dict(), [["Bore Flat", "7"]]) == 4                    # whatever the spec
+    assert store.sidecar_schema(GearSpec(process="machined").to_dict(), []) == 1
+    assert store.sidecar_schema(GearSpec(process="Printed", start_band="2", end_band="2").to_dict()) == 3
+    assert store.sidecar_schema(GearSpec(process="machined").to_dict()) == 1
+    assert store.sidecar_schema(GearSpec(start_band="2", end_band="2").to_dict()) == 2
+
+
+# Each of the five variable writers, and a sleeve, dog and hub through the spur and ring kinds they are built from.
+WRITERS = ("spur", "helical", "ring", "ring_helical", "bevel", "bevel_crown", "bevel_internal", "sleeve_banded", "dog",
+           "hub", "herringbone_grooved", "ring_herringbone")
+IIF = 'IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )'
+
+
+@pytest.mark.parametrize("name", WRITERS)
+def test_a_printed_gear_with_a_blank_backlash_writes_the_printed_default_and_carries_its_nozzle(name):
+    from gear_generator.gears import spur
+    assert spur.printed_backlash_expression() == spur.printed_backlash_expression("Module") == IIF
+    spec = _spec(name, process="printed", nozzle="0.6")
+    kind = kind_for(spec)
+    g = kind.derive(spec)
+    backlash = [v for v in kind.variables(spec, g) if v.name == "Backlash"]
+    assert [(v.expression, v.radian_expression or v.expression) for v in backlash] == [(IIF, IIF)]
+    assert g.printed and g.backlash_printed and g.nozzle == 0.6
+    data = g.to_dict()
+    assert (data["section"] if "section" in data else data)["nozzle"] == 0.6
+    typed = _spec(name, process="printed", backlash="0.2")
+    held = kind.derive(typed)
+    assert held.printed and not held.backlash_printed and held.nozzle == 0.4
+    assert [v.expression for v in kind.variables(typed, held) if v.name == "Backlash"] == ["0.2"]
+    machined = kind.derive(_spec(name))
+    assert not machined.printed and not machined.backlash_printed and machined.nozzle is None
+    assert "nozzle" not in json.dumps(machined.to_dict())
+
+
+@pytest.mark.parametrize("module, backlash", [("0.5", 0.15), ("1", 0.3), ("1.5", 0.3), ("3", 0.3)])
+def test_the_printed_default_is_the_smaller_of_0_3_mm_and_0_3_module(module, backlash):
+    from gear_generator.gears import spur
+    printed = kind_for(GearSpec()).derive(GearSpec(module=module, process="printed"))
+    machined = kind_for(GearSpec()).derive(GearSpec(module=module))
+    assert printed.backlash == pytest.approx(backlash) and printed.backlash <= machined.backlash + 1e-12
+    assert spur.printed_backlash(float(module)) == pytest.approx(backlash)
+    assert (spur.PRINTED_BACKLASH, spur.PRINTED_BACKLASH_UP_TO_MODULE) == (0.3, 1.0)
+
+
+def test_a_printed_specs_unreadable_nozzle_or_process_word_is_an_error_at_its_field():
+    kind = kind_for(GearSpec())
+    said = [(d.message, d.field) for d in kind.validate(GearSpec(process="printed", nozzle="x"))]
+    assert said == [("Nozzle must be a number (got 'x').", "nozzle")]
+    said = [(d.message, d.field) for d in kind.validate(GearSpec(process="wood"))]
+    assert said == [("Process must be printed or machined (got 'wood').", "process")]
+    assert kind.validate(GearSpec(nozzle="x")) == kind.validate(GearSpec())         # a machined gear's is not read
+
+
+def test_the_box_says_process_and_nozzle_and_a_gearbox_built_in_code_is_written_machined():
+    from gear_generator.workbook import model, schema
+    from test_workbook_model import reducer
+    settings = {s.key: s for s in schema.BOX_SETTINGS}
+    keys = [s.key for s in schema.BOX_SETTINGS]
+    # F4 (PLAN-PRINTED §5.4, §5.5): Allowable stress after Nozzle, Units after Allowable.
+    assert keys.index("process") == keys.index("efficiency") + 1 and keys.index("allowable") == keys.index("nozzle") + 1
+    assert keys.index("units") == keys.index("allowable") + 1
+    assert settings["process"].words == ("printed", "machined") and not settings["process"].numeric
+    assert settings["process"].note == ("Printed or Machined; blank: Printed for a new gearbox, as built for one "
+                                        "already built")
+    assert (settings["nozzle"].title, settings["nozzle"].numeric, settings["nozzle"].default) == (
+        "Nozzle (mm)", True, "0.4")
+    assert (model.Box().process, model.Box().nozzle) == ("machined", "")
+    box = {row[0]: row[1] for row in model.to_sheets(reducer())[0].rows[1:]}
+    assert (box["Process"], box["Nozzle (mm)"]) == ("machined", "")
+    printed = replace(reducer(), box=replace(reducer().box, process="printed", nozzle="0.6"))
+    box = {row[0]: row[1] for row in model.to_sheets(printed)[0].rows[1:]}
+    assert box["Process"] == "printed" and float(box["Nozzle (mm)"]) == 0.6
+    gear = reducer().gears[0]
+    assert gear.gear_spec(printed.box).process == "printed" and gear.gear_spec(printed.box).nozzle == "0.6"
+    assert gear.gear_spec(reducer().box).to_dict() == gear.gear_spec(model.Box()).to_dict()
+
+
+def _entry(**spec):
+    return store.PartEntry(path="C:\\P\\G.SLDPRT", gears=["G1"], spec=GearSpec(**spec).to_dict())
+
+
+@pytest.mark.parametrize("record, word", [
+    (None, "printed"),
+    (store.LinkRecord(workbook="W.xlsx"), "printed"),
+    (store.LinkRecord(workbook="W.xlsx", parts=[_entry()]), "machined"),
+    (store.LinkRecord(workbook="W.xlsx", parts=[store.PartEntry(path="C:\\P\\G.SLDPRT", gears=["G1"])]), "machined"),
+    (store.LinkRecord(workbook="W.xlsx", parts=[_entry(), _entry(process="printed")]), "printed"),
+    (store.LinkRecord(workbook="W.xlsx", parts=[_entry(process="Printed")]), "printed"),
+], ids=["no record", "no parts", "machined", "v1 part", "one printed", "Printed"])
+def test_a_blank_process_is_as_built(record, word):
+    """D11 (B): machined when every current part was built machined, printed otherwise; the same after a record is
+    written forward to 11, and since F3 to 12, since the rule reads the parts and never the schema number."""
+    assert assess.blank_process(record) == word
+    if record is not None:
+        again = store.link_record_from_json(store.link_record_to_json(record))
+        assert again.schema_version == 12 and assess.blank_process(again) == word
+
+
+def test_assess_resolves_a_blank_process_in_the_read_and_the_spec_and_leaves_a_word_alone():
+    from test_workbook_model import reducer
+    blank = replace(reducer(), box=replace(reducer().box, process=""), source_path="C:\\B\\W.xlsx")
+    for given, want in (({}, "printed"), (dict(blank_process="machined"), "machined")):
+        a = assess.assess(blank, [], OUT, **given)
+        assert a.read.box.process == a.spec.box.process == want
+    said = replace(blank, box=replace(blank.box, process="machined"))
+    a = assess.assess(said, [], OUT, blank_process="printed")
+    assert a.read.box.process == a.spec.box.process == "machined"
+
+
+def test_the_form_shares_process_and_nozzle_between_a_pairs_gears():
+    assert gui.GEAR_COMPOUND == ("kind", "recipe", "process", "nozzle")
+
+# The sentences a machined gear is told by K11 (an app-owned value changed in SolidWorks) and by the card. The
+# functions saying them are B's (swbuild's K11 words) and C's (ui_text) to change for printed gears, so what they say
+# of a machined gear is held here, outside their own test files (F1-0-REVIEW §7, must-fix 3).
+
+TOLD = ("spur", "spur_m0.5_z30", "spur_shifted", "spur_typed", "helical", "herringbone_grooved", "ring", "ring_rim",
+        "ring_helical", "bevel", "bevel_crown", "bevel_internal", "sleeve_banded", "dog", "hub")
+K11_GLOBALS = ("Backlash", "Fillet Radius", "Bore Diameter")
+
+
+def k11_sentences(name: str) -> list:
+    """K11's sentence for each of the gear's Backlash, Fillet and Bore found changed in SolidWorks to 0.123: with its
+    cell, with no cell, and on a document left unsaved (`swbuild._value_sentence`, through `_blank_meaning`,
+    `_wanted_words` and `_back_words`)."""
+    from gear_generator import swbuild
+    spec = _spec(name)
+    kind = kind_for(spec)
+    g = kind.derive(spec)
+    plan = kind.plan(spec, g, kind.recipe_for(spec), TEMPLATE, OUT + spec.stem() + ".SLDPRT")
+    values = plan.values(DEGREES)
+    out = []
+    for v in kind.variables(spec, g):
+        if v.name not in K11_GLOBALS:
+            continue
+        wanted = f"{values[v.name]:g}"
+        for cell, unsaved in (("Gears!P2", False), ("", False), ("Gears!P2", True)):
+            edit = swbuild.ValueEdit(spec.stem() + ".SLDPRT", v.name, "0.123", wanted, wanted, cell=cell,
+                                     unsaved=unsaved, blank=swbuild._blank_meaning(v))
+            out.append(swbuild._value_sentence(edit))
+    return out
+
+
+def card_text(name: str) -> str:
+    """The card a machined gear shows: its Derived rows and line, and the explainer of every field the card has."""
+    from gear_generator import ui_text
+    spec = _spec(name)
+    g = kind_for(spec).derive(spec)
+    out = [repr(ui_text.derived_rows(g)), ui_text.derived_line(g)]
+    for field in ui_text.EXPLAINER_FIELDS:
+        if field not in ui_text.PAIR_EXPLAINERS:
+            try:
+                out.append(repr(ui_text.explainer(field, g, spec.stem(), folder="C:\\Out")))
+            except Exception as exc:        # noqa: BLE001 -- a field the card cannot work out for this kind, as it is
+                out.append(f"{field}: {type(exc).__name__}")
+    return "\n".join(out)
+
+
+K11 = {
+    "bevel": "64d22adad95289e2684498d2c3370d6b3248de58105438a74be26e089284b18e",
+    "bevel_crown": "cdcb2e5273bb1da3b8ff9d821cfd5b37b46fe9ab7493e66d4a4c2e1b6c32a33a",
+    "bevel_internal": "96d4f500dfbe65dd56271bd242ddd7101ddda64e25498374d7d3a489aee238c6",
+    "dog": "036ca9077d7aba48ef8c1b531ce20351430b56264f38c6cd10530f4b63159f66",
+    "helical": "0d66bff68b845356dabadb73af89c5482e43c6f8fa3049f9f2fff7f66afaeb03",
+    "herringbone_grooved": "89f7b8bac8e8b4f8323fdc1104cba784bd8dfca81c0f76d4c3dafc383730c2a6",
+    "hub": "7973a5ebaa7628793a19223e5f0bf4284301d1649cfeb6ffd17cc412914c191b",
+    "ring": "d495bf4858cdb31c3c1eb2e9140031b97ac73d7b43949565ad5b84bc8cd53b38",
+    "ring_helical": "cebab19f67a7762042cef03ee2710a95830073a9008a15d0fe21b86c20322e19",
+    "ring_rim": "2b81898edce72dcd37c005d1cfcab153115e0ffab7749edfb0fb74c0b2de0856",
+    "sleeve_banded": "c414a3bf6d33d82f21441056cd49e18015ae461fab1803840439fcfba3759dcc",
+    "spur": "634f17fe1a470bd72c68acc548ef9cf686a6e6ecf70a11e1308d96d4fbcc5144",
+    "spur_m0.5_z30": "7e205f851d453b09f300b460904dd9ec983cbf1188b1cedbad41987088c85927",
+    "spur_shifted": "eb2cf7ede948f303001d6b5596e8b195f23e0b89c4720308ae14aa21a2634f73",
+    "spur_typed": "61d179dfd30887a3db9a84a1355a95b43b1c02ec3b51c16dda2b21d5103a85c0",
+}
+
+CARD = {
+    "bevel": "36a5c1b95918e0c0220b41a811bd04694238728efebbc0813c995b0db72cb9f9",
+    "bevel_crown": "2d268d847f83fda5403fd411a02ec3fdad20a0ddeb83bccbcbb192bd5cdbe90c",
+    "bevel_internal": "030f48fb461013d180a073b8aeef489eba73b137d01e0142ff9dfda5a11e58b6",
+    "dog": "bcb1146fa852c0da7b7d65d3543c123ac28be27d2511fb92234f129bd471c7cd",
+    "helical": "07a5f9523fd3bd1e533f816378d95b55b0d0a5d497521e3eaddaf584a19e4d2b",
+    "herringbone_grooved": "7984b6a2be08bbb52a11171f74743d8629cadaea4e473d319a0d92627a083f37",
+    "hub": "c835d9b888e7157f7dd57755f9fb83822fecd3ead1a9715bb935e8cde6a25100",
+    "ring": "cbdf1a639b3a4bbea88f671cea6c354e8f1e1d268b7bb22f6a7c5a0220059dda",
+    "ring_helical": "bc98bfdbf768c1244542fac865262dec980693f3ceb648a06988be32894589a1",
+    "ring_rim": "6beabbafe2e88b215354c34014c9f927b114404bca1bcf208aa587cd7915ae51",
+    "sleeve_banded": "15a77567b77e73f9493f1f06fddcf108f0948bd2598b38b95d7660443ed1f3f7",
+    "spur": "dd4ae6bd8a4861d269b3f8adf0a06edd11803a479455b4ec9dc97f60f5cf74bc",
+    "spur_m0.5_z30": "33321deb1b3d701ab6f92a7b7f8de2af692431b73e790fb91a7e10f45aa64389",
+    "spur_shifted": "cc40ab41f8e2d93c065b1673c8f2852f086382d1dd08a4805aaece5c083fc9fa",
+    "spur_typed": "2be86bb010539576b54ed461348ca40faa413f1431745bf29ce1df263e1ff37d",
+}
+
+
+@pytest.mark.parametrize("name", TOLD)
+def test_what_k11_tells_of_a_machined_gear_is_as_at_the_cut(name):
+    assert_pinned("K11", name, "\n".join(k11_sentences(name)))
+
+
+def test_k11_says_a_machined_blank_backlash_and_fillet_as_their_equations():
+    said = k11_sentences("spur")
+    assert ("Backlash in Gear_m1.5_N25 is 0.123 in SolidWorks and 0.45 (from its blank cell, 0.3 × Module) in the "
+            "workbook: type 0.123 in Gears!P2, or set it back to the equation 0.3 × Module in SolidWorks, and press "
+            "Update SolidWorks again.") in said
+    assert ("Fillet Radius in Gear_m1.5_N25 is 0.123 in SolidWorks and 0.57 (from its blank cell, 0.38 × Module) in "
+            "the workbook: type 0.123 in Gears!P2, or set it back to the equation 0.38 × Module in SolidWorks, and "
+            "press Update SolidWorks again.") in said
+
+
+@pytest.mark.parametrize("name", TOLD)
+def test_the_card_of_a_machined_gear_is_as_at_the_cut(name):
+    assert_pinned("CARD", name, card_text(name))
+
+
+def test_the_card_says_a_machined_blank_backlash_is_0_3_module():
+    from gear_generator import ui_text
+    g = kind_for(GearSpec()).derive(GearSpec())
+    assert dict(ui_text.derived_rows(g))["Backlash"] == "0.45 · 0.3m"
+    assert ui_text.explainer("backlash", g, "Gear_m1.5_N25")[3].startswith("blank → 0.45 mm (0.3 m) · tooth ")
+
+
+# -- a pair's names (the coordinator's ruling 2 on F1-0's decision 2, 2026-11-18) ----------------------------------
+
+G = GearSpec
+PAIRS = {
+    "spur": (PairSpec(gear_a=G(teeth="20"), gear_b=G(teeth="60")),
+             ("Pinion_m1.5_N20", "Gear_m1.5_N60", "Pair_m1.5_20T_60T")),
+    "spur_reversed": (PairSpec(gear_a=G(teeth="60"), gear_b=G(teeth="20")),
+                      ("Gear_m1.5_N60", "Pinion_m1.5_N20", "Pair_m1.5_60T_20T")),
+    "shifted": (PairSpec(gear_a=G(teeth="15", profile_shift="0.09"), gear_b=G(teeth="30", profile_shift="-0.09")),
+                ("Pinion_m1.5_N15_x0.09", "Gear_m1.5_N30_x-0.09", "Pair_m1.5_15T_30T_x0.09_-0.09")),
+    "ring": (PairSpec(mesh="internal", gear_a=G(teeth="20"), gear_b=G(teeth="60", teeth_side="internal")),
+             ("Pinion_m1.5_N20", "Ring_m1.5_N60", "Pair_m1.5_20T_60T_INT")),
+    "helical": (PairSpec(gear_a=G(kind="helical", helix_angle="20", teeth="20"),
+                         gear_b=G(kind="helical", helix_angle="20", hand="left", teeth="40")),
+                ("Pinion_m1.5_N20_20R", "Gear_m1.5_N40_20L", "Pair_m1.5_20T_40T_H20")),
+    "herringbone": (PairSpec(gear_a=G(kind="herringbone", helix_angle="30", teeth="20"),
+                             gear_b=G(kind="herringbone", helix_angle="30", hand="left", teeth="40")),
+                    ("Pinion_m1.5_N20_HB30R", "Gear_m1.5_N40_HB30L", "Pair_m1.5_20T_40T_HB30")),
+    "ring_helical": (PairSpec(mesh="internal", gear_a=G(kind="helical", helix_angle="15", teeth="20"),
+                              gear_b=G(kind="helical", helix_angle="15", teeth="60", teeth_side="internal")),
+                     ("Pinion_m1.5_N20_15R", "Ring_m1.5_N60_15R", "Pair_m1.5_20T_60T_INT_H15")),
+    "crossed": (PairSpec(shafts="crossed", shaft_angle="90", gear_a=G(kind="helical", helix_angle="45", teeth="20"),
+                         gear_b=G(kind="helical", helix_angle="45", teeth="30")),
+                ("Pinion_m1.5_N20_45R", "Gear_m1.5_N30_45R", "Pair_m1.5_20T_30T_X90")),
+    "crossed_opposite": (PairSpec(shafts="crossed", shaft_angle="30", hands="opposite",
+                                  gear_a=G(kind="helical", helix_angle="45", teeth="20"),
+                                  gear_b=G(kind="helical", helix_angle="15", hand="left", teeth="30")),
+                         ("Pinion_m1.5_N20_45R", "Gear_m1.5_N30_15L", "Pair_m1.5_20T_30T_XO30")),
+    "bevel": (PairSpec(gear_a=G(kind="bevel", teeth="20", mate_teeth="40"),
+                       gear_b=G(kind="bevel", teeth="40", mate_teeth="20")),
+              ("Pinion_m1.5_N20_M40", "Gear_m1.5_N40_M20", "Pair_m1.5_20T_40T_B90")),
+    "bevel_s80": (PairSpec(shaft_angle="80", gear_a=G(kind="bevel", teeth="20", mate_teeth="30", shaft_angle="80"),
+                           gear_b=G(kind="bevel", teeth="30", mate_teeth="20", shaft_angle="80")),
+                  ("Pinion_m1.5_N20_M30_S80", "Gear_m1.5_N30_M20_S80", "Pair_m1.5_20T_30T_B80")),
+    "named": (PairSpec(assembly_name="MyPair", gear_a=G(teeth="20", name="A1"), gear_b=G(teeth="60")),
+              ("A1", "Gear_m1.5_N60", "MyPair")),
+}
+
+
+def _pair_marked(pair, **marked):
+    return replace(pair, gear_a=replace(pair.gear_a, **marked), gear_b=replace(pair.gear_b, **marked))
+
+
+@pytest.mark.parametrize("marked", ({},) + MACHINED, ids=repr)
+@pytest.mark.parametrize("name", sorted(PAIRS))
+def test_a_machined_pairs_names_are_as_at_the_cut(name, marked):
+    """Each value as pair_stems gave it at f3c4873, for every shape of pair (checked there by running this table)."""
+    from gear_generator.spec import pair_stems
+    pair, stems = PAIRS[name]
+    assert pair_stems(_pair_marked(pair, **marked)) == stems
+
+
+@pytest.mark.parametrize("name", sorted(PAIRS))
+def test_a_printed_pair_and_its_assembly_end_p_and_a_typed_name_is_kept(name):
+    from gear_generator.spec import pair_stems
+    pair, (a, b, assembly) = PAIRS[name]
+    got = pair_stems(_pair_marked(pair, process="printed"))
+    typed = (pair.gear_a.name, pair.gear_b.name, pair.assembly_name)
+    assert got == tuple(s if t else s + "_P" for s, t in zip((a, b, assembly), typed))
+    one = pair_stems(replace(pair, gear_b=replace(pair.gear_b, process="Printed")))
+    assert one[2] == (assembly if pair.assembly_name else assembly + "_P")          # either gear printed marks it
+
+
+# -- where the Box's Process was read (the review's must-fix 1) ---------------------------------------------------
+
+def test_the_box_says_where_its_process_was_read_and_it_is_not_what_the_gearbox_is():
+    from gear_generator.workbook import model
+    assert model.Box().process_cell == ""
+    assert model.Box(process="", process_cell="Box!B9") == model.Box(process="")
+    rows = [row[0] for row in model.to_sheets(replace(model.template(), box=model.Box(process_cell="Box!B9")))[0].rows]
+    assert "process_cell" not in " ".join(map(str, rows))
+
+
+# -- what only the packages' own tests held of a machined gear or gearbox (F1-REVIEW.md S1; the coordinator's ruling 4,
+# -- 2026-11-18). Seven ways of telling a machined gear or gearbox something new, each now pinned here, so F2 to F4
+# -- cannot move them unseen: M1 a machined gearbox judged as printed at its Meshes rows, M2 a machined pair judged as
+# -- printed on the form, M4 the printed helix check on a machined gear, M7 the Workbook window's blank Process on a
+# -- gearbox built machined, M10 a missing process read as printed by W9d's columns, M11 a machined shift fix tested
+# -- as printed, M24 Gleason's clearance said for a machined bevel pair. Each value was taken at f3c4873, before F1,
+# -- where the code existed then (M7's window resolution did not: it is held to D11's answer).
+
+def _machined_box(spec, marked):
+    return replace(spec, box=replace(spec.box, **marked))
+
+
+def outside_gearbox(module, teeth=(20, 40), shifts=("", ""), centre=None):
+    """Two spur gears on frame shafts at their working centre distance, or at `centre`."""
+    from gear_generator.workbook.model import Box, Gear, GearboxSpec, Mesh, Shaft
+    if centre is None:
+        centre = pair.describe(module, teeth[0], teeth[1], 20.0, 0.0, shift_1=float(shifts[0] or 0),
+                               shift_2=float(shifts[1] or 0))[0]
+    return GearboxSpec(
+        box=Box(name="Pair", pressure_angle="20", efficiency="98"),
+        shafts=(Shaft("S1", "frame", "0", "0", "0", "Z+", "input", "", "1000", "1", row=2),
+                Shaft("S2", "frame", f"{centre:.6f}", "0", "0", "Z+", "output", row=3)),
+        gears=(Gear("G1", "S1", "0", "spur", "external", str(teeth[0]), str(module), "", "5", "",
+                    profile_shift=shifts[0], row=2),
+               Gear("G2", "S2", "0", "spur", "external", str(teeth[1]), str(module), "", "5", "",
+                    profile_shift=shifts[1], row=3)),
+        meshes=(Mesh("G1", "G2", row=2),))
+
+
+def ring_gearbox(module, teeth=(20, 60)):
+    from gear_generator.workbook.model import Box, Gear, GearboxSpec, Mesh, Shaft
+    centre = module * (teeth[1] - teeth[0]) / 2.0
+    return GearboxSpec(
+        box=Box(name="RingPair", pressure_angle="20", efficiency="98"),
+        shafts=(Shaft("P", "frame", f"{centre:.6f}", "0", "0", "Z+", "input", "", "1000", "1", row=2),
+                Shaft("R", "frame", "0", "0", "0", "Z+", "output", row=3)),
+        gears=(Gear("Pin", "P", "0", "spur", "external", str(teeth[0]), str(module), "", "5", "", row=2),
+               Gear("Ring", "R", "0", "spur", "internal", str(teeth[1]), str(module), "", "5", "", row=3)),
+        meshes=(Mesh("Pin", "Ring", row=2),))
+
+
+def bevel_gearbox(module):
+    """W6's fixture A with its bevel stage at the module given."""
+    from test_workbook_turned import bevel_reducer
+    spec = bevel_reducer()
+    gears = tuple(replace(g, module=str(module), face_width="8") if g.kind == "bevel" else g for g in spec.gears)
+    return replace(spec, gears=gears, meshes=tuple(replace(m, row=row) for row, m in enumerate(spec.meshes, start=2)))
+
+
+def crossed_gearbox(module):
+    from gear_generator.workbook.model import Box, Gear, GearboxSpec, Mesh, Shaft
+    centre = module * (20 + 40) / 2.0 / 0.7071067811865476
+    helix = dict(helix_angle="45", hand="right")
+    return GearboxSpec(
+        box=Box(name="Crossed", pressure_angle="20", efficiency="98"),
+        shafts=(Shaft("S1", "frame", "0", "0", "0", "Z+", "input", "", "1000", "1", row=2),
+                Shaft("S2", "frame", "0", f"{centre:.6f}", "8", "X+", "output", row=3)),
+        gears=(Gear("G1", "S1", "8", "helical", "external", "20", str(module), "", "6", "", row=2, **helix),
+               Gear("G2", "S2", "0", "helical", "external", "40", str(module), "", "6", "", row=3, **helix)),
+        meshes=(Mesh("G1", "G2", row=2),))
+
+
+GEARBOXES = {
+    "outside_m0.5": lambda: outside_gearbox(0.5),
+    "outside_m0.5_shifted": lambda: outside_gearbox(0.5, (15, 30), ("0.5", "0.4")),
+    "ring_m0.5": lambda: ring_gearbox(0.5),
+    "bevel_m1.5": lambda: bevel_gearbox(1.5),          # Gleason's clearance 0.282 mm, which a printed pair is told
+    "crossed_m0.5": lambda: crossed_gearbox(0.5),
+    "shift_fix_m1": lambda: outside_gearbox(1, centre=30.2),        # 20 / 40 at 30.2 mm: the printed test refuses it
+}
+
+
+def gearbox_told(name, **marked):
+    """Everything the gearbox is told (every diagnostic, in order) and the fixes it is offered, as text."""
+    spec = _machined_box(replace(GEARBOXES[name](), source_path="C:\\B\\W.xlsx"), marked)
+    a = assess.assess(spec, [], OUT)
+    fixes = {where: [(f.kind, f.title, f.changes) if hasattr(f, "changes") else repr(f) for f in found]
+             for where, found in sorted(a.report.fixes.items())}
+    return [d.message for d in a.diagnostics], repr(fixes)
+
+
+FORM_PAIRS = {
+    "outside_m0.5": (dict(module="0.5", teeth="20"), dict(module="0.5", teeth="40")),
+    "outside_m0.5_shifted": (dict(module="0.5", teeth="15", profile_shift="0.5"),
+                             dict(module="0.5", teeth="30", profile_shift="0.4")),
+    "ring_m0.5": (dict(module="0.5", teeth="20"), dict(module="0.5", teeth="60", teeth_side="internal", bore="")),
+    "bevel_m0.5": (dict(kind="bevel", module="0.5", teeth="20", mate_teeth="40", bore="3"),
+                   dict(kind="bevel", module="0.5", teeth="40", mate_teeth="20", bore="3")),
+    "helical_m0.5": (dict(kind="helical", helix_angle="20", module="0.5", teeth="20", bore="3"),
+                     dict(kind="helical", helix_angle="20", hand="left", module="0.5", teeth="40", bore="3")),
+}
+
+
+def form_told(name, **marked):
+    """What the form says of the pair (`pair.mesh_warnings`)."""
+    g1, g2 = (kind_for(s).derive(s) for s in (GearSpec(**{**x, **marked}) for x in FORM_PAIRS[name]))
+    return pair.mesh_warnings(g1, g2)
+
+
+STEEP = {"helical_50": dict(kind="helical", helix_angle="50"), "herringbone_50": dict(kind="herringbone",
+                                                                                      helix_angle="50")}
+
+
+def steep_told(name, **marked):
+    spec = GearSpec(**{**STEEP[name], **marked})
+    kind = kind_for(spec)
+    return [(d.level, d.message, d.field) for d in kind.validate(spec, kind.derive(spec))]
+
+
+GEARBOX_TOLD = {
+        "outside_m0.5": [
+            [],
+            "{}"
+        ],
+        "outside_m0.5_shifted": [
+            [
+                "Gears row 2: G1: The tooth tip is 0.008 mm thick, under 0.3 × module (0.15 mm).",
+                "Gears row 2: G1: The involute starts at 7.17 mm, above the form diameter of 7.134 mm, so the bottom of the working flank is a straight line.",
+                "Gears row 3: G2: The tooth tip is 0.144 mm thick, under 0.3 × module (0.15 mm).",
+                "Gears row 3: G2: The involute starts at 14.57 mm, above the form diameter of 14.494 mm, so the bottom of the working flank is a straight line."
+            ],
+            "{}"
+        ],
+        "ring_m0.5": [
+            [],
+            "{}"
+        ],
+        "bevel_m1.5": [
+            [
+                "Gears row 0: G1: The tooth tip is 0.361 mm thick, under 0.3 × module (0.45 mm).",
+                "Gears row 0: G1: The involute starts at 32.722 mm, above the form diameter of 31.634 mm, so the bottom of the working flank is a straight line.",
+                "Gears row 0: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line."
+            ],
+            "{}"
+        ],
+        "crossed_m0.5": [
+            [
+                "Gears row 2: G1: The involute starts at 13.312 mm, above the form diameter of 13.285 mm, so the bottom of the working flank is a straight line.",
+                "Gears row 2: G1: A helix angle of 45° is outside the usual 8–30° for a helical gear.",
+                "Gears row 3: G2: The involute starts at 27.454 mm, above the form diameter of 27.353 mm, so the bottom of the working flank is a straight line.",
+                "Gears row 3: G2: A helix angle of 45° is outside the usual 8–30° for a helical gear."
+            ],
+            "{}"
+        ],
+        "shift_fix_m1": [
+            [
+                "Meshes row 2: G1 and G2 are 30.2 apart; their teeth make 30 (+0.2 mm). Check the X and Y of S1 and S2 (Shafts rows 2 and 3); a shaft at an angle is best placed by formula."
+            ],
+            "{'Meshes row 2': [\"Fix(title='Move S2 by -0.2 mm', detail='S2 X 30.2 → 30', edits=(Edit(sheet='Shafts', item='S2', key='x', value='30'),))\", \"Fix(title='Keep your positions: profile-shift G1 and G2', detail='x +0.102459 / +0.102459 → 30.200 exact · working angle 21.02° · ε 1.58', edits=(Edit(sheet='Gears', item='G1', key='profile_shift', value='0.102459'), Edit(sheet='Gears', item='G2', key='profile_shift', value='0.102459')))\"]}"
+        ]
+    }
+
+FORM_TOLD = {
+        "outside_m0.5": [],
+        "outside_m0.5_shifted": [],
+        "ring_m0.5": [],
+        "bevel_m0.5": [],
+        "helical_m0.5": []
+    }
+
+STEEP_TOLD = {
+        "helical_50": [
+            [
+                "warning",
+                "The involute starts at 56.3 mm, above the form diameter of 55.593 mm, so the bottom of the working flank is a straight line.",
+                "fillet"
+            ],
+            [
+                "warning",
+                "A helix angle of 50° is outside the usual 8–30° for a helical gear.",
+                "helix_angle"
+            ]
+        ],
+        "herringbone_50": [
+            [
+                "warning",
+                "The involute starts at 56.3 mm, above the form diameter of 55.593 mm, so the bottom of the working flank is a straight line.",
+                "fillet"
+            ],
+            [
+                "warning",
+                "A helix angle of 50° is outside the usual 20–45° for a herringbone gear.",
+                "helix_angle"
+            ]
+        ]
+    }
+
+
+@pytest.mark.parametrize("marked", [{}, dict(process="machined")], ids=repr)
+@pytest.mark.parametrize("name", sorted(GEARBOXES))
+def test_a_machined_gearbox_is_told_and_offered_at_its_meshes_rows_what_it_was_at_the_cut(name, marked, monkeypatch):
+    """M1, M24 and M11: machined pairs whose printed twins are told their clearance (outside, shifted, ring and
+    crossed at module 0.5, bevel at 1.5), and a machined shift fix the printed test refuses (20 / 40 at module 1,
+    30.2 mm)."""
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", "entity senses", raising=False)
+    said, fixes = gearbox_told(name, **marked)
+    assert [said, fixes] == GEARBOX_TOLD[name]
+
+
+@pytest.mark.parametrize("marked", ({},) + MACHINED, ids=repr)
+@pytest.mark.parametrize("name", sorted(FORM_PAIRS))
+def test_a_machined_pair_on_the_form_is_told_what_it_was_at_the_cut(name, marked):
+    """M2: `pair.mesh_warnings` on machined pairs at module 0.5, where a printed pair is told its clearance."""
+    assert form_told(name, **marked) == FORM_TOLD[name]
+
+
+@pytest.mark.parametrize("marked", ({},) + MACHINED, ids=repr)
+@pytest.mark.parametrize("name", sorted(STEEP))
+def test_a_machined_gear_over_45_degrees_of_helix_is_told_what_it_was_at_the_cut(name, marked):
+    """M4: a machined helical and herringbone gear at 50°, where a printed one is told its flanks overhang."""
+    assert [list(x) for x in steep_told(name, **marked)] == STEEP_TOLD[name]
+
+
+def test_w9ds_columns_read_a_missing_process_as_machined():
+    """M10: a part recorded with no process (before F1, or machined after it) against a machined spec has no column
+    changed, and against a printed one its Process alone, either way round."""
+    built = GearSpec().to_dict()
+    assert "process" not in built
+    for marked in ({},) + MACHINED:
+        assert update._changed_columns(built, GearSpec(**marked).to_dict()) == []
+        assert update._changed_columns(GearSpec(**marked).to_dict(), built) == []
+    printed = GearSpec(process="printed").to_dict()
+    assert update._changed_columns(built, printed) == update._changed_columns(printed, built) == ["Process"]
+
+
+def test_the_workbook_windows_blank_process_on_a_gearbox_built_machined_is_machined(tmp_path):
+    """M7: the window resolves a blank Process by the record beside the workbook (D11, ruled (B)): a record whose
+    parts were all built machined gives machined, and no record gives printed."""
+    from gear_generator import workbook_gui
+    workbook = tmp_path / "R.xlsx"
+    workbook.write_bytes(b"")
+    window = SimpleNamespace(link=SimpleNamespace(path=str(workbook)), _settled=lambda record: record)
+    assert workbook_gui.WorkbookWindow._blank_process(window) == "printed"           # nothing built yet
+    part = store.PartEntry(path=str(tmp_path / "G.SLDPRT"), gears=["G1"], spec=GearSpec().to_dict())
+    store.save_link_record(store.LinkRecord(workbook=str(workbook), parts=[part]))
+    assert workbook_gui.WorkbookWindow._blank_process(window) == "machined"
+
+
+# -- F3-0 (PLAN-PRINTED §4.1.1, §4.6 item 1): the printed parts F1 and F2 built read after F3 as they read then ------
+# -- A blank Bore allowance on a part on record is the figure the part holds, and no part built before F3 holds one,
+# -- so each part here must read after F3 exactly as it read at 08db5ba, the commit F3-0 starts from: nothing for
+# -- Update, every part reused by Build again…, nothing for the strip's Update values, Print files not refused and its
+# -- list's part blocks word for word, no Gears column changed, W9d's "bore" the shaft's own size, and nothing written.
+# -- tests/fixtures/printed/F2_built.json was made by running the code at 08db5ba (a git archive in a scratch
+# -- directory, since deleted), as RangeBox_W9_record.json was made at f3c4873: six printed parts built from the
+# -- form (a spur, a helical and a herringbone gear at GearSpec's default Bore 10, §3.2's Coupon_C with its offset in
+# -- Bore, and, added by F3-0-REVIEW's S1 from the same code, a bevel and a crown gear at Bore 8, whose bore is in the
+# -- revolved blank's link expressions) and three gearboxes built on the fake as test_workbook_in_place_round_trip.Desk builds them (the
+# -- 12 : 1 reducer printed; RangeBox_Fixed printed and machined, its Sun, Planet, dogs and Hub bored), each with what
+# -- the code said of it then.
+
+F2_BUILT = json.loads((Path(__file__).resolve().parent / "fixtures" / "printed" / "F2_built.json").read_text(
+    encoding="utf-8"))
+F2_VERSION = (34, 1, 1)
+F2_BORES = {"Sun": "8", "Planet": "4", "HighDog": "8", "LowDog": "8", "Hub": "8"}
+
+
+def _f2_bored(spec):
+    return replace(spec, gears=tuple(replace(g, bore=F2_BORES.get(g.id, g.bore)) for g in spec.gears))
+
+
+def _f2_boxed(spec, process):
+    return replace(spec, box=replace(spec.box, process=process))
+
+
+def _f2_gearbox(name):
+    """The gearbox each snapshot was built from, made again from the same code (F2_built.json's generator's)."""
+    from test_workbook_model import reducer
+    from workbook_fixtures import range_box_fixed
+    return {"reducer_printed": lambda: _f2_boxed(reducer(), "printed"),
+            "rangebox_fixed_printed": lambda: _f2_boxed(_f2_bored(range_box_fixed()), "printed"),
+            "rangebox_fixed_machined": lambda: _f2_boxed(_f2_bored(range_box_fixed()), "machined")}[name]()
+
+
+class F2Disk:
+    """A snapshot's files, as the window and the strip would find them."""
+
+    def __init__(self, held):
+        self.files = set(held["files"])
+        self.sidecars = dict(held["sidecars"])
+
+    @staticmethod
+    def key(path):
+        return path.replace("/", "\\").lower()
+
+    def exists(self, path):
+        return self.key(path) in self.files
+
+    def read_sidecar(self, path):
+        text = self.sidecars.get(self.key(path))
+        return store.from_json(text) if text is not None and self.exists(path) else None
+
+
+def _f2_part_blocks(text):
+    """A print list's part blocks and its Process line: everything from its third line to the settings."""
+    return text.split("\n", 2)[2].split("Settings for every part above")[0]
+
+
+def _f2_strip_form(sidecar, form):
+    """What the strip holds with the record open and its form as recorded: its derive through spec.as_built with the
+    record's globals, as F3-INTERFACES §5 has the strip derive while a record is open (package C's)."""
+    from gear_generator.spec import as_built
+    held = as_built(form, sidecar.record.variables)
+    return SimpleNamespace(_loaded=sidecar, _snapshot={"path": sidecar.part_path, "title": "Gear_m1.5_N25"},
+                           mode=SimpleNamespace(get=lambda: gui.MODE_SINGLE),
+                           _derived={"a": kind_for(held).derive(held)}, _gear_spec=lambda which: form)
+
+
+@pytest.mark.parametrize("name", sorted(F2_BUILT["strip"]))
+def test_a_printed_part_built_from_the_form_before_f3_reads_after_it_as_it_did(name):
+    from gear_generator import printout, swbuild, ui_text
+    held = F2_BUILT["strip"][name]
+    sidecar = store.from_json(held["sidecar"])
+    variables = dict(sidecar.record.variables)
+    assert F2_BUILT["written_at"] == "08db5ba" and sidecar.schema_version == 3 and "Bore Allowance" not in variables
+    form = GearSpec.from_dict(sidecar.record.spec)
+    assert form.is_printed() and form.has_bore() and float(variables["Bore Diameter"]) == form.bore_mm()
+    assert form.to_dict() == sidecar.record.spec and store.to_json(sidecar) == held["sidecar"]
+    assert update._changed_columns(sidecar.record.spec, form.to_dict()) == []
+    assert swbuild.structural_change(sidecar.record.spec, form.to_dict(), built_variables=sidecar.record.variables) == ""
+    assert gui.GearApp._update_target(_f2_strip_form(sidecar, form))[0] == held["update_target"] == 0
+    path = held["path"]
+    plan = printout.form_print(sidecar, path, OUT, F2_VERSION, now=0.0, exists=lambda p: store.same_path(p, path),
+                               isdir=lambda p: True)
+    assert plan.refusal is None
+    said = ui_text.print_list_text(plan, printout.PrintResult(active_restored=True), "F2")
+    assert _f2_part_blocks(said) == _f2_part_blocks(held["print_list"])
+    assert f"bore {form.bore} mm" in _f2_part_blocks(said) and "allowance" not in said
+
+
+def _f2_opened(name):
+    held = F2_BUILT["workbooks"][name]
+    record = store.link_record_from_json(held["record"])
+    disk = F2Disk(held)
+    a = assess.assess(replace(_f2_gearbox(name), source_path=held["workbook"]), [], OUT,
+                      blank_process=assess.blank_process(record))
+    assert [d.message for d in a.diagnostics if d.is_error] == [] and a.lay_out_refusal() == ""
+    up = update.classify(record, a, exists=disk.exists, read_sidecar=disk.read_sidecar)
+    again = gearbox.plan_gearbox(a, record, exists=disk.exists, read_sidecar=disk.read_sidecar)
+    return held, record, disk, a, up, again
+
+
+@pytest.mark.parametrize("name", sorted(F2_BUILT["workbooks"]))
+def test_a_gearbox_built_before_f3_reads_after_it_as_it_did(name):
+    """Update finds nothing (no part changed, nothing structural, the record matching), Build again… reuses every part
+    through _Parts.find, the footer is what F2 said, W9d's columns find nothing changed and its "bore" is the shaft's
+    own size, Print files is not refused and its part blocks are word for word F2's, and nothing is written."""
+    import re
+    from gear_generator import printout, ui_text
+    held, record, disk, a, up, again = _f2_opened(name)
+    assert json.loads(held["record"])["link_schema_version"] == 11
+    parts = record.current_parts()
+    assert all("Bore Allowance" not in dict(p.variables) and "Bore Flat" not in dict(p.variables) for p in parts)
+    assert [up.refusal, [p.changed for p in up.parts], up.record_matches] == held["update"]
+    assert held["update"] == ["", [False] * len(parts), True]
+    assert (up.structural, up.missing, up.replaced, up.moved_shafts, up.needs_new_revision) == ((), (), (), (), False)
+    assert [again.refusal, [j.stem for j in again.build], len(again.reuse)] == held["build_again"]
+    assert held["build_again"] == ["", [], len(parts)]
+    footer = ui_text.workbook_footer(a, record=record, plan=again, update=up, digest=record.digest, folder=OUT)
+    assert [re.sub(r"As read at \d\d:\d\d", "As read at HH:MM", footer.text), footer.ok] == held["footer"]
+    jobs = {g: j for j in gearbox.plan_gearbox(a, None, exists=lambda p: False, read_sidecar=lambda p: None).build
+            for g in j.gear_ids}
+    assert [update._changed_columns(p.spec, jobs[p.gears[0]].spec.to_dict()) for p in parts] == [[]] * len(parts)
+    assert {p.path: update._bore_mm(p) for p in parts} == held["bore_mm"]
+    printed = printout.workbook_print(record, a, up, OUT, F2_VERSION, now=0.0, exists=disk.exists,
+                                      isdir=lambda p: True)
+    assert printed.refusal is None
+    said = ui_text.print_list_text(printed, printout.PrintResult(active_restored=True), "F2")
+    assert _f2_part_blocks(said) == _f2_part_blocks(held["print_list"]) and "allowance" not in said
+    # Nothing written: the record as read is F2's text but for the number a write would move, and the .gear.json files
+    # are as F2 wrote them, each at its sidecar schema then (3 printed; 1 or 2 machined).
+    assert store.link_record_to_json(record).replace(
+        f'"link_schema_version": {store.LINK_SCHEMA_VERSION}', '"link_schema_version": 11') == held["record"]
+    assert disk.sidecars == held["sidecars"]
+    printed_parts = name.endswith("_printed")
+    for text in held["sidecars"].values():
+        car = store.from_json(text)
+        assert car.schema_version == (3 if printed_parts else (2 if car.record.spec.get("start_band") else 1))
+
+
+
+# -- F3-0's interface (PLAN-PRINTED §4.6 items 2 to 7; docs/notes-printed/F3-INTERFACES.md), held so that packages A,
+# -- B and C build on it. Each package tests its own work in its own files; these hold only what F3-0 lands, and the
+# -- as-built rule (spec.as_built, written whole here) on every part on record above.
+
+def test_the_spec_says_its_bore_and_leaves_the_three_keys_out_at_their_defaults_and_the_built_allowance_always():
+    from gear_generator import spec as spec_module
+    from gear_generator.spec import InputError
+    assert (spec_module.DRIVES, spec_module.BORE_FIELDS, spec_module.RECORD_ONLY_FIELDS) == (
+        ("round", "flat"), ("bore_allowance", "drive", "flat"), ("built_allowance",))
+    assert (spec_module.BORE_ALLOWANCE_GLOBAL, spec_module.BORE_FLAT_GLOBAL, spec_module.BORE_ALLOWANCE_DEFAULT) == (
+        "Bore Allowance", "Bore Flat", 0.2)
+    g = GearSpec()
+    assert (g.bore_allowance, g.drive, g.flat, g.built_allowance) == ("", "round", "", "")
+    for quiet in (dict(), dict(drive="Round"), dict(drive=" "), dict(bore_allowance=" "), dict(built_allowance="0.2"),
+                  dict(process="printed", built_allowance="0")):
+        assert not set(GearSpec(**quiet).to_dict()) & {"bore_allowance", "drive", "flat", "built_allowance"}
+    said = GearSpec(bore_allowance="0", drive="flat", flat="7").to_dict()
+    assert (said["bore_allowance"], said["drive"], said["flat"]) == ("0", "flat", "7")       # a typed 0 is kept
+    assert GearSpec.from_dict({"bore": "8", "built_allowance": "0.2"}) == GearSpec(bore="8")    # never read
+    assert GearSpec(built_allowance="0.3").with_values(teeth="30").built_allowance == "0.3"
+    # bore_allowance_mm: typed, else as built, else the printed default, else 0.
+    assert [GearSpec(**v).bore_allowance_mm() for v in (
+        dict(), dict(process="printed"), dict(process="printed", built_allowance="0"),
+        dict(process="printed", built_allowance="0.3", bore_allowance="-0.1"), dict(built_allowance="0.25"),
+        dict(bore_allowance="0"))] == [0.0, 0.2, 0.0, -0.1, 0.25, 0.0]
+    assert GearSpec(process="printed", bore="8").bore_as_cut_mm() == pytest.approx(8.2)
+    assert GearSpec(process="printed", bore="").bore_as_cut_mm() == 0.0
+    assert [GearSpec(drive=w).drive_value() for w in ("", "round", "Flat", " FLAT ")] == ["round", "round", "flat", "flat"]
+    assert [GearSpec(drive=w).has_flat() for w in ("flat", "Flat", "round", "", "square")] == [
+        True, True, False, False, False]
+    assert GearSpec().flat_mm() is None and GearSpec(flat="7").flat_mm() == 7.0
+    for bad, call, said in ((dict(drive="square"), "drive_value", r"Drive must be round or flat \(got 'square'\)\."),
+                            (dict(flat="x"), "flat_mm", r"Flat must be a number \(got 'x'\)\."),
+                            (dict(bore_allowance="x"), "bore_allowance_mm", r"Bore allowance must be a number")):
+        with pytest.raises(InputError, match=said):
+            getattr(GearSpec(**bad), call)()
+
+
+@pytest.mark.parametrize("variables, typed, built", [
+    (None, "", ""),                                             # no part on record: the default's to come
+    ((), "", "0"),                                              # on record, no globals listed: as built, 0 (F3-INTERFACES)
+    ([["Bore Diameter", "10"]], "", "0"),                       # built before F3: no global
+    ([["Bore Diameter", "10"], ["Bore Allowance", " 0.2 "]], "", "0.2"),
+    ([["Bore Allowance", "-0.1"]], "", "-0.1"),
+    ([["Bore Allowance", "0.2"]], "0.3", ""),                   # typed: what it says
+], ids=["not on record", "no globals", "no global", "0.2", "negative", "typed"])
+def test_as_built_is_the_figure_the_part_holds(variables, typed, built):
+    from gear_generator.spec import as_built
+    for process in ("printed", "machined"):
+        spec = GearSpec(process=process, bore_allowance=typed, built_allowance="9")
+        got = as_built(spec, variables)
+        assert got.built_allowance == built and got.to_dict() == spec.to_dict()
+        assert got == replace(spec, built_allowance=built)
+        want = float(typed or built or (0.2 if process == "printed" else 0.0))
+        assert got.bore_allowance_mm() == pytest.approx(want)
+
+
+@pytest.mark.parametrize("name", sorted(GEARS))
+def test_a_machined_gear_read_as_built_from_its_record_plans_says_and_names_as_at_the_cut(name):
+    """A machined part on record holds no "Bore Allowance": read through as_built it is the gear it was."""
+    from gear_generator.spec import as_built
+    spec = _spec(name)
+    kind = kind_for(spec)
+    held = [[v.name, v.expression_for(DEGREES)] for v in kind.variables(spec, kind.derive(spec))]
+    assert as_built(spec, held).built_allowance == "0"
+    assert_pinned("STRIP", name, strip_text(name, built_allowance="0"))
+    if name in SIDECARS:
+        assert_pinned("SIDECARS", name, sidecar_text(name, built_allowance="0"))
+    else:
+        assert sidecar_text(name, built_allowance="0") == sidecar_text(name)
+
+
+def _f2_entries():
+    out = []
+    for name, held in sorted(F2_BUILT["workbooks"].items()):
+        record = store.link_record_from_json(held["record"])
+        out += [(name, p.spec, p.variables) for p in record.current_parts()]
+    for name, held in sorted(F2_BUILT["strip"].items()):
+        record = store.from_json(held["sidecar"]).record
+        out.append((name, record.spec, record.variables))
+    return out
+
+
+def test_every_part_f1_and_f2_built_reads_as_built_with_no_allowance():
+    from gear_generator.spec import as_built
+    for name, spec_dict, variables in _f2_entries():
+        built = as_built(GearSpec.from_dict(spec_dict), variables)
+        assert built.built_allowance == "0" and built.bore_allowance_mm() == 0.0, name
+        assert built.bore_as_cut_mm() == built.bore_mm() and built.to_dict() == spec_dict, name
+
+
+def test_the_gears_names_and_the_derived_fields_left_out_at_their_defaults():
+    from gear_generator.gears import bevel, spur
+    from gear_generator import spec as spec_module
+    assert (spur.BORE_ALLOWANCE, spur.BORE_FLAT, spur.BORE_ALLOWANCE_DEFAULT) == (
+        spec_module.BORE_ALLOWANCE_GLOBAL, spec_module.BORE_FLAT_GLOBAL, spec_module.BORE_ALLOWANCE_DEFAULT)
+    assert (spur.FLAT_LEAST_H, spur.FLAT_LEAST_DEPTH) == (0.25, 0.3)
+    assert store.BORE_GLOBALS == (spur.BORE_ALLOWANCE, spur.BORE_FLAT)
+    for name in ("spur", "helical", "herringbone", "bevel", "bevel_crown", "dog", "hub", "ring"):
+        g = kind_for(_spec(name)).derive(_spec(name))
+        text = json.dumps(g.to_dict())
+        assert "bore_allowance" not in text and "bore_flat" not in text, name
+    g = kind_for(GearSpec()).derive(GearSpec())
+    assert (g.bore_allowance, g.bore_flat, g.bore_as_cut) == (0.0, None, 10.0)
+    cut = replace(g, bore_allowance=0.2, bore_flat=7.0)
+    assert cut.bore_as_cut == pytest.approx(10.2) and spur.derived_dict(cut)["bore_flat"] == 7.0
+    assert spur.derived_dict(cut)["bore_allowance"] == 0.2
+    crown = kind_for(_spec("bevel_crown")).derive(_spec("bevel_crown")).section
+    assert isinstance(crown, bevel.RackSection) and (crown.bore_allowance, crown.bore_flat) == (0.0, None)
+
+
+def test_the_gears_sheet_takes_the_bore_after_the_bands_and_a_row_passes_it_to_its_gear():
+    from gear_generator.workbook import model, schema
+    from test_workbook_model import reducer
+    keys = [c.key for c in schema.GEARS.columns]
+    assert keys[keys.index("end_band") + 1:keys.index("part_name")] == ["bore_allowance", "drive", "flat"]
+    columns = {c.key: c for c in schema.GEARS.columns}
+    assert columns["bore_allowance"].blank == ("0.2 printed for a new part, as built for a part on record, "
+                                               "0 machined")
+    assert columns["bore_allowance"].numeric and columns["flat"].numeric and columns["flat"].unit == "mm"
+    assert columns["drive"].words == ("round", "flat") and columns["drive"].blank == "round"
+    gear = reducer().gears[0]
+    assert (gear.bore_allowance, gear.drive, gear.flat) == ("", "", "")
+    values = gear.spec_values(reducer().box)
+    assert (values["bore_allowance"], values["drive"], values["flat"], values["built_allowance"]) == (
+        "", "round", "", "")
+    flat = replace(gear, bore_allowance="0.3", drive="flat", flat="7").gear_spec(reducer().box)
+    assert (flat.bore_allowance, flat.drive, flat.flat, flat.built_allowance) == ("0.3", "flat", "7", "")
+    assert gear.gear_spec(reducer().box).to_dict() == gear.gear_spec(model.Box()).to_dict()
+
+
+def test_the_form_has_the_three_rows_fields_and_no_built_allowance():
+    fields_ = [f for f, _ in gui.GEAR_VARS]
+    assert fields_[-3:] == ["bore_allowance", "drive", "flat"] and gui.GEAR_RECORD_ONLY == ("built_allowance",)
+
+
+def test_the_stubs_are_importable_and_neutral_until_their_packages_fill_them():
+    """F3-0's stubs (§4.6 item 7): each answers what a part built before F3 reads, and says whose it is."""
+    from gear_generator import printout, swbuild
+    from gear_generator.workbook import gearbox as gb
+    import inspect
+    assert "built_variables" in inspect.signature(swbuild.structural_change).parameters
+    assert swbuild.structural_change({"bore": "8"}, {"bore": "8"}, built_variables=[["Bore Diameter", "8"]]) == ""
+    job = SimpleNamespace(spec=GearSpec(process="printed"))
+    assert gb.as_built_job(job, None) is job
+    part = printout.print_part("C:\\Out\\G.SLDPRT", GearSpec(process="printed", bore="8").to_dict(),
+                               variables=[["Bore Diameter", "8"]])
+    assert printout.bore_figures(part) == printout.BoreFigures(bore=8.0, allowance=0.0, flat=None)
+    for stub, owner in ((swbuild.structural_change, "package B"), (gb.as_built_job, "package B"),
+                        (printout.bore_figures, "package B")):
+        assert "F3-0's stub" in stub.__doc__ and owner in stub.__doc__
+
+
+# -- F4-0 (PLAN-PRINTED §5.6 item 1): what a machined gearbox's Results sheet and diagnostics say, pinned at abdf450 ----
+
+def results_texts():
+    """Each gearbox's Results sheet rows and note, `results_sheet` called with a fixed `when` so its timestamp does not
+    break the hash, and every diagnostic its assessment gives, in order, as level, sentence and field. RangeBox,
+    RangeBox_Fixed and planetary_4to1 as built in code (machined, each with its typed torque: 10, 10 and 2 N·m); the
+    committed Risky_Placements and Reducer_12to1 read and marked machined, as `BEFORE_W8` reads them."""
+    import os
+    from test_workbook_planetary import planetary_4to1
+    from workbook_fixtures import machined, range_box, range_box_fixed
+    from gear_generator.workbook import export, model, xlsx
+    made = {"range_box": range_box, "range_box_fixed": range_box_fixed, "planetary_4to1": planetary_4to1}
+    out = {}
+    for name, make in made.items():
+        out[name] = assess.assess(replace(make(), source_path="C:\\B\\W.xlsx"), [], OUT)
+    here = os.path.join(os.path.dirname(__file__), "fixtures", "excel-windows")
+    for name in ("Risky_Placements", "Reducer_12to1"):
+        spec, diagnostics = model.from_book(xlsx.read(os.path.join(here, f"{name}.xlsx")))
+        out[name] = assess.assess(machined(spec), diagnostics, OUT)
+    prints = {}
+    for name, a in out.items():
+        sheet = export.results_sheet(a.spec, a.report, when=STAMP)
+        told = [[d.level, d.message, d.field] for d in a.diagnostics]
+        prints[name] = json.dumps({"rows": sheet.rows, "note": sheet.note, "told": told}, ensure_ascii=False,
+                                  default=repr)
+    return prints
+
+
+def results_prints():
+    return {name: _sha(text) for name, text in results_texts().items()}
+
+
+RESULTS = {
+    "range_box": "806d0a8d1998c366399e4381786e84b3157b6e4a42723622bbd658e968415b68",
+    "range_box_fixed": "31265f8bb4354d899c117c92d5b3b9b00d00ca6b35a9e7ee2b38906d6c7bed91",
+    "planetary_4to1": "d2072566bdf29847d9ce15aa64240cdcc043ab6c770bcd8c64488bbfc23f5e5c",
+    "Risky_Placements": "53ed74582370e5c11ebb9dc8060da7a30808f7c802293f2bdcfe515a132f127a",
+    "Reducer_12to1": "95321b859470e41ff6020a17605f1973dbb7bc6cbb237991d6d38c47e7510c19",
+}
+
+
+def test_a_machined_gearboxs_results_and_diagnostics_are_as_before_f4(monkeypatch):
+    """§5.5: every machined gearbox is told exactly what it was, and its Results sheet is what it is today. F4's check
+    runs for printed gearboxes only, so these hold at every commit of F4."""
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", "entity senses", raising=False)
+    texts = results_texts()
+    assert sorted(texts) == sorted(RESULTS)
+    for name, text in texts.items():
+        assert_pinned("RESULTS", name, text)

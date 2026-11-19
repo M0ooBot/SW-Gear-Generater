@@ -1,0 +1,830 @@
+{
+ "sections": {
+  "allowance": {
+   "spur default": {
+    "hole": 5.1,
+    "schema": 4,
+    "problems": []
+   },
+   "spur typed": {
+    "hole": 4.95,
+    "schema": 4,
+    "problems": []
+   },
+   "spur machined": {
+    "hole": 5.0,
+    "schema": 1,
+    "problems": []
+   },
+   "helical default": {
+    "hole": 5.1,
+    "schema": 4,
+    "problems": []
+   },
+   "helical typed": {
+    "hole": 5.15,
+    "schema": 4,
+    "problems": []
+   },
+   "helical machined": {
+    "hole": 5.0,
+    "schema": 1,
+    "problems": []
+   },
+   "herringbone default": {
+    "hole": 5.1,
+    "schema": 4,
+    "problems": []
+   },
+   "herringbone typed": {
+    "hole": 5.15,
+    "schema": 4,
+    "problems": []
+   },
+   "herringbone machined": {
+    "hole": 5.0,
+    "schema": 1,
+    "problems": []
+   },
+   "bevel default": {
+    "hole": 5.1,
+    "schema": 4,
+    "problems": []
+   },
+   "bevel typed": {
+    "hole": 5.15,
+    "schema": 4,
+    "problems": []
+   },
+   "bevel machined": {
+    "hole": 5.0,
+    "schema": 1,
+    "problems": []
+   },
+   "hub default": {
+    "hole": 4.1,
+    "schema": 4,
+    "problems": []
+   },
+   "hub typed": {
+    "hole": 4.125,
+    "schema": 4,
+    "problems": []
+   },
+   "hub machined": {
+    "hole": 4.0,
+    "schema": 1,
+    "problems": []
+   },
+   "seconds": 485,
+   "failed": []
+  },
+  "print": {
+   "D": {
+    "folder": "2026-11-18 22.06.21",
+    "problems": [
+     "41 planes in the D, not one"
+    ]
+   },
+   "round": {
+    "folder": "2026-11-18 22.06.38",
+    "problems": [
+     "40 plane(s) in a round bore"
+    ]
+   },
+   "seconds": 36,
+   "failed": [
+    "print, D: the bore read from the STEP file itself: one cylinder of radius 4.1000 about Z, one plane on x = h, the flat's corners at x = h, the least vertex radius the hole's, to 0.01 mm: ['41 planes in the D, not one']",
+    "print, round: the bore read from the STEP file itself: one cylinder of radius 4.1000 about Z, no plane, the least vertex radius the hole's, to 0.01 mm: ['40 plane(s) in a round bore']"
+   ]
+  },
+  "built": {
+   "k11": [
+    "Bore Allowance in Gear_m1.5_N68_P is 0.5 in SolidWorks and 0.3 in the workbook: type 0.5 in Gears!V3, or set it back to 0.3 in SolidWorks, and press Update SolidWorks again."
+   ],
+   "seconds": 370,
+   "failed": [
+    "built: a quiet Update values on Coupon_F2 writes nothing: changed [], no file or record written, no save flag turned: 'Nothing to update: every value in Coupon_F2.SLDPRT already matches the form.'",
+    "built-f2: an allowance typed on G2 (built before F3, no global) is structural (G4): Update would make G2's part new, naming it alone, and the window offers Build again...: ['Gear_m1.5_N68_P (G2): A bore allowance cannot be added to or taken out of a built part through its values; build it again as a new part.']",
+    "f3-reducer-machined: the four parts plan machined: {'G1': 'printed', 'G2': 'printed', 'G3': 'printed', 'G4': 'printed'}",
+    "built-machined: Printed typed: Update changes the 4 parts in place, none made new: []",
+    "built-machined: the Update wrote each part's Backlash ({'G1': (0.3, 0.3), 'G2': (0.3, 0.3), 'G3': (0.3, 0.3), 'G4': (0.3, 0.3)}) and no F3 global, in SolidWorks ({'G1': [], 'G2': [], 'G3': [], 'G4': []}) or on record ({'Gear_m1.5_N17_P.SLDPRT': [], 'Gear_m1.5_N68_P.SLDPRT': [], 'Gear_m2_N17_P.SLDPRT': [], 'OutputGear.SLDPRT': []}); each .gear.json below schema 4 ({'G1': 3, 'G2': 3, 'G3': 3, 'G4': 3})"
+   ]
+  },
+  "hub": {
+   "modes": {
+    "H": {
+     "slide_read": 55.5,
+     "slide_recorded": -55.5,
+     "origin_z": -55.5,
+     "frame_gap": 6.580016531643196e-10,
+     "bands": {
+      "start": [
+       -55.5,
+       -50.5
+      ],
+      "end": [
+       -34.5,
+       -29.5
+      ]
+     },
+     "dogs": {
+      "HighDog": [
+       -34.5,
+       -29.5
+      ],
+      "LowDog": [
+       -19.5,
+       -14.5
+      ]
+     },
+     "hub": [
+      -55.5,
+      -35.5
+     ],
+     "interferences": [],
+     "errors": {},
+     "not_free": {},
+     "engaged": [
+      "HighDog"
+     ],
+     "least": 10.0
+    },
+    "N": {
+     "slide_read": 48.0,
+     "slide_recorded": -48.0,
+     "origin_z": -48.0,
+     "frame_gap": 6.580016531643196e-10,
+     "bands": {
+      "start": [
+       -48.0,
+       -43.0
+      ],
+      "end": [
+       -27.0,
+       -22.0
+      ]
+     },
+     "dogs": {
+      "HighDog": [
+       -34.5,
+       -29.5
+      ],
+      "LowDog": [
+       -19.5,
+       -14.5
+      ]
+     },
+     "hub": [
+      -55.5,
+      -35.5
+     ],
+     "interferences": [],
+     "errors": {},
+     "not_free": {},
+     "engaged": [],
+     "least": 2.5
+    },
+    "L": {
+     "slide_read": 40.5,
+     "slide_recorded": -40.5,
+     "origin_z": -40.5,
+     "frame_gap": 6.580016531643196e-10,
+     "bands": {
+      "start": [
+       -40.5,
+       -35.5
+      ],
+      "end": [
+       -19.5,
+       -14.5
+      ]
+     },
+     "dogs": {
+      "HighDog": [
+       -34.5,
+       -29.5
+      ],
+      "LowDog": [
+       -19.5,
+       -14.5
+      ]
+     },
+     "hub": [
+      -55.5,
+      -35.5
+     ],
+     "interferences": [],
+     "errors": {},
+     "not_free": {},
+     "engaged": [
+      "LowDog"
+     ],
+     "least": 1.0
+    }
+   },
+   "clean": true,
+   "interferences": {
+    "H": [],
+    "N": [],
+    "L": []
+   },
+   "hub_hole": {
+    "facts": {
+     "in_error": [],
+     "sketch": 3,
+     "volume": 5540.771444968911,
+     "coaxial_radii": [
+      4.1,
+      8.875,
+      11.875
+     ],
+     "side_planes": [
+      [
+       9.942365,
+       [
+        -0.09148495,
+        -0.995806459,
+        -0.0
+       ]
+      ],
+      [
+       9.942365,
+       [
+        -0.09148495,
+        0.995806459,
+        0.0
+       ]
+      ],
+      [
+       8.941018,
+       [
+        -0.44503396,
+        -0.895513693,
+        -0.0
+       ]
+      ],
+      [
+       9.60094,
+       [
+        0.274419609,
+        0.961610045,
+        0.0
+       ]
+      ],
+      [
+       7.962855,
+       [
+        0.603262279,
+        0.797542866,
+        0.0
+       ]
+      ],
+      [
+       6.732138,
+       [
+        -0.738478667,
+        -0.674276841,
+        -0.0
+       ]
+      ]
+     ],
+     "links": [
+      "\"Bore@Bore Sketch\"= ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2",
+      "\"Flat@Bore Sketch\"= 2 * ( ( abs ( ( ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2 ) * ( ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2 ) - ( \"Bore Flat\" - \"Bore Diameter\" / 2 + \"Bore Allowance\" / 2 ) * ( \"Bore Flat\" - \"Bore Diameter\" / 2 + \"Bore Allowance\" / 2 ) ) ) ^ 0.5 )"
+     ],
+     "link_values": [
+      4.1,
+      5.3665631459994945
+     ],
+     "globals": {
+      "Bore Diameter": 8.0,
+      "Bore Allowance": 0.2,
+      "Bore Flat": 7.0
+     },
+     "boxes": {
+      "cylinders": 1,
+      "flats": 1,
+      "round_x": [
+       -4.1,
+       3.1
+      ],
+      "padding_beyond_minus_r": 0.0,
+      "round_past_the_flat": 0.0,
+      "flat_span": 5.3666,
+      "chord": 5.3666
+     },
+     "tip_lands": {
+      "nearest_above": 10.567,
+      "nearest_below": -10.566,
+      "half_pitch": 10.588,
+      "crossing_plus_x": 0,
+      "space_on_plus_x": true
+     },
+     "link_value_units": [
+      "mm",
+      "mm"
+     ]
+    },
+    "problems": []
+   },
+   "seconds": 212,
+   "failed": []
+  },
+  "userwork": {
+   "userwork: Sun given a D": {
+    "inserted": [
+     [
+      "Sprocket-4",
+      "Sprocket-1"
+     ],
+     [
+      "Sprocket-1",
+      "Sprocket-2"
+     ],
+     [
+      "Sprocket-2",
+      "Sprocket-3"
+     ],
+     [
+      "Housing-1",
+      "Housing-1"
+     ],
+     [
+      "Sprocket-3",
+      "Sprocket-4"
+     ]
+    ],
+    "remade": [
+     [
+      "UserAxis1",
+      "UserAxis1"
+     ],
+     [
+      "UserLock1",
+      "UserLock1"
+     ],
+     [
+      "UserLock3",
+      "UserLock3"
+     ],
+     [
+      "UserAxis4",
+      "UserAxis4"
+     ],
+     [
+      "UserDist4",
+      "UserDist4"
+     ],
+     [
+      "UserAngle4",
+      "UserAngle4"
+     ],
+     [
+      "UserAxis2",
+      "UserAxis2"
+     ],
+     [
+      "UserLock2",
+      "UserLock2"
+     ]
+    ],
+    "named": [],
+    "stopped": "",
+    "changed_files": [],
+    "facts": [
+     "fixed as in RangeBox.SLDASM: Housing-1 fixed in every mode by one FixComponent in H",
+     "UserDist4 made again with Flip False for its FlipDimension 0; it reads FlipDimension 0",
+     "UserAngle4 made again with Flip False for its FlipDimension 0; it reads FlipDimension 0"
+    ]
+   },
+   "userwork: Sun's new part": {
+    "facts": {
+     "in_error": [],
+     "sketch": 3,
+     "volume": 9381.261063239785,
+     "coaxial_radii": [
+      4.1,
+      16.375,
+      19.375
+     ],
+     "side_planes": [
+      [
+       17.068054,
+       [
+        -0.047694224,
+        -0.998861983,
+        -0.0
+       ]
+      ],
+      [
+       17.068054,
+       [
+        -0.047694224,
+        0.998861983,
+        0.0
+       ]
+      ],
+      [
+       16.493817,
+       [
+        -0.261304959,
+        -0.965256297,
+        -0.0
+       ]
+      ],
+      [
+       16.844208,
+       [
+        0.168146641,
+        0.985761993,
+        0.0
+       ]
+      ],
+      [
+       15.832746,
+       [
+        0.376125156,
+        0.926568868,
+        0.0
+       ]
+      ],
+      [
+       15.148347,
+       [
+        -0.462697366,
+        -0.886516299,
+        -0.0
+       ]
+      ]
+     ],
+     "links": [
+      "\"Bore@Bore Sketch\"= ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2",
+      "\"Flat@Bore Sketch\"= 2 * ( ( abs ( ( ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2 ) * ( ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2 ) - ( \"Bore Flat\" - \"Bore Diameter\" / 2 + \"Bore Allowance\" / 2 ) * ( \"Bore Flat\" - \"Bore Diameter\" / 2 + \"Bore Allowance\" / 2 ) ) ) ^ 0.5 )"
+     ],
+     "link_values": [
+      4.1,
+      5.3665631459994945
+     ],
+     "globals": {
+      "Bore Diameter": 8.0,
+      "Bore Allowance": 0.2,
+      "Bore Flat": 7.0
+     },
+     "boxes": {
+      "cylinders": 1,
+      "flats": 1,
+      "round_x": [
+       -4.1,
+       3.1
+      ],
+      "padding_beyond_minus_r": 0.0,
+      "round_past_the_flat": 0.0,
+      "flat_span": 5.3666,
+      "chord": 5.3666
+     },
+     "tip_lands": {
+      "nearest_above": 6.197,
+      "nearest_below": -6.196,
+      "half_pitch": 6.207,
+      "crossing_plus_x": 0,
+      "space_on_plus_x": true
+     },
+     "link_value_units": [
+      "mm",
+      "mm"
+     ]
+    },
+    "problems": []
+   },
+   "userwork: Sun in place": {
+    "facts": {
+     "in_error": [],
+     "sketch": 3,
+     "volume": 9310.575228534013,
+     "coaxial_radii": [
+      4.1,
+      16.375,
+      19.375
+     ],
+     "side_planes": [
+      [
+       17.068054,
+       [
+        -0.047694224,
+        -0.998861983,
+        -0.0
+       ]
+      ],
+      [
+       17.068054,
+       [
+        -0.047694224,
+        0.998861983,
+        0.0
+       ]
+      ],
+      [
+       16.493817,
+       [
+        -0.261304959,
+        -0.965256297,
+        -0.0
+       ]
+      ],
+      [
+       16.844208,
+       [
+        0.168146641,
+        0.985761993,
+        0.0
+       ]
+      ],
+      [
+       15.832746,
+       [
+        0.376125156,
+        0.926568868,
+        0.0
+       ]
+      ],
+      [
+       15.148347,
+       [
+        -0.462697366,
+        -0.886516299,
+        -0.0
+       ]
+      ]
+     ],
+     "links": [
+      "\"Bore@Bore Sketch\"= ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2",
+      "\"Flat@Bore Sketch\"= 2 * ( ( abs ( ( ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2 ) * ( ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2 ) - ( \"Bore Flat\" - \"Bore Diameter\" / 2 + \"Bore Allowance\" / 2 ) * ( \"Bore Flat\" - \"Bore Diameter\" / 2 + \"Bore Allowance\" / 2 ) ) ) ^ 0.5 )"
+     ],
+     "link_values": [
+      4.1,
+      5.3665631459994945
+     ],
+     "globals": {
+      "Bore Diameter": 8.0,
+      "Bore Allowance": 0.2,
+      "Bore Flat": 7.0
+     },
+     "boxes": {
+      "cylinders": 1,
+      "flats": 1,
+      "round_x": [
+       -4.1,
+       3.1
+      ],
+      "padding_beyond_minus_r": -0.05,
+      "round_past_the_flat": -0.25,
+      "flat_span": 5.3666,
+      "chord": 4.899
+     },
+     "tip_lands": {
+      "nearest_above": 6.197,
+      "nearest_below": -6.196,
+      "half_pitch": 6.207,
+      "crossing_plus_x": 0,
+      "space_on_plus_x": true
+     },
+     "link_value_units": [
+      "",
+      ""
+     ]
+    },
+    "problems": [
+     "the bore's cylinder radius [4.1], not 4.150000 (to 0.0001)",
+     "the flat's plane at x 3.100000, not at h 3.350000 on +X (to 0.0001)",
+     "Flat@Bore Sketch evaluates to 5.366563146, not 4.898979486",
+     "Flat@Bore Sketch: the Value 5.3665631459994945 is 4.898979 neither in mm nor in m",
+     "Bore@Bore Sketch evaluates to 4.100000000, not 4.150000000",
+     "Bore@Bore Sketch: the Value 4.1 is 4.150000 neither in mm nor in m",
+     "\"Bore Allowance\" = 0.2, not 0.3",
+     "\"Bore Flat\" = 7.0, not 7.2"
+    ]
+   },
+   "userwork: Sun made new, its allowance blank": {
+    "inserted": [
+     [
+      "Sprocket-3",
+      "Sprocket-1"
+     ],
+     [
+      "Sprocket-1",
+      "Sprocket-2"
+     ],
+     [
+      "Housing-1",
+      "Housing-1"
+     ],
+     [
+      "Sprocket-2",
+      "Sprocket-3"
+     ],
+     [
+      "Sprocket-4",
+      "Sprocket-4"
+     ]
+    ],
+    "remade": [
+     [
+      "UserAxis1",
+      "UserAxis1"
+     ],
+     [
+      "UserLock1",
+      "UserLock1"
+     ],
+     [
+      "UserLock3",
+      "UserLock3"
+     ],
+     [
+      "UserAxis4",
+      "UserAxis4"
+     ],
+     [
+      "UserDist4",
+      "UserDist4"
+     ],
+     [
+      "UserAngle4",
+      "UserAngle4"
+     ],
+     [
+      "UserAxis2",
+      "UserAxis2"
+     ],
+     [
+      "UserLock2",
+      "UserLock2"
+     ]
+    ],
+    "named": [
+     [
+      "UserBoreMate",
+      "mate",
+      "part new"
+     ]
+    ],
+    "stopped": "",
+    "changed_files": [],
+    "facts": [
+     "fixed as in RangeBox_r2.SLDASM: Housing-1 fixed in every mode by one FixComponent in H",
+     "UserDist4 made again with Flip False for its FlipDimension 0; it reads FlipDimension 0",
+     "UserAngle4 made again with Flip False for its FlipDimension 0; it reads FlipDimension 0"
+    ]
+   },
+   "userwork: Sun's newest part": {
+    "facts": {
+     "in_error": [],
+     "sketch": 3,
+     "volume": 9371.014926865038,
+     "coaxial_radii": [
+      4.1,
+      16.375,
+      19.375
+     ],
+     "side_planes": [
+      [
+       17.068054,
+       [
+        -0.047694224,
+        -0.998861983,
+        -0.0
+       ]
+      ],
+      [
+       17.068054,
+       [
+        -0.047694224,
+        0.998861983,
+        0.0
+       ]
+      ],
+      [
+       16.493817,
+       [
+        -0.261304959,
+        -0.965256297,
+        -0.0
+       ]
+      ],
+      [
+       16.844208,
+       [
+        0.168146641,
+        0.985761993,
+        0.0
+       ]
+      ],
+      [
+       15.832746,
+       [
+        0.376125156,
+        0.926568868,
+        0.0
+       ]
+      ],
+      [
+       15.148347,
+       [
+        -0.462697366,
+        -0.886516299,
+        -0.0
+       ]
+      ]
+     ],
+     "links": [
+      "\"Bore@Bore Sketch\"= ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2",
+      "\"Flat@Bore Sketch\"= 2 * ( ( abs ( ( ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2 ) * ( ( \"Bore Diameter\" + \"Bore Allowance\" ) / 2 ) - ( \"Bore Flat\" - \"Bore Diameter\" / 2 + \"Bore Allowance\" / 2 ) * ( \"Bore Flat\" - \"Bore Diameter\" / 2 + \"Bore Allowance\" / 2 ) ) ) ^ 0.5 )"
+     ],
+     "link_values": [
+      4.1,
+      4.866210024238574
+     ],
+     "globals": {
+      "Bore Diameter": 8.0,
+      "Bore Allowance": 0.2,
+      "Bore Flat": 7.2
+     },
+     "boxes": {
+      "cylinders": 1,
+      "flats": 1,
+      "round_x": [
+       -4.1,
+       3.3
+      ],
+      "padding_beyond_minus_r": -0.05,
+      "round_past_the_flat": -0.05,
+      "flat_span": 4.8662,
+      "chord": 4.899
+     },
+     "tip_lands": {
+      "nearest_above": 6.197,
+      "nearest_below": -6.196,
+      "half_pitch": 6.207,
+      "crossing_plus_x": 0,
+      "space_on_plus_x": true
+     },
+     "link_value_units": [
+      "",
+      ""
+     ]
+    },
+    "problems": [
+     "the bore's cylinder radius [4.1], not 4.150000 (to 0.0001)",
+     "the flat's plane at x 3.300000, not at h 3.350000 on +X (to 0.0001)",
+     "Flat@Bore Sketch evaluates to 4.866210024, not 4.898979486",
+     "Flat@Bore Sketch: the Value 4.866210024238574 is 4.898979 neither in mm nor in m",
+     "Bore@Bore Sketch evaluates to 4.100000000, not 4.150000000",
+     "Bore@Bore Sketch: the Value 4.1 is 4.150000 neither in mm nor in m",
+     "\"Bore Allowance\" = 0.2, not 0.3"
+    ]
+   },
+   "seconds": 997,
+   "failed": [
+    "userwork: Sun was built with no bore and holds the User Keyway, in no error",
+    "userwork: the Update ended ok, nothing of the user's in error: In modes H, N and L, UserBoreMate is a mate in RangeBox_r2.SLDASM that Gear Generator did not make, on Sun, which Update SolidWorks puts back, and a mate of that kind is not moved with its gear, so nothing is changed; in SolidWorks, lock your component to Sun instead, and Update SolidWorks puts it with Sun, or suppress UserBoreMate in H, N and L, and press Update SolidWorks again.",
+    "userwork: Sun in place: D 8, a 0.3, Flat 7.2: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals: [\"the bore's cylinder radius [4.1], not 4.150000 (to 0.0001)\", \"the flat's plane at x 3.100000, not at h 3.350000 on +X (to 0.0001)\", 'Flat@Bore Sketch evaluates to 5.366563146, not 4.898979486', 'Flat@Bore Sketch: the Value 5.3665631459994945 is 4.898979 neither in mm nor in m', 'Bore@Bore Sketch evaluates to 4.100000000, not 4.150000000', 'Bore@Bore Sketch: the Value 4.1 is 4.150000 neither in mm nor in m', '\"Bore Allowance\" = 0.2, not 0.3', '\"Bore Flat\" = 7.0, not 7.2']",
+    "userwork: Sun's newest part: D 8, a 0.3, Flat 7.2: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals: [\"the bore's cylinder radius [4.1], not 4.150000 (to 0.0001)\", \"the flat's plane at x 3.300000, not at h 3.350000 on +X (to 0.0001)\", 'Flat@Bore Sketch evaluates to 4.866210024, not 4.898979486', 'Flat@Bore Sketch: the Value 4.866210024238574 is 4.898979 neither in mm nor in m', 'Bore@Bore Sketch evaluates to 4.100000000, not 4.150000000', 'Bore@Bore Sketch: the Value 4.1 is 4.150000 neither in mm nor in m', '\"Bore Allowance\" = 0.2, not 0.3']",
+    "userwork: Sun made new as SunGear.SLDPRT keeps its allowance as built (0.2; ruling 1), its cell blank on record",
+    "userwork: the mate on Sun's bore face is carried (W9d's \"bore\": the D's arc at (D + a)/2, as built), made again as None on SunGear's face of radius 4.15 by mate_definition, in no error: remade ['UserAngle4', 'UserAxis1', 'UserAxis2', 'UserAxis4', 'UserDist4', 'UserLock1', 'UserLock2', 'UserLock3'], named ['UserBoreMate']; ['not remade']"
+   ]
+  }
+ },
+ "stops": [],
+ "proposal": {},
+ "switch": "True",
+ "revision": [
+  34,
+  1,
+  1
+ ],
+ "snapshot": "c5d439185be3e2c63e4ea9187987df9883483112",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": false,
+  "allowance_seconds": 60.0
+ },
+ "fails": [
+  "print, D: the bore read from the STEP file itself: one cylinder of radius 4.1000 about Z, one plane on x = h, the flat's corners at x = h, the least vertex radius the hole's, to 0.01 mm: ['41 planes in the D, not one']",
+  "print, round: the bore read from the STEP file itself: one cylinder of radius 4.1000 about Z, no plane, the least vertex radius the hole's, to 0.01 mm: ['40 plane(s) in a round bore']",
+  "built: a quiet Update values on Coupon_F2 writes nothing: changed [], no file or record written, no save flag turned: 'Nothing to update: every value in Coupon_F2.SLDPRT already matches the form.'",
+  "built-f2: an allowance typed on G2 (built before F3, no global) is structural (G4): Update would make G2's part new, naming it alone, and the window offers Build again...: ['Gear_m1.5_N68_P (G2): A bore allowance cannot be added to or taken out of a built part through its values; build it again as a new part.']",
+  "f3-reducer-machined: the four parts plan machined: {'G1': 'printed', 'G2': 'printed', 'G3': 'printed', 'G4': 'printed'}",
+  "built-machined: Printed typed: Update changes the 4 parts in place, none made new: []",
+  "built-machined: the Update wrote each part's Backlash ({'G1': (0.3, 0.3), 'G2': (0.3, 0.3), 'G3': (0.3, 0.3), 'G4': (0.3, 0.3)}) and no F3 global, in SolidWorks ({'G1': [], 'G2': [], 'G3': [], 'G4': []}) or on record ({'Gear_m1.5_N17_P.SLDPRT': [], 'Gear_m1.5_N68_P.SLDPRT': [], 'Gear_m2_N17_P.SLDPRT': [], 'OutputGear.SLDPRT': []}); each .gear.json below schema 4 ({'G1': 3, 'G2': 3, 'G3': 3, 'G4': 3})",
+  "userwork: Sun was built with no bore and holds the User Keyway, in no error",
+  "userwork: the Update ended ok, nothing of the user's in error: In modes H, N and L, UserBoreMate is a mate in RangeBox_r2.SLDASM that Gear Generator did not make, on Sun, which Update SolidWorks puts back, and a mate of that kind is not moved with its gear, so nothing is changed; in SolidWorks, lock your component to Sun instead, and Update SolidWorks puts it with Sun, or suppress UserBoreMate in H, N and L, and press Update SolidWorks again.",
+  "userwork: Sun in place: D 8, a 0.3, Flat 7.2: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals: [\"the bore's cylinder radius [4.1], not 4.150000 (to 0.0001)\", \"the flat's plane at x 3.100000, not at h 3.350000 on +X (to 0.0001)\", 'Flat@Bore Sketch evaluates to 5.366563146, not 4.898979486', 'Flat@Bore Sketch: the Value 5.3665631459994945 is 4.898979 neither in mm nor in m', 'Bore@Bore Sketch evaluates to 4.100000000, not 4.150000000', 'Bore@Bore Sketch: the Value 4.1 is 4.150000 neither in mm nor in m', '\"Bore Allowance\" = 0.2, not 0.3', '\"Bore Flat\" = 7.0, not 7.2']",
+  "userwork: Sun's newest part: D 8, a 0.3, Flat 7.2: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals: [\"the bore's cylinder radius [4.1], not 4.150000 (to 0.0001)\", \"the flat's plane at x 3.300000, not at h 3.350000 on +X (to 0.0001)\", 'Flat@Bore Sketch evaluates to 4.866210024, not 4.898979486', 'Flat@Bore Sketch: the Value 4.866210024238574 is 4.898979 neither in mm nor in m', 'Bore@Bore Sketch evaluates to 4.100000000, not 4.150000000', 'Bore@Bore Sketch: the Value 4.1 is 4.150000 neither in mm nor in m', '\"Bore Allowance\" = 0.2, not 0.3']",
+  "userwork: Sun made new as SunGear.SLDPRT keeps its allowance as built (0.2; ruling 1), its cell blank on record",
+  "userwork: the mate on Sun's bore face is carried (W9d's \"bore\": the D's arc at (D + a)/2, as built), made again as None on SunGear's face of radius 4.15 by mate_definition, in no error: remade ['UserAngle4', 'UserAxis1', 'UserAxis2', 'UserAxis4', 'UserDist4', 'UserLock1', 'UserLock2', 'UserLock3'], named ['UserBoreMate']; ['not remade']"
+ ],
+ "notes": [
+  "SolidWorks' notification box came up while FeatureExtrusion3 was in progress (exempt by the coordinator's ruling; nothing answers it)"
+ ]
+}

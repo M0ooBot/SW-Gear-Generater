@@ -13,7 +13,7 @@ from gear_generator.gears import clutch, helical, kind_for, plan_for
 from gear_generator.gears.base import AddGlobal, LoftCut
 from gear_generator.spec import GearSpec
 from gear_generator.workbook import assess, gearbox, model, modes, schema, xlsx
-from workbook_fixtures import range_box, range_box_fixed
+from workbook_fixtures import machined, range_box, range_box_fixed
 
 BOOK = "C:\\B\\RangeBox_Fixed.xlsx"
 
@@ -39,7 +39,8 @@ def errors(a):
 def test_the_two_columns_follow_slides_numeric_in_mm_and_hub_is_a_kind_word():
     keys = [c.key for c in schema.GEARS.columns]
     assert keys[keys.index("slides") + 1:keys.index("slides") + 3] == ["start_band", "end_band"]
-    assert keys[keys.index("end_band") + 1] == "part_name"
+    # F3 (PLAN-PRINTED §4.6 item 4): the bore's three columns come between the bands and Part name.
+    assert keys[keys.index("end_band") + 1:keys.index("end_band") + 5] == ["bore_allowance", "drive", "flat", "part_name"]
     for key, title in (("start_band", "Start band (mm)"), ("end_band", "End band (mm)")):
         column = schema.GEARS.column(key)
         assert column.numeric and not column.whole and column.title == title
@@ -62,6 +63,7 @@ def test_a_workbook_without_the_columns_reads_as_before():
     import os
     here = os.path.join(os.path.dirname(__file__), "fixtures", "excel-windows", "Reducer_12to1.xlsx")
     spec, diagnostics = model.from_book(xlsx.read(here))
+    spec = machined(spec)                                           # PLAN-PRINTED §2.7: a committed workbook
     assert diagnostics == [] and spec.gears
     assert all(g.start_band == "" == g.end_band for g in spec.gears)
     assert "start_band" not in spec.columns["Gears"] and "end_band" not in spec.columns["Gears"]
@@ -345,12 +347,12 @@ def test_the_updated_sidecar_keeps_a_banded_parts_schema_and_an_unbanded_ones():
 
 
 def test_the_link_record_carries_the_bands_at_schema_8_and_after():
-    """W9b set schema 8 for the bands; W9c's 9 and W9d's 10 write them unchanged (the coordinator's ruling on the W9c
-    review)."""
+    """W9b set schema 8 for the bands; W9c's 9, W9d's 10 and F1's 11 write them unchanged (the coordinator's ruling on
+    the W9c review; PLAN-PRINTED §1.2)."""
     _, _, done = _built()
     raw = json.loads(store.link_record_to_json(done.record))
     assert store._W9B_LINK_SCHEMA == 8 == store._W9A_LINK_SCHEMA + 1
-    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 10
+    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 12
     back = store.link_record_from_json(json.dumps(raw))
     assert back == store.link_record_from_json(store.link_record_to_json(done.record))
     assert next(p for p in back.parts if "RangeSlv" in p.gears).spec["start_band"] == "5"
@@ -364,7 +366,7 @@ def test_a_schema_6_7_or_8_record_reads_as_before(tmp_path, version):
     target = tmp_path / "R.workbook.json"
     target.write_text(json.dumps(raw))
     first = store.link_record_from_json(target.read_text())
-    assert first.schema_version == 10 and first == store.link_record_from_json(store.link_record_to_json(done.record))
+    assert first.schema_version == 12 and first == store.link_record_from_json(store.link_record_to_json(done.record))
 
 
 def test_an_older_reader_refuses_the_schema_written_and_leaves_it_byte_identical(tmp_path, monkeypatch):
@@ -374,7 +376,7 @@ def test_an_older_reader_refuses_the_schema_written_and_leaves_it_byte_identical
     target = tmp_path / "R.workbook.json"
     target.write_text(text)
     monkeypatch.setattr(store, "LINK_SCHEMA_VERSION", 8)                 # a W9b-era reader
-    with pytest.raises(store.UnknownSchema, match=r"schema 10, this one reads 8"):
+    with pytest.raises(store.UnknownSchema, match=r"schema 12, this one reads 8"):
         store.read_link_record(str(tmp_path / "R.xlsx"))
     assert target.read_text() == text and sorted(p.name for p in tmp_path.iterdir()) == ["R.workbook.json"]
 

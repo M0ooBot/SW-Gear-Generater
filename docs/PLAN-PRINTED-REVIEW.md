@@ -998,3 +998,1213 @@ mate not checked, turn the pair in SolidWorks.
 
 **Ready.** F1-0 may start once `printed` is cut, and then A, B and C together. The small-backlash sentence can go
 into the plan or into F1-0's interface note; it changes no interface.
+
+---
+
+# Review of stage F2 as made ready to execute (2026-11-18)
+
+**Read at `dce5aff` on `printed`**, which holds `6d616fa` (section 3, 3.0 to 3.4, and *Changes before F2*); `src`
+is unchanged since `61460b9`, the commit the plan was read against. Nothing was run on SolidWorks or Excel, and the
+suite was not run. The figures below are from scratch scripts run with `PYTHONPATH=src` against this checkout's
+`gears/spur.py` and `gears/helical.py` (import path checked), plus an independent closed form and, for the spur
+rows, the span read off the app's own drawn outline (`SpurGear.outline`). KHK's *Gear Technical Reference* page on
+tooth thickness was fetched; its formulas are images there, so only its text is quoted. ISO 21771 was not available.
+
+## 1. The span over k teeth (§3.0)
+
+**The formula is right, and every W in the table is right.** The transverse form (`W_t = (k−1) p_bt + s_bt`, `s_bt
+= d_b (s_t/d + inv α_t)`, `W_n = W_t cos β_b`) and the closed form `W_n = m_n cos α_n [(k−0.5)π + z inv α_t] +
+2 x m_n sin α_n − j_n cos α_n` are the standard base tangent length (KHK's span measurement, Tables 5.10 and 5.11;
+DIN 3960 and ISO 21771 give the same as I know them, not checked here; the backlash term is the usual `A_Wk = A_sn cos α_n`). The `− j_n cos α_n`
+term is right for this app because `helical.derive` thins the transverse section by `j / cos β` (`helical.py:354`),
+so its backlash is a normal one. I recomputed all nine rows three ways (the plan's first form from the derived gear,
+the closed form from the spec alone, and for four spur rows the span measured off `SpurGear.outline`'s recipe-A
+points, whose involute property held to 1e-15 rad). **All nine W agree with the plan to 1e-4 mm**, and so do the
+seven spur contact radii.
+
+**k is right for every spur row, shifted included**: the usual `zα/180° + 0.5` gives 2.72, 2.72, 1.83, 3.83, 3.72,
+1.94 → 3, 3, 2, 4, 4, 2, and KHK's shifted rule gives 2.62 → 3 for z 15, x +0.3. The contact radius rule picks the
+same.
+
+**k is wrong for the second helical row, because the contact radius is wrong for helical gears (must-fix M1).**
+The jaws' common normal is the base-cylinder tangent inclined at β_b, with the jaws ±W_n/2 along it from the tangent
+point; projected on the transverse plane that is W_n cos β_b, so
+
+    r_c = √(r_b² + (W_n cos β_b / 2)²)      not √(r_b² + (W_t / 2)²)
+
+(the same for spur, where β_b = 0). With the right radius the plan's own nearest-to-`r + x m_n` rule agrees with
+the textbook k (ISO 21771's rule through `d_M = d + 2 x m_n`, as I know it and computed it here):
+
+| Gear | Plan k, W_n | Right k | W_n (W_t) at right k | r_c at k 3 / k 4, pitch r |
+|---|---|---|---|---|
+| helical m_n 2, z 20, β 15° | 3, 15.0972 | **3** (ISO 2.95) | 15.0972 (15.5645) | 20.713 / 21.890, 20.706 |
+| helical m_n 1.5, z 25, β 20° | 3, 11.4156 | **4** (ISO 3.80) | **15.8438 (16.7315)** | 19.376 / 20.062, 19.953 |
+| (β 30°, m_n 2, z 20: not in the plan) | rule gives 3 | 4 (ISO 3.79) | 21.2255 | 22.338 / 23.260, 23.094 |
+
+11.4156 is a correct span over 3 teeth of that gear (its contact, r 19.38, is on the drawn involute), but the test
+would pin a k the textbook does not choose, and the error grows with β. The table row, the `r_c` formula and the
+`Span.contact_d` the interface names change; the face condition for that row becomes `15.8438 sin 18.747° + Δb`.
+
+**Should-fix on §3.0:**
+
+- **Bound the contact.** Withhold the span (or take the next k) when r_c falls below where the app's involute
+  starts (`max(flank_start_d, form_d)/2`; below it the app draws a radial flank) or within a small margin of the tip.
+  None of the nine rows is near either (the Planet's 8.112 against 7.635 is the closest), but a z 6 or a negative
+  shift could be.
+- **The narrow face.** KHK's text gives `b_min = W sin β_b + Δb` with "Δb > 3 mm to make a stable measurement";
+  the plan's 2 mm is under it. And for a **herringbone** the b is one half, `HelicalDerived.half_width` (face/2 less
+  half the groove, `helical.py:183`), which the plan does not say.
+- **Recipe B (arcs).** The span is a constant only on an involute. On the m 1.5, z 20 printed gear drawn with
+  arcs, the span read off the outline runs from 11.139 to 11.221 mm across the flank, 0.08 mm, about the size of
+  what the user is measuring. Show it for recipe A only, or say *approximate* for B.
+- **A ring** is measured over pins (balls for a helical ring), not balls only; the wording.
+- **The check owed by package A** "against a worked example in ISO 21771 or KHK" may not be obtainable (ISO is
+  sold; KHK's web formulas are images). Let the check also be the outline route above: the span read off the
+  drawn outline equals the formula for recipe A, which tests the app's own backlash and shift conventions, which a
+  textbook example cannot.
+
+**What a measured span tells the user, and the arithmetic back.** The jaws read square to both flanks, so
+`e = (W_measured − W) / 2` is how far the printer pushed each flank out, square to it, on spur and helical alike.
+That is right. D3's 0.3 mm leaves `0.15 cos 20° = 0.141` mm a flank; less a printer's 0.10 it leaves 0.04, so
+`j = 2 (e + 0.04) / cos α` keeps 0.04 mm a flank a gear (0.16 mm normal play for a pair), and e = 0.10 gives
+0.298 (0.3 stays), as the plan says. Three should-fixes:
+
+- write `cos α_n` of the gear, not `cos 20°`, in the Measured line;
+- **a floor**: below e ≈ −0.04 mm the formula gives j ≤ 0, and §2.3 found drawn parts overlapping under about
+  0.04 mm a gear (0.08 for a 6 / 30 pair);
+- **D3's promise "never more than today's"**: a printer adding 0.12 mm gives j = 0.34, more than 0.3 × module
+  below module 1.13. Setting D3 from the measurement moves the IIF's breakpoint (`"Module" <= j / 0.3`) as well as
+  its constant, which the plan should say, and which is the user's to accept (U4).
+
+## 2. The STEP probe (§3.1.2)
+
+**The calls.** `IModelDocExtension.SaveAs(path, 0, 1|2, null, out, out)` is in the macro database exactly as the
+plan cites it (`API-LEDGER.md:190`, `entries/files/04`), *Verified, SW 2026, Airfoil Converter 2026-09-16*, through
+the same `_out_long()` and `_null_dispatch()` this repo's `swcom` has, on the active part. **Unverified, as the
+plan says:** 2024; non-zero codes; the schema and unit written; a non-active document; a modified one. Also
+unverified and not said: exporting a part **loaded only as a component of an open assembly**. `GetSaveFlag`,
+`CloseDoc` (discards, no prompt, parts on both versions), `OpenDoc6` and `ActivateDoc3` are verified on both
+versions in the ledger (lines 107-116, 150, 171). One choice is not argued: the app already calls `SaveAs3` on the
+same `Extension` with the same typed nulls on both versions (`swcom.py:1366-1376`); the ledger says to prefer
+`SaveAs`. Either is fine; F2-0's note should say which and why.
+
+**Safe on a live session?** Yes, as written: scratch parts in the run's folder, titles recorded, only its own
+documents closed unsaved, the dialog watch, fresh sessions. Steps 1 to 7 cannot overwrite anything of the user's
+(step 5 overwrites its own file on purpose). Two points:
+
+- **Step 8 (a part built into error) asks a question nothing depends on**, adds the one dialog the run expects, and
+  on 2026 a What's Wrong box is the STOP. By the handoff's rule (a probe only for a call that could hang, raise a
+  dialog or damage; a point the app does not depend on written as a caveat) it should be dropped, or run last on
+  its own copy with the box allowed on both versions. *A ruling.*
+- **Record the save flags of the user's own open documents** before and after, not only their titles.
+
+**Does each finding gate exactly what depends on it?**
+
+- `STEP_EXPORT_ON_<year>` gates the press per version, both steps 2 and 4 needed. Right.
+- `SAVE_AS_COPY`'s row says *the export is not offered*; the next row says the button is *shown and enabled* and
+  refuses. Say one thing.
+- `STEP_EXPORT_NEEDS_ACTIVE_ON_<year>` is measured on parts in their own windows, but the Workbook window's press
+  meets parts that are components of an open assembly, or not open at all. And `Session.export_step` exports the
+  session's *build document*: a part already open becomes that by `use_open_document` (no activation,
+  `swcom.py:3528`), one not open by `open_document`, which **always activates** (`:3546-3606`). So *activate=False*
+  is only reachable for parts already open. The probe should export a part open only as an assembly component (the
+  assembly's save flag read too), and the interface should say how each part becomes the build document, that the job
+  closes only what it opened (never the assembly; the ledger's line 113 records a 2024 *Save Modified Documents* box
+  on closing an assembly) and gives the user back the document that was active. **Must-fix M5**, since the probe
+  gets one follow-up round per version.
+- **Step 6's "the file is right" is not defined.** Define it: the file's text equal to step 2's but for the
+  `FILE_NAME` header line, and unlike step 4's.
+- `STEP_FILE_CHECK` is one name in the interface (§3.3) but *per version* in §3.1.4. **Must-fix M2, below.**
+
+**Checking the file as text (§3.1.4).** Reading the frame, the solid count and `OPEN_SHELL` is sound and safe, and
+never reopening a STEP file is right (`GOTCHAS.md` §20). Two faults:
+
+- **The schema and the unit are not version facts.** The AP is the user's *Tools > Options > Export* setting (the
+  plan says so in §3.1.1), and the unit follows the document. Pinning what the probe's session wrote would refuse
+  every file of a user who exports AP242, with the list left unwritten. Accept the frame, exactly one solid, no open
+  shell, a `FILE_SCHEMA` among AP203, AP214 and AP242, and a length unit the check can read (millimetre expected;
+  Bambu Studio reads others through OpenCascade); log the rest as facts. `STEP_FILE_CHECK` then needs no per-version
+  value. **Must-fix M2** (it changes F2-0's finding names).
+- **What it misses.** A file with one closed solid of the wrong shape: another document's part (the activation
+  question), a part as it was before an unsaved change (refused before, but the check would not catch a fault in
+  that refusal), a scale or unit slip, a body with a cut missing. A cheap text check catches all of these: read the
+  `VERTEX_POINT` coordinates and require the largest radius from the axis to be the part's `da/2` and the axial
+  extent its face width, each to 0.01 mm (the build's frame is the app's own). Also count entity instances
+  (`= MANIFOLD_SOLID_BREP(`), not substrings, and refuse `SHELL_BASED_SURFACE_MODEL`. Should-fix.
+
+## 3. The export itself (§3.1.3)
+
+**Refusals.** Unsaved, mismatched against the record (W9a's marks), globals not the record's (K11's read,
+`swbuild.py:5407`), a feature in error, a workbook that Update would change, the whole set or nothing: right, and
+nothing is written before every part has passed. One citation is wrong: the feature-error read is not at
+`swcom.py:900-925` (that is `MateState` and `ComponentInfo`) but the `GetErrorCode2` helper at `:1083-1095` and the
+build walk at `:2614`/`:2816`. And `Session.has_unsaved_changes` (`:1161`) reads the build document only.
+
+**Nothing of the user's is overwritten or saved**, provided the probe shows `SaveAs` with *copy* leaves path, title
+and save flag alone, which is what it asks. W9's rule holds: the user's features in a gear part go out in the file
+and are named in the list; nothing in the assembly, the layout or a carrier is touched; no build, Update or Build
+again… path changes. F1's rule holds: a machined part is exported, nothing of it changes, and its Derived panel
+stays (but the list's *span over k teeth* "for an external spur or helical part" contradicts E1's *never a
+machined gear*: say which).
+
+**Names: must-fix M3.** *A name that exists gets `_r2`, `_r3`, as a part does.* In this app `_r2` already means a
+part's second revision (Build again…). Print revision 1's `Gear_m1.5_N20_P` twice and you have
+`Gear_m1.5_N20_P_r2.step`, which reads as the file of the part `Gear_m1.5_N20_P_r2.SLDPRT`; build that revision and
+print it, and its file must become `…_r2_r2` or `…_r3`, either misleading. The list's own name is not said to take a
+suffix at all, so a second press could overwrite it. A folder per press, `print\<Box name> <date time>\`, holding
+the files and the list, never reused, removes the clash, keeps each set whole and lets the window name the set. *A
+ruling* (it changes `PrintPlan.folder` and `list_name` in the interface).
+
+**A set that fails its check after export** leaves files with no list beside them, and the next press writes the
+whole set again. With a folder per press, name that folder *not checked* or write a list that says *do not print*.
+Should-fix. Also say that the app makes the `print` folder before the first export.
+
+## 4. The user's step (§3.2)
+
+**Could someone who never saw the plan follow it?** Nearly. It is in order, names every field and what to type, and
+the figures it quotes are right (11.209 for m 1.5, z 20; k 4 and 21.223 for m 2, z 30; outside diameter 33.0).
+What is missing or may mislead:
+
+- **Where the files are**: *the `print` folder inside the Output folder you built into*, and that a list file is
+  there too.
+- **The seam.** §3.2 says *Seam position: Aligned*; the list says *the seam kept off the tooth roots*. Say one thing,
+  and tell the user to measure away from the tooth that carries the seam. (Whether Bambu Studio's *Aligned* puts a
+  gear's seam in the roots was not checked here.)
+- **The jaws.** Zero the calipers, close with the same light force each time (the thumb roller, not a squeeze), and
+  for a helical gear (the explainer) let the calipers tilt with the teeth: *square to the axis* is for spur gears.
+- **Which average.** The average of the twelve smallest-steady readings; any reading 0.05 mm off the rest is taken
+  again.
+- **The bore coupons' range and the rule's gaps.** Small FDM holes often print 0.1 to 0.3 mm under (my
+  understanding, not measured), so all four may come out (a) or (b). The rule "(c), or between (b) and (c) if none
+  is (c)" says nothing when two are (c) (take the smaller), when none is (b) or (c) (print +0.4 to +0.7, or −0.1
+  and below if all are (d)), or which face the shaft enters from: try it from the top face and from the bed face,
+  where the first layer narrows the hole. A round coupon also says nothing about F3's D-flat, whose flat is a
+  straight wall; say so.
+- **One size cannot tell shrink from a fat wall.** ΔW on one gear mixes a fixed flank growth with PLA's
+  size-proportional shrink (a few tenths of a per cent, about 0.02 mm a flank over 11 mm). Printing one m 2, z 30
+  gear beside them (k 4, 21.223) separates the two. Optional, about twenty minutes of printing.
+- **The record of the print.** Add to the table: the printer, the filament (brand, colour), Bambu Studio's version,
+  the nozzle, and any setting not as listed.
+- **Bambu Studio's STEP import** may show a mesh-precision dialog in recent versions (not checked here): keep its
+  default, since a coarser mesh lays chords inside the involute and shrinks the reading.
+
+**Are the numbers used correctly?** The span gives e, square to the flank, and D3's j follows correctly from the
+0.04 mm a flank the plan budgets (§1 above, with its floor, its cos α_n and its breakpoint). The bore allowance is a
+grade, used as F3 needs it (F3's `Bore Allowance` added to the bore diameter). Both stay on the user's word.
+
+## 5. Readiness
+
+- **Disjoint files:** A (`gears/span.py`, `test_span.py`), B (`printout.py`, `swcom.py`, `swbuild.py`, four test
+  files) and C (`gui.py`, `ui_text.py`, `workbook_gui.py`, `design/`, `README.md`, three test files) are disjoint,
+  and F2-0's stubs in B's and A's files come first. **But the sentences have two owners (must-fix M4):** B's
+  `PrintPlan.refusal` is a string, `export_step` raises "with a sentence" and `print_parts` returns a result, while C
+  owns "every refusal and result sentence, the gate sentence" in `ui_text`. Either F2-0 stubs the `ui_text` functions
+  B calls, with their exact words in the interface note, or B returns codes and C words them. Say which, and who
+  checks the per-version gate (the planning read or the job).
+- **The interface** also leaves `form_print(sidecar, ...)`'s other arguments and `PrintResult`'s fields open, and
+  should name the K11 comparison B reuses (`workbook/update.py:3096`, private), so B does not need a file it does not
+  own.
+- **Tests owed, missing:** the helical k at β 20° (and a β 30° case), the contact bound, the herringbone half, recipe
+  B, the Measured line's floor and breakpoint, the per-version gate, `_r2`/folder naming against existing revision
+  stems and the list never overwritten, a part open only as a component, and that the job leaves the open documents
+  and the active one as it found them.
+- **Done when** should add the board and `UI-DESIGN.md`/`README.md` updated, and the interface reviewed.
+- **Cost.** F1 was costed at six agent runs; its notes record about ten reviewed steps (F1-0 and its review, three
+  packages, the review and its fixes, the demonstration script, its review, the runs and their review). F2's ten
+  leave out the interface review, the should-fix round after the stage review, the review of the findings commit,
+  and the probe's follow-up round the house rule allows. **Thirteen to fifteen** is the honest figure, and about 90
+  SolidWorks minutes with one follow-up round per version (the 65 is the arithmetic of 10 + 15 + 15 + 25 and holds as
+  the floor).
+- **The button.** `design/UI-DESIGN.md` §2 puts **Build** and **Update values** in the form's **footer**; the
+  **Output** panel is the folder, the templates and **Open .gear.json** (`:210-228`). *In the Output panel, beside the
+  build buttons* cannot both hold: the footer is the place. In this app's names an ellipsis means a question or a
+  dialog follows (**Export as…**, **Build again…**, **Locate…**); **Print files…** asks nothing, so **Print files**.
+  The window's footer is drawn at 1080 px *with all four buttons* (`:623-628`); a fifth needs the board to show the
+  sentence keeps its 400 px. And the form exports *the part active in SolidWorks*, which may not be the gear on the
+  form: the SolidWorks bar should say which file it will write, as it does for Update values (`:216-221`).
+- **Decisions taken silently:** the folder layout and repeat naming (M3); the D3 floor and breakpoint; refusing a
+  print when only a shaft's place would change on Update (E3 as written refuses it; a print set does not depend on
+  the layout); and dropping probe step 8.
+
+## 6. Before F2-0 starts
+
+**Must-fix** (each changes the interface note, the probe or a figure the tests pin):
+
+- **M1.** The helical contact radius: `r_c = √(r_b² + (W_n cos β_b / 2)²)`; the m_n 1.5, z 25, β 20° row becomes
+  k 4, W_n 15.8438 (W_t 16.7315); `Span.contact_d` follows.
+- **M2.** `STEP_FILE_CHECK`: one set of accepted values (frame, one solid, no open shell, AP203/214/242, a readable
+  length unit), not a per-version pin of the probe session's schema; the interface's finding names match.
+- **M3.** Repeat presses: a folder per press, or a suffix that cannot be read as a part revision; the list never
+  overwritten. A ruling, then the interface.
+- **M4.** Who owns the refusal and result sentences between `printout`/`swbuild` (B) and `ui_text` (C), and who
+  checks the gate.
+- **M5.** The probe adds a part open only as an assembly component, and the interface says how each part becomes the
+  build document, what is activated, what is closed, and what is put back.
+
+**Should-fix** (can go into F2-0's note or the packages): the contact bound, Δb ≥ 3 mm and the herringbone half,
+recipe B, the Measured line's cos α_n, floor and breakpoint, step 6's "right file" and step 8, the user documents'
+save flags, the vertex-extent check, the failed-set folder, the list's span for machined parts, `SAVE_AS_COPY`'s
+wording, the `swcom.py:900-925` citation, the button's place and ellipsis, the cost, and §3.2's items in section 4.
+
+**Ready for F2-0 once M1 to M5 are in the plan or ruled.** None needs the user; M3 and step 8 need the coordinator.
+
+---
+
+# Re-check of the revision to F2's review (2026-11-18)
+
+**Read at `a20108b`** (`docs/PLAN-PRINTED.md` §3 and *Changes after F2's review*), against the code at `dce5aff`. Small
+scratch computations only; nothing run on SolidWorks, Excel or the suite.
+
+## 1. The five must-fixes
+
+- **M1, fixed at its cause.** §3.0 now gives `r_c = √(r_b² + (W_n cos β_b / 2)²)` with its derivation, and
+  `Span.contact_d` becomes `SpanReading.contact_d = 2 r_c`. The three helical rows agree with my recomputation: β 15°
+  k 3, W_n 15.0972, W_t 15.5645, r_c 20.713; β 20° k 4, 15.8438, 16.7315, 20.062; β 30° (new) k 4, 21.2255, 24.0448,
+  23.260; the faces needed (`W_n sin β_b + 3`) 6.67, 8.09 and 12.97 mm, β_b 14.076°, 18.747°, 28.024°. Each k is the
+  textbook one. **Should-fix:** the table gives no face width, and the β 30° gear at the default face of 10 mm is
+  under its 12.97, so its test would read *narrow face*, not the figure. Give that row a face (14 mm, say).
+- **M2, fixed.** No schema or unit is pinned; the check accepts AP203, AP214 and AP242 and any unit it can read, counts
+  instances, and refuses a surface model; `STEP_FILE_CHECK` is withdrawn. Two should-fixes: match the schema by its
+  name's prefix (SolidWorks writes the name followed by `{ 1 0 10303 … }`, and AP203's second edition is
+  `AP203_CONFIGURATION_CONTROLLED_3D_DESIGN…`, not `CONFIG_CONTROL_DESIGN`; step 3 will show which); and the
+  vertex-extent check should not refuse a part that holds the user's own features (a boss of theirs can pass the
+  tip circle): there it is a fact in the list, not a refusal.
+- **M3, fixed by the ruling.** A new folder per press, by date and time with a counter, `print list.txt` inside it,
+  `_r2` left to revisions, and a failed set's list headed *DO NOT PRINT THIS SET*. Nothing can be overwritten.
+- **M4, fixed.** B returns codes and structure, C's `ui_text` owns every sentence and the list's text, the interface
+  note gives each code's sentence once, and B checks the gate in planning and in the job. Disjoint as before, with
+  F2-0's stubs in `ui_text.py` added to its files.
+- **M5, fixed.** Probe step 7 exports a part open only as an assembly component, with a measured fallback, and two
+  findings gate them; the job says how each part is reached, reads everything before any export, closes only what it
+  opened (never an assembly) and puts the active document back. The citations hold (`active_document` `swcom.py:1131`,
+  `save_flags` `:3837`, `_squash` `swbuild.py:1414`, `_value_edits` `:5424`). Two should-fixes:
+  `GetOpenDocumentByName` is *Unverified* in the ledger (`API-LEDGER.md:94`) and new to this app, so the note should
+  say step 7 is its first use; and a **lightweight** component is not covered: the 12 : 1 fixture has been opened
+  lightweight in W9a's runs. Say that a part whose component is lightweight is treated as not reachable (fallback or
+  refusal), and have step 7 or the demonstration show it.
+
+## 2. The arcs ruling
+
+**Sound.** No figure and *choose Involute to measure* is the least misleading of the three choices, the coupons are
+Involute, the list says the same, and `span(derived, recipe)` carries the recipe. It covers helical arcs gears too.
+
+## 3. Dropping the part-in-error step
+
+**Safe and true, as written.** The app refuses a part with a feature in error in the job, on the form and in the
+window, after all reads and before any export (§3.1.3), so it never makes the export the step measured, and the
+caveat says exactly that. One should-fix: say whether a feature whose `GetErrorCode2` is non-zero with `IsWarning`
+True refuses. Refusing a warning would block a user's part that SolidWorks itself builds; I would refuse errors and
+name warnings in the list. (Opening a part in error on 2024 can show a What's Wrong box, as W9's Update meets
+already; that is not new to F2.)
+
+## 4. The user's instructions
+
+All my points are in: where the files are, the import precision, the seam, zeroing and light force, the tilt on a
+helical gear, the mean of twelve with re-takes, both faces for the shaft, the coupon-range gaps and the D-flat
+caveat, the optional second size, the record of what was printed, the floor, `cos α_n`, and the breakpoint put
+plainly as the user's choice. One wording gap: a user whose shaft is over 18 mm prints all four at module 2, z 30,
+so their optional Coupon_E should then be the other size (module 1.5, z 20), or it measures nothing new.
+
+## 5. Readiness
+
+**F2-0 may start.** M1 to M5 are fixed at their causes; what is left are the should-fixes above (the β 30° row's face,
+the schema prefix, the extent check beside user features, `GetOpenDocumentByName` as unverified, lightweight
+components, warnings against errors, Coupon_E for large shafts), each of which fits in F2-0's interface note or its
+probe without changing the plan's structure.
+
+---
+
+# Review of stage F3 as made ready to execute (2026-11-18)
+
+**Read at `2656479` on `printed`**, which holds `674d315` (§4, 4.1 to 4.6, and *Changes before F3*) against the code at
+`f28cb75` (`src` unchanged since). Nothing was run on SolidWorks or Excel, and the suite was not run. Figures are from a
+scratch script (plain Python, the formulas below); the code was read in this checkout (import path checked). The macro
+database was read at `/home/m0obot/SW-Macro-Database` (`API-LEDGER.md`, `GOTCHAS.md` §27 and §35). Two web searches
+were made on FDM hole fits; Bambu's wiki page itself could not be fetched (HTTP 402), so what it says is quoted from the
+search's summary and marked so.
+
+## 1. The bore allowance (§4.1)
+
+**What it is in the part.** One global, `"Bore Allowance"`, a literal in mm, present only when not 0, and the bore
+sketch's `Bore` dimension (a circle, so a diameter: `findings.CIRCLE_DIMENSION`) linked to `"Bore Diameter" + "Bore
+Allowance"` in place of `"Bore Diameter"`. Positive enlarges the hole; `"Bore Diameter"` stays the shaft. It is on the
+diameter, so the wall moves by half of it. It reaches spur, helical and herringbone gears (`helical._bore_ops` calls
+`spur._bore_ops`, `helical.py:417-418`), dogs and hubs (`clutch._Clutch._as_spur` is a `dataclasses.replace` that
+keeps every other field, `clutch.py:109-112`) and, through text in its two link expressions, the bevel's revolved bore
+(`bevel.py:881-893`). A ring has none (`internal.py:972`, `:1026`) and a sleeve, an internal ring, none either; its
+banded relief is not a shaft bore. All of this is right, and every citation in §4.1 is at the line it names
+(`swcom.py:1425`, `:1726`, `:1737`, `:1747`, `:1756`, `:1875`, `:1902`, `:1966`; `spur.py:913-916`, `:963-972`,
+`:1025-1028`; `swbuild.py:1305`, `:1333`; `store.py:91`, `:426-432`), with one exception: the helical's globals
+are at `helical.py:492`, not `:426`, which is `_property_sizes` (the custom properties). The bevel's globals
+(`bevel.py:716`) need the new global too; the plan names only its expressions.
+
+**0.2 mm on the diameter, as a placeholder.** It is on the diameter, which matches §3.2's coupons (shaft + 0.0 to + 0.3,
+typed in Bore). As an FDM figure it is defensible as a starting point and no more, which is what the plan says it is.
+What I found:
+- Several fit guides put a running or sliding fit at about 0.2 to 0.4 mm total on the diameter. One table gives PLA
+  0.15 to 0.25 mm for a sliding fit. They disagree on whether a figure is on the diameter or per side, so each must be
+  read for its convention.
+- Holes print under size. By the search's summary of Bambu's wiki, which I could not open: the nozzle drags the bead
+  toward the hole's centre; Bambu Studio's *X-Y hole compensation* defaults to 0; and its example corrects a hole
+  0.5 mm small with +0.25, so that setting is per side. One forum report has round holes about 0.23 mm small on one
+  Bambu printer.
+- So on a stock profile, 0.2 on the diameter may leave little or no running clearance: a snug fit for a gear fixed to
+  its shaft, tight for one that must spin free (an idler, a planet, a gear riding on its shaft until a dog engages
+  it). The coupons decide this (V1), so the figure needs no change before code. Two points follow:
+  - **A user who sets hole compensation counts it twice.** §3.2 already prints the coupons with X-Y hole compensation
+    0 (`PLAN-PRINTED.md:1239`), and the README should tell the user to keep it at 0 for parts printed with the
+    calibrated allowance. Should-fix (C, README).
+  - **The coupon instructions break when F3 lands (must-fix M3, §6).**
+
+**"A blank is *as built*" is the right rule, and it is not inert as written: must-fix M1.**
+
+*The principle.* D11's (B) applied to a number is sound. Every part on record before F3 has no `"Bore Allowance"` in
+its recorded `variables`, so it reads as 0, and moving the 0.2 later rebuilds nothing.
+
+*Where the plan applies it.* In one function, `gearbox.as_built_allowance(entry)`, used "where planning turns a row
+into a spec for a part on record", naming two places: the workbook's planning and the strip's `_update_target`. In the
+code a blank allowance on record is read in many more places than those two, and each of them plans a spec with no
+entry at hand:
+
+- **Reuse.** `gearbox._Parts.find` (`gearbox.py:579-615`) compares each recorded entry with a job that the assessment
+  planned from the row before any record was read, through `_matches` → `same_part` and `_variables_match`
+  (`:418-449`).
+  - That job of a printed row with a bore carries `"Bore Allowance" 0.2`, and a part built in F1 or F2 does not, so
+    it never matches, and Build again… makes every such part new.
+  - The match decides which entry is the part, so the as-built figure cannot simply be read "for the row's entry"
+    first. It has to be tried per candidate entry, the job replanned with that entry's figure.
+- **Update.** `update._part` (`update.py:294-337`):
+  - `same_part(built, job.spec)` replans the *recorded* spec through `_plan_of`, which under F3 gives a printed
+    blank the current default and not what was built;
+  - `_variables_match` then sees the planned `"Bore Allowance"` missing from the record;
+  - so the press either says "its new values need the global "Bore Allowance", which the built part does not have, so
+    it needs a new part", or reaches `planned_changes`' BuildError "not built by this tool" (`swbuild.py:1412-1421`).
+  - `_ignored_fields_as_built` and `swbuild.structural_change` read raw spec dicts. There a blank cannot tell "built
+    at 0.2" from "built before F3, at 0", so `has_allowance` beside `has_shift` cannot be judged from
+    `(built, wanted)` as the plan places it.
+- **Print files.** `printout.workbook_print` refuses a gearbox that `classify` says Update would change (F2), so every
+  printed gearbox with a bore built before F3 would be refused. `printout.print_part` derives the recorded spec
+  (`printout.py:292-330`), so the list's new bore line would say *+ 0.2 allowance* for a part cut without one.
+- **The strip.** `self._derived["a"]` is derived from the form on every edit. `_update_target` (`gui.py:1745-1764`)
+  and the Update values path (`:1870`, `:1945`) use it. The Derived panel's *Bore as cut* would say 8.2 for a part cut
+  at 8. All of this is in `gui.py`, package C's file, while the rule is given to B.
+- **K3 and K11.** K11's `_blank_meaning` sees a `GlobalVariable` only (`swbuild.py:5474-5486`), and a blank
+  allowance is a literal there, so it would be said as typed. K3's `ui_text._expression_words` and `_value_under`
+  (`ui_text.py:5003-5038`) would say *type 0.2 in Gears!X2 again* where the cell was blank. The plan covers K11's words
+  (B) but not K3's (C).
+
+*How large it is.* `GearSpec`'s default Bore is `"10"` (`spec.py:153`). So every printed part F1 and F2 built from a
+form left at its default has a bore: the user's coupons, and the dogs and hub of a printed RangeBox. Without the rule
+threaded through all of the places above, the first Update or Build again… after F3 on a printed gearbox does exactly
+what D11 (B) exists to prevent.
+
+*What F3-0's interface must say*, since `kind.derive(spec)` has no entry:
+- **How the as-built figure travels**: a spec field that `to_dict` never writes, set by planning; or a resolved
+  literal in `bore_allowance`. The second changes the recorded spec and makes `_changed_columns` say *its Bore
+  allowance changed* for a hole that did not change.
+- **Each call site above, and its owner.**
+- **A rule for structural judging**: "has the global" taken from the recorded `variables` on the built side, and from
+  the resolved figure on the wanted side.
+
+*What I could not check*, and the threading should cover: whether `gearbox.py`'s own same-file checks
+(`occupant`, `free_name`) and W9d's `carry_for` see a job planned before the record is read.
+
+**Is it inert for every record W9, F1 and F2 wrote?**
+- **Machined, yes**, once M1 is done. A machined blank is 0 with or without the rule; there is no global, the link text
+  is unchanged and `to_dict` leaves the three keys out. So the bytes are W9's, as F3-0's pins will hold. Without M1 it
+  is inert too, since machined never resolves to 0.2.
+- **Printed, no**, until M1 is done: see above.
+- **Two cases the plan does not say** (should-fix):
+  - a part on record whose Process changes, in either direction, keeps its as-built figure. The column note *0
+    machined* is then not the whole truth for a printed part made machined;
+  - a typed allowance cleared on a built part does nothing (blank is as built), so the user cannot go back to the
+    default by clearing the cell. *Bore as cut* shows it, which is enough if the explainer says so.
+
+**Update SolidWorks after the user types an allowance on an existing gearbox.**
+- **A part without the global** (built before F3, machined, or printed at a typed 0): the change is none to some, and
+  so structural. Update refuses that part with the plan's sentence and Build again… makes it new. W9a's and W9d's rules
+  cover it as they cover a Flank change:
+  - the user's features in the old part stay behind and are named;
+  - a mate of theirs on the old bore is named, not found again (K5).
+- **A part with the global** (printed and built at F3 with a blank or a typed figure): the change is a value. W9c's
+  Update sets the global in place, and W9a's rules cover it:
+  - K11, if the user changed `"Bore Allowance"` in SolidWorks;
+  - K3, if a feature of theirs in the bore (a keyway) goes into error. The sentence then names *Bore Allowance 0.2 to
+    0.3 (Gears!…)*, with the blank-cell wording gap above.
+- **Going from some to none** (typing 0) is refused as structural, though the part's global could carry 0. This keeps
+  house precedent (Profile shift), so I accept it.
+- **New, and not decided (should-fix S5, a ruling):** when a part on record is made new for another reason, does it
+  keep its as-built allowance or take the current default? Under the plan, a Teeth change carried by Update keeps
+  0.2, while the same change through Build again… gives a part at the new default. I would keep the as-built figure
+  for every row whose part is on record, and let only a row with no part take the default. That is D11's spirit: the
+  user's printed hole does not change as a side effect.
+
+## 2. The D-flat (§4.2)
+
+**The geometry, by my own calculation.**
+
+The shaft's flat is `F − D/2` from the axis, `F` being the across-flat size measured to the opposite round side. The
+hole is `R = (D + a)/2` and its flat is `h = F − D/2 + a/2` from the axis. So the hole is `h + R = F + a` across its
+flat, and the flat wall takes the same `a/2` as the round. The plan's formula is right, and so is its figure. For D 8,
+F 7, a 0.2:
+- h 3.1000, R 4.1000, chord `2 √(R² − h²)` 5.3666, arc sweep 278.24°;
+- the circular segment the flat keeps is 3.6752 mm², so the D's area is 49.1350 mm² against the circle's 52.8102.
+
+Other cases, for A's tests:
+
+| Case | h | R | chord | sweep |
+|---|---|---|---|---|
+| a 0 | 3.0000 | 4.0000 | 5.2915 | 277.18° |
+| a 0.3 | 3.1500 | 4.1500 | 5.4037 | 278.76° |
+| F 7.2 | 3.3000 | 4.1000 | 4.8662 | 287.20° |
+| D 5, F 4.5 | 2.1000 | 2.6000 | 3.0659 | 287.74° |
+| D 3, F 2.5 | 1.1000 | 1.6000 | 2.3238 | 266.87° |
+
+**The sketch is fully defined, but only up to its branch.**
+
+*Counting.* The arc has 5 degrees of freedom (centre, start and end, less the equal-radius condition) and the line 4,
+9 in all. The relations take 9: centre on origin 2, two shared ends 4, horizontal 1, radius 1, length 1. So
+`GetConstrainedStatus` will read fully defined.
+
+*Four solutions.* The dimensions are unsigned and the ends carry their identity, so four solutions satisfy every
+relation. For `CreateArc`'s direction +1 (counter-clockwise from start, `swcom.py:1743-1748`; `API-LEDGER.md:385`):
+- **The D wanted.** Start at the chord's −X end (−2.683, 3.1) and end at its +X end. This sweeps 278.24°, the major
+  arc.
+- **The plan's sketch does not fix this order.** `Arc(origin, start, end)` and `Line(start, end)` are written with the
+  same `start` and `end`, and the natural reading, start on +X, draws the **81.76° minor arc**. Cut, that is a
+  sliver, not a D.
+- **The chord reflected to −h** with the same identities is the minor arc too, so the third solution is also a sliver.
+  The fourth is a D with its flat at −Y.
+
+*On Update.* The first build draws the right one, if A orders the ends right. An Update moves the dimensions and lets
+SolidWorks solve from where the sketch was. This is W9c's situation: the ring's `Li+` was solved to the far side
+after a one-tooth change, came out code 72, and did not recover (`gears/landing.py`'s docstring; `HANDOFF-WORKBOOK.md:
+214`). The D has two shapes that invite the same:
+- **A near-zero chord.** As F nears D the chord goes to 0: 1.277 mm at F 7.95 and 0.572 at 7.99, with D 8 and a 0.2.
+  The plan's check only forbids F ≥ D, and that is the near-zero line W9c measured failing.
+- **A near-diameter chord.** As F nears D/2, h goes to 0 (0.15 at F 4.05) and the reflected solution is 2h away.
+
+*A negative allowance.* The plan does not say whether one (a press fit) is allowed. If it is, "Flat not more than half
+the bore" is the wrong test: with a −0.1, F 4.04 passes it and gives h −0.01, a chord past the axis and a minor arc. The
+condition is h > 0 as cut.
+
+**Every call is one the app makes; one expression is not (must-fix M4).**
+- *The calls.* `CreateArc`, `CreateLine`, `SketchAddConstraints` (coincident, horizontal), `AddDimension2` on an arc
+  (`findings.ARC_DIMENSION = "radius"`, `findings.py:85-88`) and on a line, `FeatureCut4` and `Add2`. Each is in
+  `swcom.py` at the lines cited and verified in the ledger (`:157-158`, `:281`, `:382-387`).
+- *The expression.* The chord's link is written `2 * sqr ( R * R - h * h )`, "the app's guarded sqr" at
+  `spur.py:1158`. That comment says the opposite: SolidWorks 2026 refuses `sqr ( 0 )` and `IIF` does not guard it, so
+  the app writes square roots as `( abs ( … ) ) ^ 0.5` (`spur.py:1157-1162`; `GOTCHAS.md` §27, *"Write square roots as
+  `( ... ) ^ 0.5`"*). No equation the app writes contains `sqr`: `grep "sqr ("` finds only that comment and the tier-1
+  probe. `sqr` of a positive number works (the probe's `sqr ( 16 )`), so this is not a hang, but it is a form the app
+  has never written. The house form is `2 * ( abs ( R * R - h * h ) ) ^ 0.5`.
+- *Is a major arc's dimension a radius?* `ARC_DIMENSION` was measured on minor arcs. A diameter would make the link give
+  half a hole, which the first build's volume or STEP read catches at once. That is the plan's "measured by the first
+  build", and right.
+- *The shared point.* `GOTCHAS.md` §35 is about a line drawn *starting* on another entity's end. The line's other end
+  landing on the arc's start is not covered there. Either way `Session.relation` skips a coincident between one point
+  and itself and adds it otherwise (`swcom.py:1860-1875`), so neither case is a risk.
+
+**"New in kind, measured by the first full build": right as the house rule reads, with one change of order.**
+- None of the calls can hang or damage a file. A wrong branch is a feature in error. On 2026 that is a What's Wrong box,
+  and so the run's STOP, in the run's own part.
+- The plan's `update` section changes Flat by only 0.2 (7 → 7.2, h 3.1 → 3.3), which tests nothing about branches.
+- **Should-fix S6:**
+  - make the D's value changes their own early section, as W9c's `landing` was: Flat 7 → 5 → 7.8 and back, Bore
+    8 → 10 with Flat 7 → 9, an allowance 0.2 → 0.4, and the bounds A sets;
+  - judge each by volume against the same D built from scratch;
+  - and A's tests assert that the drawn points satisfy every relation, with a sweep over 180°.
+- With that, no separate probe is needed before the full build. If the section shows a far-side solve, it gets one
+  follow-up round, as W9c's did.
+
+**Where the flat sits relative to a tooth.**
+- One tooth space is centred on +X (`spur.py:4`, `:1394`), so +Y is z/4 pitches from a space centre:
+  - on a space centre when z ≡ 0 (mod 4): 12, 16, 20;
+  - on a tooth centre when z ≡ 2 (mod 4): 14;
+  - a quarter pitch either side otherwise: 13, 15, 17, 25, 29.
+- A helical gear's teeth turn along the face, so it is that at the Front plane only.
+- **A pair's phase:** no. Each shaft turns as a whole, so a gear's phase is its shaft's, and the layout rotates each
+  component to mesh.
+- **Two gears fixed by D-flats to one shaft:** their phase to each other is set by the parts, and the assembly does not
+  model it, since the layout rotates each gear on its own. This matters only where the mesh graph closes a loop, for
+  example two meshes between the same pair of D-fixed shafts. A planet on its pin, or a gear free on its shaft until a
+  dog engages, is not fixed. Say it in the README. A defined angle would cost nothing (the chord vertical, the flat on
+  +X, centred on a space for every z), and that is the coordinator's choice, not the user's. Should-fix S8 (G6).
+- **W9d's carry: no.**
+  - `_bore_mm` becomes the hole as cut, and §4.4's "bore" needs a coaxial cylinder of radius `bore_mm/2` to 1e-4 mm
+    (`swbuild.py:7168`, `:7537-7538`). The D's arc face is a partial cylinder of radius R, coaxial, so it qualifies; the
+    flat is a plane, *a face of Sun*.
+  - `COAXIAL_FACE_READ` was verified on full cylinders only (`W9D-INTERFACES.md:793`, `:848`). A partial one reading
+    its radius by `CylinderParams` is very likely the same and is not shown; the plan shows "bore" against the fake
+    only, which I accept as a caveat.
+
+## 3. The record (§4.3)
+
+**Link 12 whatever the parts, and older apps.**
+- An F2-era app refuses a link record of 12 and a `.gear.json` of 4. It raises `UnknownSchema`, leaves the file
+  byte-identical (`store.py:220`, `:1473`), and the planning read returns None. That is right, and it is the policy F1
+  set.
+
+**Sidecar 4 by the spec cannot see a blank allowance: must-fix M2.**
+- §4.3 says a `.gear.json` goes to 4 "when its part has the allowance global or a flat". F3-0's item 6 says
+  `sidecar_schema` gives 4 "for a spec with an allowance or a flat". `sidecar_schema` takes the spec dict only
+  (`store.py:91-97`). A printed part built with a blank allowance has the global and no `bore_allowance` key, so the
+  second reading writes it at sidecar 3.
+- An F2-era strip then opens it, and its Update values writes `store.updated_sidecar(…, variables)` with F2's planned
+  globals (`gui.py:1945`), which drops `"Bore Allowance"` from the record.
+- After that, F3 reads the part as built at 0 while SolidWorks holds 0.2:
+  - Update plans a link it does not hold;
+  - W9d's `_bore_mm` misses the bore;
+  - the print list misstates the hole.
+- This is exactly what the bump exists to prevent. Decide sidecar 4 from the recorded globals (`"Bore Allowance"` or
+  `"Bore Flat"` present), or from the spec resolved by M1, and pass what is needed to `built_sidecar` and
+  `updated_sidecar`.
+- Two existing pins take a side here: `test_printed_rule.py:458` (`GearSpec(process="printed")`, bore 10 by default,
+  sidecar 3) and `test_store.py:1600-1610` (the same spec, sidecar 3).
+
+**The fifteen lines are not all of them.** The fifteen listed are right, and `test_store.py:833`'s 12 is rightly
+named. These pin the current schema too and are missing:
+- `test_printed_rule.py:456`, `(LINK_SCHEMA_VERSION, _W9D_LINK_SCHEMA) == (11, 10)`. It becomes `(12, 11)` against
+  `_F1_LINK_SCHEMA`.
+- `test_printed_rule.py:457`, `(SCHEMA_VERSION, PRINTED_SCHEMA, …) == (3, 3, 2, 1)`. It becomes `(4, 3, 2, 1)` with
+  `BORE_SCHEMA`. This test's name says 11 and 3, so "F1's `test_printed_rule.py` whole" (*What must not move*)
+  cannot hold as written.
+- `test_printed_workbook.py:367`, `== LINK_SCHEMA_VERSION == 11`.
+- `test_store.py:1419-1426` and `test_workbook_user_record.py:85-91`. Each writes a raw 12 and expects *"schema 12,
+  this one reads 11"*; at 12 the record is accepted and the test fails. Both become 13 and 12.
+- `test_workbook_bands.py:378` (*"schema 11, this one reads 8"*) and `test_workbook_carry.py:96` (*"schema 11, this one
+  reads 9"*), which become 12.
+
+A `git grep` for `11` finds most of these but not the raw 12s, nor `(3, 3, 2, 1)`. Should-fix: F3-0 finds the lines by
+what they pin, and by a run of the suite at its interface commit.
+
+**What moves by design is wider than the plan suggests.**
+- Because the default bore is 10, every `GearSpec(process="printed")` plan, sidecar, variables list or print list line
+  that F1's and F2's tests pin gains the global and the summed link. That is `test_printed_gears.py`,
+  `test_printed_workbook.py` (for example `:385`, a printed RangeBox's dogs and hub at sidecar 3),
+  `test_printed_window.py`, `test_print_form.py`, `test_ui_text.py`, `test_printout.py` and `test_printed_rule.py`'s
+  printed cases.
+- The plan allows this, re-taken in F3-0 by name with each reason. F3-0 should count them before it starts, by running
+  the suite with the default stubbed in, because the count sizes F3-0.
+- **Machined, and printed parts on record, never move** once M1 and M2 are in. The machined pins F3-0 takes first are
+  the right guard. The printed-on-record pin needs M1's threading to pass.
+
+## 4. K11, the hub, the export
+
+- **K11.**
+  - `"Bore Allowance"` → `bore_allowance` and `"Bore Flat"` → `flat` in `update._GLOBAL_COLUMN` (`update.py:670`)
+    are right, and K11 reads every planned global already (`swbuild._value_edits`, `:5437`).
+  - The blank-allowance wording needs the as-built knowledge M1 provides, since `_blank_meaning` sees only the
+    global.
+  - K3's words in `ui_text` need the same (S4).
+  - A user edit of the Bore Sketch's own dimension, as against the global, is not K11's, as today.
+- **The hub row.** It takes all three through `_as_spur`, and W9b's rule (a hub's teeth, module and pressure angle are
+  its sleeve's) is untouched. The flat's checks run in the delegate's `validate`, so a hub gets them.
+- **Sleeve and ring rows.** Not said: what a typed Drive flat or allowance on a sleeve or ring row is. "Drive flat with
+  no Bore" covers a blank Bore only. Say error or ignored (S7).
+- **The export (F2).**
+  - The size check is the largest radius from the axis (`d_a/2`) and the axial extent (`printout.py:89-91`, `:691`).
+    A D-flat bore changes neither, and the dog, hub and bevel are skipped kinds anyway (`EXTENT_SKIPPED`, `:112`). So
+    it still holds.
+  - The print list's *bore 8 + 0.2 allowance, D-flat 7.5* must be taken from the record as built (M1), not from
+    deriving the spec.
+  - The demonstration's STEP read of the hole is the script's own, not the app's check:
+    - "the bore's least radius" is right for a round bore: some vertex lies on each circular edge;
+    - **h is not a radius.** The flat's corner vertices are at radius R. h is their Y in the part's frame, and the note
+      should say so;
+    - Done-when's "volumes … agree with the maths to 0.01 mm" mixes units. Say `small_pinion_check`'s 0.1 %.
+- **Volume sensitivity.** For D 8 and a gear of about the area of a 30 mm circle:
+  - the D against the round removes 0.52 %;
+  - an allowance of 0.2 against 0, 0.36 %;
+  - 0.3 against 0.2, 0.18 %.
+  
+  All are above 0.1 %, but not by much on larger gears. The STEP read is the exact check.
+
+## 5. Readiness
+
+- **Disjoint files.**
+  - F3-0 comes first and alone. A (gears and `test_bore`), B (`swbuild`, `update`, `gearbox`, `printout`,
+    `test_bore_workbook`) and C (`gui`, `ui_text`, design, README, `test_bore_form`) are disjoint in `src` and
+    `tests`.
+  - M1's strip side is in `gui.py`, C's file, while the rule is B's. Give C the strip's use of
+    `as_built_allowance` by name (S10), or the rule falls between them.
+- **Tests owed, missing.** Each of these should be named:
+  - the as-built rule through `_Parts.find` (a pre-F3 printed part with a bore reused by Build again…), through
+    `update._part` (unchanged, no refusal), through `workbook_print` (not refused) and through the strip (no Update
+    button, *Bore as cut* 8);
+  - M2's sidecar for a printed blank allowance, and an F2-era reader refusing it byte-identical;
+  - the D's arc order and sweep;
+  - h > 0 as cut, and the flat's bounds;
+  - K3's blank-allowance sentence;
+  - a ring or sleeve row with Drive flat;
+  - the coupon instructions (M3).
+- **The demonstration and its confirming build on 2024.**
+  - The sections are right. Running all of them again on 2024 follows F1's and F2's precedent on `printed` rather
+    than the handoff's lighter confirming build; either is defensible.
+  - Add S6's D section.
+  - "a W9a `setup.master` copy, Printed typed … nothing written by it" should say: nothing written *for the bore*.
+    Typing Printed does change Backlash, which Update writes.
+- **The cost.**
+  - Sixteen to twenty agent runs is plausible; M1 makes B the largest package, and one more fix round is likely.
+  - **The reason given for the SolidWorks time is wrong.** "F2's demonstration took about twice its estimate" is
+    contradicted by its own note: the runs took 11.6 min on 2026 and 15.5 on 2024, against estimates of 31 and 48
+    (`F2-DEMONSTRATION.md:388-389`, `:550-551`). What doubled was the plan's 15 and 25 into the script's estimate.
+  - 35 and 55 minutes are therefore generous, which does no harm, but the sentence should say so.
+- **Decisions taken silently**, beyond G1 to G8:
+  - a new part replacing one on record takes the current default (S5, a ruling);
+  - the coupon instructions after F3 (M3);
+  - whether a negative allowance is allowed;
+  - the flat's bounds (M4);
+  - two gears on one D-shaft not phased by the app (S8);
+  - the as-built figure kept across a Process change.
+
+  None needs the user before code; S5 and S8 need the coordinator.
+
+## 6. Before F3-0 starts
+
+**Must-fix** (each changes F3-0's interface, a pinned figure, or what the user is told to do):
+
+- **M1.** The as-built rule, made true where a blank allowance on record is read:
+  - how the figure reaches `derive` without entering `to_dict`;
+  - the reuse match tried per candidate entry (`_Parts.find`, `_matches`);
+  - `same_part` and `_plan_of` on the recorded spec, `update._part`, `_ignored_fields_as_built`, and
+    `structural_change`'s `has_allowance` from the recorded globals;
+  - `printout`'s bore line and `workbook_print` through `classify`;
+  - the strip's derive, `_update_target` and Update values;
+  - K11's and K3's blank words;
+  - each with its owner.
+- **M2.** Sidecar 4 from the part's globals (or the resolved spec), so a printed part with a blank allowance is never
+  written at 3 for an F2-era strip to write back without its global. Pin it, with `test_printed_rule.py:458` and
+  `test_store.py:1610` re-taken.
+- **M3.** §3.2 and the README's *Calibrating your printer* (`README.md:119-220`) are rewritten for F3: Bore = the shaft,
+  **Bore allowance** 0, 0.1, 0.2, 0.3 typed (a typed 0 honoured), and the result read as the allowance itself. As
+  written, a coupon built after F3 gains the 0.2 default on top of its typed offset, and V1's figure comes out 0.2 too
+  large. Coupons already built stay valid as built.
+- **M4.** The D sketch stated so that it cannot be built on the wrong branch:
+  - the arc's start at the chord's −X end and its end at +X, direction +1, sweep over 180°;
+  - the chord's link as `2 * ( abs ( R * R - h * h ) ) ^ 0.5`, not `sqr` (GOTCHAS §27);
+  - the checks on the hole as cut: h > 0, which settles a negative allowance either way;
+  - a least flat depth or chord, and a least h, so the near-zero chord W9c measured failing cannot be typed.
+
+**Should-fix:**
+- S1, the time sentence (§5);
+- S2, the helical and bevel globals' lines (§1);
+- S3, the herringbone's groove floor (`g.bore >= g.groove_d`, `helical.py`) on the bore as cut;
+- S4, K3's blank-allowance words (C);
+- S5, the ruling on a part made new;
+- S6, the D's Update section first, by volume against from-scratch parts;
+- S7, ring and sleeve rows with Drive flat or an allowance;
+- S8, the flat's phase on a shared D-shaft (README, or a defined angle);
+- S9, hole compensation kept 0 (README);
+- S10, the strip's owner;
+- the literal list by meaning (§3);
+- h read as Y in the STEP check;
+- volumes in per cent;
+- a cleared typed allowance and a Process change said in the explainer.
+
+**Not ready for F3-0 until M1 to M4 are in the plan.** None needs the user; S5 and S8 need the coordinator. On the
+probe: by the house rule none is needed before the full build, provided M4 fixes the arc's order and S6 puts the D's
+value changes first in the demonstration, where a far-side solve would show in the first minutes and get its one
+follow-up round.
+
+
+---
+
+# Re-check of the revision to F3's review (2026-11-18)
+
+**Read at `6f0a462`** (`docs/PLAN-PRINTED.md` §3.2, §4 and *Changes after F3's review*), against the code at
+`f28cb75`. These are small scratch computations only; nothing was run on SolidWorks, Excel or the suite. The two
+rulings (a part made new keeps its as-built allowance; the flat on +X, facing a tooth space's middle) are taken as
+given.
+
+## 1. The four must-fixes
+
+**M1, the as-built rule, is fixed at its cause.**
+- It has one home, `spec.as_built(spec, variables)`, written whole in F3-0.
+- It sets `built_allowance`, which `to_dict` never writes, and `bore_allowance_mm()` reads it after a typed figure
+  and before the default. So every `derive` sees the as-built figure without a record entry in hand.
+- All nine callers are named with their owners: reuse per candidate entry, `update._part`,
+  `structural_change`'s `built_variables`, Build again…'s made-new rows, Print files, W9d, K11, K3 and the strip.
+  They cover every place I found, and the three I could not check (`occupant`, `free_name`, `carry_for`) are now
+  tests in B.
+- The pin of printed parts on record, written at F3-0's base, is the right guard.
+
+Two small points for F3-0's note:
+- `from_dict` keeps every known field (`spec.py:169-172`), and `built_allowance` will be one. So "never read by
+  `from_dict`" needs an explicit exclusion.
+- Say what `as_built` does with an **empty** `variables`: a journaled entry is matched with `()` (`gearbox.py:595`),
+  and a v1 record has none. Treated as "on record, 0", a part built at 0.2 would be made new; that is the safe side,
+  but say it.
+
+**M2, the sidecar's schema, is fixed.**
+- `sidecar_schema(spec, variables)` decides from the globals, and both writers pass them.
+- Give `variables` a default of None ("as today"). Then the one-argument calls at `test_printed_rule.py:459-461` keep
+  their meaning.
+- `test_printed_workbook.py:530` (printed typed on a machined gearbox built before F3, parts at sidecar 3) is a useful
+  extra check that M1 works: those parts have no global and must stay at 3.
+
+**M3, the coupons, is fixed.**
+- §3.2 now gives both tables, keyed on whether the form shows a **Bore allowance** row.
+- After F3, the shaft goes in Bore and 0 (typed), 0.1, 0.2 and 0.3 go in the allowance, never both.
+- The fit is read as the allowance itself, and coupons built before F3 stay valid.
+- Package C carries the change into the README, and a test reads the README's table.
+
+**M4, the D sketch, is fixed.** By my own calculation (R 4.1, h 3.1, chord 5.3666):
+
+| Arc as drawn, direction +1 | Sweep | What it cuts |
+|---|---|---|
+| Start (h, +c/2), end (h, −c/2): the plan's | **278.24°** | the D, through +Y, −X and −Y |
+| The chord reflected to x = −h, same ends | 81.76° | the sliver |
+| The ends swapped | 81.76° | the sliver |
+| Reflected and swapped | 278.24° | a D with its flat on −X |
+
+So the stated start and direction cut the D at build, and A's sweep test forbids the sliver.
+- The line, drawn from the arc's end to its start, shares the first point (GOTCHAS §35). `Session.relation` adds the
+  second coincident.
+- `vertical` is a verified relation (`findings.py:82`).
+- The link is in the house form `( abs ( … ) ) ^ 0.5`.
+
+## 2. "A tooth space centred on +X"
+
+- **True as drawn for spur gears, dogs and hubs** (`spur.py:4`, `:1394`; dogs and hubs through `_as_spur`), and for
+  rings (`internal.py:4`, `:828-841`), which have no bore.
+- A bevel gear takes no D (G5), so its frame does not matter.
+- **Helical and herringbone gears: not at the Front plane, as §4.2 says.**
+  - A helical gear's section is drawn on a plane one overrun *behind* the Front plane (`helical.py:206-232`,
+    `:558-564`), so the Front-plane face is already turned `hand · 360 · overrun / L` (`:226-229`).
+  - A herringbone's section is on its mid-plane (`:553-556`), so it is the apex that has a space centred on +X.
+  - Should-fix (wording): "on the section plane: for a helical gear one overrun behind the Front plane, for a
+    herringbone its mid-plane".
+- **One more caveat, unverified:** that a sketch on those offset reference planes keeps the model's +X. If it were
+  mirrored, the space would be centred on −X, which is the same thing only when the tooth count is even. Nothing the
+  app reads (volumes, size checks) would tell. The `kinds` section could read it from the STEP file: the flat's corners
+  against a space's vertices. It is optional, since the assembly does not model the flat (ruling 2).
+
+## 3. The bounds
+
+- **The depth bound is about the shaft.** `R − h` equals `D − F` exactly, whatever the allowance, so "a flat at least
+  0.3 mm deep" is a bound on the shaft's own flat depth.
+- **`h ≥ 0.25 R`** depends on the allowance and is the guard against the reflected branch: the reflected solution is
+  then at least 0.5 R away.
+- For D 8 and a 0.2, Flat may be from **4.925 to 7.7**.
+  - Refused: 7.71 (depth 0.29) and 7.8 (0.2); 4.9 (h/R 0.244); and 4.925 at a −0.2 (h/R 0.212). The negative allowance
+    is handled.
+  - Common shafts pass: 2/1.5, 3/2.5, 5/4.5 and 8/7.5, every one 0.5 deep.
+  - The least chord at the depth bound is `2 √(0.6 R − 0.09)`: 3.08 mm at R 4.1, 1.84 at R 1.1.
+- **One should-fix for the sentence.** A real shaft whose flat is under 0.3 mm deep cannot be typed as it is. The
+  error should say to type a Flat at most D − 0.3, which leaves the flat a little rotational play, or to use a round
+  bore.
+- `dshape`'s values all lie inside the bounds:
+  - 7 → 5 lands at h/R 0.268, near the edge, as intended;
+  - 7.6 is 0.4 deep;
+  - Bore 10 with Flat 9 gives h/R 0.80;
+  - an allowance of 0.4 gives h 3.2.
+
+## 4. The pinned lines
+
+**The table in §4.3 is now complete**, as far as a search by meaning finds: `sidecar_schema(`, the schema constants,
+`schema_version == n`, `reads n` and raw `link_schema_version` writes across `tests/`, fixtures excluded. Two
+additions:
+- `test_printed_workbook.py:385`, a printed RangeBox's dogs and hub built new with a bore, will move to 4. The plan
+  leaves it to the suite run, which is enough.
+- `:530` must not move (§1 above).
+
+**Moving `test_printed_rule.py` 456 to 458 and 550 is not a loosening.**
+
+| Line | Becomes | Why it is not weaker |
+|---|---|---|
+| 456 | `(12, 11)` against `_F1_LINK_SCHEMA` | It pins the current schema and its predecessor's constant, as before. |
+| 457 | `(4, 3, 2, 1)` with `BORE_SCHEMA` | It keeps the three old numbers and adds one. |
+| 458 | two cases: 3 with no global, 4 with `"Bore Allowance"` | It asserts strictly more. |
+| 550 | 12 | A record is still read forward and written at the current schema, with `blank_process`'s answer unchanged. |
+
+The test's name, `…_link_schema_11_and_…_sidecar_schema_3`, should be renamed with it.
+
+## 5. Readiness
+
+**F3-0 may start.** M1 to M4 are fixed at their causes, and the rulings are written in. What is left fits in F3-0's
+note or the packages, without changing the plan:
+- `from_dict` excluding `built_allowance`;
+- `as_built` on an empty `variables`;
+- `sidecar_schema`'s `variables` defaulting to None;
+- the helical and herringbone wording of where a space is centred, and the unverified sketch-frame caveat;
+- the depth bound's sentence naming the shaft.
+
+The restated cost (seventeen to twenty-one agent runs, about 85 SolidWorks minutes) is consistent with F2's measured
+runs.
+
+---
+
+# Review of stage F4 as made ready to execute (2026-11-19)
+
+**Read at `a1a844c` on `printed`** (§5, 5.1 to 5.7, and *Changes before F4*). `src` and `tests` are unchanged since
+`11f2a25`, the commit §5 was read against. Nothing was run on SolidWorks or Excel, and the suite was not run. Every figure
+below is from my own scratch script, which imports the gear and workbook modules from this checkout (import path
+checked). It does not reuse the plan's working:
+- the 30° and 60° points are found from the fillet's centre as `spur.involute_flank` and `internal.involute_flank` give
+  it, with a check that each lies between the arc's two ends;
+- the load line is the numerically differentiated normal of the drawn flank at the tip, crossed with the centreline;
+- Y_F is worked by beam statics, not taken from the formula;
+- the torques are `checks.check`'s own, on each fixture marked printed.
+
+On sources: the MITcalc page was fetched and read. ISO 6336-3:2006's sample PDF from iteh was fetched, but its text could
+not be extracted here. The 2006 range of Y_S and the 60° tangent come from search summaries quoting the iteh preview; AGMA
+2001's 70 % and Bambu's data sheet come from search summaries, and neither document was opened.
+
+## 1. The formula (§5.1)
+
+**Y_F from beam theory.** Take a cantilever tooth with the normal force F_n at its tip, along the flank's normal, at α_F to
+the perpendicular of the centreline. Its bending part F_n cos α_F acts at h_F above the section of chord s_Fn, so
+σ = 6 F_n cos α_F h_F / (b s_Fn²). The normal force is constant along the line of action and T = F_n r_b, so
+F_n = F_t / cos α_n with F_t at the reference circle. Then σ = F_t/(b m_n) · 6 (h_F/m_n) cos α_F / ((s_Fn/m_n)² cos α_n):
+the plan's Y_F, form and all. Like ISO and Lewis, it leaves out the radial part F_n sin α_F, which compresses the root.
+
+**The ISO expressions, checked two ways.**
+- MITcalc's page gives Y_F, Y_S, L = s_Fn/h_Fe and q_s = s_Fn/(2ρ_F) exactly as §5.1 writes them. It writes
+  z_n = z/cos³β_b (so that is §5.1's "secondary source"), and T = π/6 for internal gears in its s_Fn and h_Fe, which is
+  the 60° tangent. The iteh preview, as the search quoted it, gives 1 ≤ q_s < 8 for 2006 and the 30°/60° chord
+  definition.
+- **Independently:** I coded ISO's Method B for a hobbed gear (E, G, H, the ϑ iteration, s_Fn, ρ_F, h_Fe), with the load
+  at the tip and the 1.25/0.38 basic rack. At z 20, x 0 it gives Y_Fa 2.800, Y_Sa 1.553 and Y_Fa·Y_Sa 4.347, which are the
+  chart values I recall from ISO 6336-3 and DIN 3990 (2.8, 1.55, about 4.35). Its α_Fen, 29.5115°, is A3's α_F to the
+  digit, since the tip of an involute is the same however the root was cut. So the expressions and the 30° method are as
+  ISO has them. I could not read the standard: the chart values are from memory, and so is z_n = z/(cos²β_b cos β),
+  which agrees with §5.1.
+
+**The fillet the app draws.**
+- *External gears:* 0.38 × module, `spur.FILLET_FACTOR` (`spur.py:94`). It is used printed or machined alike
+  (`SpurGear.derive`, `:824-828`), and a helical gear's `fillet_factor` is the same.
+- *Rings:* 0.15 × module (`internal.py:127`). A printed ring keeps it: `PRINTED_FILLET_FACTOR` 0.3 only sets the threshold
+  of F1's warning (`internal.py:598-608`).
+- A typed Fillet is used as typed. §5.1 is right on all of this.
+
+**Q on the drawn arc, and the q_s ranges.**
+- *Outside gears:* the 30° point is on the drawn arc in every one of the 1696 I swept (modules 0.5 to 3, teeth 6 to 300,
+  14.5° to 30°, printed and machined, both recipes). q_s runs 1.213 to 3.544. The plan's upper 3.86 is not reproduced,
+  which does not matter.
+- *Rings:* the 60° point is on the arc in every ring that has an involute tip. At 20°, rings of 34 to 150 teeth give q_s
+  7.78 to 8.97; from 14.5° to 30° the range is 7.09 to 11.26. So the ring is past 8 nearly always, as §5.1 says, and
+  carrying the formula on is the right side to err.
+
+**Two shapes §5.1 does not cover.**
+- **A ring whose tips lie inside its base circle: must-fix M1.** At 20° that is every ring of fewer than 34 teeth
+  (d_a = (z − 2)m < z m cos α). They validate with a warning only ("the last of each tooth is a straight radial line"), so
+  they are built. Their tip corner is on the radial line, where there is no involute normal, so §5.1's load line is
+  undefined. The plan's own sweep ("the 60° point on every ring", 20 to 150 teeth) must have done something with them,
+  and it is not written down. F4-0 needs a stated rule. My proposal: load at the involute's start (the base circle, the
+  innermost point the pinion can touch), with α_F taken from the normal there. The other choice is not rated, with a
+  sentence.
+- **Pointed teeth.** A tooth whose flanks meet below the outer diameter (tip thickness ≤ 0) is a validation error ("the
+  teeth come to a point…"), so it is never built. `rate` should still say *not rated* for it rather than load a point
+  past the apex, where my α_F stops matching the identity. Should-fix: name it among `rate`'s reasons.
+
+**Where the app's tooth stands against ISO's.** §5.1 sets the app's Y_F against Lewis "as recalled" and calls the app 7 to
+15 % weaker. Set against ISO's own generated tooth, with the load at the tip, unshifted and with no backlash:
+
+| | ISO Y_Fa | app Y_F | ISO Y_Fa·Y_Sa | app Y_F·Y_S | app over ISO |
+|---|---|---|---|---|---|
+| m 2, z 20 | 2.800 | 3.326 | 4.347 | 5.549 | +19 % (Y_F), +28 % (product) |
+| m 2, z 40 | 2.405 | 2.755 | 4.013 | 4.889 | +15 %, +22 % |
+| m 2, z 100 | 2.195 | 2.546 | 3.939 | 4.656 | +16 %, +18 % |
+| m 1, z 20 (depth 2.4 m) | 2.800 | 3.696 | 4.347 | 6.010 | +32 %, +38 % |
+
+The chord shows why: s_Fn/m is 1.801 on the app's tooth at z 20 against ISO's 1.945. The point stands, but the size is
+larger than §5.1 says. Should-fix: A's note compares with ISO's own tooth, in these figures.
+
+**The 30° section is ISO's convention, not the beam's worst section.** The app's root is a fillet set on a radial line, so
+the tooth narrows toward it. Scanning the fillet for the largest 6 h cos α_F / s², the worst section is at a tangent of
+8° to 16°, and it reads above the 30° section by:
+- A1 5.2 %, A2 3.6 %, A8 (m 1, z 12) 9.2 %, m 2 z 100 2.5 %;
+- 3.9 %, 2.6 %, 7.4 % and 1.7 % once Y_S is taken at each point.
+
+Keeping ISO's 30° is right, since Y_S is calibrated on it, but "exact" in §5.1 is about the geometry. Should-fix: A's note
+says the 30° figure can read up to about 7 % low on small pinions.
+
+**Helical gears.** The virtual spur gear is applied correctly:
+- z_n = z/(cos²β_b cos β) gives A4 23.735, against 23.553 by z/cos³β_b and 24.103 by z/cos³β;
+- normal module, normal pressure angle and normal backlash: the j that `HelicalGear.derive` takes is the normal one, and
+  the section gets j/cos β (`helical.py:345-357`);
+- F_t and d are transverse, and b is the face or a herringbone's 2 × toothed width.
+
+The transverse-drawn fillet's radius in the normal section lies between ρ cos²β and ρ/cos β. At β 20° that moves Y_S by
+at most about 3 % for A4 (exponent 1/(1.21 + 2.3/L) = 0.256), which A's note can say in place of "not exactly ρ".
+
+**Layers, on a helical tooth.** §5.1's 0.035 counts only the shear from the axial force. The root's bending stress itself
+runs along the fillet in the normal section, and at the 30° point that direction leaves the layer plane by
+sin 30° · sin β = 0.17 at 20° (0.21 at 25°). That gives about 0.17 σ_F of shear between layers and 0.03 σ_F across them.
+That is still small: Bambu's PLA Basic sheet gives 31 MPa across layers against 35 in them. So no derating is the right
+answer (H11), but the figure in §5.1 should be the larger one. Should-fix (wording).
+
+## 2. The worked rows, recomputed
+
+**Single gears.** Every figure is reproduced to the plan's last digit:
+
+| | Y_F | Y_S | q_s | Holds (N) | (N·m) |
+|---|---|---|---|---|---|
+| A1 | 4.1931 | 1.5749 | 2.131 | 38.614 | 0.5792 |
+| A2 | 3.2708 | 1.6975 | 2.458 | 45.929 | 2.0668 |
+| A3 | 3.3258 | 1.6685 | 2.370 | 45.952 | 0.6893 |
+| A4 | 3.8769 | 1.6089 | 2.226 | 49.058 | 0.7831 |
+| A5 | (as A4) | | | 32.705 | 0.5221 |
+| A6 | 2.2574 | 2.5535 | 8.341 | 29.492 | 0.7963 |
+| A7 | 3.4536 | 1.6274 | 2.288 | 45.369 | 0.6805 |
+| A8 | 6.8916 | 1.4151 | 1.701 | 17.432 | 0.1046 |
+
+Also reproduced:
+- A1 machined 35.044 N, and A3's α_a − γ_a = 29.5115° (equal to my numerical α_F; the ring's α_a + γ_a = 13.3242°, equal
+  too);
+- the module 2 Y_F 3.326, 2.755 and 2.546, and 3.696 at module 1;
+- A4's shear ratio 0.0345.
+
+On recipe B the identity does not hold (A7's α_F is 35.14° against 30.30°), as §5.1 says.
+
+**Meshes.** B1 to B7 are reproduced exactly, from `checks.check`'s torques:
+- planetary_4to1: S 2, P 0, C 7.7624, held R 5.7624, so 92.593 and 88.926 N, shares 641.5 % and 616.1 %;
+- Idler_Train, as §5.3 builds it (no diagnostics): In 1, Idl 0, Out 1.9208. G1's 66.667 N against G3's own 64.027, GI
+  28.984 (0.7 × 41.406), 230.0 %, and 57.5 % at 0.25 N·m;
+- RangeBox, RangeBox_Fixed and `RangeBox_W9.xlsx` in L: Input 10, Planet 0, Carrier 28.2145, held Ring 18.2145, so
+  229.885 and 220.782 N, 1364.3 % and 1310.2 %. In H and N no Planet, Carrier or Ring torque exists, so the meshes are
+  *not worked out*.
+
+The kinematics agree with §5.2's reading:
+- a planet's force is the member's torque over N d, × K_γ;
+- the ring side comes out 0.98² of the sun side, because kinematics runs two mesh efficiencies through the stage; that
+  does not matter here;
+- an idler and a planet both show a shaft torque of exactly 0.
+
+**Reversed bending.**
+- A planet's tooth does bend both ways: the sun presses one flank and the ring the other, as on an idler.
+- AGMA 2001's *70 percent of s_at for idler gears* is quoted in D04 and in C95 by several secondary sources, and one
+  extends it to planets. ISO 6336-3:2019's Annex B (Y_M) is the ISO home of the same idea; I could not see its values.
+
+**The six-to-23-times list.**
+- Confirmed: planetary_4to1 6.41; RangeBox, RangeBox_Fixed and the W9 fixture 13.64 in L; E4 21.42 and
+  TransferCase_Parallel 22.58 in 4L; Reducer_12to1 22.58; Arc_Move 6.90.
+- **Risky_Placements reads 14.28, not 14.9.** Its worst is G5–G6 at 1428.0 % (G5's 723.563 N against G5's 50.670 N).
+- 14.9 is reproduced exactly when G6, an internal helical ring, gives its force at d = z m_n = 72 mm instead of its
+  transverse 76.621 mm: 2000 × 27.1656 / 72 = 754.6 N, and 754.6 / 50.670 = 14.89. So the plan's script slipped on the
+  very rule §5.1 states (*F_t and d are transverse*).
+- None of B1 to B7 is a helical mesh, and no A row is a helical ring, so nothing would catch the same slip in B's code.
+  **Must-fix M2:** correct 14.9 to 14.3 in §5.3 and U-c, and add two pinned rows:
+  - **A9**, ring helical m 2, z 36, β 20°, face 10, printed: z_n 42.723, d 76.6208, Y_F 2.0408, Y_S 2.6948, q_s 8.500 past
+    the range, holds 61.823 N and 2.3685 N·m;
+  - **B8**, Risky_Placements printed at 5 N·m: G5–G6 F_t 723.563 N (G6's own side 709.09), G5 50.670 and G6 61.823, G5
+    the weaker, 1428.0 %. Beside it, the herringbone G3–G4: 453.154 N at b 12 (the overlap), G3 62.836 and G4 71.137,
+    721.2 %.
+
+**A wording that is false for a branch past a split.**
+- In E4 and TransferCase_Parallel in 4H and 4L, the front drive (FDrive–FIdler–FOut) is `past_split`: it carries torque,
+  but J17 does not share it out, so F4 says nothing of FIdler, a two-way gear, in any mode.
+- That is §5.2's rule and it is acceptable. But §5.4's Results row *no torque here* would then be false: those teeth are
+  loaded.
+- Should-fix: two wordings, *turns unloaded here* (RangeBox in H and N, the front branch in 2H) and *the torque past a
+  shared output is not shared out (not worked out)*, as `kinematics.Motion.shared` and `past_split` tell them apart.
+
+## 3. The allowable stress, and what the user is told
+
+**17 MPa as a default.**
+- *What the plan's basis misses.* The print list names Bambu Studio, and Bambu's PLA Basic data sheet (V3.0, by the
+  search summary) gives:
+  - tensile strength 35 ± 4 MPa in X-Y and 31 ± 3 in Z (ISO 527, printed specimens);
+  - bending strength 76 ± 5 in X-Y and 59 ± 6 in Z (ISO 178);
+  - V2.0 gave 39 and 35 tensile.
+
+  So *a third of the roughly 50 MPa a PLA datasheet gives* is not what the filament the app points at reports. 17 MPa is
+  about half its in-layer tensile strength and under a quarter of its bending strength.
+- *Not a fatigue figure.* Printed PLA's fatigue strength at 2 × 10⁶ cycles is reported at 10 to 25 % of its tensile strength
+  (13.5 MPa in one dataset; secondary sources disagree). So 17 MPa is a one-time figure, which is what *once* says.
+- *Why it is defensible.* As a provisional *once* default it holds:
+  - σ_F includes the full notch factor (PLA is brittle enough that the notch counts);
+  - the load is on one tooth's tip with Y_ε 1, worth 1.2 to 1.5 against load sharing;
+  - and it sits at about half the in-layer tensile strength.
+- **Should-fix:** D7's sentence, the README and the Box's note give this basis (a printed PLA data sheet's 35 MPa
+  in-layer tensile strength, about half), not "a third of about 50".
+
+**Layers and infill.**
+- *Layers.* Printed flat, a spur tooth's root stress lies in the layers. The walls follow the outline, so the fillet's
+  surface fibre runs along the beads, the best case and the one ISO 527's X-Y specimens measure.
+- *Infill.* Bending is carried by the outer fibres, which are the five walls (2 mm a side). So even above module 2 the
+  infill matters less than §5.1 implies: what weakens such a root is the seam between wall and infill, not the infill's
+  density.
+- The README can say both in a sentence.
+
+**Is 6 to 23 times the truth, or a check too severe? The truth about the typed torques.**
+- *Why the torques are high.* The fixtures' 5 and 10 N·m were typed for machined gearboxes before Printed existed. A
+  steel tooth's allowable is some fifteen to twenty times 17 MPa.
+- *How much margin the check stacks.* Against a best estimate of a one-time break (Y_ε about 0.75 at ε_α ≈ 1.5, the
+  load at 35 MPa, no K_γ, no 0.7), the stack is about 1.33 × 2.06 = 2.7 for a plain gear and × 1.25 × 1.43 = 4.9 for a
+  planet.
+- *What that leaves.* Against a best-estimate break:
+  - planetary_4to1 (6.4, a planet) is still about 1.3 times over;
+  - Arc_Move (6.9, plain gears) about 2.5 times;
+  - RangeBox (13.6, a planet) about 2.8 times;
+  - Reducer_12to1 and TransferCase_Parallel (22.6, plain gears) about 8 times.
+- *So:* printed as typed, all of them would break or would not run. U-c is the right question, and nothing in the check
+  should be softened to make these read better.
+
+**One rule to rule on (R1): 0.7 under *once*.**
+- 0.7 is a fatigue allowance: a tooth bent both ways endures less over many cycles. A single static load does not weaken
+  a tooth because the next contact is on its other flank.
+- So *Holds, once* and 0.7 do not fit together. Either:
+  - keep 0.7, as the realistic tilt (planets and idlers fail first in service), and word it as *teeth that bend both ways
+    are rated at 0.7, for running*; or
+  - drop it from the *once* figure.
+- I would keep it and word it, but this is the coordinator's ruling. It moves B1, B2, B3, B4, B6 and B7, and B5's 57.5 %.
+
+**The wording.**
+- **The form's row breaks §5.1's own rule.** §5.1 says every place the figure shows says *about* and gives the
+  allowable. §5.4's row *Holds, once — 0.58 N·m · 39 N* does neither. Should-fix: for example *about 0.58 N·m · 39 N at
+  17 MPa* (label *Holds once*), so a reader sees an estimate at a stated stress.
+- **The warning.**
+  - *Holds* reads as a breaking load; *is rated to take once* does not.
+  - A blank allowable should be called provisional, with where to type one.
+  - The user's own tested allowable is a remedy as real as a larger module.
+
+  Proposed, for F4-0 to settle:
+
+  > Meshes row 2: Sun and Planet: Printed, these teeth take about 230 N at the pitch circle in L, 13.6 times the 17 N
+  > one tooth of Planet is rated to take once at 17 MPa (provisional: type your own in the Box's Allowable stress)
+  > (…the two brackets as §5.4…); use a larger module, a wider face or less torque. An estimate for teeth printed flat,
+  > with the whole load on one tooth's tip: not a running rating; heat, wear and creep are not worked out.
+
+  Nothing frightening is added and nothing reassuring is lost: the multiple is the true one at the stated stress, and
+  the reader is told the stress is theirs to set.
+
+## 4. What must not move
+
+- **Machined gears.** They are told exactly what they were, by construction: the check is behind F1's `_printed`
+  (`checks.py:508-511`), the form's row behind a printed derived gear, the Results block behind a printed gearbox, and
+  every figure is pure maths. F4-0's pins (step 1) must give `export.results_sheet` a fixed `when`, or its timestamp
+  breaks the hash (should-fix, small).
+- **No schema number moves.** `store.py` keeps no Box value, so no record sees the setting. `_read_box` skips a label it
+  does not know (`model.py:405-407`), so an F3-era app reads a workbook with the row. `link.describe_changes` will list
+  *Box Allowable stress 17 → 34* as a changed cell, which is right; B's `update.classify` test holds that Update has
+  nothing to do.
+- **The three pinned lines.**
+  - `test_workbook_model.py:27-29` and `test_printed_rule.py:535` are the Box's titles and order.
+  - `test_printed_workbook.py:123`, *labels[7] == "Units"*, reads the committed `RangeBox_W9.xlsx`, so it does not move.
+  - I did not rerun the stub run. F4-0 reruns it, as §5.5 says.
+- **B's edit at `test_printed_workbook.py:296-311`.** As planned it is not a loosening, but it can be stricter at no cost.
+  Should-fix: assert that printed's diagnostics are machined's plus exactly B's strength sentences for that gearbox, in
+  order, rather than setting aside whatever carries the mark.
+- **W9's, F1's, F2's and F3's pins.** Nothing in §5 touches them, and the row is placed in `gui._rows_with_span` (which
+  takes `ui_text.derived_rows` unchanged) so `test_ui_text.py:4520` holds.
+
+## 5. Readiness
+
+- **Files.** F4-0, with A whole, then B and C: the files are disjoint as listed (F4-0: `gears/strength.py`, `schema.py`,
+  `model.py`, `test_strength.py`, `test_printed_rule.py`, `test_workbook_model.py`; B: `workbook/strength.py`, `checks.py`,
+  `export.py`, `test_strength_workbook.py`, `test_printed_workbook.py`; C: `gui.py`, `ui_text.py`, README, design,
+  `test_strength_form.py`).
+- **Tests and Done-when.** The tests owed are right, with M2's two rows added. The Done-when needs no SolidWorks, which
+  is right, since nothing F4 writes reaches a part.
+- **Cost.** Six to eight runs is honest by every earlier stage.
+- **What F4-0's interface must also state:** M1's rule; *not rated* for pointed teeth; the two *not worked out*
+  wordings; and R1's ruling.
+- **Decisions taken without the user, beyond §5.7's list.** None that blocks code. Two are worth putting in U-c's
+  question:
+  - every printed workbook read with a blank Process and no record (printed by D11) and an input torque will now carry
+    these warnings, the user's own copies of RangeBox among them;
+  - a planet's 0.7 is applied to a figure called *once* (R1).
+
+## 6. Before F4-0 starts
+
+**Must-fix**
+- **M1.** State what F4 does with a ring whose tips lie inside its base circle (every ring under 34 teeth at 20°; built,
+  with a warning): the load at the involute's start, or not rated with a sentence. Pin one such ring in A.
+- **M2.** Correct Risky_Placements' 14.9 to 14.3 (G5–G6, 1428.0 %) in §5.3 and U-c. Pin A9 (helical ring) and B8
+  (Risky_Placements' helical, herringbone and helical-ring meshes) with §2's figures, so a force taken at a helical ring's
+  normal-module diameter fails a test.
+
+**Should-fix**
+- S1. D7, the README and the Box's note give 17 MPa's basis as about half a printed PLA data sheet's 35 MPa in-layer
+  tensile strength (Bambu PLA Basic V3.0), not "a third of about 50".
+- S2. The form's row says *about* and the allowable (§5.1's own rule); the warning says *rated to take once*, calls a
+  blank allowable provisional and says where to type one.
+- S3. Results: *turns unloaded here* and *not shared out past a shared output* in place of one *no torque here*.
+- S4. A's note: the app's tooth against ISO's own generated tooth (+15 to +32 % in Y_F, +18 to +38 % with Y_S); the 30°
+  section reading up to about 7 % under the beam's worst on small pinions; the normal-section fillet bound (Y_S within
+  about 3 % at 20°).
+- S5. §5.1's interlayer figure: about 0.17 σ_F of shear at β 20° from the bending stress itself, not 0.035; the conclusion
+  (no derating) stands.
+- S6. `rate` says *not rated* for pointed teeth.
+- S7. F4-0's results pins pass a fixed `when`; B's edit to `test_printed_workbook.py` asserts the exact added sentences.
+
+**For a ruling:** R1, 0.7 under a *once* figure: keep it and word it for running (my preference), or drop it.
+
+**Ready for F4-0 once M1 and M2 are in the plan.** Neither needs the user, and nothing else in §5 is in doubt: every one of
+the plan's other figures was reproduced from the app's own geometry and kinematics.
+
+
+---
+
+# Re-check of the revision to F4's review (2026-11-19)
+
+**Read at `1d76576`** (§5 revised, and *Changes after F4's review*). The coordinator's rulings are taken as given: M1, a
+ring whose tips lie inside its base circle is not rated; R1, the 0.7 stays as an allowance for running. Figures are from a
+fresh scratch script on the app's own geometry and `checks.check`, built as before and not from the plan's numbers. Nothing
+was run on SolidWorks or Excel, and the suite was not run.
+
+## 1. The two must-fixes
+
+- **M1 is fixed at its cause.**
+  - *The condition.* It is `InternalDerived.tip_below_base` (d_a < d_b), the same test that drives the app's own
+    warning. It is applied to the drawn section, and to the virtual ring for a helical ring. I swept helical rings
+    (β 5° to 45°, 20 to 79 teeth, 14.5°, 20° and 25°) and found no case where the drawn section and the virtual ring
+    disagree on it.
+  - *A10, my figures.* At m 1, z 33, d_a 31.000 mm against d_b 31.010 mm, it is not rated. At z 34, d_a 32.000 against
+    31.952, it is rated: Y_F 2.1242, Y_S 2.6416, q_s 8.756.
+  - *Where it is said.* §5.1, §5.2, §5.4, §5.6 (the interface's item 4 and A's and B's tests) and §5.7 all carry it.
+  - *Pointed teeth.* `rate` now says *not rated* for a pointed tooth too.
+- **M2 is fixed at its cause.**
+  - §5.1 now states that a helical ring's force is taken at its transverse diameter, never at z · m_n.
+  - Risky_Placements reads 14.3 in §5.3 and in U-c.
+  - The A9 and B8 rows now pinned would fail if the force were taken at z · m_n.
+
+## 2. A9 and B8, recomputed
+
+- **A9.** Y_F 2.0408, Y_S 2.6948, q_s 8.500, d 76.6208. It is rated to take 61.823 N and 2.3685 N·m. All agree with the
+  plan.
+- **B8.** All three meshes agree with the plan:
+
+  | Mesh | My result |
+  |---|---|
+  | G5–G6 | 723.563 N (G6's own side 709.092); G5 50.670 N, G6 61.823 N; G5 the weaker; 1428.0 % |
+  | G1–G2 | 335.605 N (d 29.7970 and 42.5671); G1 50.670 N, G2 56.971 N; 662.3 % |
+  | G3–G4 | 453.154 N at b 12 (the faces' overlap); G3 62.836 N, G4 71.137 N; 721.2 % |
+
+## 3. A mesh with an unrated ring, and the *Worst share* row
+
+- **The mesh itself reads right.**
+  - The share is counted over the gear that rates. That is a true lower bound, and the plan says so.
+  - The ring is named at its Meshes row whenever the mesh is loaded, whether or not the share passes 100 %. So a mesh
+    whose rated gear reads under 100 % is not passed over in silence.
+- **The *Worst share* row cannot pass off a lower bound as the worst.** When a lower bound is the worst figure, it is
+  marked *(Ring not rated)*, and every unrated gear or mesh is listed after it by name.
+- **One way it can still mislead (should-fix, B's words).**
+  - *What it misses.* The row covers rated meshes and unrated ones, but not loaded meshes that are *not worked out*.
+  - *Where that bites.* In TransferCase_Parallel and E4 in 4H and 4L, the front branch FDrive–FIdler–FOut carries torque
+    past a shared output. FIdler is a gear whose teeth are loaded both ways, and it is never rated. The row would read
+    the low range's 2258.1 % as the gearbox's worst and stay silent about it.
+  - *The fix.* After the unrated list, the row should also name every mesh that carries torque but is not shared out,
+    with its modes, for example *not worked out: FDrive–FIdler, FIdler–FOut in 4H and 4L (past a shared output)*.
+- **Wording, small.** §5.2's opening still says *each Meshes row whose two gears are rated*. It should cover a mesh where
+  one gear rates and the other is a ring that is not rated, since §5.2's own bullet below it works out that mesh's share.
+
+## 4. The 17 MPa basis and the wording
+
+- **The basis.** D7, H1, the Box's note and the README now give 17 MPa as about half a printed PLA data sheet's 35 MPa
+  within the layers, for a single load, and provisional. That is the basis I asked for.
+- **The form's row.** It is now *Holds once — about 0.58 N·m · 39 N at 17 MPa*, so it says *about* and the stress, and a
+  ring adds that its stress factor is past range.
+- **The warning.** It now says *rated to take … once*, calls a blank allowable provisional and says where to type one, and
+  names the user's own tested allowable as a remedy. The 0.7 is worded as R1 rules, beside the figure for a single load
+  rather than inside it. The worked sentence's numbers check: 230 N, 17 N (16.851), 24 N once (24.072), 13.6 times.
+- **The Results sheet.** It gives the two wordings in place of *no torque here*.
+- **Two leftover uses of *holds*.** §5.4's form bullet (*what each printed gear holds at 17 MPa*) and the README title
+  (*What a tooth holds*) still use it. Harmless; C can align them.
+
+## 5. Readiness
+
+- **F4-0, with package A, may start.** Nothing left touches A's maths, the Box or the pins.
+- **Left for B, should-fix:** the *Worst share* row's not-worked-out list, and §5.2's opening sentence.

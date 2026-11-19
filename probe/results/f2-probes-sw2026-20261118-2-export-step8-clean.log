@@ -1,0 +1,54 @@
+findings SAVE_AS_SILENT 1; F2's, each None until a reviewed run sets it: {'OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_2024': None, 'OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_2026': None, 'PART_WINDOW_READ_ON_2024': None, 'PART_WINDOW_READ_ON_2026': None, 'SAVE_AS_COPY': None, 'STEP_EXPORT_FROM_COMPONENT_ON_2024': None, 'STEP_EXPORT_FROM_COMPONENT_ON_2026': None, 'STEP_EXPORT_NEEDS_ACTIVE_ON_2024': None, 'STEP_EXPORT_NEEDS_ACTIVE_ON_2026': None, 'STEP_EXPORT_ON_2024': None, 'STEP_EXPORT_ON_2026': None}
+awake   display and system held awake for the run (previous state -0x80000000)
+run     2026-11-18 10:13:41; F2 probes from C:\Users\M0obo\Documents\GearGeneratorProbe\f2-probes-sw2026-20261118-100922\snap2\src (snapshot: e3dc598); sections ['export']; masters {'rangebox': '', 'setup': '', 'reducer': ''}; redo True
+ok      the app's settings and Recent list go into this run's folder, not the user's: C:\Users\M0obo\Documents\GearGeneratorProbe\f2-probes-sw2026-20261118-100922\out\appdata\Gear Generator\recent.json
+attach  SolidWorks 2026 (revision 34.1.1) (revision 34.1.1), PID 20700; SolidWorks 0.97 GB private, 9.30 GB free
+open    before: []
+findings USER_MATE_PUT_ROUTE "put along, the user's locks left on", USER_TIE_RULE 'not COMPONENT_UNDER_DEFINED', WHATS_WRONG_OPENS_ON_PART_REBUILD False, the branches {'USER_MATE_PUT_FIXED_GEAR_ON_2024': None, 'USER_MATE_PUT_FIXED_GEAR_ON_2026': None, 'USER_MATE_PUT_HELD_GEAR_ON_2024': None, 'USER_MATE_PUT_HELD_GEAR_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2024': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_ON_2024': True, 'USER_MATE_PUT_NO_CARRIER_ON_2026': True, 'USER_MATE_PUT_SUBASSEMBLY_ON_2024': None, 'USER_MATE_PUT_SUBASSEMBLY_ON_2026': None}
+rule    What's Wrong: swbuild.whats_wrong_shows_in_update reads False; What's Wrong during a job is a STOP, as any dialog
+excel   started our own Excel, PID 52452, 16.0 build 20527.0
+redo    export: f2-export set aside as f2-export.prev-20261118-101341
+== export  a printed spur and a printed helical gear built and saved; swSaveAsOptions_e read; each part exported to STEP as a copy while active, the files read as text; an export onto an existing file; the spur exported by its own document object while the helical is active; the spur changed, not saved, and exported; everything closed unsaved
+NEW     IModelDocExtension.SaveAs(path.step, 0, Silent | Copy, null, out errors, out warnings) under this app's session and builds (the macro database, files/04: verified on SolidWorks 2026 by the Airfoil Converter, on the active part only; never on 2024, on a part not active, or on a modified one); swSaveAsOptions_e, swFileSaveError_e and swFileSaveWarning_e read from swconst.tlb
+open    export: the user's documents at the start none
+ok      export spur: built and saved by swbuild.build as f2-export\Gear_m1.5_N20_P.SLDPRT: ok True, failures []
+ok      export helical: built and saved by swbuild.build as f2-export\Helical_m2_N20_15R_P.SLDPRT: ok True, failures []
+ok      export: both parts saved and unmarked after their builds: {'Gear_m1.5_N20_P.SLDPRT': False, 'Helical_m2_N20_15R_P.SLDPRT': False}
+fact    swconst.tlb beside the running sldworks.exe; read ['swComponentSuppressionState_e', 'swDeleteSelectionOptions_e', 'swDocumentTypes_e', 'swInConfigurationOpts_e', 'swMateAlign_e', 'swMateType_e', 'swMateWidthOptions_e', 'swOpenDocOptions_e', 'swSelectType_e']; the positive control (mate types findings.py holds) agrees
+fact    export (1) swconst.tlb: swSaveAsOptions_e Silent 1, Copy 2 (13 members); swFileSaveError_e 15 members, swFileSaveWarning_e 12
+propose SAVE_AS_COPY = 2  # swSaveAsOptions_e.swSaveAsOptions_Copy from swconst.tlb, Silent read 1 against findings.SAVE_AS_SILENT 1
+fact    export (2) the spur: SaveAs answered True (plain), errors 0 [], warnings 0 [], options 3, in 0.402 s; the file on disk, 909834 bytes; windows 0
+        before {'active': 'Gear_m1.5_N20_P.SLDPRT', 'folder': {'Gear_m1.5_N20_P.SLDPRT': False, 'Helical_m2_N20_15R_P.SLDPRT': False}, 'users': {}, 'doc': {'path': 'f2-export\\Gear_m1.5_N20_P.SLDPRT', 'title': 'Gear_m1.5_N20_P.SLDPRT', 'flag': False}}
+        after  {'active': 'Gear_m1.5_N20_P.SLDPRT', 'folder': {'Gear_m1.5_N20_P.SLDPRT': False, 'Helical_m2_N20_15R_P.SLDPRT': False}, 'users': {}, 'doc': {'path': 'f2-export\\Gear_m1.5_N20_P.SLDPRT', 'title': 'Gear_m1.5_N20_P.SLDPRT', 'flag': False}}
+fact    export (2) the spur, the file: frame True; FILE_SCHEMA CONFIG_CONTROL_DESIGN (AP203); instances 9096: MANIFOLD_SOLID_BREP 1, CLOSED_SHELL 1, OPEN_SHELL 0, SHELL_BASED_SURFACE_MODEL 0; length unit MILLI.METRE (1.0 mm); 340 vertices; extent largest radius 16.501185 against 16.500000, axial extent 8.000031 against 8.000000 mm: holds True
+fact    export (2) the spur: a clean export
+fact    export (4) the helical: SaveAs answered True (plain), errors 0 [], warnings 0 [], options 3, in 0.434 s; the file on disk, 1888147 bytes; windows 0
+        before {'active': 'Helical_m2_N20_15R_P.SLDPRT', 'folder': {'Gear_m1.5_N20_P.SLDPRT': False, 'Helical_m2_N20_15R_P.SLDPRT': False}, 'users': {}, 'doc': {'path': 'f2-export\\Helical_m2_N20_15R_P.SLDPRT', 'title': 'Helical_m2_N20_15R_P.SLDPRT', 'flag': False}}
+        after  {'active': 'Helical_m2_N20_15R_P.SLDPRT', 'folder': {'Gear_m1.5_N20_P.SLDPRT': False, 'Helical_m2_N20_15R_P.SLDPRT': False}, 'users': {}, 'doc': {'path': 'f2-export\\Helical_m2_N20_15R_P.SLDPRT', 'title': 'Helical_m2_N20_15R_P.SLDPRT', 'flag': False}}
+fact    export (4) the helical, the file: frame True; FILE_SCHEMA CONFIG_CONTROL_DESIGN (AP203); instances 13659: MANIFOLD_SOLID_BREP 1, CLOSED_SHELL 1, OPEN_SHELL 0, SHELL_BASED_SURFACE_MODEL 0; length unit MILLI.METRE (1.0 mm); 322 vertices; extent largest radius 22.705524 against 22.705524, axial extent 10.000000 against 10.000000 mm: holds True
+fact    export (4) the helical: a clean export
+propose STEP_EXPORT_ON_2026 = True  # steps 2-4: both exports clean and both files whole
+fact    export (5) the spur again onto its file: SaveAs answered True (plain), errors 0 [], warnings 0 [], options 3, in 0.421 s; the file on disk, 909848 bytes; windows 0
+        before {'active': 'Gear_m1.5_N20_P.SLDPRT', 'folder': {'Gear_m1.5_N20_P.SLDPRT': False, 'Helical_m2_N20_15R_P.SLDPRT': False}, 'users': {}, 'doc': {'path': 'f2-export\\Gear_m1.5_N20_P.SLDPRT', 'title': 'Gear_m1.5_N20_P.SLDPRT', 'flag': False}}
+        after  {'active': 'Gear_m1.5_N20_P.SLDPRT', 'folder': {'Gear_m1.5_N20_P.SLDPRT': False, 'Helical_m2_N20_15R_P.SLDPRT': False}, 'users': {}, 'doc': {'path': 'f2-export\\Gear_m1.5_N20_P.SLDPRT', 'title': 'Gear_m1.5_N20_P.SLDPRT', 'flag': False}}
+fact    export (5): the existing file was overwritten (its time before 1795014857.2552545, after 1795014859.5695884); the text the same as (2)'s but for FILE_NAME: False (9087 statements differ): the control step 6's comparison rests on
+fact    export (6): the spur's window read with Helical_m2_N20_15R_P.SLDPRT active: {'Visible': True, 'ActiveView': True} (M1)
+fact    export (6) the spur by its own object, the helical active: SaveAs answered True (plain), errors 0 [], warnings 0 [], options 3, in 0.46 s; the file on disk, 909905 bytes; windows 0
+        before {'active': 'Helical_m2_N20_15R_P.SLDPRT', 'folder': {'Gear_m1.5_N20_P.SLDPRT': False, 'Helical_m2_N20_15R_P.SLDPRT': False}, 'users': {}, 'doc': {'path': 'f2-export\\Gear_m1.5_N20_P.SLDPRT', 'title': 'Gear_m1.5_N20_P.SLDPRT', 'flag': False}}
+        after  {'active': 'Helical_m2_N20_15R_P.SLDPRT', 'folder': {'Gear_m1.5_N20_P.SLDPRT': False, 'Helical_m2_N20_15R_P.SLDPRT': False}, 'users': {}, 'doc': {'path': 'f2-export\\Gear_m1.5_N20_P.SLDPRT', 'title': 'Gear_m1.5_N20_P.SLDPRT', 'flag': False}}
+fact    export (6): the file is the spur's own: None (two exports of one document differ beyond FILE_NAME, so a file cannot be told by its text)
+propose STEP_EXPORT_NEEDS_ACTIVE_ON_2026 = None  # step 6: two exports of one document differ beyond FILE_NAME, so a file cannot be told by its text
+fact    export (8): the spur's flag after the change True, Gear_m1.5_N20_P.SLDPRT active at the change
+fact    export (8) the spur, changed and not saved: SaveAs answered True (plain), errors 0 [], warnings 0 [], options 3, in 0.496 s; the file on disk, 909890 bytes; windows 0
+        before {'active': 'Gear_m1.5_N20_P.SLDPRT', 'folder': {'Gear_m1.5_N20_P.SLDPRT': True, 'Helical_m2_N20_15R_P.SLDPRT': False}, 'users': {}, 'doc': {'path': 'f2-export\\Gear_m1.5_N20_P.SLDPRT', 'title': 'Gear_m1.5_N20_P.SLDPRT', 'flag': True}}
+        after  {'active': 'Gear_m1.5_N20_P.SLDPRT', 'folder': {'Gear_m1.5_N20_P.SLDPRT': True, 'Helical_m2_N20_15R_P.SLDPRT': False}, 'users': {}, 'doc': {'path': 'f2-export\\Gear_m1.5_N20_P.SLDPRT', 'title': 'Gear_m1.5_N20_P.SLDPRT', 'flag': True}}
+fact    export (8): {'flag_stays_on': True, 'path_unchanged': True, 'differs_from_saved': True, 'axial_extent_mm': 9.000030745716966} (the changed solid's face is 9 mm; the app refuses an unsaved part by ruling, whatever this shows)
+ok      export (9): every document of its folder closed unsaved, no window: left []
+ok      export: the user's documents as at the section's start: all
+time    export: 43 s; 0 failed; SolidWorks 1.00 GB private, 9.22 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 0.95 GB private, 9.33 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 0, 'Updating...': 0, 'Opening': 0, 'Loading...': 0}; other windows the watch logged: 0
+awake   display and system released (previous state -0x7ffffffd)
+result  written to C:\Users\M0obo\Documents\GearGeneratorProbe\f2-probes-sw2026-20261118-100922\f2-probes-20261118-101341.json; masters kept {'rangebox': '', 'setup': '', 'reducer': ''}
+done    0 failed: []; 0 noted; 0 STOP(s), a hung worker included: []

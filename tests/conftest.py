@@ -1,5 +1,6 @@
-"""What every test shares: an exception raised in a Tk callback fails the test it was raised in; and W9c's gates, and
-W9d's demonstration findings, patched back to None for a test that wants their refusal, now that measured ones are set.
+"""What every test shares: an exception raised in a Tk callback fails the test it was raised in; and W9c's gates, W9d's
+demonstration findings and F2's findings, patched back to None for a test that wants their refusal, now that measured
+ones are set.
 
 Tk does not raise such an exception where the callback was set off (a variable's write, an ``after``, an event): it
 hands it to the root's ``report_callback_exception``, which prints a traceback and carries on, so a test could pass
@@ -55,6 +56,24 @@ W9D_M9_FINDINGS = ("CARRY_INSERTS", "CARRY_INSERTS_IN_A_CONFIGURATION", "REFEREN
                    "CARRY_REMAKE_KINDS", "CARRY_GEAR_MATE_ON_AN_APP_GEAR", "CARRY_INSERTS_A_SUBASSEMBLY",
                    "CARRY_REMAKES_ON_A_LEAF", "VIRTUAL_READ", "PATTERN_INSTANCE_READ", "ORIGIN_ENTITY_READ",
                    "PERSIST_REFERENCE_ROUTE_FOR_VERTICES")
+
+
+# F2's findings (findings.py, the F2 block; F2-INTERFACES.md §7): all six set alike on both versions since the probe's
+# reruns were reviewed (F2-PROBES-REVIEW.md, e449465), with EXTENT_MEASURED; a test of what the app does while one is not
+# measured patches it back to None.
+F2_FINDINGS = ("STEP_EXPORT", "STEP_EXPORT_NEEDS_ACTIVE", "STEP_EXPORT_FROM_COMPONENT", "OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN",
+               "PART_WINDOW_READ")
+
+
+@pytest.fixture
+def f2_unmeasured(monkeypatch):
+    """Every F2 finding None on both versions, SAVE_AS_COPY and EXTENT_MEASURED with them, as committed before the probe's
+    reruns were reviewed."""
+    monkeypatch.setattr(findings, "SAVE_AS_COPY", None)
+    monkeypatch.setattr(findings, "EXTENT_MEASURED", None)
+    for name in F2_FINDINGS:
+        for year in (2026, 2024):
+            monkeypatch.setattr(findings, f"{name}_ON_{year}", None)
 
 
 @pytest.fixture

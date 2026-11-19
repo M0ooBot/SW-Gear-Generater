@@ -27,10 +27,12 @@ touches Tk, COM or the file system.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import List, Sequence, Tuple
+from dataclasses import dataclass, field, replace
+from typing import List, Optional, Sequence, Tuple
 
+from .. import store
 from ..gears.base import Diagnostic
+from ..spec import PROCESS_MACHINED, PROCESS_PRINTED, GearSpec
 from . import build, checks, fixes, geometry, motion
 from .build import PartsPlan
 from .checks import Report
@@ -145,21 +147,55 @@ def build_refusal(parts: PartsPlan, diagnostics: Sequence[Diagnostic], folder: s
     return ""
 
 
+def blank_process(record: Optional[store.LinkRecord]) -> str:
+    """What a blank Process on the Box sheet means for the gearbox ``record`` describes (PLAN-PRINTED §1.3, D11 ruled
+    (B) by the coordinating session, 2026-11-18): *as built*.
+
+    Machined when the record lists current parts (:meth:`store.LinkRecord.current_parts`) and none was built
+    printed (no part entry's ``spec`` reads printed; a part built before F1, or built machined after it, holds no
+    ``process``). Printed otherwise: no record, a record with no parts, or any part built printed. The rule goes by
+    the parts, never by the record's schema number, which any F1 write moves to 11.
+
+    This body is D11's one switch: under (A) it returns :data:`PROCESS_PRINTED` always. The window passes no record
+    when the one beside the workbook is another workbook's (package C).
+    """
+    parts = record.current_parts() if record is not None else []
+    if not parts:
+        return PROCESS_PRINTED
+    if any(GearSpec.from_dict(dict(p.spec or {})).is_printed() for p in parts):
+        return PROCESS_PRINTED
+    return PROCESS_MACHINED
+
+
 def assess(read: GearboxSpec, read_diagnostics: Sequence[Diagnostic], folder: str, part_template: str = "",
-           chosen: Sequence[Fix] = (), provisional: bool = False) -> Assessment:
+           chosen: Sequence[Fix] = (), provisional: bool = False,
+           blank_process: str = PROCESS_PRINTED, record: Optional[store.LinkRecord] = None) -> Assessment:
     """The read worked through: the chosen fixes made, every gear planned, the gearbox checked.
 
     A gear with an error of its own — from the read or the strip's checks — is
     left out of the parts and the gearbox checks (the error says where), and
     then out of the layout too (:attr:`geometry.Layout.left_out`). A
     ``provisional`` read offers no fixes (``report.fixes`` is empty).
+
+    F1 (PLAN-PRINTED §1.3): a Box whose Process is blank (``""``, the user's blank as read) takes ``blank_process``,
+    in the assessment's ``read`` and ``spec`` both, so no Assessment holds a blank Process. The window passes
+    :func:`blank_process` of the record beside the workbook; a gearbox built in code says machined and never meets it.
+
+    F3 (PLAN-PRINTED §4.1.1; F3-INTERFACES §14, S3, the rule's tenth caller): ``record``, the record beside the workbook
+    (this workbook's: the window passes the one it reads :func:`blank_process` from, None for another workbook's), reads
+    each row whose gear's part is on record as built (``build.built_globals``), so the window's checks (the printed rim,
+    the bore against the root) speak of the hole that part was cut with; its job is planned as typed (F3-REVIEW M2). None, every row as
+    a row with no part on record, as before.
     """
+    if not str(read.box.process).strip():
+        read = replace(read, box=replace(read.box, process=blank_process))
     spec = read
     for fix in chosen:
         spec = fixes.apply(spec, fix)
     read_diagnostics = list(read_diagnostics)
     skip_rows = build.rows_with_errors(read_diagnostics)
-    parts = build.plan_parts(spec, folder, part_template, skip_rows=skip_rows)
+    parts = build.plan_parts(spec, folder, part_template, skip_rows=skip_rows,
+                             built=build.built_globals(record) if record is not None else None)
     bad_rows = skip_rows | build.rows_with_errors(parts.diagnostics)
     report = checks.check(spec, {g.id for g in spec.gears if g.row in bad_rows})
     if provisional:

@@ -69,11 +69,13 @@ def test_the_stage_is_a_frozen_record_of_its_members():
 
 import hashlib  # noqa: E402
 import os  # noqa: E402
+import sys  # noqa: E402
 from fractions import Fraction  # noqa: E402
 
 from gear_generator import findings  # noqa: E402
 from gear_generator.workbook import assess, build, checks, geometry, gearbox, kinematics, model, xlsx  # noqa: E402
 from gear_generator.workbook.model import Box, Gear, GearboxSpec, Mesh, Shaft, replace  # noqa: E402
+from workbook_fixtures import machined  # noqa: E402
 
 BOOK = "C:\\Books\\Planetary_4to1.xlsx"
 OUT = "C:\\Out\\"
@@ -366,7 +368,8 @@ def test_a_mount_that_loops_and_copies_below_one_are_the_reads_errors(tmp_path):
 
 # -- every workbook before W7 plans bit for bit as it did (D7's rule, carried over) ---------------------------------
 
-def _fingerprint(a):
+def _fingerprint_text(a):
+    """What _fingerprint hashes (split out for test_printed_rule's stored content of its W8 pins; unchanged)."""
     r = a.report
     out = [repr([d.message for d in a.diagnostics]), r.worked_out_as, r.unchecked]
     out.append(repr({k: v.hex() for k, v in sorted(r.theta.items())}))
@@ -381,7 +384,11 @@ def _fingerprint(a):
     out.append(plan.refusal)
     if not plan.refusal:
         out.append(repr(plan.build_kwargs()))
-    return hashlib.sha256("\n".join(out).encode()).hexdigest()
+    return "\n".join(out)
+
+
+def _fingerprint(a):
+    return hashlib.sha256(_fingerprint_text(a).encode()).hexdigest()
 
 
 # Taken at 5d5d51d (W7's interface commit, before any of B's W7 code), with the turned read-back finding set.
@@ -394,13 +401,17 @@ BEFORE_W7 = {
 }
 
 
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason=(
+    "a Linux-only pin: W7's hashes were taken on Linux over float.hex of figures whose last bit libm and the Windows CRT "
+    "differ in, and over paths joined by Linux's os.path; left as they are by the coordinator's ruling of 2026-11-19 "
+    "(PINS-ON-WINDOWS.md)"))
 @pytest.mark.parametrize("name", sorted(BEFORE_W7))
 def test_every_workbook_before_w7_plans_bit_for_bit_as_it_did(name, monkeypatch):
     monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", "entity senses", raising=False)
     if name.endswith(".xlsx"):
         here = os.path.join(os.path.dirname(__file__), "fixtures", "excel-windows")
         spec, diagnostics = model.from_book(xlsx.read(os.path.join(here, name)))
-        a = assess.assess(spec, diagnostics, OUT)
+        a = assess.assess(machined(spec), diagnostics, OUT)          # PLAN-PRINTED §2.7: a committed workbook
     else:
         import test_workbook_turned as turned
         a = assess.assess(replace(getattr(turned, name)(), source_path="C:\\B\\W.xlsx"), [], OUT)

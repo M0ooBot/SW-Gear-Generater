@@ -39,13 +39,29 @@ solve, and a greyed panel is only clutter.
 
 ### Gear — readout `Spur · involute curve`
 
-Three segmented rows: **Kind** (`Spur` · `Helical` · `Double` · `Bevel`),
-**Flank** (`Involute` · `Arcs`), and **Make** (`Single gear` · `Gear pair`).
+Four segmented rows: **Kind** (`Spur` · `Helical` · `Double` · `Bevel`),
+**Flank** (`Involute` · `Arcs`), **Make** (`Single gear` · `Gear pair`), and
+**Process** (`Printed` · `Machined`, F1), with **Nozzle** under it (mm,
+placeholder *0.4*, hint *the printer's line width*) shown only while Process is
+Printed.
 `Double` is the herringbone: the whole word does not fit its share of the row,
 so the readout says it (`Herringbone · involute curve`). Internal is not a kind:
 it is the gear panel's **Teeth side**. Choosing a kind shows or hides the rows
 below that only some kinds have — `_show_helix_rows` decides all of them (§2,
 *Rows by kind*).
+
+**Process** is the pair's, as Kind and Flank are: `_gear_spec` puts it and the
+Nozzle into both gears, so Solve, which reads the pair's gears, and a candidate
+applied keep it. It starts at **Printed** on every launch (PLAN-PRINTED §1.3: the
+user's default), not at `GearSpec()`'s machined, which is what a spec built in
+code without saying means. A Machined gear's Nozzle goes across blank, as a
+hidden Profile shift goes across as 0, so a nozzle left typed never reaches a
+machined part. **Open .gear.json** sets the row from the record: a record written
+before F1 has no process and opens **Machined**, which is what was built, and a
+part built from that form afterwards is machined too unless the row is changed.
+`_show_process_rows` shows or hides Nozzle and sets each gear's Backlash
+placeholder and hint for the row (below). A printed part's name ends `_P`
+(`Gear_m1.5_N25_P`), and a printed pair's assembly too.
 
 ### Rows by kind
 
@@ -56,6 +72,8 @@ below that only some kinds have — `_show_helix_rows` decides all of them (§2,
 | Profile shift (unit *× m*, placeholder *0*, hint *+ cures undercut*) | Gear A/B | spur, helical, double with external teeth; in a pair only on parallel shafts with an external mesh. Hidden, it goes to the spec as 0 |
 | Teeth side (`External` · `Internal`) | Gear | spur, helical, double in single mode; in a pair the Pair panel's Mesh decides |
 | Rim (placeholder *root + 6 × module*) | Gear A/B | a ring — and Bore is hidden for it |
+| Bore allowance (F3) | Gear A/B | every gear with a Bore row; hidden for a ring, and goes across blank |
+| Drive (`Round` · `Flat`), and Flat while it is Flat (F3) | Gear A/B | every gear with a Bore row but a bevel gear (G5); hidden, they go across round and blank |
 | Shaft angle, Mate teeth | Gear | bevel in single mode; in a pair they come from the Pair panel's shaft angle and the other gear's teeth |
 | Cone distance (in Centre distance's place, hint *apex to heel*) | Pair | bevel |
 | Mesh (`External` · `Internal`) | Pair | every kind but bevel; Internal makes gear B the ring |
@@ -93,7 +111,10 @@ gear closes the flyout, since the button that would hide it goes with the panel.
 
 Module (every ISO 54 module in a dropdown beside it, hint *ISO 54*), Teeth,
 Pressure angle (14.5, 20 and 25 in a dropdown), Face width, Bore (placeholder
-*none*), Backlash (placeholder *0.3 × module*, hint *ISO: 0.02–0.05 × m*), Fillet
+*none*), under it Bore allowance, Drive and, while Drive is Flat, Flat (F3; *The
+bore as cut*, §9), Backlash (placeholder *0.3 × module*, hint *ISO: 0.02–0.05 × m*; while
+Process is Printed, placeholder *0.3 · printed*, hint *0.3 × m below m1*, since a
+printed gear's blank is the smaller of 0.3 mm and 0.3 × module), Fillet
 (placeholder *0.38 × module*), for a helical kind Helix angle (10–30 in a
 dropdown, hint *normal module, α*) and Hand (`Right` · `Left`), and Name
 (placeholder: the stem the part will be saved as, `Gear_m1.5_N25`, or
@@ -123,8 +144,20 @@ left and three lines at the right:
 3. the worked line: `here` in 11.5 px `#8f8f8f`, then what the typed value comes
    to in mono 11.5 px ink. A blank field says what blank means.
 
-The words are `ui_text.explainer(field, derived, stem, pair, folder) -> (name,
-symbol, what, worked)`, tested for every field in `tests/test_ui_text.py`. The worked line is derived text like every readout: it
+The words are `ui_text.explainer(field, derived, stem, pair, folder, printed) -> (name,
+symbol, what, worked)`, tested for every field in `tests/test_ui_text.py`.
+**Backlash on a printed gear** (F1) says, in place of the machined copy's last
+sentence: *Printed, blank uses 0.3 mm, or 0.3 × module below module 1: room for
+walls printed a little fat, and a starting value until your own prints are
+measured. A slicer's X-Y compensation does the same job, so use one or the
+other, not both.* Bore allowance, Drive and Flat (F3) have
+cards of their own, kept out of `EXPLAINER_FIELDS` and drawn with Bore's
+diagram (*The bore as cut*, §9). Its worked line reads *blank → 0.3 mm · printed default · tooth
+2.056 · space 2.656 · play in the mesh 0.6*, and a printed bevel gear's adds the
+toe's figure, which governs (*0.3 mm · printed default, 0.211 at the toe*). The
+strip passes the form's Process as `printed`, so the copy is right while the
+gear does not work out; every other card is the same printed or machined, and a
+machined gear's card is pinned in `tests/test_printed_rule.py` (`CARD`). The worked line is derived text like every readout: it
 is filled in again on every `_derive_now`, not only when the caret moves, and a
 gear that does not work out says *check the fields*, as the gear readout does.
 The diagrams are `widgets.draw_diagram`, stroke drawings on a 56 px grid the way
@@ -162,13 +195,23 @@ helical pair), all from `pairs.describe`, and for a shifted pair a fourth,
 Working α `21.252°` —
 then a 1 px rule, then the table: captions `A · mm` and `B · mm`, the label
 column 104 px, value columns 96 px. Values carry no unit; one `mm` caption heads
-each column. Where a value came from a default it says so (`0.45 · 0.3m`). A
+each column. Where a value came from a default it says so (`0.45 · 0.3m`; a
+printed gear's blank Backlash `0.3 · printed default`, the third state). A
+printed gear with a bore ends with *Bore as cut* `8.2 · 8 + 0.2`, and a D with
+*Flat as cut* (F3; a machined gear only with an allowance or a D). After them a printed spur,
+helical, herringbone or ring gear ends with *Holds once*, *about 0.58 N·m · 39 N at
+17 MPa* (F4: *What a tooth is rated to take*, below). A
 helical gear's column starts with six more: Helix `15° · right`, Transverse m,
 Transverse α, Lead, Twist on face (face to apex for a herringbone), and
 Overlap εβ. A shifted gear's starts with Profile shift `+0.3 · 0.6`, the
 coefficient and what it comes to in mm. A shifted pair whose tips come within a
 tenth of a module of the other gear's root says so under the table, and one
-whose tips reach it is an error.
+whose tips reach it is an error. A printed pair (F1) is told its tip clearance
+under 0.3 mm (*Printed, the tip clearance is 0.2 mm, under the 0.3 mm two
+printed surfaces take; use a larger module.*) whatever its kind: outside, a
+pinion in a ring, a bevel pair (`pair.mesh_warnings`), and a crossed pair, judged
+unshifted as the workbook judges it, so the form and the workbook never
+disagree. A machined ring, bevel or crossed pair is told nothing new.
 Errors come first, then warnings, each once, in `theme.ERROR`. The form is
 worked out again **120 ms** after the last keystroke. An error disables
 **Build**.
@@ -184,12 +227,17 @@ naming the record that is open.
 The dot and the headline (no document open is a good state here: this app makes
 its own documents). Below, what the primary button is about to do (*Build will
 make Gear_m1.5_N25.SLDPRT.*, or *Update values will change 2 variables in
-Gear_m1.5_N25.SLDPRT.*), and a line counting what is left to do by hand.
+Gear_m1.5_N25.SLDPRT.*; with a record open and Bore allowance blank, *Build will
+make Coupon_F3.SLDPRT with no bore allowance, as Coupon_C was built, since Bore
+allowance is blank.*, F3), under it which file **Print files** would write from
+the active part (*Print files will write Gear_m1.5_N25_P.step from the active
+part.*, F2), and a line counting what is left to do by hand.
 
 ### Footer
 
 The status dot and line — one sentence for whatever last happened — then
-**Update values** (secondary) and **Build** (primary). **Update values** shows
+**Update values** (secondary), **Print files** (secondary, F2) and **Build**
+(primary); the sentence wraps in the room the buttons showing leave. **Update values** shows
 only while an opened record's part is the active document in SolidWorks and
 the form differs from what that part holds.
 
@@ -256,7 +304,7 @@ All in `ui_text.py`, tested without a window:
 | `widgets.py` | Airfoil Converter's, plus `Explainer` and `draw_diagram` |
 | `swbuild.py` | the build, run against the `SolidWorks` protocol |
 | `store.py` | `.gear.json` records and `recent.json` |
-| `design/canvas/` | the artboards, one strip each: `Main` (a spur pair), `SingleGear`, `ShiftedPair` (a solved row with profile shift), `HelicalPair` (gear B's hand following A's), `Herringbone` (grooved), `RingPair`, `CrossedPair` (opposite hands), `BevelPair`, and `FieldGuide` (every explainer card, each worked for a gear that has the field); and the Workbook window, 1080 px wide, as `WorkbookReady`, `WorkbookError`, `WorkbookFix`, `WorkbookChosen`, `WorkbookBuilt`, `WorkbookUpdate`, `WorkbookUpdated`, `WorkbookAgain`, `WorkbookUnsaved`, `WorkbookCopy`, `WorkbookMoved` and `WorkbookCloseAnyway` (§9); the built ones run the worker against `tests/test_swbuild.py`'s fake SolidWorks, so `gen.py` needs the tests folder beside it. `gen.py` writes them — `.venv/bin/python design/canvas/gen.py` — taking every word from `ui_text`, every picture from `preview.layout` and which field borrows which diagram from `widgets.py`, so they cannot drift from the window; only the HTML and the SVG diagrams are its own. `ui.py` is Airfoil Converter's builders, unchanged. The first three once lived at <https://claude.ai/artifact/NZXpsX26vgcabs9fFryF7G>, which has not been republished since |
+| `design/canvas/` | the artboards, one strip each: `Main` (a spur pair), `SingleGear`, `ShiftedPair` (a solved row with profile shift), `HelicalPair` (gear B's hand following A's), `Herringbone` (grooved), `RingPair`, `CrossedPair` (opposite hands), `BevelPair`, `PrintedGear` (F1: Process Printed with Nozzle, the Backlash card's printed default and a thin tip's printed warning; the other strip boards draw specs built in code, so their Process row says Machined), and `FieldGuide` (every explainer card, each worked for a gear that has the field); and the Workbook window, 1080 px wide, as `WorkbookReady`, `WorkbookError`, `WorkbookFix`, `WorkbookChosen`, `WorkbookBuilt`, `WorkbookUpdate`, `WorkbookUpdated`, `WorkbookAgain`, `WorkbookUnsaved`, `WorkbookCopy`, `WorkbookMoved` and `WorkbookCloseAnyway` (§9); the built ones run the worker against `tests/test_swbuild.py`'s fake SolidWorks, so `gen.py` needs the tests folder beside it. `gen.py` writes them — `.venv/bin/python design/canvas/gen.py` — taking every word from `ui_text`, every picture from `preview.layout` and which field borrows which diagram from `widgets.py`, so they cannot drift from the window; only the HTML and the SVG diagrams are its own. `ui.py` is Airfoil Converter's builders, unchanged. The first three once lived at <https://claude.ai/artifact/NZXpsX26vgcabs9fFryF7G>, which has not been republished since |
 | `design/renders/` | each artboard as a PNG at 2×, `<Board>.png`, made by `.venv/bin/python design/canvas/render.py` with headless Chrome (no window opens; a throwaway profile) and trimmed of the empty window ground. Its `CHROME` is the Mac's path; on Windows or WSL point it at `chrome.exe` and add `--disable-lcd-text`, or the text comes out with colour fringes |
 
 ## 7. Where it differs from the plan
@@ -445,7 +493,10 @@ E4, 1570 px inside at 150 %: 1047 px as drawn).
   them only while the file has gone.
 - **Workbook** (readout `3 shafts · 4 gears · 2 meshes · no modes`): File, Name,
   Output folder with where it came from (*from the Box sheet*, *the strip's
-  Output*, or *set one on the Box sheet*), and **Worked out as**, what the rows
+  Output*, or *set one on the Box sheet*), **Process** (F1, every gearbox,
+  machined ones too: *Printed, 0.4 mm nozzle*, or *Machined, as built: type
+  Printed beside Process on the Box sheet to print it*; see *Printed and
+  Machined* below), and **Worked out as**, what the rows
   add up to: *Parallel train · 2 meshes · 12.000 : 1 · output turns the same
   way*, or for a layout this phase does not do, *Not laid out yet: P1 is mounted
   on C*. When the meshes give no ratio it says why rather than leaving it out:
@@ -585,10 +636,11 @@ E4, 1570 px inside at 150 %: 1047 px as drawn).
   `… · — (past a split)`.
 - **Footer.** A dot and one sentence, green when all is well, wrapped in the
   room the dot and the buttons showing leave (never narrower than 400 px), so
-  the window keeps its 1080 px with all four buttons and grows taller instead,
+  the window keeps its 1080 px with all five buttons and grows taller instead,
   up to the screen's work area, past a third of which the sentence scrolls in
   itself (*The layout*, K12);
-  then **Export**, **Export as…**, the build button and, once anything is
+  then **Export**, **Export as…**, **Print files** (F2, *Print files and the
+  span over k teeth* below), the build button and, once anything is
   on record, **Update SolidWorks**. The build button is one button whose label
   follows the record and the read: **Build** (primary), **Build parts**
   (primary) while rows a later phase builds hold the layout back, or **Build
@@ -1602,6 +1654,518 @@ left in error, above), that advice wins and says the cost in its parenthesis,
 including what Build again… carried into it, which RangeBox.SLDASM held when it
 was carried*, and the carry's save line
 is not said beside it.
+
+### Printed and Machined (F1)
+
+PLAN-PRINTED §1.3 and §6; D11 ruled (B) by the coordinating session, the user's
+to overrule. A gearbox's Process is the Box sheet's **Process** setting
+(`Printed` or `Machined`, any case) with **Nozzle** under it (mm, blank 0.4),
+one for every gear in it.
+
+**What a blank means.** A blank Process cell, or no Process row at all (every
+workbook written before F1), means *as built*: `WorkbookWindow._assess` reads the
+record beside the workbook, as `_plan_solidworks_pass` does and without moving
+anything, and passes `workbook.assess.blank_process(record)`: Machined while the
+record's current parts were all built machined, Printed with no record, no
+parts, or any part built printed. So both of `_assess`'s callers, `_plan` and
+the raw read a save's consequence is worked out from, resolve a blank alike.
+When the record is another workbook's (a copy, or one not yet said:
+`store.foreign_workbook`), it passes none, so a copied workbook reads a blank as
+a new gearbox does, Printed, and not Machined from its original's parts. A
+gearbox built before F1 therefore opens exactly as it did: every gear *built*,
+nothing for Update SolidWorks, the footer as it was, and nothing written.
+
+**The Process line** in the Workbook panel (`ui_text.workbook_process_line`,
+given the Box as read and the Box as assessed):
+
+| The Box | The line |
+|---|---|
+| Printed, typed or a blank read so | *Printed, 0.4 mm nozzle* (the Box's Nozzle) |
+| blank, read as built, with a Process row | *Machined, as built: type Printed beside Process on the Box sheet to print it* |
+| blank, read as built, with no Process row (`Box.process_cell` is `""`) | the same, then * (add a row labelled Process)* |
+| Machined typed | *Machined, as the Box sheet says: type Printed beside Process to print it* |
+| a word that is neither (an error at its cell) | *Process does not read: the Checks panel says why* |
+| Printed, its Nozzle not a number above zero | *Printed; its Nozzle does not read: the Checks panel says why* |
+| blank, the record beside it broken (Build makes a new gearbox) | *Printed, as for a new gearbox: the record of what was built beside this workbook cannot be read, so a blank Process is not read as built; 0.4 mm nozzle* |
+| blank, the record from a newer app (both buttons wait) | *Not known: the record beside this workbook is from a newer Gear Generator, so a blank Process is not read as built here* |
+
+It wraps in its cell as *Worked out as* does. Typing Printed on a gearbox built
+Machined changes each part's Backlash global, so every gear reads *changes on
+Update* and Update SolidWorks carries it in place (W9a's rules); *Build again…*
+makes every gear new, and W9d names the reason *its Process changed*. Under (B)
+the footer says nothing new and no way back is offered: the user asked for it by
+typing Printed.
+
+An Update never renames a file (D10), so parts built machined and made printed
+keep names without `_P`. The result says so once for the gearbox, not as a
+stale name for each part: *The 4 parts now printed keep their file names,
+without the _P a part built printed is named with: Update SolidWorks never
+renames a file, and Build again… makes new parts named with _P if you want the
+mark.* (one part: *Gear_m1.5_N17, now printed, keeps its file name, …*; the
+other way: *… now machined, keeps its file name, with the _P it was built
+printed with: … named without it if you want.*). A part's own tooth count or
+module said in its name is still told as before, the mark set aside. It is said
+only on the Update that changes the Process (the F1 review's S2): what a part was
+before the press is read from the record taken at the press (its entry's spec),
+else its recorded Backlash global, and only with neither from its file's name.
+
+Boards: `WorkbookBeforeF1` (the reducer as an app before F1 built it, its
+workbook with no Process row, opened Machined, as built, nothing changed) and
+`WorkbookPrinted` (the same with Printed typed: *Printed, 0.4 mm nozzle*, every
+gear *changes on Update*). `gen.py` writes a spec whose Box's Process is blank
+with no Process or Nozzle row, as a workbook before F1 has. Their renders, like
+every board's since F1 added the Process row, wait for `render.py` on a machine
+with its Chrome.
+
+### Print files and the span over k teeth (F2)
+
+PLAN-PRINTED §3.0 and §3.1.3, package C of stage F2. The span is package A's
+(`gears.span`), the plans, the job and the codes package B's (`printout`,
+`swbuild.print_parts`); every sentence below is `ui_text`'s.
+
+**The span row.** A printed external spur, helical or herringbone gear drawn
+with Involute (a dog and a hub too) gets one Derived row after *Tooth at pitch*:
+*Span over 3 teeth* `11.209`, the base tangent length the calipers read square
+to the teeth (W_n on a helical gear). A machined gear, a ring, a sleeve and a
+bevel gear get no row (`derived_rows` is unchanged, so the machined panel is
+F1's). A printed gear withheld one says why in one line under the rows:
+*Span over k teeth: not one figure on arcs; choose Involute to measure*, *…:
+face too narrow to measure: it needs 13.0 mm*, *…: no span: no k has both jaws
+on the involute*. In a pair each column has its own row (the two gears' k can
+differ, so each row has a dash in the other column) and each line is prefixed
+*A:* or *B:*.
+
+**Measured.** Under the rows, a **Measured** entry (84 px, unit *mm*) in the
+column of each gear with a figure: the calipers' reading, the form's only, never
+saved, made once so the caret stays in it while the rows are laid out again.
+What a reading tells is one line under the rows, worded from
+`gears.span.measured` (the arithmetic is A's, the coordinator's ruling):
+
+| Reading | The line |
+|---|---|
+| above the span | *Your printer adds 0.041 mm a flank: a backlash of 0.173 mm a gear keeps 0.04 mm of play a flank.* |
+| at it, or below it with the backlash held at the floor | *Your printer adds nothing to a flank: a backlash of 0.1 mm a gear, the least proposed (0.04 mm of play a flank alone would ask less).* (*takes 0.019 mm off a flank* below) |
+| a backlash above the gear's printed default (0.3 mm from module 1 up, 0.3 × module below; A's `Measured.default_mm`, the coordinator's ruling on M2) | the line, then *That is more than the 0.3 mm a printed gear of this module is given today: whether it should take more is yours to decide (README: Calibrating your printer, step 6).* (*0.24 mm* at module 0.8) |
+| not a number above 0 | *Measured: type the calipers' reading in mm, a number such as 11.25.* |
+
+The caret in Measured brings up the span's card in that gear's panel
+(`ui_text.span_explainer`; kept out of `EXPLAINER_FIELDS` so no machined card
+moves): *Span over k teeth · W*, what it is and how to hold the calipers (square
+to the axis on a spur gear, tilted with the teeth on a helical one, at
+mid-face), that the figure is the gear as drawn with its backlash, and the
+worked line *k 3 · W 11.209 mm · jaws touch at Ø 30.337 mm* (a helical gear's
+*… across the teeth (16.731 round the gear) …*). It borrows the Teeth diagram,
+`widgets` drawing none of its own.
+
+**Print files on the form.** In the footer between **Update values** and
+**Build**, secondary, no ellipsis since it asks nothing (E5). It is enabled
+whenever no job runs. The status sentence wraps in the room the buttons
+showing leave (`GearApp._wrap_footer`): about its old 260 px while Update values
+is hidden, less with all three, so the footer never pushes the strip past 460
+px. It prints **the part active in SolidWorks** with its `.gear.json` beside it
+(the snapshot's path, which now carries the revision too, for B's gate), into
+the strip's Output folder. The SolidWorks bar says which file under the primary
+button's line: *Print files will write Gear_m1.5_N20_P.step from the active
+part.*, only while B's plan for it would write (`print_bar_line`). A press
+plans (`printout.form_print`) and says a refusal at once (an Output folder not on
+disk among them, B's NO_FOLDER); else one job on the worker (*Print files is
+writing STEP files from SolidWorks…*), then `print list.txt` written into the
+press's folder (`printout.with_list`) and the status composed from what that
+answered. The active part's `.gear.json` is read for planning by
+`store.read_sidecar`, which never moves a record that does not read.
+
+**Print files in the Workbook window.** The footer's fifth button, after
+**Export** and **Export as…** (which write the workbook) and before the build
+button and **Update SolidWorks** (which change SolidWorks). With all five the
+window keeps its 1080 px and the sentence its 400 (`_wrap_status` measures the
+buttons). Enabled whenever a read is shown and no job runs. A press plans again,
+then says without a job: a read that failed (*Print files wrote nothing: the
+workbook does not read as it is now; the footer says why.*), a read Excel has
+yet to recalculate (*Print files wrote nothing: Export wrote cells that formulas
+in the workbook may depend on; open and save it in Excel first, so what is built
+can be compared with what it says.*), B's refusal (`printout.workbook_print`,
+from the record, the assessment and Update's plan, and the strip's last
+snapshot's revision, with the window's own verdict on a record that is another
+workbook's passed as `foreign_record=`, so FOREIGN_RECORD and NO_FOLDER are B's in
+B's order). While the job runs
+the footer says *Print files is writing STEP files from SolidWorks…* and holds
+every button; its finish is a standing note, as an Export's, and writes no
+record. Closed while it runs, the window says *This window closes once Print
+files has finished and its print list is written; it stays open if something
+needs saying.*; closed again, it asks *Close anyway?* in Print files' words (its
+list will not be written); the strip's *Quit anyway?* names no build's journal
+for it.
+
+**The refusals** (`ui_text.print_refusal`, one sentence per B code):
+
+| Code | Sentence |
+|---|---|
+| GATE_COPY | *Print files waits until writing a STEP file is measured on this SolidWorks; nothing was written.* |
+| GATE | *Print files waits until writing a STEP file is measured on SolidWorks 2024 (32.5.0); nothing was written.*; none connected: *Print files needs SolidWorks running and connected; nothing was written.*; changed since the plan: *SolidWorks changed since Print files was pressed (2026 (34.1.1) then, 2024 (32.5.0) now): press it again. Nothing was written.* |
+| UNSAVED_MARK | *Print files wrote nothing: Gear_m1.5_N20_P has changes from Update SolidWorks that are not saved; save it in SolidWorks, then print.* |
+| MISMATCHED_MARK | *Print files wrote nothing: Gear_m1.5_N20_P no longer holds what the record says; press Update SolidWorks, then print.* |
+| CHANGES_ON_UPDATE | *Print files wrote nothing: Update SolidWorks would change the values in Gear_m1.25_N29_P (and make Gear_m1.25_N13_P new); press Update SolidWorks and save, then print.* (new alone: *… would make … new; press Update SolidWorks, then print.*) |
+| NEW_REVISION (M1: the Update plan needs a new revision, so Update is never run) | *Print files wrote nothing: the workbook's changes to Gear_m1.5_N20_P and Gear_m1.5_N40_P need a new revision, which Update SolidWorks cannot make; press Build again…, then print the new revision.* |
+| NO_PART | *Print files wrote nothing: G3 has no part yet, and Gear_x is not on disk; build them first, then print.* |
+| NO_FOLDER (planning, or the job when the folder has gone) | *Print files wrote nothing: the output folder C:\Gears\Out does not exist; make it, or choose another, then print.*; none given: *Print files wrote nothing: choose an output folder; it writes into a print folder there.* |
+| WORKBOOK_ERROR | *Print files wrote nothing: the workbook as it stands cannot be compared with what is built; the footer says why.* (B gives it for an error, a provisional read, fixes chosen and not exported, and an Update that cannot say what it would change) |
+| LIGHTWEIGHT | *Print files wrote nothing: Gear_m1.25_N29_P is not open where Print files can reach it while RangeBox is open: it may be a lightweight or suppressed component of it, or simply closed; resolve it there, or open the part itself, then print again.* (B's job cannot tell a lightweight or suppressed component from a part simply closed while an assembly is open, so the sentence names all three; no assembly named: *… while an assembly is open: …*; several: *… are not open … they may be lightweight or suppressed components of it …; resolve them there, or open the parts themselves …*) |
+| FOREIGN_RECORD | *Print files wrote nothing: the record beside this workbook is another workbook's, so nothing built is this workbook's to print yet; Build makes its own.* |
+| NO_RECORD | *Print files prints a part Gear Generator built: Part1.SLDPRT has no .gear.json beside it, so nothing was written.*; one there that does not read: *… built: the .gear.json beside Part1.SLDPRT does not read, so nothing was written.* |
+| NOT_A_PART | *Print files prints the part active in SolidWorks, and Assem1.SLDASM is not a part: make a gear part active there; nothing was written.* (nothing active: without the clause). The form hands B's planner whatever is active, so an active assembly is named; its record is read only for a part. |
+| MODIFIED | *Print files wrote nothing: Gear_m1.5_N20_P is changed in SolidWorks and not saved; save it, or close it without saving, then print.* |
+| GLOBALS_DIFFER | *Print files wrote nothing: in Gear_m1.5_N20_P, "Face Width" is 9 where its record says 8; press Update values (Update SolidWorks in the Workbook window), or put it back, then print.* |
+| FEATURE_IN_ERROR | *Print files wrote nothing: in Gear_m1.5_N20_P, User Keyway is in error in SolidWorks; fix it there, then print.* |
+| COMPONENT_ONLY | *Print files wrote nothing: Gear_m1.25_N29_P is open only inside RangeBox; close the assembly or open the part, then print.*; no assembly named: *… is open in SolidWorks but not as the active document; make it active, or close it, then print.*; several such: *… are open in SolidWorks but not as the active document; close them, then print.* |
+| SOLIDWORKS_REFUSED | *Print files stopped: SolidWorks would not write Gear_m1.5_N20_P.step (errors 1, warnings 0).* |
+| FILE_CHECK | *Print files stopped: Gear_m1.5_N20_P.step is not fit to print: it does not hold exactly one solid.* (each reason in its words) |
+
+**The result** (`ui_text.print_result`), composed after the list is written and
+from what `printout.with_list` answered (F2-REVIEW S2), so it never claims a list
+that is not there: *Print files wrote Coupon_A.step and its print list in
+C:\Out\print\2026-11-19 10.05.12.*, or *… wrote 4 STEP files and their print list
+in …*; the list not written, *Print files wrote Coupon_A.step in …, but the print
+list could not be written (the disk is full), so nothing in that folder says what
+each file is: press Print files again for a set with its list.*; after a stop,
+the refusal then *What was written is in …, and its print list says not to print
+this set.* (the list not written: *What was written is in …, but its print list
+could not be written (…), so nothing there says not to print it: do not print
+this set.*); then, each when it holds,
+*SolidWorks warns about Fillet3 in Gear_h; it was written as SolidWorks built
+it.*, *SolidWorks now marks A.SLDPRT as changed since Print files ran, and
+nothing was saved: close it without saving to leave its file as before.*, *The
+document you had active could not be made active again.*, *Print files opened X
+and could not close it: close it in SolidWorks without saving.*, *Whether Print
+files left any document marked as changed in SolidWorks could not be read;
+nothing was saved.* Green only for a set written whole with its list, every
+document put back as it was.
+
+**The print list** (`ui_text.print_list_text`): *DO NOT PRINT THIS SET:* and the
+file and reason first when the job stopped; *Print list: <the Box's name, or the
+part's stem>*, the press's time, the app's version and the SolidWorks it ran on,
+*Process: Printed, 0.4 mm nozzle*; one block a part: its file, *For G2 and G3 ·
+print 2*, *Module 1.5 · 20 teeth · face 8 mm · bore 8 mm · backlash 0.3 mm,
+printed default*, its span (*Span over 3 teeth: 11.209 mm (the calipers square
+to the axis, at mid-face).*; a helical gear's *… across the teeth (the calipers
+tilted with them …)*; *Machined: its backlash is a cutter's, not a printer's; no
+span.*; the arcs, narrow-face, no-contact, internal and bevel lines), *Your
+features left in it: …* (for a part written, the user's features the job read
+live in it, B's `PrintResult.live_features`, whether or not its record lists
+them, so a keyway added to a form-built part is named; for a part the job
+stopped before writing, those its record lists), a feature SolidWorks warns about, and *Checked: one
+closed solid, AP214 (AUTOMOTIVE_DESIGN), millimetres; outer diameter and face
+width match the gear.* (or *size not checked (your features in it)*, *(a
+herringbone, not yet measured)*, *(a ring)* and the other kinds), *NOT FIT TO
+PRINT: …* or *Not written.*; then the slicer settings, said once, and how to
+measure a span.
+
+Boards: `PrintedSpan` (the coupon on the form, printed, a reading typed, the
+span's card) and `WorkbookPrintRefused` (the built reducer, Print files pressed on
+a SolidWorks writing a STEP file has not been measured on, 2025: GATE said, the
+five buttons at 1080 px; the findings are set for 2024 and 2026).
+Every other board's footer gains Print files. Their renders wait for
+`render.py` on a machine with its Chrome, as every board's since F1.
+
+### The bore as cut (F3)
+
+PLAN-PRINTED §4.1, §4.1.1, §4.2 and §4.6, package C of stage F3; the interface is
+`docs/notes-printed/F3-INTERFACES.md`. The figures are package A's (the derived
+gear's `bore_allowance` and `bore_flat`, on the section of a helical or bevel
+gear), the record's comparisons package B's; every sentence below is `ui_text`'s
+unless it says whose. Board: `PrintedBore` (a printed module 1.5, 20 tooth gear
+on an 8 mm D-shaft, Flat 7, a Bore allowance of 0.2 typed, the card on Drive).
+
+**The rows** (Gear A/B, under Bore, before Backlash; G3):
+
+| Row | What | Shown |
+|---|---|---|
+| Bore allowance | a 150 px field, mm, hint *added to Bore*; its placeholder what a blank means for this gear (`bore_allowance_placeholder`): *0.2 · printed* for a printed gear not on record, *0 · as built* (or the figure the part holds) while a record is open, *0* machined. The figure is the derived gear's, so it says what the plan cuts | every gear with a Bore row; not a ring |
+| Drive | `Round` · `Flat` (140 px; blank is round); choosing brings up its card | not a ring, not a bevel gear (G5) |
+| Flat | an 84 px field, mm, hint *your shaft across its flat* | while Drive is Flat |
+
+A row hidden goes across blank, as a hidden Profile shift goes as 0: a ring's
+three go as blank and round, a bevel gear's Drive and Flat as round and blank,
+and Flat as blank while Drive is round (still typed in the field for when Drive
+is Flat again). So no ring is refused for a field it does not show
+(*A ring has no bore to give an allowance or a flat.* is the workbook's, at its
+cell). Open .gear.json sets Drive from the record, in lower case.
+
+**A record open** (F3-INTERFACES §5). While the strip holds an opened
+`.gear.json` in single mode, gear A's spec passes `spec.as_built` with the
+record's globals (`gui.held_spec`) before every derive, so a blank Bore
+allowance is the figure the opened part holds: none for every part built before
+F3. *Bore as cut* says the Bore of such a part, and nothing is offered to Update
+values for a bore that did not change. `_update_target` takes the form's spec as
+it is and applies `as_built` itself, deriving again from it for the globals it
+counts, and gives `swbuild.structural_change` the record's globals
+(`built_variables`); Update values plans and writes the record from the same
+spec, whose `to_dict` holds no `built_allowance`. **Build** with a record open
+keeps the opened part's as-built allowance too (the coordinator's ruling on
+F3-0's decision 11), and the SolidWorks bar's line says so while Bore allowance
+is blank (`ui_text.build_keeps`):
+
+- *Build will make Coupon_F3.SLDPRT with no bore allowance, as Coupon_C was
+  built, since Bore allowance is blank.* (a printed part built with none);
+- *Build will make Coupon_F3.SLDPRT with the bore allowance Coupon_C was built
+  with, 0.2 mm, since Bore allowance is blank.*;
+- nothing more for a typed allowance, no bore, a ring, a pair, or a machined
+  part built with none (a blank is 0 there either way). *Update values will
+  change …* is said in its place whenever it has something to change, as before.
+
+A pair's two gears are never read as built (the record is one gear's, and
+Update values is single mode's), so a pair built from the form takes the
+default.
+
+**Derived** (`ui_text.bore_rows`, after Fillet, the last of the rows):
+*Bore as cut* `8.2 · 8 + 0.2` (`8` with no allowance, `7.9 · 8 − 0.1` for a
+press fit), and for a D *Flat as cut* `7.2 · 7 + 0.2`, the hole across its flat.
+A printed gear with a bore always shows its hole; a machined gear only with an
+allowance or a D, so a plain machined gear's rows are F2's (the card pin,
+`tests/test_printed_rule.py`). No row with no bore, nor for a ring.
+
+**The cards** (`ui_text.bore_explainer(field, spec, derived)`; kept out of
+`EXPLAINER_FIELDS`, as the span's card is, and drawn with Bore's diagram,
+`BORE_DIAGRAM`):
+
+- **Bore allowance · a.** *Added to Bore when the hole is cut, on the diameter,
+  so Bore stays your shaft's size and the wall moves by half of it. Blank: 0.2 mm
+  for a printed gear not yet built (a starting value until your coupons give your
+  printer's figure), 0 machined, and for a gear already built the allowance it
+  was built with, whatever its Process is now. Clearing a typed allowance keeps
+  the figure as built; to take the default, type it. Bore as cut, under Derived,
+  shows which. Negative for a press fit. A slicer's X-Y hole compensation does
+  the same job, so keep it at 0.* Worked: *blank → 0.2 mm, the printed default →
+  a hole of 8.2 mm*; *blank → 0 mm, as built → a hole of 8 mm*; *blank → 0 mm,
+  machined → …*; *0.3 mm → a hole of 8.3 mm* (typed); *no Bore → no hole, so the
+  allowance is not used*; with a D *… → a D 8.2 mm across its round and 7.2 across
+  its flat*.
+- **Drive.** *Round cuts a round hole. Flat cuts a D, for a shaft with a flat:
+  type its size across the flat in Flat. The flat is cut on the gear's +X side,
+  square to its X axis and facing the middle of a tooth space (on a helical gear
+  at its section plane, one overrun behind the face; on a herringbone at its
+  middle), the same in every gear. The assembly does not model a shaft's flat: it turns each gear to mesh on
+  its own, so gears that share a D-shaft are phased by their flats in your
+  machine and by their meshes in the assembly.* Worked: *round → a hole of 8.2
+  mm*; *flat → a D 8.2 mm across its round and 7.2 across its flat, its flat 3.1
+  mm from the axis on +X*; *flat → type your shaft's size across its flat in
+  Flat*; *no Bore → no hole to drive by*.
+- **Flat · F.** *Your shaft's size across its flat, from the flat to the
+  opposite round side, as your calipers read it. The hole's flat takes the same
+  half allowance as its round. The flat must be at least 0.3 mm deep on the shaft
+  (Bore less Flat) and stay well clear of the axis.* Worked: *7 mm → the hole 7.2
+  mm across its flat, 3.1 from the axis · 1 mm deep on the shaft*; *Drive is
+  round, so Flat is not used*; *no Bore → no hole to give a flat*.
+- **Bore**'s worked line gives the rim to the hole as cut once it has an
+  allowance: *10 mm, cut at 10.2 → rim 11.775 mm to the root circle* (with none,
+  *10 mm → rim 11.875 mm to the root circle*, as before).
+
+**What the Derived panel says of the bore's fields** (package A's sentences, at
+the field named; pinned through the strip in `tests/test_bore_form.py`): *There
+is no Bore, so the Bore allowance is not used.* (a warning: Build stays enabled,
+the ruling on F3-0's decision 15); *Drive flat needs a Bore: type your shaft's
+diameter in Bore, or choose round.*; *Drive flat needs a Flat: type your shaft's
+size across its flat.*; *Your shaft's flat is 0.2 mm deep (Bore 8 less Flat 7.8),
+under the 0.3 mm a printed D needs to hold; type a Flat of at most 7.7 mm, which
+leaves the flat a little play, or use a round bore.*; *The flat is 1 mm from the
+axis, under a quarter of the hole's radius (1.025 mm); type a Flat of at least
+4.925 mm, or use a round bore.*; and the bore checks on the hole as cut, *Bore of
+8 mm with its 0.2 mm allowance (8.2 mm as cut) reaches the root diameter of …*.
+
+**The print list** (`ui_text._print_bore`, from package B's
+`printout.bore_figures`, the hole as built): *bore 10 mm* for a part with no
+allowance and a round bore, word for word as before F3 (every list F2 wrote reads
+the same); *bore 8 mm + 0.2 mm allowance (8.2 mm as cut)*; *bore 8 mm − 0.1 mm
+allowance (7.9 mm as cut)*; with a D *bore 8 mm, D-flat 7 mm*, or *…, D-flat 7 mm
+(7.2 mm as cut)* with an allowance.
+
+**K3 in the Workbook window.** A user's feature (a keyway) in error after an
+Update set a part's Bore Allowance is said with the way back as typing the
+figure, never clearing the cell and never *again*: *Your User Keyway in
+Gear_m1.5_N20_P is in error in SolidWorks now, after this Update set Bore
+Allowance 0.2 to 0.3 (Gears!V2) in that part: change your User Keyway to fit, or
+type 0.2 in Gears!V2.* A blank allowance is the figure the part holds, and after
+this Update it holds the new one, so clearing the cell would keep that; and the
+sentence cannot see whether the cell was blank or typed before. Every other
+global's way back is as before (*… or type 10 in Gears!I2 again.*).
+
+**The window's checks read a part on record as built** (F3-0-REVIEW's S3, its
+wiring given to package C by the coordinator's ruling): `WorkbookWindow._assess`
+hands `workbook.assess.assess` the record `_blank_process` reads
+(`assessed_record`: this workbook's own, None for another's, a broken one or a
+newer one), so a row whose part is on record is checked and planned as built
+(package B's `build.built_globals`). A gearbox built before F3 is told exactly
+what it was told before, the printed rim and the bore against the root measured
+on the hole its parts hold, not on one a new part would be cut with.
+
+**The Gears columns** (`workbook/schema.py`, F3-0's): Bore allowance (V, mm,
+blank *0.2 printed for a new part, as built for a part on record, 0 machined*),
+Drive (W, `round` · `flat`, blank round) and Flat (X, mm), after End band and
+before Part name, which moves to Y and Notes to Z. A workbook written before F3
+is read and written by its own headers, so nothing lands in the wrong column. A
+ring's or sleeve's typed bore field is an error at its cell (package A's).
+
+### What a tooth is rated to take (F4)
+
+PLAN-PRINTED §5.1 to §5.4 and §5.6, package C of stage F4; the interface is
+`docs/notes-printed/F4-INTERFACES.md`. The figures are package A's
+(`gears.strength`: `rate`, `holds`, `torque_held`, and the rounding every reader
+shows, `newtons`, `newton_metres`, `megapascals`); the Box's Allowable stress is
+F4-0's; the warning at a Meshes row and the Results block are package B's. Every
+sentence of the form's below is `ui_text`'s. Boards: `PrintedStrength` (a printed
+pinion of 20 teeth in a printed ring of 54, module 1, face 10) and
+`WorkbookStrength` (a printed gearbox of one mesh at 2 N·m, B's warning in its
+Checks list).
+
+**The row** (`ui_text.holds_row`, laid by `gui._rows_with_span` after every row of
+`derived_rows`, so after F2's span row and F3's *Bore as cut*; F2's Measured entry
+stays the panel's foot). Label *Holds once*; the value is the torque one tooth is
+rated to take once about the gear's own axis, then the force at its pitch circle,
+at 17 MPa (`strength.ALLOWABLE_DEFAULT`: the form has no Box), over the gear's own
+toothed width (a herringbone's face less its groove):
+
+| Gear | Value |
+|---|---|
+| a printed spur gear, m 1.5, z 20, face 10 (§5.3's A1) | *about 0.58 N·m · 39 N at 17 MPa* |
+| a helical one, β 20°, face 12 (A4) | *about 0.78 N·m · 49 N at 17 MPa* |
+| the same as a herringbone with Groove 4 (A5) | *about 0.52 N·m · 33 N at 17 MPa* |
+| a ring, m 1, z 54, face 10 (A6): YS past its range | *about 0.80 N·m · 29 N at 17 MPa · stress factor past its range* |
+| a ring whose tips lie inside its base circle, z 33 (A10) | *not rated: tips inside the base circle* |
+
+Forces are whole newtons from 10 N and to 0.1 N under that; torques to 0.01 N·m
+under 10, 0.1 under 100, whole from 100. **Which gears** (`ui_text.holds_rating`):
+a printed spur, helical or herringbone gear, outside or a ring, that rates, and a
+ring not rated for its tips inside its base circle. **No row** for a machined
+gear (its rows are `derived_rows` exactly, as before F4), a bevel gear, either gear
+of a crossed pair (its teeth meet at a point), and a gear not rated for any other
+reason (it does not validate and is never built). In a pair each column has its
+own, a dash where a gear has none.
+
+**Laid into its column.** The value is long beside the other rows' figures, and two
+columns of it would widen the strip past its 460 px. So `_show_derived` lays it
+into the room its column has (the rows' 434 px, less the 104 px label column and
+8 px a column, and the value label's own border and padding, `GearApp._chrome`:
+4 px on Linux's Tk, 6 on Windows', whose labels take a 2 px border), measured in
+the platform's mono_tiny
+(`ui_text.holds_value_lines`): whole phrases first, a new line starting *·* where
+the value's own *·* falls, and a phrase too long for a line wrapped at its spaces;
+its label sits at its top. With one gear the second column keeps no width of its
+own (before F4 it kept 96 px of blank that no row needed), so a single gear's
+value is one line, and a ring's past its range two:
+
+    about 0.80 N·m · 29 N at 17 MPa
+    · stress factor past its range
+
+In a pair each column has about 150 px, so the pinion's reads *about 0.22 N·m* / *· 22 N at 17 MPa*, and the ring's
+*about 0.80 N·m* / *· 29 N at 17 MPa* / *· stress factor past its range*, that last phrase wrapped at a space where
+the font needs it (the board's stand-in measure, a character of 6.9 px, wraps it after *past*). Where the breaks fall
+is the platform's: Windows' fonts measure wider, so a value may break once more there (the unrated ring's *not rated:
+tips inside the base circle* in a pair breaks once on Linux and twice on Windows); what it says does not change.
+
+**The panel's width on Windows.** Measured under Windows' `python.exe` (Tk 8.6) and Linux's, the Derived panel holds
+460 px in every case with the row (single and pair, outside, ring, the unrated ring and the past-its-range line), its
+rows at most 426 px of the body's 434 on Windows (382 to 400 on Linux), and it is exactly as wide with the row as
+without. One line was not: a ring of 33 teeth's own warning (*The teeth's tips, at 31 mm, are inside the base circle
+…*, older than F4, machined too), wrapped at 430 px, came to 435 with Windows' 6 px of label chrome, and the panel to
+461. Every line across the panel body (the line under the rows, each warning) now wraps at the body's 434 px less its
+own label's chrome (`GearApp._text_room`): 430 on Linux, as before, and 428 on Windows. The F1 to F3 rows were
+measured the same way and keep to the strip on both: the Gear panel with Process and Nozzle 360 px on Windows (384 on
+Linux), a gear's panel with Bore allowance, Drive and Flat at most 456 (454), the span row and Measured entry inside
+the rows' 434, and the Pair panel 428 (434).
+
+**The line under the rows** (`ui_text.holds_line`, after every line of F2's, *A:*
+or *B:* before it in a pair):
+
+- YS past its range: *Holds once: the ring's 0.15 mm fillet is sharper than the
+  stress factor's range, which is carried past it.* (the fillet as drawn, 0.3 mm
+  on A9's module 2 ring); an outside gear whose typed Fillet is that sharp says
+  the same of *the gear's* fillet (A1 with Fillet 0.1: q_s 11.2);
+- a ring not rated: *Holds once: not rated:* and package A's clause
+  (`ToothRating.why`), *its tips lie inside its base circle (31.000 mm against
+  31.010), where its teeth cannot be involute, and the rating needs an involute
+  tip to load.* (F4-REVIEW S1); a ring drawn by Arcs says the same with its own
+  diameters (z 30: *28.000 mm against 28.191*).
+
+No card: the row is a reading, as Bore as cut is, and the README's *What a tooth
+is rated to take* says what it is and is not.
+
+**The Box's Allowable stress** (F4-0's: `workbook/schema.py`, `model.py`), after
+Nozzle and before Units, `Box!B11` in a workbook `to_sheets` writes: MPa, blank 17,
+*New workbook…* writing 17; its note *printed teeth only: the root stress a tooth
+is rated to take once; blank: 17, provisional (about half a printed PLA data
+sheet's 35 MPa within the layers) until you type your own figure here*; a figure
+that does not read an error at its cell (*Box!B11: Allowable stress must be a
+number (got 'x').*, *… must be more than zero (got '0').*), the checks then using
+17. It is not a gear's value: typing it changes no part. The Workbook panel says
+nothing new.
+
+**The warning at a Meshes row** (package B's `workbook.strength.warning_sentence`,
+put at the row's cell by `checks._check_strength` with the pair first, once a
+row, naming the mode with the largest share; said only past 100 %, or for a ring
+not rated in a loaded mesh; nothing for a machined gearbox or one whose first
+input has no torque). B's words as built, pinned in `tests/test_strength_workbook.py`
+and `test_printed_workbook.py`'s `STRENGTH_SAID`:
+
+- a planet the weaker, modes, a blank allowable (RangeBox, row 2):
+
+  > Meshes row 2: Sun and Planet: Printed, these teeth take about 230 N at the
+  > pitch circle in L, 13.6 times the 17 N Planet's teeth are rated to take at
+  > 17 MPa (provisional: type your own in the Box's Allowable stress): 24 N once,
+  > with an allowance of 0.7 because a planet's teeth are loaded in both
+  > directions as the gearbox runs; the load is shared by 3 planets, one taking
+  > 1.25 of an even share. Use a larger module, a wider face, less torque, or your
+  > own tested allowable. An estimate for teeth printed flat, with the whole load
+  > on one tooth's tip: not a running rating; heat, wear and creep are not worked
+  > out.
+
+- an idler the weaker, 34 MPa typed (Idler_Train): *…, 1.2 times the 58 N GI's
+  teeth are rated to take at 34 MPa: 83 N once, with an allowance of 0.7 because
+  an idler's teeth are loaded in both directions as the gearbox runs. Use …*;
+- not two-way, no modes (Risky_Placements, row 4): *G5 and G6: Printed, these
+  teeth take about 724 N at the pitch circle, 14.3 times the 51 N G5's teeth are
+  rated to take once at 17 MPa (provisional: type your own in the Box's Allowable
+  stress). Use …*; one planet: no sharing clause;
+- a ring past YS's range the weaker: *… times the 29 N Ring's teeth (its 0.15 mm
+  fillet is sharper than the stress factor's range, which is carried past it) are
+  rated to take once at 17 MPa …*;
+- a ring not rated, the pinion at or under 100 %: *Pin and Ring: Printed, Ring is
+  not rated:* and package A's clause (`ToothRating.why`), *its tips lie inside its
+  base circle (31.000 mm against 31.010), where its teeth cannot be involute, and
+  the rating needs an involute tip to load; the share counts Pin alone.*
+  (F4-REVIEW S1); with the pinion past 100 %, one warning: the pinion's sentence, then
+  the ring's, then *Use …*;
+- neither gear rated, loaded: *Printed, A is not rated: …; B is not rated: …; so
+  no share is worked out.*
+
+**The Results block** (package B's `workbook.strength.results_rows` and
+`worst_row`, written by `export.results_sheet` after the box size and its *Not in
+the box size* row, behind a blank row, for a printed gearbox whose first input
+has a torque). Head *Tooth strength (printed)* | *Mode* | *Force (N)* | *Weaker
+gear* | *Rated to take (N)* | *Share used (%)*, then a row per Meshes row and
+mode, in the Meshes sheet's order and each mode's, in one of eight states:
+
+| State | Row |
+|---|---|
+| rated | *Sun–Planet* · *L* · 229.885 · *Planet* · *16.851 (0.7)* · 1364.3 (force to 0.001 N, share to 0.1 %, as numbers; the figure text when marked *(0.7)* or *(stress factor past its range)*) |
+| rated, a ring not rated | *Pin–Ring* · · 266.667 · *Pin (Ring not rated)* · 19.161 · 1391.7 |
+| unloaded: both shafts turn with no load (a stage that idles, a branch reaching no output) | *Sun–Planet* · *H* · *—* · · · *turns unloaded here* |
+| not driven: a shaft of the mesh does not turn in this mode (a free member: the transfer cases' front branch in 2H and N; F4-REVIEW S2, the coordinator's ruling) | *FDrive–FIdler* · *2H* · *—* · · · *not driven here* |
+| not shared | *FDrive–FIdler* · *4H* · *—* · · · *the torque past a shared output is not shared out (not worked out)* |
+| not worked out (B's seventh state, `UNWORKED`: both shafts turn and the branch reaches a turning output with no torque given, as past W3's split) | *G1–G2* · · *—* · · · *the torque here is not given (past a split, not worked out)* |
+| not rated | *A–B* · *L* · *—* · · · *not rated: A (short), B (short)* |
+| a bevel or crossed pair | *G1–G2* · · *not rated: a bevel pair* (or *a crossed pair*) |
+
+Then *Worst share* (*Sun–Planet in L, 1364.3 %*; *Pin–Ring, 1391.7 % (Ring not
+rated)* with a third cell *not rated: Ring (tips inside the base circle)*; *—*
+when nothing is rated; and after the meshes and gears not rated, the loaded
+meshes not worked out, *not worked out: FDrive–FIdler, FIdler–FOut in 4H and 4L
+(past a shared output)* or *… (its torque is not given)*); *Allowable stress
+(MPa)* with *17* and *blank: provisional, type your own in the Box's Allowable
+stress*, *34* and *the Box's*, or *17* and *the Box's does not read as a figure
+above zero: provisional, type your own there*; and the note row *An estimate for
+teeth printed flat, the whole load on one tooth's tip: rated to take once, not a
+running rating. Heat, wear, creep and load across layers are not worked out.*
+*No torque here* is said nowhere. A machined gearbox's Results are what they were
+(F4-0's pins).
 
 ### Planetary stages (W7)
 

@@ -90,7 +90,8 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 from .. import findings, store
 from ..gears import kind_for, plan_for
 from ..gears.base import BuildPlan, GlobalVariable
-from ..spec import GearSpec, InputError, sanitize_stem
+from ..gears.equations import DEGREES
+from ..spec import GearSpec, InputError, as_built, sanitize_stem
 from ..store import (ComponentEntry, EarlierRevision, GearboxRecord, LinkRecord, PartEntry, ShaftEntry, Sidecar)
 from ..swbuild import BuildResult, DocumentValues, GearboxResult, ModesPlan
 from . import layout, motion, planetary
@@ -437,16 +438,56 @@ def _variables_match(recorded: Sequence[Sequence[str]], trig: str, wanted: Seque
     return all(v.name in held and _squash(held[v.name]) == _squash(v.expression_for(trig)) for v in wanted)
 
 
-def _matches(spec_dict: Mapping[str, Any], variables: Sequence[Sequence[str]], trig: str, job: PartJob) -> bool:
+def _match(spec_dict: Mapping[str, Any], variables: Sequence[Sequence[str]], trig: str,
+           job: PartJob) -> Optional[PartJob]:
+    """The job as built for this candidate (:func:`as_built_job` with the candidate's own globals) when the candidate
+    holds the part it asks for, else None. F3 (§4.1.1): the match is tried per candidate entry, both sides read as
+    built from that entry's ``variables``, so a blank Bore allowance plans the hole the candidate holds on both sides,
+    and a part built before F3 (no ``"Bore Allowance"``) is the part its row asks for, not one cut at the default."""
     if not spec_dict:
-        return False                       # a v1 record's part says only its path and gears
+        return None                        # a v1 record's part says only its path and gears
     try:
-        built = GearSpec.from_dict(dict(spec_dict))
+        built = as_built(GearSpec.from_dict(dict(spec_dict)), variables or ())
     except (TypeError, ValueError):
-        return False
-    if not same_part(built, job.spec, _template_of(job.plan)):
-        return False
-    return _variables_match(variables, trig, _variables_of(job))
+        return None
+    if name_changed(built, job.spec):
+        return None                        # before any replanning: the file name alone already says no
+    mine = as_built_job(job, variables or ())
+    if not same_part(built, mine.spec, _template_of(mine.plan)):
+        return None
+    return mine if _variables_match(variables, trig, _variables_of(mine)) else None
+
+
+def _matches(spec_dict: Mapping[str, Any], variables: Sequence[Sequence[str]], trig: str, job: PartJob) -> bool:
+    return _match(spec_dict, variables, trig, job) is not None
+
+
+def as_built_job(job: PartJob, variables: Optional[Sequence[Sequence[str]]]) -> PartJob:
+    """F3 (PLAN-PRINTED §4.1.1; F3-INTERFACES §6): the job replanned for the part on record whose globals are
+    ``variables``: its spec through ``spec.as_built(job.spec, variables)``, and its derived and plan from that spec
+    (F3-0-REVIEW S5: ``_variables_of`` reads ``job.derived``), at the job's own path and template, so that a blank Bore
+    allowance plans the hole the part holds. None (no part on record) gives the job as planned, and so does a spec that
+    as_built leaves as it is. The reuse match is tried per candidate entry through it (``_match``, ``_Parts.find``), and
+    Update (``update._part``) and Build again…'s rows made new (ruling 1) plan through it too; W9d's ``carry_for`` reads
+    the jobs a plan holds, which are as built.
+
+    The body is package B's, over F3-0's stub (which gave the job as it is). A recorded allowance that does not plan (a
+    literal that does not read) gives the job as planned: the match then fails and the part is made new, the safe
+    side."""
+    if variables is None:
+        return job
+    spec = as_built(job.spec, variables)
+    if spec == job.spec:
+        return job
+    try:
+        kind = kind_for(spec)
+        if kind is None:
+            return job
+        derived = kind.derive(spec)
+        plan = plan_for(spec, derived, _template_of(job.plan), job.path)
+    except _PLAN_ERRORS:
+        return job
+    return PartJob(job.stem, job.path, tuple(job.gear_ids), spec, derived, plan)
 
 
 def _variables_of(job: PartJob) -> Tuple[GlobalVariable, ...]:
@@ -485,6 +526,7 @@ class _Found:
     revision: int
     features: Tuple[str, ...] = ()
     journaled: bool = False
+    job: Optional[PartJob] = None          # F3: the job as built for this part (_match), which the reuse holds
 
 
 class _Parts:
@@ -581,29 +623,36 @@ class _Parts:
         (:meth:`blocked`), else ``("", "")``."""
         held = ("", "")
         for entry in self.entries(revision):
-            if not _matches(entry.spec, entry.variables, entry.trig, job) or not self.exists(entry.path):
+            mine = _match(entry.spec, entry.variables, entry.trig, job)
+            if mine is None or not self.exists(entry.path):
                 continue
             why = self.blocked(entry.path)
             if why:
                 held = held if held[0] else (entry.path, why)
                 continue
-            return _Found(entry.path, entry.revision, self.features(entry.path)), ("", "")
+            return _Found(entry.path, entry.revision, self.features(entry.path), job=mine), ("", "")
         for path in self.names(job):
             if not self.exists(path):
                 continue
             entry = self.journaled(path)
             if entry is not None:
-                if entry.kind in (layout.LAYOUT_KIND, layout.ASSEMBLY_KIND) or not _matches(entry.spec, (), "", job):
+                # F3-0-REVIEW B1: the journal's entry carries the job's globals and trig (:func:`journal`), so a part cut
+                # at one allowance and left by an interrupted build is never reused as one cut at another; an entry
+                # an earlier version journaled holds none, and reads as built with no allowance, as every such part is.
+                mine = None if entry.kind in (layout.LAYOUT_KIND, layout.ASSEMBLY_KIND) else _match(
+                    entry.spec, entry.variables, entry.trig, job)
+                if mine is None:
                     continue
                 why = self.blocked(path)
                 if why:
                     held = held if held[0] else (path, why)
                     continue
-                return _Found(path, entry.revision, (), journaled=True), ("", "")
+                return _Found(path, entry.revision, (), journaled=True, job=mine), ("", "")
             if not self.ours(path):
                 continue
             record = self.sidecar(path).record
-            if not _matches(record.spec, record.variables, record.trig, job):
+            mine = _match(record.spec, record.variables, record.trig, job)
+            if mine is None:
                 continue
             why = self.blocked(path)
             if why:
@@ -611,7 +660,8 @@ class _Parts:
                 continue
             on_record = next((p for p in (self.record.parts if self.record else []) if store.same_path(p.path, path)),
                              None)
-            return _Found(path, on_record.revision if on_record else revision, self.features(path)), ("", "")
+            return _Found(path, on_record.revision if on_record else revision, self.features(path),
+                          job=mine), ("", "")
         return None, held
 
     def free_name(self, job: PartJob, claimed: Sequence[str]) -> str:
@@ -953,11 +1003,14 @@ def plan_gearbox(a: Assessment, record: Optional[LinkRecord], *, part_template: 
         for gear in job.gear_ids:
             part_of[gear] = path
         if found is not None:
+            job = found.job or job         # F3: as built for the part reused, whose globals the live check holds it to
             reuse.append(PartReuse(path, _stem_of(path), tuple(job.gear_ids), job.spec, job.derived,
                                    _variables_of(job), found.revision, found.features, found.journaled,
                                    job.plan.recipe, _template_of(job.plan),
                                    tuple(op.text for op in job.plan.manual_steps())))
-        elif store.same_path(path, job.path):
+            continue
+        job = made_new_job(job, record)    # F3, ruling 1: a row whose part is on record keeps its as-built allowance
+        if store.same_path(path, job.path):
             build_jobs.append(job)
         else:
             build_jobs.append(replan(job, path, _template_of(job.plan)))
@@ -1105,10 +1158,15 @@ def journal(plan: GearboxPlan) -> List[PartEntry]:
     part (path, gears, revision, kind, spec), the new layout part and the assembly (``kind`` ``layout`` and
     ``assembly``), and what it reuses that only the journal knows (no ``.gear.json`` yet), so a build interrupted
     again keeps them."""
+    # F3-0-REVIEW B1: each part with the globals it is planned to hold, in degrees (``trig`` says so; the document's own
+    # units are measured only when it is built), so the journaled match (``_Parts.find``) reads a part an interrupted
+    # build cut at an allowance as cut at that allowance, never as one with none.
     out = [PartEntry(path=j.path, gears=list(j.gear_ids), revision=plan.revision, kind=j.spec.kind,
-                     spec=j.spec.to_dict()) for j in plan.build]
+                     spec=j.spec.to_dict(), variables=_journaled_variables(_variables_of(j)), trig=DEGREES)
+           for j in plan.build]
     out += [PartEntry(path=r.path, gears=list(r.gear_ids), revision=r.revision, kind=r.spec.kind,
-                      spec=r.spec.to_dict()) for r in plan.reuse if r.journaled]
+                      spec=r.spec.to_dict(), variables=_journaled_variables(r.variables), trig=DEGREES)
+            for r in plan.reuse if r.journaled]
     if plan.layout is not None and (not isinstance(plan.layout, LayoutReuse) or plan.layout.journaled):
         out.append(PartEntry(path=plan.layout_path, revision=plan.revision, kind=layout.LAYOUT_KIND))
     for carrier, item in zip(plan.carrier_layouts, plan.carriers):        # W7: as the layout part
@@ -1118,6 +1176,10 @@ def journal(plan: GearboxPlan) -> List[PartEntry]:
     if plan.assembly is not None and plan.assembly_path:
         out.append(PartEntry(path=plan.assembly_path, revision=plan.revision, kind=layout.ASSEMBLY_KIND))
     return out
+
+
+def _journaled_variables(variables: Sequence[GlobalVariable]) -> List[List[str]]:
+    return [[v.name, v.expression_for(DEGREES)] for v in variables]
 
 
 def _same_file_name(paths: Sequence[str]) -> str:
@@ -1139,6 +1201,26 @@ def _same_file_name(paths: Sequence[str]) -> str:
         return ""
     return (f"This build would use {'; '.join(pairs)}, and SolidWorks cannot have two documents of one file name "
             "open at once: give the gear a Part name, or change the output folder.")
+
+
+def recorded_entry(record: Optional[LinkRecord], gear_ids: Sequence[str]) -> Optional[PartEntry]:
+    """The part on record (``record.current_parts()``) that serves any of ``gear_ids``, the first in the record's order, or
+    None: a row with no part on record."""
+    if record is None:
+        return None
+    wanted = set(gear_ids)
+    return next((e for e in record.current_parts() if wanted & set(e.gears)), None)
+
+
+def made_new_job(job: PartJob, record: Optional[LinkRecord]) -> PartJob:
+    """F3, ruling 1 (PLAN-PRINTED §4.1.1, the coordinating session, 2026-11-18): a part made new by Build again… for
+    another reason keeps its as-built allowance. The job of a row whose gear's part is on record
+    (:func:`recorded_entry`) is planned through :func:`as_built_job` with that part's globals, so a Teeth change made
+    new keeps the hole the old part was cut with, as the same change carried by Update would; a row with no part on
+    record keeps the job as planned, the current default. ``record`` is the plan's (None for a copy's, which shares
+    nothing)."""
+    entry = recorded_entry(record, job.gear_ids)
+    return job if entry is None else as_built_job(job, entry.variables)
 
 
 def replan(job: PartJob, path: str, template: str) -> PartJob:

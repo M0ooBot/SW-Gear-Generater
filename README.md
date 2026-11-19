@@ -33,10 +33,15 @@ the window still works out, checks and draws gears and solves pairs; only
 
 1. Choose **Single gear** or **Gear pair**, and the flank: **Involute** (a true
    involute, as an equation-driven curve — the default) or **Arcs** (circular
-   arcs approximating it).
+   arcs approximating it). **Process** says how the gear will be made:
+   **Printed** (the default, with the printer's **Nozzle** under it, blank
+   0.4 mm) or **Machined**; see *Printed gears* below.
 2. Type the gear: module, number of teeth, pressure angle, face width, and bore
-   (blank for none). Backlash and fillet radius default to 0.3 × and 0.38 ×
-   module; type a value to override either.
+   (your shaft's diameter; blank for none). Under Bore, **Bore allowance** is
+   added to it when the hole is cut, and **Drive** cuts a round hole or a D for a
+   shaft with a flat; see *The bore* below. Backlash defaults to 0.3 × module on
+   a machined gear and to 0.3 mm (0.3 × module below module 1) on a printed one,
+   and fillet radius to 0.38 × module; type a value to override either.
 3. A card at the foot of the panel says what the field you are typing in means
    and what your value comes to: *Module · m … here m 1.5 × z 20 = PD 30 mm ·
    tooth depth 3.375*. It follows the caret.
@@ -59,10 +64,290 @@ Material is left unset, and the status line counts it as a step to do by hand.
 document in SolidWorks, change a value and press **Update values**: only the
 globals that differ are set, in one batch, and the part rebuilds once. A change
 the equations cannot carry — the other flank recipe, adding or removing a bore,
-or shifting an unshifted gear — is refused with a sentence saying to build a new
-part instead.
+shifting an unshifted gear, giving a bore an allowance it was built without (or
+taking it away), or changing Drive — is refused with a sentence saying to build a
+new part instead. A blank Bore allowance on an opened gear is the allowance its
+part was built with (none for a part built before the field existed), so nothing
+changes there unless you type one; **Build** with the record open keeps it too,
+and the line above the buttons says so.
 
 Editing the globals in SolidWorks' own Equation Manager works just as well.
+
+### Printed gears
+
+A gear made to be 3D printed (FDM, PLA) is the same involute gear, built the
+same way, with these differences.
+
+- **Backlash.** A blank Backlash is the smaller of 0.3 mm and 0.3 × module per
+  gear, written into SolidWorks as `IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )`:
+  room for walls printed a little fat. It is a starting value until your own
+  prints are measured, and it does the job a slicer's X-Y compensation does, so
+  use one or the other. The card and the Derived panel say *printed default*
+  beside it.
+- **Checks for printing.** The Derived panel also warns of a tooth tip thinner
+  than one nozzle line after backlash (at the toe on a bevel gear), a module
+  under 2.5 nozzle widths, a rim under three, a helix over 45°, a tip clearance
+  under 0.3 mm in a pair, and a ring's small default fillet. A printed gear
+  under its undercut limit is made as drawn, so the warning says to turn the
+  pair in SolidWorks. Solve marks the rows that are thin for the nozzle.
+- **The name.** A printed part's file name ends `_P` (`Gear_m1.5_N25_P`), and
+  so does a printed pair's assembly, so it never clashes with the machined gear
+  of the same sizes.
+- **The span over k teeth.** A printed spur, helical or herringbone gear drawn
+  with Involute shows one more Derived row after *Tooth at pitch*: *Span over 3
+  teeth 11.209*, the distance a pair of flat caliper jaws reads across that many
+  teeth, the gear as drawn with its backlash. Under it, **Measured** takes your
+  calipers' reading of the printed gear, and the line under the rows says what
+  your printer adds to each flank and the backlash that would keep 0.04 mm of
+  play a flank (*Your printer adds 0.041 mm a flank: a backlash of 0.173 mm a
+  gear keeps 0.04 mm of play a flank.*). The entry is not saved. A gear drawn
+  with Arcs shows no figure (*not one figure on arcs; choose Involute to
+  measure*); nor does a ring, a sleeve, a bevel gear or a machined gear.
+- **What a tooth is rated to take.** The Derived panel's **Holds once** row
+  says what one tooth is rated to take once, as an estimate: *What a tooth is
+  rated to take*, below.
+- **Print files.** The footer's **Print files**, beside **Build**, writes the
+  part active in SolidWorks (a part Gear Generator built, with its
+  `.gear.json` beside it) to a STEP file for the slicer; the SolidWorks bar
+  names the file it will write. In a Workbook window **Print files** writes
+  every part of the gearbox at once. Each press makes a new folder in the
+  `print` folder of the Output folder, named by the date and time of the press
+  (`print\2026-11-19 10.05.12`), holding the `.step` files and
+  `print list.txt`: each file's sizes, how many to print, its span over k
+  teeth, your own features left in it, and the slicer settings below. A part
+  changed in SolidWorks and not saved, one whose values are not what its record
+  says, one with a feature in error, or a gearbox Update SolidWorks would change
+  is refused by name, and nothing is written. Writing a STEP file has been
+  measured on SolidWorks 2024 and 2026; on another version **Print files** says
+  so and writes nothing.
+
+A machined gear is built, checked and recorded exactly as before. A
+`.gear.json` written before printed gears existed opens as **Machined**, which is
+what was built.
+
+#### The bore
+
+**Bore** is your shaft's diameter. The hole is cut at Bore plus **Bore
+allowance**, which is on the diameter (the wall moves by half of it), so the
+part keeps the shaft's own size in `"Bore Diameter"` and the allowance in a
+global of its own, `"Bore Allowance"`.
+
+- **Blank** is 0.2 mm on a printed gear not yet built, a starting value until
+  your coupons give your printer's figure (*Calibrating your printer*, below); 0
+  on a machined gear; and on a gear already built, the allowance it was built
+  with, whatever its Process is now. So a part built before this version, which
+  has none, reads unchanged, and moving the default later rebuilds nothing.
+  Clearing a typed allowance keeps the figure as built; to take the default,
+  type it. A negative allowance makes a press fit.
+- The Derived panel's **Bore as cut** says the hole, *8.2 · 8 + 0.2*, and the
+  print list says *bore 8 mm + 0.2 mm allowance (8.2 mm as cut)*.
+- The allowance does the job of a slicer's **X-Y hole compensation**: keep that
+  at 0 for parts printed with the calibrated allowance, or the hole is opened
+  twice.
+
+**Drive** is **Round** or **Flat**. A **D-flat** is the flat ground or milled
+along a shaft so a gear cannot turn on it. For a shaft with one, choose Flat and
+type the shaft's size across its flat in **Flat**: calipers across the flat and
+the opposite round side (7 for a common 8 mm D-shaft). The hole is cut as a D,
+the flat taking the same half allowance as the round. The flat must be at least
+0.3 mm deep on the shaft (Bore less Flat) and well clear of the axis; a shaft
+whose flat is shallower than that can be typed with a Flat of at most Bore less
+0.3, which leaves the flat a little play. A bevel gear takes an allowance but no
+flat (use a round bore, or a hub row in a workbook), and a ring none of the
+three.
+
+The flat sits at one fixed angle to the teeth in every gear: on the gear's +X
+side, square to its X axis and facing the middle of a tooth space (on a helical
+gear at its section plane, one overrun behind the face; on a herringbone at its
+middle). **The app's assembly does not model a shaft's flat.** It turns each
+gear on its own until its teeth mesh, so two gears fixed by D-flats to one shaft
+are phased to each other by their flats in your machine, and by their meshes in
+the assembly. That matters only where meshes close a loop between gears on
+D-fixed shafts; a planet on its pin, or a gear free on its shaft until a dog
+engages it, is not fixed.
+
+#### What a tooth is rated to take
+
+A printed spur, helical, herringbone or ring gear's Derived panel ends with
+**Holds once**: *about 0.58 N·m · 39 N at 17 MPa* for module 1.5, 20 teeth and
+a 10 mm face. That is the torque about the gear's own axis, and the force at its
+pitch circle, that one tooth is rated to take once at an allowable root stress
+of 17 MPa, over the gear's own toothed width (a herringbone's face less its
+groove). In a pair each gear's column has its own.
+
+- **What it is.** An estimate of a single load on one tooth, by a standard's
+  method applied to the tooth as the app draws it: ISO 6336-3's tooth-root
+  stress (Method B's form and stress-correction factors) worked out on the
+  drawn root, backlash and shift included, with the whole load on one tooth's
+  tip and every load factor 1. A helical or herringbone gear is rated on ISO's
+  virtual spur gear. The formulas are from secondary sources; the standard
+  itself was not read.
+- **What it is not.** It is not a life and not a running rating. Printed PLA's
+  strength under repeated load is far lower than under one load (its fatigue
+  strength is reported at 10 to 25 % of its tensile strength), so a gear that
+  runs wants a wide margin under this figure. The app's root, a radial line and
+  a fillet, is narrower than a hobbed one, so it reads 15 to 32 % weaker than
+  ISO's own generated tooth: the figure is for the tooth you print.
+- **17 MPa is provisional**: about half the 35 MPa a printed PLA data sheet
+  gives for tensile strength within the layers. The form always rates at 17. In
+  a workbook, type your own in the Box's **Allowable stress** (MPa, blank 17;
+  *New workbook…* writes the 17 there so you can see where yours goes), best a
+  figure from a printed tooth broken in a jig. It is not a gear's value: typing
+  it changes no part.
+- **A ring.** A ring's 0.15 × module fillet is sharper than the
+  stress-correction factor's range, which is carried past it: the row adds
+  *stress factor past its range*, and a line under the rows names the fillet
+  (so does any gear whose typed Fillet is that sharp). A ring whose tips lie
+  inside its base circle (33 teeth or fewer at 20°) is not rated: the row says
+  *not rated: tips inside the base circle*, and the line under the rows says
+  why.
+- **No row** for a machined gear, a bevel gear, or either gear of a crossed
+  pair, whose teeth meet at a point.
+- **In a workbook**, a printed gearbox with a torque on its input has each
+  mesh's force worked out from the Shafts sheet's torque, mode by mode. A
+  Meshes row whose teeth take more than they are rated to is warned of, and the
+  Results sheet lists every share. A planetary stage's load is shared among its
+  planets with one taking 1.25 of an even share, and a planet's or an idler's
+  teeth, loaded in both directions as the gearbox runs, are rated at 0.7 of
+  their figure, an allowance for running. Bevel and crossed meshes and a
+  sleeve's couplings are not rated, and the Results sheet says so.
+- **Not covered:** heat (PLA softens near 55 to 60 °C), wear, creep at the bore
+  or under a steady load, fatigue, load across the layers (the figure is for
+  teeth printed flat, as the print list asks; a gear printed on its side is not
+  covered), and the seam behind the walls of a root wider than five walls
+  (above about module 2).
+- **The example gearboxes read many times over when printed.** Their torques
+  were typed for steel before printed gears existed, and a steel tooth's
+  allowable is some fifteen to twenty times 17 MPa. Printed, the workbooks
+  under `tests/fixtures` and the gearboxes the tests build read 6 to 23 times
+  over: planetary_4to1 6.4, Arc_Move 6.9, RangeBox 13.6 in L, Risky_Placements
+  14.3, the E4 transfer case 21.4, Reducer_12to1 and TransferCase_Parallel 22.6.
+  Even against a best estimate of a break every one is over, so printed as
+  typed they would break, or would not run. That is their torques, not the
+  check: for a printed gearbox, use a larger module, a wider face, less torque, or your own tested
+  allowable.
+
+#### Calibrating your printer
+
+This tells the app how much your printer adds to a printed tooth, and which bore
+allowance fits your shaft. Nothing needs a rig, and no gear has to run. Allow about two
+hours of printing (two and a half with the optional fifth gear) and half an hour
+of measuring.
+
+You need your Bambu printer with a 0.4 mm nozzle, PLA and Bambu Studio;
+calipers that read to 0.01 mm; and one length of the shaft you mean to use.
+Measure the shaft at three places and write down the smallest reading, for
+example 8.00.
+
+1. **Make the parts.** On the form choose **Single gear**, **Spur**,
+   **Involute**, Process **Printed** and Nozzle 0.4 (or yours). Type Module
+   **1.5**, Teeth **20**, Face width **8**, Pressure angle 20, Backlash and
+   Fillet blank, Bore your shaft itself (8.0 for an 8.00 shaft), Drive Round,
+   Bore allowance **0** (typed: a blank would give the 0.2 mm default) and Name
+   **Coupon_A**. Press **Build**. With the part open and active in SolidWorks
+   (the SolidWorks bar names the file **Print files** will write), press
+   **Print files**. Do the same three more times, changing only the Bore
+   allowance and the Name, which has to be typed since a gear's default name
+   does not include its bore:
+
+   | Name | Bore | Bore allowance |
+   |---|---|---|
+   | Coupon_A | shaft | **0** (typed, not left blank) |
+   | Coupon_B | shaft | 0.1 |
+   | Coupon_C | shaft | 0.2 |
+   | Coupon_D | shaft | 0.3 |
+
+   The shaft goes in Bore and the offset in Bore allowance, never both, so the
+   coupon that fits reads as the allowance itself. Coupons built with an earlier
+   version, which had no Bore allowance and took the offset in Bore, stay valid:
+   read each one's offset over the shaft as its allowance.
+
+   Keep the Derived panel's **Span over 3 teeth**: with the printed default it
+   reads 11.209. **If your shaft is over 18 mm**, make all four Module **2**,
+   Teeth **30** instead; the panel then says Span over 4 teeth, 21.223.
+
+   *Optional, recommended:* a fifth gear, **Coupon_E**, with no bore and Face
+   width 8, of the other size: Module **2**, Teeth **30** (span over 4 teeth,
+   21.223) when your four are module 1.5; Module **1.5**, Teeth **20** (span over
+   3 teeth, 11.209) when your shaft is over 18 mm and your four are module 2. One
+   size cannot tell a fixed growth of the flank from PLA's shrink, which grows
+   with the part; two sizes can. It adds about twenty minutes of printing.
+
+   **Where the files are:** each press makes a new folder in the `print` folder
+   of the Output folder, named by the date and time of the press, for example
+   `print\2026-11-19 10.05.12`, holding the `.step` file and `print list.txt`,
+   which repeats these settings and the span.
+2. **Slice them in Bambu Studio.** Open the four (or five) `.step` files. Say
+   if Bambu Studio refuses them: that is a check this step asks of you. If it
+   asks about mesh precision or tolerance on import, keep its default (a coarser
+   mesh makes the gear measure small). Lay each flat on its face, and set, by
+   Bambu Studio's names (if a name differs in your version, the setting
+   described is the one meant):
+   - **Layer height** 0.2 mm;
+   - **Wall loops** 5;
+   - **Sparse infill density** 35 %;
+   - **Elephant foot compensation** 0.15 mm;
+   - **X-Y hole compensation** 0 and **X-Y contour compensation** 0, so that
+     what you measure is the printer and the app, not a correction on top;
+   - **Seam position** Aligned; note which tooth carries the seam (a faint
+     vertical line) and measure away from it;
+   - no brim, no supports, your usual PLA filament profile.
+
+   Print them all on one plate and let them cool on the plate.
+3. **Measure the span** over 3 teeth on each gear (over 4 on a module 2, 30
+   tooth gear). Zero the calipers and close them the same light way each time,
+   with the thumb roller, not by squeezing. Lay the flat outside jaws across the
+   teeth, one jaw on the outer flank of the first tooth and one on the outer
+   flank of the last, touching about halfway up the teeth. Hold the calipers
+   square to the gear's axis, at mid-face, not at the bed face. Rock them gently
+   and take the **smallest steady reading**, at three places about a third of a
+   turn apart, none across the seam's tooth. That is twelve readings for four
+   coupons; take again any more than 0.05 mm off the others. The figure that
+   counts is **the mean of the twelve**.
+4. **Try your shaft in each bore**, from the top face and again from the bed
+   face, and write down for each coupon and face one of: (a) it does not go in;
+   (b) it goes in with a firm push and does not wobble; (c) it slides in by hand
+   with no play you can feel; (d) it is loose. Then measure each bore with the
+   inside jaws at two places a quarter turn apart. If all four are (a), print
+   four more with Bore allowance 0.4, 0.5, 0.6 and 0.7; if all four are (d),
+   print Bore allowance −0.1 and below.
+5. *Optionally*, measure each gear's outside diameter at three places (33.0 for
+   module 1.5, 20 teeth) and its face width (8.0).
+6. **Type the mean, and keep the numbers.** Put Coupon_A back on the form
+   (Open .gear.json, or type it again) and type **the mean of the twelve** into
+   **Measured** under *Span over 3 teeth*. The line under it says what your
+   printer adds to each flank and the backlash that would keep 0.04 mm of play a
+   flank, never less than 0.1 mm. **If that backlash is more than the printed
+   default** (0.3 mm a gear from module 1 up, 0.3 × module below it), the line
+   says so, and there is a choice to make: larger gears can take the measured
+   backlash, but the smallest ones, whose 0.3 × module is under it, either keep
+   today's smaller backlash or take the measured one, at the cost of thinner tips
+   that can come to a point on the smallest modules.
+
+   The mean is the only number typed into the app. Write the rest into the table
+   below and keep it: the twelve readings (and Coupon_E's three), for each coupon
+   the bore allowance typed, the bore measured and the two fit grades (top and
+   bed face), the optional diameters, and what you printed with (the printer, the
+   filament's brand and colour, Bambu Studio's version, the nozzle and any setting
+   not as listed). The printed backlash default and the bore allowance's default
+   are to be set from these numbers; this version of Gear Generator does not read
+   them yet, so until then type the allowance that fit in Bore allowance on each
+   printed gear (blank still gives 0.2 mm), and keep X-Y hole compensation at 0
+   when you print them.
+
+   | | Coupon_A | Coupon_B | Coupon_C | Coupon_D | Coupon_E (optional) |
+   |---|---|---|---|---|---|
+   | Bore allowance typed (mm) | 0 | 0.1 | 0.2 | 0.3 | none |
+   | Bore measured (mm, two readings) | | | | | |
+   | Shaft fit, top face / bed face (a–d) | | | | | |
+   | Span (mm, three readings) | | | | | |
+   | Outside diameter (optional) | | | | | |
+
+   Printed with: printer ___, filament ___, Bambu Studio ___, nozzle ___,
+   settings not as listed ___.
+7. *Optionally*, print a pair from the app and turn it by hand through whole
+   turns on your own shafts, before and after a short run. It confirms step 3;
+   it does not replace it.
 
 ## The gear in SolidWorks
 
@@ -75,7 +360,7 @@ patterned round the gear axis:
 | `Blank Sketch`, `Blank` | the outer diameter (`OD`) and face width (`Width`) |
 | `Tooth Space Sketch`, `Tooth Space` | one space: root arc, fillets, flanks, and a chord beyond the tip (an arc on a pinion too small for a chord) |
 | `Teeth` | the circular pattern, its count (`Count`) linked to `"No. of Teeth"` |
-| `Bore Sketch`, `Bore` | the bore, when there is one |
+| `Bore Sketch`, `Bore` | the bore, when there is one: a circle cut at `"Bore Diameter" + "Bore Allowance"`, or with Drive Flat a D whose flat's chord is linked to `"Bore Flat"` |
 
 Every sketch is fully defined. The build measures whether the part's Equation
 Manager works in degrees or radians before writing a single global, and after
@@ -289,12 +574,18 @@ last few workbooks you opened.
 
 | Sheet | Holds |
 |---|---|
-| Box | the gearbox's Name, its Output folder (blank: the form's Folder), part and assembly templates, and the pressure angle and efficiency per mesh that blank cells elsewhere take |
+| Box | the gearbox's Name, its Output folder (blank: the form's Folder), part and assembly templates, the pressure angle and efficiency per mesh that blank cells elsewhere take, and its Process (`Printed` or `Machined`) and Nozzle (mm, blank 0.4) for every gear in it, and the Allowable stress (MPa, blank 17) printed teeth are rated at (*What a tooth is rated to take*) |
 | Shafts | one row per shaft: X, Y and Z of a point on its axis, from the origin; its Axis (`Z+`, `Z-`, `X+`, `Y-` …, or a direction `dx, dy, dz`); its Role (`input`, `output`, `fixed`); on an input, its speed in rpm and torque in N·m; and on a planet shaft, the carrier it is Mounted on and its Copies |
-| Gears | one row per gear: the shaft it is on, how far along the axis its face's middle is (At; a bevel gear's pitch apex), and the values the form takes — Kind, Teeth, Module, Face width, Bore, Helix angle, Hand, Profile shift … — a blank cell taking the form's default; and a Part name if you want one |
+| Gears | one row per gear: the shaft it is on, how far along the axis its face's middle is (At; a bevel gear's pitch apex), and the values the form takes — Kind, Teeth, Module, Face width, Bore, Helix angle, Hand, Profile shift, Bore allowance, Drive, Flat … — a blank cell taking the form's default (a blank Bore allowance: 0.2 printed for a part not yet built, as built for a part on record, 0 machined); and a Part name if you want one |
 | Meshes | one row per pair of gears in mesh, and its efficiency |
 | Modes | the positions of sliding gears, one row per mode |
 | Results | written by the app on Export, and never read |
+
+A blank Process means Printed for a new gearbox and *as built* for one already
+built: a gearbox built before printed gears existed, whose workbook has no
+Process row, opens Machined and unchanged, with nothing written, until you type
+Printed beside Process on its Box sheet (adding the row). The Workbook window's
+**Process** line says which, and how to change it.
 
 Headers are found by name, so columns may be in any order; a column the app
 does not know, and a row starting `#`, are left alone. Units are mm, degrees,
@@ -407,6 +698,20 @@ Excel recalculates; until then Checks are marked provisional and offer no fixes.
 If every cell a fix names holds a formula, nothing is written: change the
 formula, or a cell it reads, in Excel.
 
+**Print files** writes every part of the gearbox as built (its current
+revision: hubs, dogs and sleeves among them, each once however many rows share
+it; never the layout part, the assembly or your own components) to STEP files
+for the slicer, in a new folder of the Output folder's `print` folder, with
+`print list.txt` saying how many of each to print (one per row it serves, times
+a planet's copies) and each part's span over k teeth. It asks nothing and is
+refused, by name and before anything is written, while the record marks a part
+unsaved or no longer as built, while Update SolidWorks would change a part's
+values or make it new (a change to the layout or the assembly alone does not
+count), while the workbook's changes need a new revision (press **Build
+again…** first), while a gear has no part yet, while the workbook has an error,
+while Excel has yet to recalculate an Export, or while the Output folder is not
+on disk; *Printed gears* says the rest.
+
 **Build** makes the whole gearbox in the output folder, named for the Box's
 Name: every gear as a part, exactly as the form builds the same values, each
 with its `.gear.json` (identical gears share one part file); a layout part,
@@ -484,7 +789,8 @@ and `Reducer_12to1_r2.SLDASM` (then `_r3`, …), beside the first: new parts for
 the rows that need them, the unchanged parts reused, and nothing overwritten.
 It is what a change Update cannot carry needs — a gear, shaft or mesh added or
 removed, a shaft's X or Y crossing, reaching or leaving 0, another recipe, a
-bore added or removed, a Part name changed, a built file moved away, a
+bore added or removed, a bore allowance added or removed, Drive changed, a Part
+name changed, a built file moved away, a
 component deleted in SolidWorks — and Update SolidWorks then offers it, asking
 first (Build again… always asks). The question says what the new revision
 makes and reuses, why a part is made new rather than reused (for one Update
@@ -604,6 +910,8 @@ The tests need no SolidWorks and no display. The build runs against a fake
 SolidWorks in `tests/test_swbuild.py`.
 
 `python -m gear_generator.gears --spec m=1.5,z=25 --recipe A` prints the build
-plan for a gear — every global and every step — without SolidWorks.
+plan for a gear — every global and every step — without SolidWorks. Add
+`process=printed` (and `nozzle=0.4`) to the spec for a printed gear; left out, it
+is machined, as any spec built in code is.
 
 `docs/PLAN.md` is the design the app was built to.

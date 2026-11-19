@@ -73,7 +73,6 @@ from .spur import (
     ARC_LENGTH,
     AXIS_NAME,
     BACKLASH,
-    BACKLASH_FACTOR,
     BASE,
     BASE_RADIUS,
     BLANK,
@@ -130,6 +129,7 @@ RIM_MODULES = 6.0             # a blank rim is the root diameter plus this many 
 RIM_WARNING_MODULES = 2.0     # a rim thinner than this many modules is warned about
 FLANK_END_FILLETS = 3.0       # the involute ends this many fillet radii inside the root
 TIP_THICKNESS_WARNING = 0.3   # × module
+PRINTED_FILLET_FACTOR = 0.3   # × module: the root fillet the printing guides ask for (F1, PLAN-PRINTED §2.2)
 
 # The pair's tip clash, worked out at module 1 with no backlash and scaled.
 CLASH_STEPS = 60              # positions through one pitch
@@ -194,6 +194,24 @@ class InternalDerived:
     transverse_module: float
     tip_thickness: float = 0.0
     bore: float = 0.0          # a ring has none; read by what draws gears
+    # F1 (PLAN-PRINTED §1.1): the line width in mm when printed, None when not; left out of to_dict while None.
+    nozzle: Optional[float] = None
+
+    @property
+    def printed(self) -> bool:
+        """Whether the ring is made printed (F1): it then carries its nozzle."""
+        return self.nozzle is not None
+
+    @property
+    def backlash_printed(self) -> bool:
+        """A printed ring whose Backlash was left blank: its backlash is the printed default (§2.1)."""
+        return self.printed and not self.backlash_typed
+
+    # F3 (§4.1, G9): a ring has no shaft bore, so no allowance and no flat; read as every derived gear's are
+    # (spur.SpurDerived), and not fields, so a ring's record is what it was.
+    bore_allowance = 0.0
+    bore_flat = None
+    bore_as_cut = 0.0
 
     @property
     def rp(self) -> float:
@@ -258,13 +276,13 @@ class InternalDerived:
         }
 
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        return spur.derived_dict(self)
 
 
 def section(teeth: int, module: float, pressure_angle_deg: float, face_width: float, rim: Optional[float],
             backlash: float, fillet: float, backlash_typed: bool = False, fillet_typed: bool = False,
             transverse_module: Optional[float] = None, transverse_backlash: Optional[float] = None,
-            whole_depth: Optional[float] = None) -> InternalDerived:
+            whole_depth: Optional[float] = None, nozzle: Optional[float] = None) -> InternalDerived:
     """Every size of a ring's tooth-space section; ``rim`` None is the root plus six modules.
 
     As :func:`spur.profile`: a helical ring passes its transverse module,
@@ -296,7 +314,7 @@ def section(teeth: int, module: float, pressure_angle_deg: float, face_width: fl
         inv_alpha=inv_alpha, phi=-(psi_s + inv_alpha), tip_cap_d=da - 2.0 * m, flank_start_d=start,
         flank_end_d=end, t1=math.sqrt(max(0.0, (start / db) ** 2 - 1.0)),
         t2=math.sqrt(max(0.0, (end / db) ** 2 - 1.0)), flank_arc_radius=d / 2.0 * math.sin(alpha),
-        transverse_module=mt,
+        transverse_module=mt, nozzle=nozzle,
     )
     tip = max(g.ra, g.flank_start_d / 2.0)
     return replace(g, tip_thickness=g.ra * (2.0 * math.pi / n - 2.0 * half_space_angle(g, tip)))
@@ -563,6 +581,8 @@ def section_diagnostics(g: InternalDerived, recipe: str, _undercut_limit: int = 
         out.append(Diagnostic(WARNING, (
             f"The ring's tooth tips are {_num(g.tip_thickness)} mm thick, under 0.3 × module "
             f"({_num(TIP_THICKNESS_WARNING * g.module)} mm)."), "teeth"))
+    if g.printed:
+        out.extend(printed_ring_warnings(g))
     if recipe == RECIPE_INVOLUTE and g.flank_end_d / 2.0 < g.rp + g.module - 1e-9:
         out.append(Diagnostic(WARNING, (
             f"The involute ends at {_num(g.flank_end_d)} mm, inside the {_num(g.d + 2 * g.module)} mm a standard "
@@ -573,6 +593,20 @@ def section_diagnostics(g: InternalDerived, recipe: str, _undercut_limit: int = 
             f"Arcs stand in for the involute on this ring to within "
             f"{_num(flank_deviation(g) * 1000.0, 1)} µm."), "recipe"))
     return out
+
+
+def printed_ring_warnings(g: InternalDerived) -> List[Diagnostic]:
+    """F1 (PLAN-PRINTED §2.2): what a printed ring's section alone says, empty when it is not printed: its tips
+    after backlash under one nozzle line, a module under 2.5 nozzle widths, and its default fillet, which is kept
+    at 0.15 × module (under the guides' 0.3) so a pinion's tips clear it. A typed fillet is the user's, and not said."""
+    if not g.printed:
+        return []
+    found = [spur.printed_tip_warning(g.tip_thickness, g.nozzle, "ring"), spur.printed_module_warning(g.module, g.nozzle)]
+    if not g.fillet_typed and g.fillet < PRINTED_FILLET_FACTOR * g.module - spur.PRINTED_TOLERANCE:
+        found.append(Diagnostic(WARNING, (
+            f"Printed, the ring's {_num(g.fillet)} mm root fillet is 0.15 × module, under the 0.3 × module printed "
+            "gears are given; it is kept small so the pinion's tips clear it."), "fillet"))
+    return [d for d in found if d is not None]
 
 
 def _field_errors(spec: GearSpec, kind: str) -> List[Diagnostic]:
@@ -875,9 +909,10 @@ class InternalSpurGear:
         typed_fillet = spec.fillet_mm()
         return section(
             spec.teeth_count(), m, spec.pressure_angle_deg(), spec.face_width_mm(), spec.rim_mm(),
-            BACKLASH_FACTOR * m if typed_backlash is None else typed_backlash,
+            spur.blank_backlash(spec, m) if typed_backlash is None else typed_backlash,
             FILLET_FACTOR * m if typed_fillet is None else typed_fillet,
             backlash_typed=typed_backlash is not None, fillet_typed=typed_fillet is not None,
+            nozzle=spur.spec_nozzle(spec),
         )
 
     def validate(self, spec: GearSpec, derived: Optional[InternalDerived] = None) -> List[Diagnostic]:
@@ -892,7 +927,7 @@ class InternalSpurGear:
 
     def variables(self, spec: GearSpec, derived: InternalDerived) -> List[GlobalVariable]:
         g = derived
-        backlash = equations.literal(g.backlash) if g.backlash_typed else f"{BACKLASH_FACTOR} * {_q(MODULE)}"
+        backlash = spur.backlash_expression(g)
         fillet = equations.literal(g.fillet) if g.fillet_typed else f"{FILLET_FACTOR} * {_q(MODULE)}"
         return [
             GlobalVariable(TEETH, equations.literal(g.teeth)),
@@ -970,7 +1005,7 @@ class InternalHelicalGear(helical.HelicalGear):
     def _section_variables(self, spec: GearSpec, g: Any, beta_rad: str) -> List[GlobalVariable]:
         s = g.section
         beta = _q(helical.HELIX_ANGLE)
-        backlash = equations.literal(s.backlash) if s.backlash_typed else f"{BACKLASH_FACTOR} * {_q(MODULE)}"
+        backlash = spur.backlash_expression(s)
         fillet = equations.literal(s.fillet) if s.fillet_typed else f"{FILLET_FACTOR} * {_q(MODULE)}"
         tm = _q(helical.TRANSVERSE_MODULE)
         return [

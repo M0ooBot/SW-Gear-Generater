@@ -567,6 +567,7 @@ class FakeSolidWorks:
 
     def add_global_variable(self, name, expression):
         self._log("add_global_variable", name, expression)
+        self._touch()                  # an equation added marks the document modified, as detect_trig_units' add does
         self.equations_text.append(f'"{name}"= {expression}')
         return len(self.equations_text) - 1
 
@@ -2009,6 +2010,119 @@ class FakeSolidWorks:
         return {d.path: (_key(d.path) in self.touched or self.memory.get(_key(d.path)) != self.saved.get(_key(d.path)))
                 for d in self.open_docs}
 
+    # -- F2 (package B): Print files (F2-INTERFACES.md §4, §5.2). Each call as F2's probe is to measure it, taught by
+    # assumption until it has (none of it is measured): ``document_by_path`` finds a document open in its own window
+    # (``open_docs``) or one loaded only as a component (``component_only``, lower-cased paths: the walk's answer for
+    # such a part is the probe's question, step 7a); ``window_read`` answers by PART_WINDOW_READ_ON_<year> as the
+    # Session does, None while it is None, else whether the document has its own window; ``use_document`` makes a found
+    # document the one calls act on, nothing activated; ``activate`` brings an open document forward and makes it the one
+    # read, as Session.activate (ActivateDoc3, the build document forgotten); ``close_document`` closes a window unsaved
+    # (CloseDoc: its changes lost, a component-only part's stay loaded with the assembly); ``export_step`` writes the
+    # document calls act on (``current``) as SolidWorks is assumed to, by its object whether active or not, to a file
+    # holding ``step_texts[path]`` (else _step_text's, sized to its globals), refusing a path that exists as Session does, answering (0, 0), and
+    # marking nothing (a copy). ``exports`` keeps (document written, file, the active document's path then);
+    # ``export_fail[path] = (errors, warnings)`` makes SolidWorks answer False with those codes.
+
+    STEP_TEXT_SHAPE = (
+        "ISO-10303-21;\r\nHEADER;\r\nFILE_DESCRIPTION (( 'STEP AP214' ), '1' );\r\n"
+        "FILE_NAME ('Gear.STEP', '2026-11-18T22:10:05', ( '' ), ( '' ), 'SwSTEP 2.0', 'SolidWorks 2026', '' );\r\n"
+        "FILE_SCHEMA (( 'AUTOMOTIVE_DESIGN {{ 1 0 10303 214 3 1 1 }}' ));\r\nENDSEC;\r\n\r\nDATA;\r\n"
+        "#1 = ( LENGTH_UNIT ( ) NAMED_UNIT ( * ) SI_UNIT ( .MILLI., .METRE. ) );\r\n"
+        "#2 = MANIFOLD_SOLID_BREP ( 'Body', #3 ) ;\r\n#3 = CLOSED_SHELL ( 'NONE', ( ) ) ;\r\n"
+        "#4 = CARTESIAN_POINT ( 'NONE', ( {r!r}, 0.0, 0.0 ) ) ;\r\n#5 = VERTEX_POINT ( 'NONE', #4 ) ;\r\n"
+        "#6 = CARTESIAN_POINT ( 'NONE', ( 0.0, 0.0, {f!r} ) ) ;\r\n#7 = VERTEX_POINT ( 'NONE', #6 ) ;\r\n"
+        "ENDSEC;\r\nEND-ISO-10303-21;\r\n")
+    STEP_TEXT = STEP_TEXT_SHAPE.format(r=16.5, f=8.0)        # the m 1.5, z 20, face 8 spur's
+
+    def _step_text(self):
+        """The file SolidWorks is assumed to write for the document calls act on: a whole AP214 file of one solid in
+        millimetres whose vertices reach its "Outer Diameter" / 2 from the axis and span its "Face Width" (F2's probe:
+        the printed spur, helical and 50-tooth gear held to 0.0012 mm); a spur of m 1.5, z 20, face 8 (16.5, 8) when
+        the document holds neither global."""
+        try:
+            values = self.equation_values()
+        except Exception:  # noqa: BLE001 - a document whose equations do not evaluate here
+            values = {}
+        r = float(values.get("Outer Diameter", 33.0)) / 2.0
+        f = float(values.get("Face Width", 8.0))
+        return self.STEP_TEXT_SHAPE.format(r=r, f=f)
+
+    def _f2(self):
+        for name, value in (("component_only", set()), ("step_texts", {}), ("exports", []), ("export_fail", {})):
+            if not hasattr(self, name):
+                setattr(self, name, value)
+        return self
+
+    def _load(self, path):
+        key = _key(path)
+        if key not in self.memory:
+            eq, made = self.saved.get(key, ([], []))
+            self.memory[key] = (list(eq), list(made))
+        self.equations_text, self.made = self.memory[key]
+        self.mates = self.memory_mates.setdefault(key, copy.deepcopy(self.saved_mates.get(key, [])))
+        self.axis_defs = self.memory_axes.setdefault(key, dict(self.saved_axes.get(key, {})))
+        self.current = path
+        self.epoch += 1
+
+    def document_by_path(self, path):
+        self._log("document_by_path", path)
+        info = next((d for d in self.open_docs if _key(d.path) == _key(path)), None)
+        if info is None and _key(path) in self._f2().component_only:
+            info = DocInfo(title=path.replace("/", "\\").rsplit("\\", 1)[-1], path=path, doc_type=1)
+        return info
+
+    def use_document(self, doc):
+        self._log("use_document", doc.path)
+        self._load(doc.path)
+        return doc
+
+    def window_read(self, doc):
+        """As Session.window_read: only the reads it knows by name ("Visible", "ActiveView") are measured; None, or any
+        other value of PART_WINDOW_READ (F2-REVIEW S7: True, or the probe's prose), answers None."""
+        self._log("window_read", doc.path)
+        if self._finding("PART_WINDOW_READ") not in ("Visible", "ActiveView"):
+            return None
+        return any(_key(d.path) == _key(doc.path) for d in self.open_docs)
+
+    def activate(self, title):
+        self._log("activate", title)
+        info = next((d for d in self.open_docs if d.title == title), None)
+        if info is None:
+            raise SolidWorksError(f"{title} is not open in SolidWorks.")
+        self.active = info
+        self._load(info.path)
+
+    def close_document(self, title):
+        self._log("close_document", title)
+        info = next((d for d in self.open_docs if d.title == title), None)
+        if info is None:
+            return
+        self.open_docs.remove(info)
+        key = _key(info.path)
+        if key not in self._f2().component_only:
+            self.memory.pop(key, None)                  # closed unsaved: its changes are lost
+            self.touched.discard(key)
+        if self.active is not None and self.active.title == title:
+            self.active = self.open_docs[-1] if self.open_docs else None
+        if _key(self.current or "") == key:
+            self.current = ""
+
+    def export_step(self, path):
+        import os
+        self._log("export_step", path)
+        self._f2()
+        if os.path.exists(path):
+            raise SolidWorksError(f"{path} already exists, and Print files never writes over a file.")
+        if findings.SAVE_AS_COPY is None:
+            raise SolidWorksError("Writing a STEP file as a copy has not been measured.")
+        self.exports.append((self.current, path, self.active.path if self.active is not None else ""))
+        fail = self.export_fail.get(_key(self.current or ""))
+        if fail is not None:
+            raise swcom.StepExportError(path, False, fail[0], fail[1], False)
+        with open(path, "w", encoding="latin-1", newline="") as handle:
+            handle.write(self.step_texts.get(_key(self.current or ""), self._step_text()))
+        return 0, 0
+
     def file_version(self, path):
         self._log("file_version", path)
         self._gate("FILE_VERSION_READ", "Reading a file's version")
@@ -2693,6 +2807,47 @@ def test_nothing_to_change_means_no_rebuild():
     fake = _built_fake(spec)
     result = swbuild.update_variables(fake, SPUR.variables(spec, SPUR.derive(spec)), PATH)
     assert result.changed == [] and "rebuild" not in names(fake)
+
+
+# A call that changes a document or turns its save flag on (detect_trig_units adds an equation and deletes it, which
+# SolidWorks 2026 and 2024 read as modified: swbuild.py's _read_live note, W4 review S2, the F3 demonstration's runs).
+MARKING = {"detect_trig_units", "add_global_variable", "set_global_variable", "set_rebuild_suppressed", "suppress",
+            "rebuild", "link_dimension", "save_as"}
+
+
+@pytest.mark.parametrize("trig", [DEGREES, RADIANS])
+def test_a_quiet_update_values_makes_no_changing_call_and_leaves_the_save_flag_as_it_was(trig):
+    """F3-DEMONSTRATION-RUNS-REVIEW §3, the coordinator's ruling of 2026-11-19: the part's equations are read first and,
+    when it already holds every global, nothing that marks it is called; before, the units were measured first and the
+    part read modified though nothing was written. Its unit is the one its text and values are in."""
+    spec = GearSpec(pressure_angle="20")
+    fake = FakeSolidWorks(trig=trig)
+    swbuild.build(fake, plan(spec), never_exists)
+    fake.calls.clear()
+    fake.touched.discard(_key(PATH))                  # saved: its save flag off
+    fake.active = DocInfo(title="Gear_m1.5_N25.SLDPRT", path=PATH, doc_type=1)
+    result = swbuild.update_variables(fake, SPUR.variables(spec, SPUR.derive(spec)), PATH)
+    assert result.ok and result.changed == [] and result.trig == trig
+    assert not set(names(fake)) & MARKING, names(fake)
+    assert _key(PATH) not in fake.touched and fake.memory.get(_key(PATH)) == fake.saved.get(_key(PATH))
+
+
+@pytest.mark.parametrize("trig", [DEGREES, RADIANS])
+def test_an_update_values_that_sets_a_value_measures_the_units_first_as_before(trig):
+    spec = GearSpec()
+    fake = FakeSolidWorks(trig=trig)
+    swbuild.build(fake, plan(spec), never_exists)
+    fake.calls.clear()
+    fake.touched.discard(_key(PATH))
+    fake.active = DocInfo(title="Gear_m1.5_N25.SLDPRT", path=PATH, doc_type=1)
+    wanted = spec.with_values(teeth="40")
+    variables = SPUR.variables(wanted, SPUR.derive(wanted))
+    result = swbuild.update_variables(fake, variables, PATH)
+    assert result.ok and result.changed == ["No. of Teeth"] and result.trig == trig
+    called = names(fake)
+    assert called.count("detect_trig_units") == 1
+    assert called.index("detect_trig_units") < called.index("set_global_variable") and called.count("rebuild") == 1
+    assert _key(PATH) in fake.touched
 
 
 @pytest.mark.parametrize("built,wanted,word", [

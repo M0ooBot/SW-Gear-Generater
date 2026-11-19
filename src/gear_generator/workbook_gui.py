@@ -93,7 +93,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from . import __version__, store, swbuild, swcom, theme, ui_text, widgets
+from . import __version__, printout, store, swbuild, swcom, theme, ui_text, widgets
 from .gears.base import Diagnostic
 from .theme import px
 from . import preview
@@ -128,7 +128,7 @@ TABLE_HEAD = ("Gear", "Shaft", "Kind", "Teeth", "Module", "Face", "Part", "")
 TABLE_WIDTHS = (40, 44, 56, 44, 52, 40, 0, 128)     # 0: the column that takes the room left
 PART_COLUMN = 6     # the Part column: its cells shortened to the room the others leave (_fit_part_cells)
 PATH_CHARS = 52     # a path longer than this is shortened in the middle, so the window keeps its width
-FOOTER_COLUMNS = {"build_button": 4, "update_button": 5}    # Export, Export as…, then these two
+FOOTER_COLUMNS = {"build_button": 5, "update_button": 6}    # Export, Export as…, Print files (F2), then these two
 BODY_PAD = 12               # around the window's body, px
 STATUS_MIN_WRAP = 400       # the footer's sentence wraps in the room the buttons leave, never narrower than this
 # W9a, K12 (ISSUE-1-PLAN §2.6): the window fits its screen. It never grows past the primary screen's work area less
@@ -253,6 +253,7 @@ def _update_gate(a: wb_assess.Assessment, record: store.LinkRecord) -> str:
 
 
 JOB_BUILD, JOB_UPDATE = "build", "update"
+JOB_PRINT = "print"         # F2 (PLAN-PRINTED §3.1.3): Print files, swbuild.print_parts; it writes no record
 
 # The person's answers to "was this workbook moved or renamed from …?", for this session: (this workbook, the
 # workbook the record names), normalised -> True (moved: the record is this workbook's) or False (a copy). Kept in
@@ -308,10 +309,15 @@ class Job:
     revision: Tuple[int, ...] = ()
     before: Optional[swbuild.OldAssembly] = None
     carry: Optional[swbuild.Carry] = None    # W9d: what a carrying Build again… was given (W9D-INTERFACES §2.1)
+    print_plan: Optional[printout.PrintPlan] = None     # F2: what a Print files job runs, for its list
 
     @property
     def updating(self) -> bool:
         return self.kind == JOB_UPDATE
+
+    @property
+    def printing(self) -> bool:
+        return self.kind == JOB_PRINT
 
 
 class WorkbookWindow(tk.Toplevel):
@@ -344,6 +350,8 @@ class WorkbookWindow(tk.Toplevel):
         # What a press would do, planned on every re-plan (see the module's docstring), and the record it read.
         self.record: Optional[store.LinkRecord] = None
         self.record_problem = ""       # why the record beside the workbook cannot be read ("" when it can)
+        self.process_record = ""       # F1: "broken" or "newer" when _blank_process could not read the record
+        self.assessed_record: Optional[store.LinkRecord] = None   # F3: the record _blank_process read, for assess
         self.plan: Optional[wb_gearbox.GearboxPlan] = None      # what the build button would run
         self.update_plan: Optional[wb_update.UpdatePlan] = None    # what Update SolidWorks would do (not Tk's update)
         self.plan_trouble = ""         # planning itself raised: said, and both buttons held
@@ -456,8 +464,9 @@ class WorkbookWindow(tk.Toplevel):
         box.grid(row=1, column=0, sticky="ew", pady=(0, px(8)))
         box.body.columnconfigure(1, weight=1)
         self.box_values: Dict[str, tk.Label] = {}
+        # F1 (PLAN-PRINTED §6, open point 3): the Box's Process, for every gearbox, machined ones too.
         for row, (key, text) in enumerate((("file", "File"), ("name", "Name"), ("folder", "Output folder"),
-                                           ("type", "Worked out as"))):
+                                           ("process", "Process"), ("type", "Worked out as"))):
             tk.Label(box.body, text=text, bg=theme.WHITE, fg=theme.LABEL, font=f.label, anchor="w",
                      width=0).grid(row=row, column=0, sticky="w", padx=(0, px(24)), pady=(0, px(2)))
             cell = tk.Frame(box.body, bg=theme.WHITE)
@@ -470,8 +479,9 @@ class WorkbookWindow(tk.Toplevel):
                 self.folder_hint.pack(side="left", padx=(px(10), 0))
         # "Worked out as" wraps in the room its column leaves (W8: a gearbox with modes names every mode's ratio),
         # as the footer and the Speeds lines wrap, so the window keeps its width.
-        labels = max(f.label.measure(t) for t in ("File", "Name", "Output folder", "Worked out as")) + px(24)
-        self.box_values["type"].configure(justify="left", wraplength=px(LEFT_WIDTH - 2 * 12 - 2) - labels)
+        labels = max(f.label.measure(t) for t in ("File", "Name", "Output folder", "Process", "Worked out as")) + px(24)
+        for key in ("process", "type"):
+            self.box_values[key].configure(justify="left", wraplength=px(LEFT_WIDTH - 2 * 12 - 2) - labels)
 
         gears = widgets.Panel(body, "Gears", self.parts_readout)
         gears.grid(row=2, column=0, sticky="ew", pady=(0, px(8)))
@@ -517,10 +527,16 @@ class WorkbookWindow(tk.Toplevel):
         self.export_as_button = widgets.Button(foot, "Export as…", command=self.export_as, height=32,
                                                bg=theme.WINDOW)
         self.export_as_button.grid(row=0, column=3, sticky="e", padx=(px(8), 0))
+        # F2 (PLAN-PRINTED §3.1, E5): Print files, the footer's fifth button, after the two that write the workbook
+        # and before the two that change SolidWorks; no ellipsis, since it asks nothing.
+        self.print_button = widgets.Button(foot, "Print files", command=self.press_print, height=32, bg=theme.WINDOW)
+        self.print_button.grid(row=0, column=4, sticky="e", padx=(px(8), 0))
         self._foot = foot
         # The build button's label, action and weight, and whether Update SolidWorks shows, are the footer's.
-        self.build_button = self._footer_button(ui_text.BUILD_LABELS[ui_text.BUILD], self.press_build, True, 4)
-        self.update_button = self._footer_button("Update SolidWorks", self.press_update, False, 5)
+        self.build_button = self._footer_button(ui_text.BUILD_LABELS[ui_text.BUILD], self.press_build, True,
+                                                FOOTER_COLUMNS["build_button"])
+        self.update_button = self._footer_button("Update SolidWorks", self.press_update, False,
+                                                 FOOTER_COLUMNS["update_button"])
         self.update_button.grid_remove()
 
     def _wrap_status(self) -> None:
@@ -826,8 +842,36 @@ class WorkbookWindow(tk.Toplevel):
                 chosen=(), provisional: bool = False) -> wb_assess.Assessment:
         """A read worked through by :func:`workbook.assess.assess`, the one pipeline the boards and W4 share.
         ``provisional`` while Excel has yet to recalculate the app's own Export (``recalc``): no fixes then."""
+        # F3 (F3-INTERFACES §14, S3; the coordinator's ruling giving this wiring to package C): the record
+        # _blank_process reads, this workbook's own, goes to assess too, so a row whose part is on record is checked and
+        # planned as built (the printed rim, the bore against the root speak of the hole that part holds).
+        blank = self._blank_process()
         return wb_assess.assess(spec, read_diagnostics, self._folder(spec), self._template(spec), chosen,
-                                provisional=provisional)
+                                provisional=provisional, blank_process=blank, record=self.assessed_record)
+
+    def _blank_process(self) -> str:
+        """What a blank Process on the Box sheet means here (F1, PLAN-PRINTED §1.3; D11 ruled (B)): as built, by
+        :func:`workbook.assess.blank_process` of the record beside the workbook, read as ``_plan_solidworks_pass`` reads
+        it, without moving anything. Here, so both callers of :meth:`_assess` (``_plan``, and the raw read ``_show``
+        works the consequence of a save out from) resolve a blank alike. No record when it is another workbook's (a
+        copy, or not yet said: ``store.foreign_workbook``), so a copy does not read Machined from its original's parts;
+        none either when it cannot be read (Build then makes a new gearbox, as ``_plan_solidworks_pass`` plans it) or is
+        newer than this app (both buttons wait). Which of those two it was is kept in ``process_record``
+        (``"broken"``, ``"newer"`` or ``""``), so the Process line does not say a blank was read as built or as new
+        when it could not be (the F1 review's S5)."""
+        self.process_record = ""
+        try:
+            record = store.read_link_record(self.link.path)
+        except store.UnknownSchema:
+            record, self.process_record = None, ui_text.PROCESS_RECORD_NEWER
+        except store.StoreError:
+            record, self.process_record = None, ui_text.PROCESS_RECORD_BROKEN
+        if record is not None and store.foreign_workbook(self._settled(record), self.link.path):
+            record = None
+        # F3: the record read, this workbook's (None for another's, a broken one or a newer one), which _assess also
+        # hands to assess so rows on record are read as built.
+        self.assessed_record = record
+        return wb_assess.blank_process(record)
 
     def _folder(self, spec: wb_model.GearboxSpec) -> str:
         return spec.box.output_folder or self.app.out_folder.get().strip()
@@ -844,16 +888,18 @@ class WorkbookWindow(tk.Toplevel):
             record_problem=self.record_problem, plan=self.plan, update=self.update_plan,
             error=self.error or self.plan_trouble, folder=folder,
             folder_exists=bool(folder) and os.path.isdir(folder),
-            building=job is not None and not job.updating, updating=job is not None and job.updating,
+            building=job is not None and job.kind == JOB_BUILD, updating=job is not None and job.updating,
             progress=job.progress.step if job is not None else None, note=self.note, results_due=self.results_due,
             digest=self.reading.digest if self.reading is not None else "",
-            positions_per_configuration=self.positions_per_configuration)
+            positions_per_configuration=self.positions_per_configuration,
+            printing=job is not None and job.printing)
 
     def _refresh_state(self) -> None:
         footer = self.footer()
         text = footer.text
         if self._close_when_done and self._job is not None:
-            text = f"{text} {ui_text.closes_when_done(self._job.updating)}"
+            text = (f"{text} {ui_text.PRINT_CLOSES_WHEN_DONE}" if self._job.printing
+                    else f"{text} {ui_text.closes_when_done(self._job.updating)}")
         self._set_status(text, footer.ok)
         self._shape_button("build_button", footer.build_label, footer.build_primary, footer.build_enabled)
         self._shape_button("update_button", "Update SolidWorks", footer.update_primary, footer.update_enabled,
@@ -864,6 +910,9 @@ class WorkbookWindow(tk.Toplevel):
         can_export = self.reading is not None and not self.error and self._pending is None and not self.recalc
         self.export_button.configure(state="normal" if can_export else "disabled")
         self.export_as_button.configure(state="normal" if can_export else "disabled")
+        # F2: Print files is held only while a job runs; the press says anything else that stops it.
+        self.print_button.configure(state="normal" if self.reading is not None and self._pending is None
+                                    else "disabled")
 
     def locate(self) -> None:
         """The file was moved or renamed: point the window at it again, and carry the record of what was built
@@ -908,6 +957,10 @@ class WorkbookWindow(tk.Toplevel):
         self.box_values["folder"].configure(text=ui_text.short_path(folder, PATH_CHARS - 20) if folder else "—")
         self.folder_hint.configure(text="from the Box sheet" if spec.box.output_folder
                                    else ("the strip's Output" if folder else "set one on the Box sheet"))
+        # The Box as read says whether Process was typed or left blank, and whether the sheet has its row; the Box as
+        # assessed says what a blank resolved to.
+        self.box_values["process"].configure(text=ui_text.workbook_process_line(
+            self.reading.spec.box, spec.box, record=getattr(self, "process_record", "")), font=f.label)
         self.box_values["type"].configure(text=self.report.worked_out_as if self.report else "—", font=f.label)
 
         self.parts_readout.set(ui_text.workbook_parts_readout(self.parts, record=self.record))
@@ -1160,7 +1213,9 @@ class WorkbookWindow(tk.Toplevel):
         """Write the chosen fixes and the Results sheet: into the workbook, or a copy at ``out_path``."""
         if self.reading is None or self.error or self._pending is not None or self.recalc:
             # Export as… can be pressed before a read fails (its file dialog keeps the poll running): say so.
-            why = (ui_text.export_busy(self._job is not None and self._job.updating) if self._pending is not None
+            busy = (ui_text.EXPORT_WAITS_FOR_PRINT if self._job is not None and self._job.printing
+                    else ui_text.export_busy(self._job is not None and self._job.updating))
+            why = (busy if self._pending is not None
                    else self.error or ("the workbook has not been read yet." if self.reading is None
                                        else ui_text.EXPORT_WAITS))
             self._set_status(f"Nothing was exported: {why}", ok=False)
@@ -1345,6 +1400,78 @@ class WorkbookWindow(tk.Toplevel):
             return swbuild.update_gearbox(session, **kwargs, progress=job.progress.say)
         self._submit(job, work)
 
+    def press_print(self) -> None:
+        """Print files (PLAN-PRINTED §3.1.3): every part of the record's current revision, each once, written to STEP
+        files in a new folder of the Output folder's print folder, with its print list. Planned again first, then by
+        package B's printout.workbook_print from this window's planning read (the record, the assessment and what
+        Update would do) and the version the strip's SolidWorks bar last read, which refuses (the gate first) before
+        any job; then one job on the shared worker, swbuild.print_parts. Every sentence is ui_text's; what this
+        window says itself is only what B cannot see: a read that failed, and a read Excel has yet to recalculate.
+        Whether the record beside the workbook is another's is this window's verdict, passed to B's planner
+        (``foreign_record=``, F2-REVIEW S8), which says FOREIGN_RECORD in its own order; an Output folder not on disk is
+        B's NO_FOLDER."""
+        if self._pending is not None or self.reading is None:
+            return
+        self._plan()
+        if self.error or self.plan_trouble:
+            said = ui_text.PRINT_WAITS_FOR_READ
+        elif self.recalc:
+            said = ui_text.PRINT_WAITS_FOR_RECALC
+        else:
+            said = ""
+        if said:
+            self.note = ui_text.Note(said, False, ui_text.NOTE_STANDING)
+            self._refresh_state()
+            return
+        folder = self._folder(self.reading.spec)
+        snapshot = getattr(self.app, "_snapshot", None) or {}
+        revision = tuple(snapshot.get("revision", ()) or ())
+        try:
+            plan = printout.workbook_print(self.record, self.state, self.update_plan, folder, revision,
+                                           foreign_record=self._foreign_record())
+        except Exception as exc:  # noqa: BLE001 - planning is pure and should never raise; if it does, say so
+            self.note = ui_text.Note(ui_text.print_collect_failed(exc), False, ui_text.NOTE_STANDING)
+            self._refresh_state()
+            return
+        if plan.refusal is not None:
+            self.note = ui_text.Note(ui_text.print_refusal(plan.refusal), False, ui_text.NOTE_STANDING)
+            self._refresh_state()
+            return
+        if not self._worker_free(printing=True):
+            return
+        job = Job(JOB_PRINT, self.reading.digest, record=self.record, print_plan=plan)
+
+        def work(session: Any) -> Any:
+            job.revision = tuple(getattr(session, "revision", ()) or ())
+            return swbuild.print_parts(session, plan)
+        self._submit(job, work)
+
+    def _foreign_record(self) -> str:
+        """The other workbook the record beside this one was written for, when it is not to be taken as this one's (a
+        copy's, or not yet said: store.foreign_workbook of the settled record), else "": the planning read drops such
+        a record (self.record None), so this window's verdict is what B's planner is handed."""
+        try:
+            record = store.read_link_record(self.link.path)
+        except store.StoreError:
+            return ""
+        if record is None:
+            return ""
+        return store.foreign_workbook(self._settled(record), self.link.path) or ""
+
+    def _finish_print(self, job: Job, result: Any) -> ui_text.Note:
+        """What a press of Print files did: its print list first written into the press's folder whenever one was made
+        (printout.with_list; a failed set's headed DO NOT PRINT THIS SET), then the status composed from what that
+        answered (ui_text.print_result), never claiming a list that could not be written (F2-REVIEW S2). A standing
+        note: it writes no record and changes nothing the footer reads."""
+        try:
+            result = printout.with_list(result, ui_text.print_list_text(job.print_plan, result, __version__))
+            text = ui_text.print_result(result)
+            ok = (result.refusal is None and not result.failed and not result.flags_turned_on
+                  and result.active_restored and not result.list_error)
+        except Exception as exc:  # noqa: BLE001
+            text, ok = ui_text.print_collect_failed(exc), False
+        return ui_text.Note(text, ok, ui_text.NOTE_STANDING)
+
     def _build_again(self) -> None:
         """Ask (default No) whether to build the next revision, with what it makes, reuses and shares; then build
         it — unless the workbook changed while the question was open."""
@@ -1450,19 +1577,21 @@ class WorkbookWindow(tk.Toplevel):
         except Exception:  # noqa: BLE001 - only the journal: the next plan drops what is not on disk
             pass
 
-    def _worker_free(self, updating: bool = False) -> bool:
+    def _worker_free(self, updating: bool = False, printing: bool = False) -> bool:
         """The strip's one SolidWorks thread is there, not building for the strip, and not still running a job a
-        closed window left (``_UNOWNED``); else say why."""
+        closed window left (``_UNOWNED``); else say why (F2: in Print files' words for its press)."""
         worker = self.app._worker  # noqa: SLF001 - the strip's one SolidWorks thread, shared on purpose
         if worker is None:
-            self._set_status(ui_text.job_unreachable(swcom.unavailable_reason(), updating), ok=False)
+            self._set_status(ui_text.print_unreachable(swcom.unavailable_reason()) if printing
+                             else ui_text.job_unreachable(swcom.unavailable_reason(), updating), ok=False)
             return False
         if getattr(self.app, "_pending_build", None) is not None:
-            self._set_status(ui_text.strip_busy(updating), ok=False)
+            self._set_status(ui_text.PRINT_WAITS_FOR_STRIP if printing else ui_text.strip_busy(updating), ok=False)
             return False
         _UNOWNED[:] = [job for job in _UNOWNED if job.poll() is None]
         if _UNOWNED:
-            self._set_status(ui_text.unowned_job_busy(updating), ok=False)
+            self._set_status(ui_text.PRINT_WAITS_FOR_UNOWNED if printing else ui_text.unowned_job_busy(updating),
+                             ok=False)
             return False
         return True
 
@@ -1483,7 +1612,11 @@ class WorkbookWindow(tk.Toplevel):
         value, error = answer
         job, self._pending, self._job = self._job, None, None
         try:
-            if error is not None:
+            if job.printing:
+                # F2: Print files writes no record; its sentence stands as an Export's does.
+                self.note = (ui_text.Note(ui_text.print_job_failed(error), False, ui_text.NOTE_STANDING)
+                             if error is not None else self._finish_print(job, value))
+            elif error is not None:
                 self.note = ui_text.Note(ui_text.job_failed(error, job.updating), False)
                 if job.updating and isinstance(error, swbuild.NotAsBuilt):
                     self._mark_not_as_built(error)
@@ -1496,7 +1629,8 @@ class WorkbookWindow(tk.Toplevel):
                 self.positions_per_configuration = getattr(value, "positions_per_configuration", None)
                 self.note = self._finish_update(job, value) if job.updating else self._finish_build(job, value)
         except Exception as exc:  # noqa: BLE001 - the finishes catch their own; this is the last net
-            self.note = ui_text.Note(ui_text.collect_failed(exc, job.updating), False)
+            self.note = (ui_text.Note(ui_text.print_collect_failed(exc), False, ui_text.NOTE_STANDING) if job.printing
+                         else ui_text.Note(ui_text.collect_failed(exc, job.updating), False))
         if self._close_when_done:
             self._close_when_done = False
             if self.note.ok:
@@ -1688,8 +1822,9 @@ class WorkbookWindow(tk.Toplevel):
                 updating = self._job.updating
                 self._asking = True
                 try:
-                    anyway = ask_yes_no(self, ui_text.CLOSE_ANYWAY_TITLE,
-                                        ui_text.close_anyway_question(updating, journaled=self._job.journaled))
+                    question = (ui_text.PRINT_CLOSE_ANYWAY if self._job.printing
+                                else ui_text.close_anyway_question(updating, journaled=self._job.journaled))
+                    anyway = ask_yes_no(self, ui_text.CLOSE_ANYWAY_TITLE, question)
                 finally:
                     self._asking = False
                 if anyway and self._pending is not None:

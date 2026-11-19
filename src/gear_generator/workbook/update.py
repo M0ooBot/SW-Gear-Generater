@@ -53,7 +53,8 @@ from .. import findings, store, swbuild
 from ..gears import bevel, clutch, equations, kind_for, spur
 from ..gears import base
 from ..gears.base import GlobalVariable
-from ..spec import GearSpec, InputError
+from ..spec import (BORE_ALLOWANCE_GLOBAL, BORE_FLAT_GLOBAL, DRIVE_ROUND, PROCESS_MACHINED, PROCESS_PRINTED, GearSpec,
+                    InputError, as_built)
 from ..store import GearboxRecord, LinkRecord, MateEntry, PartEntry, ShaftEntry, Sidecar
 from ..swbuild import (MARK_MISMATCHED, MARK_UNSAVED, POSE_TOLERANCE, DocumentValues, GearboxUpdate, LockLink, MateRef, MeshLink, MotionUpdate, Placement,
                        _caps_with_arc, on_in, plan_features, same_frame, structural_change)
@@ -86,6 +87,9 @@ class PartUpdate:
     made: Tuple[str, ...] = ()
     mark: str = ""                  # the record's mark on the file: "unsaved", "mismatched" or ""
     left_in_error: bool = False     # the record marks it left in error by a stopped Update (``unsaved_in_error``)
+    # F3 (PLAN-PRINTED §4.1.1, §4.4; package B), handed to the worker in its ``DocumentValues`` for K11's words: the
+    # globals whose Gears cell is blank and whose value is therefore the part's as built (``"Bore Allowance"`` only).
+    blank_cells: Tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -188,7 +192,8 @@ class UpdatePlan:
                              + " ".join((self.refusal,) + self.structural + self.missing).strip())
         kwargs: Dict[str, Any] = {
             "parts": [DocumentValues(p.path, tuple(p.variables), recorded=p.recorded, cells=p.cells, made=p.made,
-                                     mark=p.mark, left_in_error=p.left_in_error) for p in self.parts],
+                                     mark=p.mark, left_in_error=p.left_in_error, blank_cells=p.blank_cells)
+                      for p in self.parts],
             "layout": self.layout,
             "assembly": self.assembly,
             "placements": list(self.placements),
@@ -241,10 +246,15 @@ def _side_change(shaft: str, coordinate: str, old: float, new: float) -> str:
             "plane, so it needs a new layout part.")
 
 
-def _ignored_fields_as_built(built: GearSpec, wanted: GearSpec, template: str) -> Tuple[Dict[str, str], Dict[str, str]]:
+def _ignored_fields_as_built(built: GearSpec, wanted: GearSpec, template: str,
+                             variables: Optional[Sequence[Sequence[str]]] = None) -> Tuple[Dict[str, str], Dict[str, str]]:
     """Both forms as dicts, with every field the wanted part's kind ignores set to the built value (decision 5):
     a field is ignored when giving it the built value leaves the wanted plan as it is. ``name`` is never compared
-    here (:func:`gearbox.name_changed` decides it)."""
+    here (:func:`gearbox.name_changed` decides it).
+
+    F3 (§4.1.1): ``variables`` are the built part's globals on record. Given, each trial is read as built from them
+    (``spec.as_built``), so a Bore allowance typed as the figure the part holds, set back to the built blank, is the
+    blank read as built, not the current default; and a Flat typed with Drive round, which plans nothing, is ignored."""
     b, w = built.to_dict(), wanted.to_dict()
     b.pop("name", None)
     w.pop("name", None)
@@ -261,6 +271,8 @@ def _ignored_fields_as_built(built: GearSpec, wanted: GearSpec, template: str) -
             trial = wanted.with_values(**{key: str(b.get(key, ""))})
         except (TypeError, ValueError):
             continue
+        if variables is not None:
+            trial = as_built(trial, variables)
         if plan is not None and gearbox._plan_of(trial, template) == plan:
             w[key] = b.get(key, "")
     return b, w
@@ -269,41 +281,63 @@ def _ignored_fields_as_built(built: GearSpec, wanted: GearSpec, template: str) -
 # The fields swbuild.structural_change names by their field name, as the Gears sheet calls them (second W4 review
 # N6: the footer said "The recipe changed from 'A' to 'B'" where the person had typed Flank = arcs, and "The
 # teeth_side changed" for Side). Bore, profile shift and groove it already says in words.
-_COLUMNS = (("kind", "Kind"), ("recipe", "Flank"), ("hand", "Hand"), ("teeth_side", "Side"))
+_COLUMNS = (("kind", "Kind"), ("recipe", "Flank"), ("hand", "Hand"), ("teeth_side", "Side"),
+            ("drive", "Drive"))         # F3 (§4.2): a Drive change is structural, said as *Drive changed from round to flat*
+_COLUMN_BLANK = {"teeth_side": "external", "drive": DRIVE_ROUND}    # what a key a record leaves out was built as
 _FLANK_OF_RECIPE = {recipe: flank for flank, recipe in schema.FLANK_RECIPE.items()}
 
 
-def _structural(built: Dict[str, Any], wanted: Dict[str, Any]) -> str:
+def _structural(built: Dict[str, Any], wanted: Dict[str, Any],
+                built_variables: Optional[Sequence[Sequence[str]]] = None) -> str:
     """``swbuild.structural_change`` in the workbook's words: *Flank changed from involute to arcs, which its values
     cannot carry; build it again as a new part.* (``ui_text`` turns the tail into the footer's). The strip keeps
-    ``structural_change``'s own sentence, in its own words."""
+    ``structural_change``'s own sentence, in its own words. F3: *Drive changed from round to flat, which its values
+    cannot carry; build it again as a new part.* (a Drive left out of a record was built round, and the word is read in
+    any case); ``built_variables``, the built part's globals on record, go to ``structural_change`` for the
+    allowance's none and some."""
     for key, column in _COLUMNS:
-        default = "external" if key == "teeth_side" else ""
+        default = _COLUMN_BLANK.get(key, "")
         was, now = (str(values.get(key, default) or default) for values in (built, wanted))
+        if key == "drive":
+            was, now = was.strip().lower(), now.strip().lower()
         if was != now:
             word = (lambda v: _FLANK_OF_RECIPE.get(v, v)) if key == "recipe" else (lambda v: v)
             return (f"{column} changed from {word(was) or 'blank'} to {word(now) or 'blank'}, which its values cannot "
                     "carry; build it again as a new part.")
-    return structural_change(built, wanted)
+    return structural_change(built, wanted, built_variables=built_variables)
 
 
 _BUILD_NOT_ON_RECORD = ("The record does not say how this part was built, so whether its teeth can be cut this "
                         "few through its values cannot be told; build it again as a new part.")
 
 
+def _blank_allowance(spec: Any) -> bool:
+    return not str(getattr(spec, "bore_allowance", "") or "").strip()
+
+
 def _part(entry: PartEntry, job: PartJob, exists: Callable[[str], bool]) -> Tuple[PartUpdate, str]:
-    """What Update does to one built part, and the sentence if it cannot (``""``)."""
+    """What Update does to one built part, and the sentence if it cannot (``""``).
+
+    F3 (PLAN-PRINTED §4.1.1, the rule's second caller): both sides are read as built from this entry's own globals,
+    the built spec ``spec.as_built(from_dict(entry.spec), entry.variables)`` and the job through
+    ``gearbox.as_built_job(job, entry.variables)``, so both plan the bore the part holds: a blank Bore allowance on a
+    part built before F3 plans none, and nothing is said or written for a bore that did not change. The update holds the
+    as-built job's spec, derived and globals, which are what its record and ``.gear.json`` are written from."""
+    job = gearbox.as_built_job(job, entry.variables)
     variables = gearbox._variables_of(job)
     label = f"{gearbox._stem_of(entry.path)} ({_names(entry.gears)})"
     recorded = tuple((str(pair[0]), str(pair[1])) for pair in entry.variables if len(pair) == 2) or None
-    update = PartUpdate(entry.path, tuple(entry.gears), job.spec, job.derived, variables, changed=True,
-                        recorded=recorded, made=plan_features(job.plan) if job.plan is not None else ())
+    planned = {v.name for v in variables}
+    blank_cells = (BORE_ALLOWANCE_GLOBAL,) if BORE_ALLOWANCE_GLOBAL in planned and _blank_allowance(job.spec) else ()
     built: Optional[GearSpec] = None
     if entry.spec:
         try:
-            built = GearSpec.from_dict(entry.spec)
+            built = as_built(GearSpec.from_dict(entry.spec), entry.variables)
         except (TypeError, ValueError, AttributeError):
             built = None
+    update = PartUpdate(entry.path, tuple(entry.gears), job.spec, job.derived, variables, changed=True,
+                        recorded=recorded, made=plan_features(job.plan) if job.plan is not None else (),
+                        blank_cells=blank_cells)
     if built is None:
         # A v1 record (or one whose form will not read): what the part holds is known only live, and that is
         # enough for its values, but not for teeth so few their spaces close with an arc on the tip cap, which no
@@ -321,8 +355,8 @@ def _part(entry: PartEntry, job: PartJob, exists: Callable[[str], bool]) -> Tupl
         return update, reformed
     if gearbox.same_part(built, job.spec, template):
         return replace(update, changed=not unchanged or not entry.variables), ""
-    b, w = _ignored_fields_as_built(built, job.spec, template)
-    why = _structural(b, w)
+    b, w = _ignored_fields_as_built(built, job.spec, template, entry.variables)
+    why = _structural(b, w, entry.variables)
     if why:
         return update, f"{label}: {why}"
     held = {str(pair[0]) for pair in entry.variables if pair}
@@ -670,7 +704,8 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
 _GLOBAL_COLUMN = {spur.TEETH: "teeth", spur.MODULE: "module", spur.BORE: "bore", spur.PRESSURE_ANGLE: "pressure_angle",
                   spur.FACE_WIDTH: "face_width", spur.BACKLASH: "backlash", spur.FILLET: "fillet",
                   spur.PROFILE_SHIFT: "profile_shift",
-                  clutch.START_BAND: "start_band", clutch.END_BAND: "end_band"}      # W9b: a banded sleeve's bands
+                  clutch.START_BAND: "start_band", clutch.END_BAND: "end_band",      # W9b: a banded sleeve's bands
+                  BORE_ALLOWANCE_GLOBAL: "bore_allowance", BORE_FLAT_GLOBAL: "flat"}   # F3 (§4.4): K11 names their cells
 
 
 def _mark(record: LinkRecord, path: str) -> str:
@@ -3198,7 +3233,13 @@ _SPEC_COLUMNS = (("name", "Part name"), ("kind", "Kind"), ("teeth_side", "Side")
                  ("face_width", "Face width"), ("bore", "Bore"), ("helix_angle", "Helix angle"), ("hand", "Hand"),
                  ("groove", "Groove"), ("profile_shift", "Profile shift"), ("backlash", "Backlash"),
                  ("fillet", "Fillet"), ("rim", "Rim"), ("start_band", "Start band"), ("end_band", "End band"),
-                 ("shaft_angle", "shaft angle"), ("mate_teeth", "mate's Teeth"))
+                 # F3 (§4.4): the bore's three columns, so a part made new by them says *its Drive changed*. The
+                 # allowance is compared as built, as a number (F3-REVIEW S3, ruled): :func:`_allowance_as_built`.
+                 ("bore_allowance", "Bore allowance"), ("drive", "Drive"), ("flat", "Flat"),
+                 ("shaft_angle", "shaft angle"), ("mate_teeth", "mate's Teeth"),
+                 # F1 (PLAN-PRINTED §6): the Box's Process, which each part's spec carries; a part made new because
+                 # of it says *its Process changed*. Its Nozzle changes no plan, so no part is made new for it.
+                 ("process", "Process"))
 
 WHY_NEW_UNSAVED = "it had changes from Update SolidWorks that were not saved"
 WHY_NEW_MISMATCHED = "it did not hold what the record says, as the last job in SolidWorks found"
@@ -3207,13 +3248,49 @@ WHY_NEW_CARRIER = "its carrier part is new with this revision"
 WHY_NEW_VALUES = "its values changed"
 
 
-def _changed_columns(built: Mapping[str, Any], wanted: Mapping[str, Any]) -> List[str]:
-    """The Gears columns whose values differ between two parts' forms (``GearSpec.to_dict``), in sheet order; a blank
-    and its default compare the same way ``gearbox.same_part`` reads them, as text without spaces."""
+_COLUMN_DEFAULTS = {"teeth_side": "external", "process": PROCESS_MACHINED, "drive": DRIVE_ROUND}
+
+
+def _process_word(text: str) -> str:
+    """A form's Process as :func:`_changed_columns` compares it: printed in any case, else machined (blank, machined,
+    or a word that does not read, which ``GearSpec.to_dict`` never writes)."""
+    return PROCESS_PRINTED if text.strip().lower() == PROCESS_PRINTED else PROCESS_MACHINED
+
+
+def _allowance_as_built(values: Mapping[str, Any], variables: Sequence[Sequence[str]]) -> Optional[float]:
+    """A form's Bore allowance as the part on record holds it (``spec.as_built`` with that part's globals): a typed
+    figure, else the recorded global, else 0; None when it does not read."""
+    try:
+        return as_built(GearSpec.from_dict(dict(values)), variables).bore_allowance_mm()
+    except (InputError, TypeError, ValueError):
+        return None
+
+
+def _changed_columns(built: Mapping[str, Any], wanted: Mapping[str, Any],
+                     variables: Sequence[Sequence[str]] = ()) -> List[str]:
+    """The Gears columns whose values differ between two parts' forms (``GearSpec.to_dict``), in sheet order (the Box's
+    Process last); a blank and its default compare the same way ``gearbox.same_part`` reads them, as text without
+    spaces. F1: a form with no ``process`` was built machined (a part built before F1, or machined after it, whose
+    ``to_dict`` leaves the key out), and the word is read in any case, as ``GearSpec.is_printed`` reads it.
+
+    F3 (F3-REVIEW S3, the coordinator's ruling): the Bore allowance is compared as built, as a number, both forms read
+    through ``spec.as_built`` with ``variables``, the globals on record of the built part (none given: a part built
+    with none, as every part before F3). So a typed 0.3 cleared on a part made new for another reason, which keeps 0.3
+    (ruling 1), and 0 typed where the part holds none, say nothing; a figure that does not read compares as text."""
     out = []
     for key, column in _SPEC_COLUMNS:
-        default = "external" if key == "teeth_side" else ""
+        default = _COLUMN_DEFAULTS.get(key, "")
         was, now = (str(values.get(key, default) or default) for values in (built, wanted))
+        if key == "bore_allowance":
+            held = [_allowance_as_built(values, variables) for values in (built, wanted)]
+            if None not in held:
+                if abs(held[0] - held[1]) > 1e-9:
+                    out.append(column)
+                continue
+        if key == "process":
+            was, now = (_process_word(v) for v in (was, now))
+        if key == "drive":                  # F3: read in any case, as GearSpec.drive_value reads it
+            was, now = was.lower(), now.lower()
         if swbuild._squash(was) != swbuild._squash(now):
             out.append(column)
     return out
@@ -3232,7 +3309,7 @@ def _why_part_new(entry: Optional[PartEntry], gear: str, again: Any) -> str:
             return WHY_NEW_MISMATCHED
     job = next((j for j in getattr(again, "build", ()) or () if row in j.gear_ids), None)
     if entry is not None and entry.spec and job is not None:
-        columns = _changed_columns(entry.spec, job.spec.to_dict())
+        columns = _changed_columns(entry.spec, job.spec.to_dict(), entry.variables or ())
         if columns:
             return f"its {_names(columns)} changed"
     return WHY_NEW_VALUES
@@ -3257,15 +3334,27 @@ def _old_carrier_names(entry: store.CarrierEntry) -> Tuple[str, ...]:
 
 
 def _bore_mm(entry: Optional[PartEntry]) -> Optional[float]:
-    """The OLD gear part's bore in mm, from its spec on record (what its Bore Diameter global was written from:
+    """The OLD gear part's hole in mm, as cut, from its spec on record (what its Bore Diameter global was written from:
     §2.1's ``CarryBody.bore_mm``, the coordinator's ruling); None with no bore (blank or 0) or when not known (the
-    layout, a carrier, a part with no spec on record). §4.4's "bore" rests on it."""
+    layout, a carrier, a part with no spec on record). §4.4's "bore" rests on it.
+
+    F3 (PLAN-PRINTED §4.1.1, §4.4): the hole as cut is Bore plus the allowance as built
+    (``spec.as_built(spec, entry.variables).bore_as_cut_mm()``): the recorded ``"Bore Allowance"``, or none for a part
+    built before F3, so W9d's coaxial cylinder of exactly half this is still the bore of a printed part, and the arc face
+    of a D (a partial cylinder of that radius) is too; its flat is a plane, and is not."""
     text = str((entry.spec or {}).get("bore", "") if entry is not None else "").strip()
     try:
         value = float(text) if text else 0.0
     except ValueError:
         return None
-    return value if value > 0 and math.isfinite(value) else None
+    if not (value > 0 and math.isfinite(value)):
+        return None
+    try:
+        held = as_built(GearSpec.from_dict(dict(entry.spec)), entry.variables or ()).bore_allowance_mm()
+    except (InputError, TypeError, ValueError):
+        return None                     # an allowance on record that does not read: the hole is not known
+    hole = value + held
+    return hole if hole > 0 and math.isfinite(hole) else None
 
 
 def carry_for(record: Optional[LinkRecord], again: Any, old: Optional[swbuild.OldAssembly], *,

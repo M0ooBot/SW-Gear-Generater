@@ -48,7 +48,8 @@ def test_schema_10_keeps_the_carry_and_each_mates_entities_and_round_trips_byte_
     record = _record(_carry_entry())
     text = store.link_record_to_json(record)
     raw = json.loads(text)
-    assert store._W9C_LINK_SCHEMA == 9 and raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 10
+    assert store._W9C_LINK_SCHEMA == 9 and store._W9D_LINK_SCHEMA == 10
+    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 12            # F3's (PLAN-PRINTED §4.3)
     assert raw["gearbox"]["carry"]["components"][0] == {"name": "Sprocket-1", "was": "Sprocket-1", "kind": "part",
                                                         "configuration": "", "fixed": False, "suppressed_in": ["4L"],
                                                         "anchor": "G1"}
@@ -72,11 +73,11 @@ def test_a_schema_9_record_reads_forward_with_no_carry_and_no_entities_and_is_wr
     target = tmp_path / "R.workbook.json"
     target.write_text(json.dumps(raw))
     first = store.read_link_record(str(tmp_path / "R.xlsx"))
-    assert first.schema_version == 10 and first.gearbox.carry is None
+    assert first.schema_version == 12 and first.gearbox.carry is None
     assert all(m.entities == [] for m in first.gearbox.user_work.mates)
     first.workbook = str(tmp_path / "R.xlsx")
     store.save_link_record(first, str(target))
-    assert json.loads(target.read_text())["link_schema_version"] == 10
+    assert json.loads(target.read_text())["link_schema_version"] == 12
     assert store.read_link_record(str(tmp_path / "R.xlsx")) == first
 
 
@@ -92,7 +93,7 @@ def test_a_w9c_era_reader_refuses_schema_10_with_its_sentence_and_leaves_the_fil
         with pytest.raises(store.UnknownSchema) as caught:
             read(str(tmp_path / "RangeBox.xlsx"))
         assert str(caught.value) == ("The record of what was built, RangeBox.workbook.json, cannot be read: it was "
-                                     "written by a newer Gear Generator (schema 10, this one reads 9). It is left "
+                                     "written by a newer Gear Generator (schema 12, this one reads 9). It is left "
                                      "alone, so Build and Update SolidWorks wait.")
     with pytest.raises(store.UnknownSchema):
         store.save_link_record(record, str(target))
@@ -1115,7 +1116,7 @@ def test_the_round_trip_classify_question_build_with_carry_finish_record_footer(
     assert ("Your Keyway stays in Gear_m1.25_N29, which Sun's new part replaces because its Flank changed "
             "(RangeBox.SLDASM and that file keep it).") in said                # M2
     assert said.endswith("Save RangeBox_r2 in SolidWorks to keep what was carried.")
-    assert json.loads(store.link_record_to_json(record))["link_schema_version"] == 10
+    assert json.loads(store.link_record_to_json(record))["link_schema_version"] == 12
     box = record.gearbox
     assert box.carry.how == "open" and [c.was for c in box.carry.components] == ["Sprocket-1", "Housing-1"]
     assert {c.was: c.anchor for c in box.carry.components} == dict(gearbox.carry_anchors(carry, done, ()))

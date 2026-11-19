@@ -123,7 +123,7 @@ from fractions import Fraction  # noqa: E402
 
 from gear_generator import findings  # noqa: E402
 from gear_generator.workbook import assess, model, xlsx  # noqa: E402
-from workbook_fixtures import e4_transfer_case, transfer_case_parallel  # noqa: E402
+from workbook_fixtures import e4_transfer_case, machined, transfer_case_parallel  # noqa: E402
 
 BOOK = "C:\\Books\\TransferCase.xlsx"
 
@@ -251,7 +251,7 @@ def test_every_workbook_before_w8_plans_bit_for_bit_as_it_did(name, monkeypatch)
     if name.endswith(".xlsx"):
         here = os.path.join(os.path.dirname(__file__), "fixtures", "excel-windows")
         spec, diagnostics = model.from_book(xlsx.read(os.path.join(here, name)))
-        a = assess.assess(spec, diagnostics, "C:\\Out\\")
+        a = assess.assess(machined(spec), diagnostics, "C:\\Out\\")      # PLAN-PRINTED §2.7: a committed workbook
     elif hasattr(turned, name):
         a = assess.assess(replace(getattr(turned, name)(), source_path="C:\\B\\W.xlsx"), [], "C:\\Out\\")
     else:

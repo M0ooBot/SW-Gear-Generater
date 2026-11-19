@@ -75,6 +75,7 @@ from gear_generator.workbook.geometry import Layout, Placed  # noqa: E402
 from gear_generator.workbook.model import Box, Gear, GearboxSpec, Mesh, Shaft  # noqa: E402
 from test_workbook_geometry import FACINGS, outside_pair, ring_pair  # noqa: E402
 from test_workbook_model import reducer  # noqa: E402
+from workbook_fixtures import machined  # noqa: E402
 
 WINDOWS = os.path.join(os.path.dirname(__file__), "fixtures", "excel-windows")
 
@@ -91,8 +92,8 @@ def windows(name):
     """One of the three workbooks of W4's Windows demonstration, read and assessed: (spec, report, frames)."""
     reading = link.Link(os.path.join(WINDOWS, name)).read()
     assert reading.ok, reading.error
-    a = assess.assess(reading.spec, reading.diagnostics, reading.spec.box.output_folder,
-                      reading.spec.box.part_template)
+    spec = machined(reading.spec)                                   # PLAN-PRINTED §2.7: a committed workbook
+    a = assess.assess(spec, reading.diagnostics, spec.box.output_folder, spec.box.part_template)
     assert a.lay_out_refusal() == ""
     return a.spec, a.report, layout.frames(a.report)
 

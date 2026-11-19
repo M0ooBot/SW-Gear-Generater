@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import math
 import os
 import sys
 import tkinter as tk
 from tkinter import filedialog, font as tkfont, ttk
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
-from . import __version__, findings, preview, store, swbuild, swcom, theme, ui_text, widgets
+from . import __version__, findings, preview, printout, store, swbuild, swcom, theme, ui_text, widgets
 from .gears import KINDS, PLANNED_KINDS, WORKBOOK_KINDS, crossed, helical as helix, kind_for, pair as pairs, standards
 from .gears import plan_for
+from .gears import span as spans
 from .gears.base import Diagnostic, GeometryError, Point2
 from .gears.equations import literal
 from .spec import (
@@ -32,11 +34,17 @@ from .spec import (
     TEETH_SIDES,
     MODE_PAIR,
     MODE_SINGLE,
+    PROCESS_MACHINED,
+    PROCESS_PRINTED,
     RECIPE_ARCS,
     RECIPE_INVOLUTE,
+    DRIVE_FLAT,
+    DRIVE_ROUND,
+    DRIVES,
     GearSpec,
     InputError,
     PairSpec,
+    as_built,
     pair_stems,
 )
 
@@ -56,7 +64,18 @@ DEBOUNCE_MS = 120
 # and padding and the 56 px diagram beside it.
 EXPLAINER_TEXT_WIDTH = STRIP_WIDTH - 114
 
+# The Derived panel's rows: the panel body, less its 12 px padding a side and the panel's 1 px border; their label
+# column. F4's Holds once value is laid into what is left of it (ui_text.holds_value_lines).
+DERIVED_ROWS_WIDTH = STRIP_WIDTH - 26
+DERIVED_LABEL_WIDTH = 104
+DERIVED_VALUE_WIDTH = 96
+
 SIDES = ("a", "b")
+
+# F2: the card the Measured entry brings up (ui_text.span_explainer), and the diagram it borrows: widgets draws none of
+# its own for it, and the Teeth diagram's gear is the nearest picture.
+SPAN_CARD = "span"
+SPAN_DIAGRAM = "teeth"
 
 # Every GearSpec field, and the key of the per-side variable holding it. Kept as
 # data so a test can prove it covers the dataclass exactly: a field added
@@ -78,11 +97,26 @@ GEAR_VARS = (
     ("shaft_angle", "shaft_angle"),
     ("mate_teeth", "mate_teeth"),
     ("name", "name"),
+    # F3 (PLAN-PRINTED §4.6 item 5; F3-INTERFACES §5): the bore as cut. Package C gives them their rows under Bore.
+    ("bore_allowance", "bore_allowance"),
+    ("drive", "drive"),
+    ("flat", "flat"),
 )
-# Shared by both gears.
-GEAR_COMPOUND = ("kind", "recipe")
+# Shared by both gears. F1 (PLAN-PRINTED §1.3): Process and Nozzle are the pair's, as Kind and Flank are; package C
+# gives them their rows and puts them into each gear in _gear_spec.
+GEAR_COMPOUND = ("kind", "recipe", "process", "nozzle")
 # W9b: GearSpec fields only a workbook row fills (a sleeve's bands); the strip leaves them blank, as GearSpec() does.
 GEAR_WORKBOOK_ONLY = ("start_band", "end_band")
+# F3 (§4.1.1): GearSpec fields no form or row fills: the allowance a part on record holds, which spec.as_built sets.
+GEAR_RECORD_ONLY = ("built_allowance",)
+
+
+def held_spec(spec: GearSpec, sidecar: Optional[store.Sidecar]) -> GearSpec:
+    """The form's gear as the strip holds it (F3-INTERFACES §5): read through spec.as_built with the globals of the
+    record open, so a blank Bore allowance is the figure the opened part holds (none for a part built before F3), or
+    the spec as it is with no record open. Every derive, Update values, the count of what it would change, and a Build
+    from the form while a record is open (the coordinator's ruling on F3-0's decision 11) go by this spec."""
+    return as_built(spec, sidecar.record.variables) if sidecar is not None else spec
 
 # Every PairSpec field, and the app attribute holding it.
 PAIR_VARS = (
@@ -137,6 +171,8 @@ def _read_snapshot(session) -> dict:
         "path": document.path if document else "",
         "doc_type": document.doc_type if document else 0,
         "is_part": bool(document and document.is_part),
+        # F2: the revision, for Print files' gate (printout.form_print, workbook_print): () with none connected.
+        "revision": tuple(getattr(session, "revision", ()) or ()),
     }
 
 
@@ -157,6 +193,10 @@ class GearApp(ttk.Frame):
         recipe = self.recent.recipe if self.recent.recipe in (RECIPE_INVOLUTE, RECIPE_ARCS) else findings.DEFAULT_RECIPE
         self.recipe = tk.StringVar(value=recipe)
         self.mode = tk.StringVar(value=self.recent.mode if self.recent.mode in MODE_VALUES else MODE_SINGLE)
+        # F1 (PLAN-PRINTED §1.3): the pair's Process, which starts at Printed whatever GearSpec() says (machined, as
+        # in code), and the nozzle's line width, blank meaning 0.4 mm; both go into each gear in _gear_spec.
+        self.process = tk.StringVar(value=PROCESS_PRINTED)
+        self.nozzle = tk.StringVar(value="")
 
         self.gear_vars: Dict[str, Dict[str, tk.StringVar]] = {
             side: {attr: tk.StringVar(value=getattr(defaults, field)) for field, attr in GEAR_VARS}
@@ -204,6 +244,17 @@ class GearApp(ttk.Frame):
         self.mode_note = tk.StringVar(value="")
         self.card_title = tk.StringVar(value="No candidate chosen")
         self.card_detail = tk.StringVar(value="")
+        # F2 (PLAN-PRINTED §3.0, §3.1.3): each gear's span over k teeth (package A's gears.span), the Measured entry
+        # under it (the calipers' reading: the form's only, never saved) and what a reading typed tells; and the
+        # SolidWorks bar's line naming the file Print files would write.
+        self._spans: Dict[str, Any] = {side: spans.NONE for side in SIDES}
+        # F4 (PLAN-PRINTED §5.4): each printed gear's tooth rating (gears.strength.rate, through ui_text.holds_rating),
+        # None for a gear that shows no Holds once row.
+        self._ratings: Dict[str, Any] = {side: None for side in SIDES}
+        self.measured = {side: tk.StringVar(value="") for side in SIDES}
+        self.measured_text = tk.StringVar(value="")
+        self.print_line = tk.StringVar(value="")
+        self._print_sidecar: Tuple[str, float, Optional[store.Sidecar]] = ("", 0.0, None)
 
         # The explainer card follows the caret: one card at the foot of the
         # panel that has it, and which field it is showing.
@@ -215,6 +266,8 @@ class GearApp(ttk.Frame):
         # Each gear's Hand row, and the hint that says gear B's follows gear A's.
         self.hand_segs: Dict[str, widgets.Segmented] = {}
         self.hand_hints: Dict[str, tk.Label] = {}
+        # Each gear's Backlash hint, which says what a blank means for the Process chosen.
+        self.backlash_hints: Dict[str, tk.Label] = {}
         self._card_panel = "a"
         self._card_field = "module"
 
@@ -246,6 +299,7 @@ class GearApp(ttk.Frame):
 
         self._build()
         self._show_helix_rows()
+        self._show_process_rows()
         self._watch_form()
         self._show_card("a", "module")
         self._on_mode_changed()
@@ -417,7 +471,24 @@ class GearApp(ttk.Frame):
         self._row_label(body, 2, "Make")
         widgets.Segmented(
             body, self.mode, MODE_VALUES, labels=MODE_LABELS, command=self._on_mode_changed, width=200,
-        ).grid(row=2, column=1, sticky="w")
+        ).grid(row=2, column=1, sticky="w", pady=(0, theme.px(6)))
+
+        # F1 (PLAN-PRINTED §1.3): one Process for both gears of a pair, as Kind and Flank are; Nozzle under it, shown
+        # while Process is Printed.
+        self._row_label(body, 3, "Process")
+        self.process_seg = widgets.Segmented(
+            body, self.process, (PROCESS_PRINTED, PROCESS_MACHINED), labels=ui_text.PROCESS_LABELS,
+            command=self._on_process_changed, width=200,
+        )
+        self.process_seg.grid(row=3, column=1, sticky="w", pady=(0, theme.px(6)))
+        nozzle_label = self._row_label(body, 4, "Nozzle")
+        nozzle_label.grid_configure(pady=0)
+        cell = self._cell(body, 4, pady=0)
+        self.nozzle_field = widgets.Field(cell, self.nozzle, width=84, unit="mm",
+                                          placeholder=ui_text.NOZZLE_PLACEHOLDER)
+        self.nozzle_field.grid(row=0, column=0)
+        self._hint(cell, ui_text.NOZZLE_HINT).grid(row=0, column=1, padx=(theme.px(8), 0))
+        self.nozzle_row = (nozzle_label, cell)
 
         # A whole gearbox, specified in a workbook, opens in a window of its own (PLAN-WORKBOOK §5).
         slot = panel.header_slot()
@@ -489,26 +560,52 @@ class GearApp(ttk.Frame):
         fields["bore"].grid(row=0, column=0)
         rows: Dict[str, Tuple[tk.Widget, ...]] = {"bore": (bore_label, cell)}
 
-        self._row_label(body, 5, "Backlash")
+        # F3 (PLAN-PRINTED §4.1, §4.2): the bore as cut, under Bore. Bore allowance is on the diameter; its placeholder
+        # says what a blank means for this gear (ui_text.bore_allowance_placeholder, set on every derive). Drive takes
+        # no caret, so choosing shows its card; Flat shows only while Drive is flat. A ring has none of the three, and
+        # a bevel gear no Drive or Flat (G5).
+        label = self._row_label(body, 5, "Bore allowance")
         cell = self._cell(body, 5)
-        fields["backlash"] = widgets.Field(cell, v["backlash"], width=150, unit="mm", placeholder="0.3 × module")
-        fields["backlash"].grid(row=0, column=0)
-        self._hint(cell, "ISO: 0.02–0.05 × m").grid(row=0, column=1, padx=(theme.px(8), 0))
+        fields["bore_allowance"] = widgets.Field(cell, v["bore_allowance"], width=150, unit="mm",
+                                                 placeholder=ui_text.bore_allowance_placeholder(GearSpec()))
+        fields["bore_allowance"].grid(row=0, column=0)
+        self._hint(cell, ui_text.BORE_ALLOWANCE_HINT).grid(row=0, column=1, padx=(theme.px(8), 0))
+        rows["bore_allowance"] = (label, cell)
+        label = self._row_label(body, 6, "Drive")
+        drive = widgets.Segmented(body, v["drive"], DRIVES, labels=ui_text.DRIVE_LABELS, width=140,
+                                  command=lambda s=side: (self._show_card(s, "drive"), self._show_helix_rows(),
+                                                          self._schedule_derive()))
+        drive.grid(row=6, column=1, sticky="w", pady=(0, theme.px(6)))
+        rows["drive"] = (label, drive)
+        label = self._row_label(body, 7, "Flat")
+        cell = self._cell(body, 7)
+        fields["flat"] = widgets.Field(cell, v["flat"], width=84, unit="mm")
+        fields["flat"].grid(row=0, column=0)
+        self._hint(cell, ui_text.FLAT_HINT).grid(row=0, column=1, padx=(theme.px(8), 0))
+        rows["flat"] = (label, cell)
 
-        self._row_label(body, 6, "Fillet")
-        cell = self._cell(body, 6)
+        self._row_label(body, 8, "Backlash")
+        cell = self._cell(body, 8)
+        fields["backlash"] = widgets.Field(cell, v["backlash"], width=150, unit="mm",
+                                           placeholder=ui_text.BACKLASH_PLACEHOLDERS[PROCESS_MACHINED])
+        fields["backlash"].grid(row=0, column=0)
+        self.backlash_hints[side] = self._hint(cell, ui_text.BACKLASH_HINTS[PROCESS_MACHINED])
+        self.backlash_hints[side].grid(row=0, column=1, padx=(theme.px(8), 0))
+
+        self._row_label(body, 9, "Fillet")
+        cell = self._cell(body, 9)
         fields["fillet"] = widgets.Field(cell, v["fillet"], width=150, unit="mm", placeholder="0.38 × module")
         fields["fillet"].grid(row=0, column=0)
 
-        label = self._row_label(body, 7, "Profile shift")
-        cell = self._cell(body, 7)
+        label = self._row_label(body, 10, "Profile shift")
+        cell = self._cell(body, 10)
         fields["profile_shift"] = widgets.Field(cell, v["profile_shift"], width=84, unit="× m", placeholder="0")
         fields["profile_shift"].grid(row=0, column=0)
         self._hint(cell, "+ cures undercut").grid(row=0, column=1, padx=(theme.px(8), 0))
         rows["profile_shift"] = (label, cell)
 
-        helix_label = self._row_label(body, 8, "Helix angle")
-        helix_cell = self._cell(body, 8)
+        helix_label = self._row_label(body, 11, "Helix angle")
+        helix_cell = self._cell(body, 11)
         fields["helix_angle"] = widgets.Field(helix_cell, v["helix_angle"], width=84, unit="°")
         fields["helix_angle"].grid(row=0, column=0)
         helix_pick = tk.StringVar(value="")
@@ -516,8 +613,8 @@ class GearApp(ttk.Frame):
         holder.grid(row=0, column=1, padx=(theme.px(8), 0))
         box.bind("<<ComboboxSelected>>", lambda _e, s=side, p=helix_pick: self._pick_value(s, "helix_angle", p))
         self._hint(helix_cell, "normal module, α").grid(row=0, column=2, padx=(theme.px(8), 0))
-        hand_label = self._row_label(body, 9, "Hand")
-        hand_cell = self._cell(body, 9)
+        hand_label = self._row_label(body, 12, "Hand")
+        hand_cell = self._cell(body, 12)
         # In a pair gear B's hand is gear A's, or the other one: it follows, and says so.
         hand = widgets.Segmented(hand_cell, v["hand"], HANDS, labels=ui_text.HAND_LABELS, width=160,
                                  command=lambda s=side: (self._show_card(s, "hand"), self._lock_hands(),
@@ -529,8 +626,8 @@ class GearApp(ttk.Frame):
         self.hand_segs[side], self.hand_hints[side] = hand, hint
         self.helix_rows[side] = (helix_label, helix_cell, hand_label, hand_cell)
 
-        label = self._row_label(body, 10, "Groove")
-        cell = self._cell(body, 10)
+        label = self._row_label(body, 13, "Groove")
+        cell = self._cell(body, 13)
         fields["groove"] = widgets.Field(cell, v["groove"], width=84, unit="mm", placeholder="none")
         fields["groove"].grid(row=0, column=0)
         self._hint(cell, "between the two helices").grid(row=0, column=1, padx=(theme.px(8), 0))
@@ -538,28 +635,28 @@ class GearApp(ttk.Frame):
 
         # Which side of the rim the teeth are on. A segmented row takes no caret,
         # so choosing is what shows its card.
-        label = self._row_label(body, 11, "Teeth side")
+        label = self._row_label(body, 14, "Teeth side")
         seg = widgets.Segmented(body, v["teeth_side"], TEETH_SIDES, labels=ui_text.TEETH_SIDE_LABELS, width=180,
                                 command=lambda s=side: (self._show_card(s, "teeth_side"), self._show_helix_rows(),
                                                         self._schedule_derive()))
-        seg.grid(row=11, column=1, sticky="w", pady=(0, theme.px(6)))
+        seg.grid(row=14, column=1, sticky="w", pady=(0, theme.px(6)))
         rows["teeth_side"] = (label, seg)
 
-        label = self._row_label(body, 12, "Rim")
-        cell = self._cell(body, 12)
+        label = self._row_label(body, 15, "Rim")
+        cell = self._cell(body, 15)
         fields["rim"] = widgets.Field(cell, v["rim"], width=190, unit="mm", placeholder="root + 6 × module")
         fields["rim"].grid(row=0, column=0)
         rows["rim"] = (label, cell)
 
-        label = self._row_label(body, 13, "Shaft angle")
-        cell = self._cell(body, 13)
+        label = self._row_label(body, 16, "Shaft angle")
+        cell = self._cell(body, 16)
         fields["shaft_angle"] = widgets.Field(cell, v["shaft_angle"], width=84, unit="°")
         fields["shaft_angle"].grid(row=0, column=0)
         self._hint(cell, "90 for a right angle").grid(row=0, column=1, padx=(theme.px(8), 0))
         rows["shaft_angle"] = (label, cell)
 
-        label = self._row_label(body, 14, "Mate teeth")
-        cell = self._cell(body, 14)
+        label = self._row_label(body, 17, "Mate teeth")
+        cell = self._cell(body, 17)
         fields["mate_teeth"] = widgets.Field(cell, v["mate_teeth"], width=84)
         fields["mate_teeth"].grid(row=0, column=0)
         self._hint(cell, "the gear it meshes with").grid(row=0, column=1, padx=(theme.px(8), 0))
@@ -567,8 +664,8 @@ class GearApp(ttk.Frame):
         rows["groove"] = groove_row
         self.kind_rows[side] = rows
 
-        self._row_label(body, 15, "Name")
-        cell = self._cell(body, 15, sticky="ew", pady=0)
+        self._row_label(body, 18, "Name")
+        cell = self._cell(body, 18, sticky="ew", pady=0)
         cell.columnconfigure(0, weight=1)
         fields["name"] = widgets.Field(cell, v["name"], grow=True, placeholder="")
         fields["name"].grid(row=0, column=0, sticky="ew")
@@ -577,10 +674,10 @@ class GearApp(ttk.Frame):
         # this panel, so the strip reflows when the caret crosses to the other
         # gear rather than two cards of the same sentences standing open.
         card = widgets.Explainer(body, EXPLAINER_TEXT_WIDTH)
-        card.grid(row=16, column=0, columnspan=2, sticky="ew", pady=(theme.px(8), 0))
+        card.grid(row=19, column=0, columnspan=2, sticky="ew", pady=(theme.px(8), 0))
         self.cards[side] = card
         for name, field in fields.items():
-            if name in ui_text.GEAR_EXPLAINERS:
+            if name in ui_text.GEAR_EXPLAINERS or name in ui_text.BORE_EXPLAINERS:
                 self._explains(field, side, name)
 
         if side == "a":
@@ -615,9 +712,20 @@ class GearApp(ttk.Frame):
         if card is None:
             return
         side = "a" if self._card_panel == "pair" else self._card_panel
+        if self._card_field == SPAN_CARD:
+            # F2: the Measured entry's card, the span's (ui_text.span_explainer), not one of EXPLAINER_FIELDS.
+            card.show(SPAN_DIAGRAM, *ui_text.span_explainer(self._spans.get(side, spans.NONE)))
+            return
+        if self._card_field in ui_text.BORE_EXPLAINERS:
+            # F3: Bore allowance's, Drive's and Flat's cards (ui_text.bore_explainer), not EXPLAINER_FIELDS either; the
+            # spec as the strip holds it says where a blank allowance comes from.
+            card.show(ui_text.BORE_DIAGRAM, *ui_text.bore_explainer(self._card_field, self._held_spec(side),
+                                                                    self._derived[side]))
+            return
         pair = self._pair_spec() if self.mode.get() == MODE_PAIR else None
         card.show(self._card_field, *ui_text.explainer(
-            self._card_field, self._derived[side], self._side_stems[side], pair, self.out_folder.get()))
+            self._card_field, self._derived[side], self._side_stems[side], pair, self.out_folder.get(),
+            printed=self._printed()))
 
     def _pick_value(self, side: str, attr: str, picked: tk.StringVar) -> None:
         """A dropdown beside a field writes into the field, and then lets go."""
@@ -650,13 +758,28 @@ class GearApp(ttk.Frame):
 
         self.derived_rows = tk.Frame(body, bg=theme.WHITE)
         self.derived_rows.grid(row=3, column=0, sticky="nw")
-        self.derived_rows.columnconfigure(0, minsize=theme.px(104))
+        self.derived_rows.columnconfigure(0, minsize=theme.px(DERIVED_LABEL_WIDTH))
         for column in (1, 2):
-            self.derived_rows.columnconfigure(column, minsize=theme.px(96))
+            self.derived_rows.columnconfigure(column, minsize=theme.px(DERIVED_VALUE_WIDTH))
         self._derived_widgets: List[tk.Widget] = []
 
+        # F2: the Measured entry, one per gear, laid into the rows under the span row by _show_derived. Made once, so
+        # the caret stays in it while the rows round it are laid out again; its card is the span's.
+        self.measured_fields: Dict[str, widgets.Field] = {}
+        for side in SIDES:
+            field = widgets.Field(self.derived_rows, self.measured[side], width=84, unit="mm")
+            field.entry.bind("<FocusIn>", lambda _e, s=side: self._show_card(s, SPAN_CARD), add="+")
+            self.measured_fields[side] = field
+            self.measured[side].trace_add("write", lambda *_: self._show_measured())
+        # What a reading typed tells, or why a printed gear shows no span, under the rows.
+        self.measured_label = tk.Label(body, textvariable=self.measured_text, bg=theme.WHITE, fg=theme.INK,
+                                       font=self.fonts.hint, anchor="w", justify="left")
+        self.measured_label.configure(wraplength=self._text_room(self.measured_label))
+        self.measured_label.grid(row=4, column=0, sticky="ew", pady=(theme.px(4), 0))
+        self.measured_label.grid_remove()
+
         self.warning_frame = tk.Frame(body, bg=theme.WHITE)
-        self.warning_frame.grid(row=4, column=0, sticky="ew", pady=(theme.px(4), 0))
+        self.warning_frame.grid(row=5, column=0, sticky="ew", pady=(theme.px(4), 0))
         self._warning_widgets: List[tk.Widget] = []
         return panel
 
@@ -853,7 +976,13 @@ class GearApp(ttk.Frame):
             row=0, column=1, sticky="w", padx=(theme.px(8), 0))
         self.manual_label = tk.Label(body, text="", bg=theme.WHITE, fg=theme.MUTED, font=self.fonts.hint,
                                      justify="left", anchor="w", wraplength=theme.px(STRIP_WIDTH - 60))
-        self.manual_label.grid(row=1, column=1, sticky="w", padx=(theme.px(8), 0), pady=(theme.px(4), 0))
+        self.manual_label.grid(row=2, column=1, sticky="w", padx=(theme.px(8), 0), pady=(theme.px(4), 0))
+        # F2 (§3.1.3): which file Print files would write from the active part, as the line above says Update values'.
+        self.print_label = tk.Label(body, textvariable=self.print_line, bg=theme.WHITE, fg=theme.INK,
+                                    font=self.fonts.hint, justify="left", anchor="w",
+                                    wraplength=theme.px(STRIP_WIDTH - 60))
+        self.print_label.grid(row=1, column=1, sticky="w", padx=(theme.px(8), 0), pady=(theme.px(4), 0))
+        self.print_label.grid_remove()
         return panel
 
     # -- the footer
@@ -871,9 +1000,14 @@ class GearApp(ttk.Frame):
                                             height=32, bg=theme.WINDOW)
         self.update_button.grid(row=0, column=2, sticky="e", padx=(theme.px(8), 0))
         self.update_button.grid_remove()
+        # F2 (§3.1, E5): Print files, no ellipsis since it asks nothing; secondary, beside the build buttons.
+        self.print_button = widgets.Button(footer, "Print files", command=self._print_files, height=32,
+                                           bg=theme.WINDOW)
+        self.print_button.grid(row=0, column=3, sticky="e", padx=(theme.px(8), 0))
         self.build_button = widgets.Button(footer, "Build", command=self._build_gear, primary=True,
                                            height=32, bg=theme.WINDOW)
-        self.build_button.grid(row=0, column=3, sticky="e", padx=(theme.px(8), 0))
+        self.build_button.grid(row=0, column=4, sticky="e", padx=(theme.px(8), 0))
+        self._footer = footer
         return footer
 
     # -- the flyout: pair candidates
@@ -962,11 +1096,32 @@ class GearApp(ttk.Frame):
         for side in SIDES:
             for var in self.gear_vars[side].values():
                 var.trace_add("write", lambda *_: self._schedule_derive())
-        for var in (self.kind, self.recipe, self.centre_distance, self.ratio, self.pair_module,
-                    self.series, self.min_teeth, self.max_teeth, self.pair_helix_angle, self.helix_min,
-                    self.helix_max, self.mesh, self.shafts, self.pair_shaft_angle, self.cone_distance,
+        for var in (self.kind, self.recipe, self.process, self.nozzle, self.centre_distance, self.ratio,
+                    self.pair_module, self.series, self.min_teeth, self.max_teeth, self.pair_helix_angle,
+                    self.helix_min, self.helix_max, self.mesh, self.shafts, self.pair_shaft_angle, self.cone_distance,
                     self.motion, self.hands, self.assembly_name, self.out_folder):
             var.trace_add("write", lambda *_: self._schedule_derive())
+
+    def _printed(self) -> bool:
+        return self.process.get() == PROCESS_PRINTED
+
+    def _on_process_changed(self) -> None:
+        self._show_process_rows()
+        self._schedule_derive()
+
+    def _show_process_rows(self) -> None:
+        """Nozzle while Process is Printed, and each gear's Backlash placeholder and hint for the Process chosen: a
+        printed gear's blank is the smaller of 0.3 mm and 0.3 × module (PLAN-PRINTED §2.1)."""
+        process = PROCESS_PRINTED if self._printed() else PROCESS_MACHINED
+        for widget in self.nozzle_row:
+            widget.grid() if process == PROCESS_PRINTED else widget.grid_remove()
+        # The last row shown sits on the panel's foot, as Make did before Process was under it.
+        self.process_seg.grid_configure(pady=(0, theme.px(6)) if process == PROCESS_PRINTED else 0)
+        for side in SIDES:
+            if side in self.backlash_hints:
+                self._side_fields(side)["backlash"].set_placeholder(ui_text.BACKLASH_PLACEHOLDERS[process])
+                self.backlash_hints[side].configure(text=ui_text.BACKLASH_HINTS[process])
+        self._relayout()
 
     def _on_kind_changed(self) -> None:
         self._show_helix_rows()
@@ -1014,6 +1169,10 @@ class GearApp(ttk.Frame):
             show(rows["teeth_side"], not bevel and not pair_mode)
             show(rows["rim"], internal)
             show(rows["bore"], not internal)
+            # F3: the bore's rows go with Bore; a bevel gear's bore takes no flat (G5), so no Drive and no Flat.
+            show(rows["bore_allowance"], not internal)
+            show(rows["drive"], not internal and not bevel)
+            show(rows["flat"], not internal and not bevel and self._drive_flat(side))
             show(rows["shaft_angle"], bevel and not pair_mode)
             show(rows["mate_teeth"], bevel and not pair_mode)
             show(rows["profile_shift"], self._takes_shift(side))
@@ -1114,7 +1273,9 @@ class GearApp(ttk.Frame):
         across as 0: the row is hidden because that kind of gear refuses one.
         """
         values = {field: self.gear_vars[side][attr].get() for field, attr in GEAR_VARS}
-        values.update(kind=self.kind.get(), recipe=self.recipe.get())
+        # The Nozzle row shows only while Printed, so a machined gear's goes across blank, as a hidden shift goes as 0.
+        values.update(kind=self.kind.get(), recipe=self.recipe.get(), process=self.process.get(),
+                      nozzle=self.nozzle.get() if self._printed() else "")
         if not self._takes_shift(side):
             values["profile_shift"] = "0"
         if not self._takes_groove(side):
@@ -1130,7 +1291,23 @@ class GearApp(ttk.Frame):
                 values["shaft_angle"] = self.pair_shaft_angle.get()
         elif bevel:
             values["teeth_side"] = TEETH_EXTERNAL
+        # F3: a row hidden goes across blank, as a hidden shift goes as 0: a ring shows none of the bore's rows, a bevel
+        # gear no Drive or Flat, and Flat shows only while Drive is flat. So nothing typed for another kind reaches it.
+        if str(values["teeth_side"]).strip().lower() == TEETH_INTERNAL and not bevel:
+            values.update(bore_allowance="", drive=DRIVE_ROUND, flat="")
+        elif bevel or not self._drive_flat(side):
+            values.update(drive=DRIVE_ROUND, flat="")
         return GearSpec(**values)
+
+    def _drive_flat(self, side: str) -> bool:
+        """Whether this gear's Drive row says flat."""
+        return self.gear_vars[side]["drive"].get().strip().lower() == DRIVE_FLAT
+
+    def _held_spec(self, side: str) -> GearSpec:
+        """The gear as the strip holds it (:func:`held_spec`): gear A through spec.as_built while a record is open in
+        single mode (the record is one gear's, and Update values is single mode's); else the form's spec as it is."""
+        sidecar = self._loaded if side == "a" and self.mode.get() == MODE_SINGLE else None
+        return held_spec(self._gear_spec(side), sidecar)
 
     def _pair_spec(self) -> PairSpec:
         values: Dict[str, Any] = {field: getattr(self, attr).get() for field, attr in PAIR_VARS}
@@ -1157,11 +1334,13 @@ class GearApp(ttk.Frame):
         except InputError:
             stems = {}
         for side in SIDES:
-            spec = self._gear_spec(side)
+            spec = self._held_spec(side)
             self.gear_readouts[side].set(ui_text.gear_readout(spec))
             self._side_stems[side] = stems.get(side) or spec.default_stem()
             self._side_fields(side)["name"].set_placeholder(self._side_stems[side])
             self._derived[side], self._outlines[side], self._diagnostics[side] = None, [], []
+            self._spans[side] = spans.NONE
+            self._ratings[side] = None
             kind = kind_for(spec)
             if kind is None:
                 self._diagnostics[side] = [Diagnostic("error", "That kind of gear comes in a later version.")]
@@ -1174,9 +1353,15 @@ class GearApp(ttk.Frame):
                 derived = kind.derive(spec)
                 self._derived[side] = derived
                 self._outlines[side] = kind.outline(spec, derived)
+                self._spans[side] = self._span_of(kind, spec, derived)
+                self._ratings[side] = self._rating_of(kind, spec, derived)
             except (GeometryError, InputError, ValueError) as exc:
                 self._diagnostics[side] = [Diagnostic("error", str(exc))]
                 self._derived[side] = None
+        for side in SIDES:
+            # F3: what a blank Bore allowance means for this gear, as derived (as built while a record is open).
+            self._side_fields(side)["bore_allowance"].set_placeholder(
+                ui_text.bore_allowance_placeholder(self._held_spec(side), self._derived[side]))
 
         self._show_derived()
         self._draw_preview()
@@ -1184,14 +1369,156 @@ class GearApp(ttk.Frame):
         self._refresh_card()
         self.output_readout.set(ui_text.output_readout(self.out_folder.get()))
         try:
-            self.mode_note.set(ui_text.mode_note(self.mode.get(), self._stems(), *self._update_target()))
+            self.mode_note.set(ui_text.mode_note(self.mode.get(), self._stems(), *self._update_target(),
+                                                 keeps=self._build_keeps()))
         except InputError:
             self.mode_note.set("Build will make a new part.")
         ready = all(self._derived[side] is not None for side in self._active_sides())
         busy = self._pending_build is not None
         self.build_button.configure(state="normal" if ready and not busy else "disabled")
+        # Print files asks nothing of the form: it prints the active part, so only a job running holds it.
+        self.print_button.configure(state="disabled" if busy else "normal")
         self._show_update_button()
+        self._refresh_print_line()
         self._relayout()
+
+    @staticmethod
+    def _span_of(kind: Any, spec: GearSpec, derived: Any) -> Any:
+        """The span over k teeth of a gear that works out (package A's gears.span), by its kind's recipe; none when
+        it cannot be worked out, so a fault there never takes the panel with it."""
+        try:
+            return spans.span(derived, kind.recipe_for(spec))
+        except Exception:  # noqa: BLE001 - A's span never raises; this keeps the form up if it ever does
+            return spans.NONE
+
+    @staticmethod
+    def _chrome(label: tk.Label) -> int:
+        """A label's own border, padding and highlight, both sides, in px: what is laid inside it must leave this much.
+        Tk gives a label a 2 px border on Windows and 1 px on Linux, so the same wraplength is 2 px wider on Windows."""
+        return 2 * sum(int(float(str(label.cget(option)))) for option in ("borderwidth", "padx", "highlightthickness"))
+
+    @classmethod
+    def _text_room(cls, label: tk.Label) -> int:
+        """The wraplength of a line across the Derived panel's body (the line under the rows, a warning): the rows'
+        width less the label's own chrome, so that its widest wrapped line keeps to the strip on every platform (on
+        Windows a warning wrapped at the old 430 px came to 435 px with its 6 px of chrome, a pixel past the body)."""
+        return theme.px(DERIVED_ROWS_WIDTH) - cls._chrome(label)
+
+    @staticmethod
+    def _rating_of(kind: Any, spec: GearSpec, derived: Any) -> Any:
+        """F4: the gear's tooth rating for its Holds once row (ui_text.holds_rating), by its kind's recipe; None for a
+        gear that shows none, and never a fault that takes the panel with it."""
+        try:
+            return ui_text.holds_rating(spec, derived, kind.recipe_for(spec))
+        except Exception:  # noqa: BLE001 - A's rate never raises; this keeps the form up if it ever does
+            return None
+
+    def _holding(self, side: str) -> Any:
+        """The rating the Holds once row words for this gear as the form stands: none for either gear of a crossed
+        pair, whose teeth meet at a point and are not rated (PLAN-PRINTED §5.1)."""
+        return None if self._crossed() else self._ratings[side]
+
+    def _rows_with_span(self, side: str) -> List[Tuple[str, str]]:
+        """The gear's Derived rows (ui_text.derived_rows, unchanged), with its span row after Tooth at pitch when it
+        has a figure (§3.0). A machined gear, a ring, a sleeve and a bevel gear have none; a printed gear withheld
+        one says why under the rows (_measured_lines). F4 (§5.4): a printed gear's Holds once row last, after every
+        row of derived_rows, whose last rows are pinned; none for a gear holds_rating gives no rating."""
+        rows = list(ui_text.derived_rows(self._derived[side]))
+        holds = ui_text.holds_row(self._holding(side))
+        reading = self._spans[side]
+        if reading.kind == spans.KIND_SPAN:
+            span_row = ui_text.span_rows(reading, None, 0.0, 0.0)[0]
+            at = next((i + 1 for i, (label, _) in enumerate(rows) if label == "Tooth at pitch"), len(rows))
+            rows = rows[:at] + [span_row] + rows[at:]
+        return rows + [holds] if holds else rows
+
+    def _measured_lines(self) -> List[str]:
+        """Under the rows: why a printed gear shows no span, and what a reading typed in Measured tells (§3.0), one
+        line a gear, prefixed A: and B: in a pair; then F4's: a Holds once row's full sentence, where it has one (YS
+        past its range, a ring not rated), after every line of F2's."""
+        sides = self._active_sides()
+        out: List[str] = []
+        for side in sides:
+            derived, reading = self._derived[side], self._spans[side]
+            if derived is None:
+                continue
+            prefix = f"{side.upper()}: " if len(sides) > 1 else ""
+            withheld = ui_text.span_withheld(reading)
+            if withheld:
+                out.append(f"{prefix}{ui_text.SPAN_LABEL_ANY}: {withheld}")
+                continue
+            text = self.measured[side].get().strip()
+            if reading.kind != spans.KIND_SPAN or not text:
+                continue
+            try:
+                value = float(text)
+            except ValueError:
+                value = float("nan")
+            if not (math.isfinite(value) and value > 0):
+                out.append(prefix + ui_text.MEASURED_NOT_A_NUMBER)
+                continue
+            alpha = getattr(derived, "normal_pressure_angle_deg", derived.pressure_angle_deg)
+            out.append(prefix + ui_text.span_rows(reading, value, alpha, derived.module)[-1][1])
+        for side in sides:
+            line = ui_text.holds_line(self._holding(side)) if self._derived[side] is not None else ""
+            if line:
+                out.append(f"{side.upper()}: {line}" if len(sides) > 1 else line)
+        return out
+
+    def _show_measured(self) -> None:
+        """The line under the rows, again: called on every derive and on every keystroke in Measured, which changes
+        nothing else on the form."""
+        text = "\n".join(self._measured_lines())
+        self.measured_text.set(text)
+        if text:
+            self.measured_label.grid()
+        else:
+            self.measured_label.grid_remove()
+        if self._card_field == SPAN_CARD:
+            self._refresh_card()
+
+    def _active_sidecar(self, part_path: str) -> Optional[store.Sidecar]:
+        """The .gear.json beside the active part, read once for each time it is written (None when there is none
+        or it does not read): the same record the bar's Update values line and _update_target go by."""
+        if not part_path:
+            return None
+        record = store.sidecar_path(part_path)
+        try:
+            stamp = os.path.getmtime(record)
+        except OSError:
+            return None
+        if self._print_sidecar[:2] == (record, stamp):
+            return self._print_sidecar[2]
+        # store.read_sidecar, never store.load: a record that does not read is left where it is (load moves it aside),
+        # so planning on every derive changes nothing on disk, and B's NO_RECORD can say it is there and unreadable.
+        sidecar = store.read_sidecar(part_path)
+        self._print_sidecar = (record, stamp, sidecar)
+        return sidecar
+
+    def _form_print_plan(self) -> printout.PrintPlan:
+        """Package B's plan for Print files on the form (printout.form_print): the part active in SolidWorks, as the
+        bar's snapshot names it, with its .gear.json, into the Output folder's print folder, for the version the
+        snapshot gives (B's gate)."""
+        snapshot = self._snapshot or {}
+        # Whatever is active, so B's NOT_A_PART can name an active assembly (F2-DEMONSTRATION-REVIEW §6.2); its
+        # record is read only for a part.
+        path = snapshot.get("path", "") or ""
+        sidecar = self._active_sidecar(path) if snapshot.get("is_part") else None
+        return printout.form_print(sidecar, path, self.out_folder.get().strip(),
+                                   tuple(snapshot.get("revision", ()) or ()))
+
+    def _refresh_print_line(self) -> None:
+        """The SolidWorks bar's line naming the file Print files would write (ui_text.print_bar_line); none while
+        the plan refuses, which the press says."""
+        try:
+            line = ui_text.print_bar_line(self._form_print_plan()) if self._snapshot else ""
+        except Exception:  # noqa: BLE001 - B's planning is pure and should not raise; the press says it if it does
+            line = ""
+        self.print_line.set(line)
+        if line:
+            self.print_label.grid()
+        else:
+            self.print_label.grid_remove()
 
     def _pair_values(self) -> Optional[Tuple[float, float, float, str]]:
         """``(centre distance, ratio, contact ratio, its symbol)`` of the pair on the form.
@@ -1269,41 +1596,86 @@ class GearApp(ttk.Frame):
             self.pair_rows.grid_remove()
             self.pair_rule.grid_remove()
 
+        for field in self.measured_fields.values():
+            field.grid_remove()
         if shown:
-            columns = [dict(ui_text.derived_rows(self._derived[side])) for side in shown]
+            rows_of = {side: self._rows_with_span(side) for side in shown}
+            columns = [dict(rows_of[side]) for side in shown]
             # A ring's column and its pinion's do not share every row (Inner tip, Rim):
             # every label once, in the order it first appears, and a dash where a gear has none.
-            labels = list(dict.fromkeys(label for side in shown for label, _ in ui_text.derived_rows(self._derived[side])))
+            labels = list(dict.fromkeys(label for side in shown for label, _ in rows_of[side]))
             for index, side in enumerate(shown):
                 caption = f"{side.upper()} · mm" if len(sides) > 1 else "mm"
                 head = tk.Label(self.derived_rows, text=caption, bg=theme.WHITE, fg=theme.READOUT,
                                 font=self.fonts.tiny, anchor="w")
                 head.grid(row=0, column=1 + index, sticky="w", padx=(theme.px(8), 0))
                 self._derived_widgets.append(head)
+            # F4: the Holds once row's value, long beside the others, laid into the room its column has, so that two
+            # columns of it in a pair keep to the strip's width (ui_text.holds_value_lines); its label at its top.
+            # Each value label's own border and padding come off the room as well (_chrome: 4 px on Linux's Tk, 6 on
+            # Windows'). With one gear the second column, empty, keeps no width of its own (it kept 96 px of blank
+            # before F4, which no row needed).
+            room = (theme.px(DERIVED_ROWS_WIDTH - DERIVED_LABEL_WIDTH) - len(shown) * theme.px(8)) / len(shown)
+            self.derived_rows.columnconfigure(2, minsize=theme.px(DERIVED_VALUE_WIDTH) if len(shown) > 1 else 0)
             for row, label in enumerate(labels, start=1):
+                holds = label == ui_text.HOLDS_LABEL
                 name = tk.Label(self.derived_rows, text=label, bg=theme.WHITE, fg=theme.LABEL,
                                 font=self.fonts.hint, anchor="w")
-                name.grid(row=row, column=0, sticky="w")
+                name.grid(row=row, column=0, sticky="nw" if holds else "w")
                 self._derived_widgets.append(name)
                 for index, values in enumerate(columns):
-                    value = tk.Label(self.derived_rows, text=values.get(label, "—"), bg=theme.WHITE, fg=theme.INK,
-                                     font=self.fonts.mono_tiny, anchor="w")
-                    value.grid(row=row, column=1 + index, sticky="w", padx=(theme.px(8), 0))
+                    text = values.get(label, "—")
+                    value = tk.Label(self.derived_rows, text=text, bg=theme.WHITE, fg=theme.INK,
+                                     font=self.fonts.mono_tiny, anchor="w", justify="left")
+                    if holds:
+                        value.configure(text=ui_text.holds_value_lines(text, room - self._chrome(value),
+                                                                       self.fonts.mono_tiny.measure))
+                    value.grid(row=row, column=1 + index, sticky="nw" if holds else "w", padx=(theme.px(8), 0))
                     self._derived_widgets.append(value)
+            # F2 (§3.0): the Measured entry under the rows, in the column of each gear with a span figure.
+            measuring = [side for side in shown if self._spans[side].kind == spans.KIND_SPAN]
+            if measuring:
+                row = len(labels) + 1
+                name = tk.Label(self.derived_rows, text=ui_text.MEASURED_LABEL, bg=theme.WHITE, fg=theme.LABEL,
+                                font=self.fonts.hint, anchor="w")
+                name.grid(row=row, column=0, sticky="w", pady=(theme.px(2), 0))
+                self._derived_widgets.append(name)
+                for index, side in enumerate(shown):
+                    if side in measuring:
+                        self.measured_fields[side].grid(row=row, column=1 + index, sticky="w",
+                                                        padx=(theme.px(8), 0), pady=(theme.px(2), 0))
+        self._show_measured()
 
         lines: List[Tuple[str, str]] = []
         for side in sides:
             prefix = f"{side.upper()}: " if len(sides) > 1 else ""
             for diagnostic in self._diagnostics[side]:
                 lines.append((prefix + diagnostic.message, diagnostic.level))
-        if pair is not None and symbol == "C" and not self._crossed() and not ui_text.is_ring(self._derived["b"]):
+        # A machined pair's clearance is said for outside pairs alone, as before F1; a printed pair's for a pinion in
+        # a ring and a bevel pair too (PLAN-PRINTED §2.2, package A's mesh_warnings).
+        printed = pair is not None and any(getattr(self._derived[s], "printed", False) for s in SIDES)
+        if pair is not None and not self._crossed() and (
+                (symbol == "C" and not ui_text.is_ring(self._derived["b"])) or printed):
             for message in pairs.mesh_warnings(self._derived["a"], self._derived["b"]):
                 lines.append((message, "error" if "cannot be built" in message else "warning"))
+        if printed and self._crossed():
+            # The coordinator's ruling 2 on the F1 review: a printed crossed pair is judged as the workbook judges it
+            # (workbook.checks, crossed helical gears): unshifted, each tip stands the depth less two addenda from the
+            # other's root whatever the helix angles, so the outside pair's figure, in the same sentence.
+            a, b = self._derived["a"], self._derived["b"]
+            try:
+                said = pairs.printed_clearance_sentence(
+                    pairs.tip_clearance(a.module, a.teeth, b.teeth,
+                                        getattr(a, "normal_pressure_angle_deg", a.pressure_angle_deg)), False)
+            except (ValueError, ArithmeticError):
+                said = None
+            if said:
+                lines.append((said, "warning"))
         for row, (text, level) in enumerate(dict.fromkeys(lines)):
             label = tk.Label(self.warning_frame, text=text, bg=theme.WHITE,
                              fg=theme.ERROR if level == "error" else theme.MUTED,
-                             font=self.fonts.hint, anchor="w", justify="left",
-                             wraplength=theme.px(STRIP_WIDTH - 30))
+                             font=self.fonts.hint, anchor="w", justify="left")
+            label.configure(wraplength=self._text_room(label))
             label.grid(row=row, column=0, sticky="w")
             self._warning_widgets.append(label)
 
@@ -1428,6 +1800,7 @@ class GearApp(ttk.Frame):
             f"{symbol} {ui_text._n(centre)} mm · i {ui_text._n(ratio, 4)} · contact ratio "
             f"{ui_text.contact_ratio_text(epsilon)}" + (" · non-standard module" if not candidate.standard else "")
             + (" · undercut" if candidate.undercut else "")
+            + (f" · {candidate.mark}" if candidate.mark else "")
             + (f" · profile shift {ui_text.shift_text(candidate.shift_1)} and {ui_text.shift_text(candidate.shift_2)}"
                if candidate.shifted else "")
         )
@@ -1477,9 +1850,19 @@ class GearApp(ttk.Frame):
         self._on_mode_changed()
         if spec.recipe in (RECIPE_INVOLUTE, RECIPE_ARCS):
             self.recipe.set(spec.recipe)
+        # F1 (PLAN-PRINTED §1.3): the row says what was built. A record from before F1 has no process and opens
+        # Machined, and a part built from this form afterwards is machined too unless the row is changed.
+        self.process.set(PROCESS_PRINTED if spec.is_printed() else PROCESS_MACHINED)
+        if spec.is_printed():
+            self.nozzle.set(spec.nozzle)
+        self._show_process_rows()
         for field, attr in GEAR_VARS:
             self.gear_vars["a"][attr].set(getattr(spec, field))
+        # F3: the Drive row's segments are the words in lower case, and a blank is round.
+        drive = str(spec.drive).strip().lower() or DRIVE_ROUND
+        self.gear_vars["a"]["drive"].set(drive if drive in DRIVES else spec.drive)
         self._loaded, self._loaded_path = sidecar, path
+        self._show_helix_rows()
         self.recent.remember(path)
         store.save_recent(self.recent)
         self.record_hint.configure(text=os.path.basename(path))
@@ -1498,27 +1881,65 @@ class GearApp(ttk.Frame):
 
         Only for the part an opened record describes, while it is the active
         document, and only for a change the equations can carry.
+
+        F3 (F3-INTERFACES §5): the form's spec is taken from ``_gear_spec("a")`` as it is and read here through
+        spec.as_built with the record's globals (:func:`held_spec`), both for the globals counted (of the gear
+        derived again from that spec) and for structural_change, which is given the built part's globals: a blank Bore
+        allowance is what the part holds.
         """
         sidecar, snapshot = self._loaded, self._snapshot
         if sidecar is None or not snapshot or self.mode.get() != MODE_SINGLE:
             return 0, ""
         if not store.same_path(snapshot.get("path", ""), sidecar.part_path) or self._derived["a"] is None:
             return 0, ""
-        spec = self._gear_spec("a")
+        spec = held_spec(self._gear_spec("a"), sidecar)
         kind = kind_for(spec)
-        if kind is None or swbuild.structural_change(sidecar.record.spec, spec.to_dict()):
+        if kind is None or swbuild.structural_change(sidecar.record.spec, spec.to_dict(),
+                                                     built_variables=sidecar.record.variables):
+            return 0, ""
+        try:
+            # The globals counted are the as-built gear's, worked out here from the held spec, never a derive of the
+            # plain form's (whose blank allowance would be the default): F3-0-REVIEW §5.
+            derived = kind.derive(spec)
+        except (GeometryError, InputError, ValueError):
             return 0, ""
         trig = sidecar.record.trig or findings.TRIG_DEFAULT
         held = {name: "".join(expression.split()) for name, expression in sidecar.record.variables}
-        count = sum(1 for v in kind.variables(spec, self._derived["a"])
+        count = sum(1 for v in kind.variables(spec, derived)
                     if held.get(v.name) != "".join(v.expression_for(trig).split()))
         return count, snapshot.get("title", "")
+
+    def _build_keeps(self) -> str:
+        """What a Build from the form keeps of the record open (ui_text.build_keeps): the opened part's as-built
+        allowance while Bore allowance is blank (the ruling on F3-0's decision 11); ``""`` with none open."""
+        sidecar = self._loaded
+        if sidecar is None or self.mode.get() != MODE_SINGLE:
+            return ""
+        part = os.path.splitext(os.path.basename((sidecar.part_path or sidecar.part_title).replace("\\", "/")))[0]
+        return ui_text.build_keeps(self._held_spec("a"), self._derived["a"], part)
 
     def _show_update_button(self) -> None:
         if self._update_target()[0] and self._pending_build is None:
             self.update_button.grid()
         else:
             self.update_button.grid_remove()
+        self._wrap_footer()
+
+    def _wrap_footer(self) -> None:
+        """The status sentence wraps in the room the dot and the buttons showing leave in the strip's width (F2: a
+        third button, Print files, beside Update values and Build), so the footer never pushes the strip wider; about
+        the 260 px it always had while Update values is hidden."""
+        self._footer.update_idletasks()
+        used = 0
+        for child in self._footer.grid_slaves(row=0):
+            if child is self.status_label:
+                continue
+            pads = child.grid_info().get("padx", 0)
+            pads = pads if isinstance(pads, (tuple, list)) else str(pads).split()
+            used += child.winfo_reqwidth() + sum(int(float(p)) for p in pads)
+        wrap = max(theme.px(120), theme.px(STRIP_WIDTH) - used - theme.px(4))
+        if int(float(str(self.status_label.cget("wraplength")))) != wrap:
+            self.status_label.configure(wraplength=wrap)
 
     def _workbook_building(self) -> bool:
         """Whether a Workbook window has a batch in SolidWorks: it shares this worker, so the strip waits for it."""
@@ -1556,7 +1977,8 @@ class GearApp(ttk.Frame):
         self._derive_now()
 
     def _plan_single(self, folder: str) -> Dict[str, Any]:
-        spec, derived = self._gear_spec("a"), self._derived["a"]
+        # F3: with a record open, a blank Bore allowance is the opened part's as built (the ruling on decision 11).
+        spec, derived = self._held_spec("a"), self._derived["a"]
         if derived is None:
             raise InputError("The gear on the form does not work out yet, so it cannot be built.")
         path = os.path.join(folder, spec.stem() + ".SLDPRT")
@@ -1597,11 +2019,14 @@ class GearApp(ttk.Frame):
         if sidecar is None:
             self._set_status("Open a gear's .gear.json first, so the tool knows which part to update.", ok=False)
             return
-        spec, derived = self._gear_spec("a"), self._derived["a"]
+        # F3: the spec as built (held_spec), as _update_target counts it: the record written after holds no
+        # built_allowance (to_dict never writes it), and its globals are the as-built ones.
+        spec, derived = held_spec(self._gear_spec("a"), sidecar), self._derived["a"]
         if derived is None:
             self._set_status("The gear on the form does not work out yet, so nothing was updated.", ok=False)
             return
-        reason = swbuild.structural_change(sidecar.record.spec, spec.to_dict())
+        reason = swbuild.structural_change(sidecar.record.spec, spec.to_dict(),
+                                           built_variables=sidecar.record.variables)
         if reason:
             self._set_status(reason, ok=False)
             return
@@ -1622,12 +2047,16 @@ class GearApp(ttk.Frame):
         value, error = answer
         context, self._pending_build, self._build_context = self._build_context or {}, None, None
         try:
-            if error is not None:
+            if error is not None and context.get("job_kind") == "print":
+                self._set_status(ui_text.print_job_failed(error), ok=False)
+            elif error is not None:
                 if isinstance(error, swcom.SolidWorksError):
                     self._set_status(str(error), ok=False)
                 else:
                     self._set_status(f"The build hit a problem in SolidWorks — {type(error).__name__}: {error}",
                                      ok=False)
+            elif context.get("job_kind") == "print":
+                self._finish_print(context, value)
             elif context.get("job_kind") == "update":
                 self._finish_update(context, value)
             elif context.get("job_kind") == MODE_PAIR:
@@ -1679,6 +2108,45 @@ class GearApp(ttk.Frame):
                 self._loaded = updated
             except OSError as exc:
                 text, ok = text + f" Its record could not be written: {exc}", False
+        self._set_status(text, ok)
+
+    def _print_files(self) -> None:
+        """Print files (PLAN-PRINTED §3.1.3): the part active in SolidWorks, with its .gear.json, written to a STEP file
+        in a new folder of the Output folder's print folder. Planned here by package B's printout.form_print, which
+        refuses (the gate first) before any job; then one job on the worker, swbuild.print_parts; the list is written
+        once it has answered (_finish_print). Every sentence is ui_text's."""
+        if self._pending_build is not None:
+            return
+        if self._workbook_building():
+            self._set_status(ui_text.PRINT_WAITS_FOR_WORKBOOK, ok=False)
+            return
+        if self._worker is None:
+            self._set_status(ui_text.print_unreachable(swcom.unavailable_reason()), ok=False)
+            return
+        try:
+            plan = self._form_print_plan()
+        except Exception as exc:  # noqa: BLE001 - planning is pure and should never raise; if it does, say so
+            self._set_status(ui_text.print_collect_failed(exc), ok=False)
+            return
+        if plan.refusal is not None:                # the Output folder among them (B's NO_FOLDER)
+            self._set_status(ui_text.print_refusal(plan.refusal), ok=False)
+            return
+        self._build_context = {"job_kind": "print", "plan": plan}
+        self._pending_build = self._worker.submit(lambda session: swbuild.print_parts(session, plan))
+        self._set_status(ui_text.PRINTING)
+        self._derive_now()
+
+    def _finish_print(self, context: Dict[str, Any], result: Any) -> None:
+        """What a press of Print files did, its print list first written into the press's folder whenever one was made
+        (printout.with_list; a failed set's headed DO NOT PRINT THIS SET), then the status composed from what that
+        answered (ui_text.print_result), so it never claims a list that could not be written (F2-REVIEW S2)."""
+        try:
+            result = printout.with_list(result, ui_text.print_list_text(context["plan"], result, __version__))
+            text = ui_text.print_result(result)
+            ok = (result.refusal is None and not result.failed and not result.flags_turned_on
+                  and result.active_restored and not result.list_error)
+        except Exception as exc:  # noqa: BLE001 - what the job did could not be said: say that
+            text, ok = ui_text.print_collect_failed(exc), False
         self._set_status(text, ok)
 
     def _write_sidecar(self, spec: GearSpec, derived: Any, plan: Any, result: swbuild.BuildResult,
@@ -1954,7 +2422,9 @@ class CloseGuard:
             self.quit()
             return
         if self.asked and (pending or strip):
-            building = any(w._job is not None and not w._job.updating for w in pending)  # noqa: SLF001
+            from .workbook_gui import JOB_BUILD
+            # Only a workbook's build has a journal to speak of (an update's or Print files' has none).
+            building = any(w._job is not None and w._job.kind == JOB_BUILD for w in pending)  # noqa: SLF001
             if self.ask(ui_text.QUIT_ANYWAY_TITLE, ui_text.quit_anyway_question(building)):
                 self.waiting, self.asked = [], False
                 self.quit()

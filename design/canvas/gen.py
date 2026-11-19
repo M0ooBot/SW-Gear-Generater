@@ -16,7 +16,8 @@ sys.path.insert(0, os.path.join(HERE, "..", "..", "src"))             # the app'
 from ui import *
 from gear_generator.gears import KINDS, kind_for, spur, pair as pairs
 from gear_generator.spec import GearSpec, PairSpec, pair_stems
-from gear_generator import findings, preview as layout_of, ui_text
+from gear_generator import findings, preview as layout_of, printout, ui_text
+from gear_generator.gears import span as spans
 HEADER_TEXT, READOUT = "#505050", "#8f8f8f"
 CARD_BG, CARD_BORDER = "#fafafa", "#cfcfcf"
 
@@ -248,19 +249,58 @@ def value_row(label_text, values, widths=(104, 96)):
     return f'<div style="display: flex; align-items: center; gap: 8px; height: 18px;">{cells}</div>'
 
 
-def derived_table(deriveds, tags):
+def holds_of(spec, d, crossed=False):
+    """GearApp._rating_of and _holding (F4): the rating a gear's Holds once row words, None for no row."""
+    return ui_text.holds_rating(spec, d, kind_for(spec).recipe_for(spec), crossed=crossed)
+
+
+def rows_with_span(d, reading, rating=None):
+    """GearApp._rows_with_span: the Derived rows, with the span row after Tooth at pitch when it has a figure (F2), and
+    a printed gear's Holds once row last (F4)."""
+    rows = list(ui_text.derived_rows(d))
+    holds = ui_text.holds_row(rating)
+    if reading is not None and reading.kind == spans.KIND_SPAN:
+        at = next((i + 1 for i, (label, _) in enumerate(rows) if label == "Tooth at pitch"), len(rows))
+        rows = rows[:at] + [ui_text.span_rows(reading, None, 0.0, 0.0)[0]] + rows[at:]
+    return rows + [holds] if holds else rows
+
+
+# GearApp._show_derived lays the Holds once value into its column's room (ui_text.holds_value_lines), measured in the
+# window's mono_tiny; here a character of mono 11.5 px stands for it.
+MONO_CHAR = 6.9
+
+
+def holds_cell(text, columns):
+    room = (434 - 104 - columns * 8) / columns - 8
+    return ui_text.holds_value_lines(text, room, lambda s: len(s) * MONO_CHAR).replace("\n", "<br>")
+
+
+def derived_table(deriveds, tags, readings=None, measured=None, focused=False, ratings=None):
     """Every label once, in the order it first appears, and a dash where a gear has none — as the window does.
 
-    A grid, as Tk's is: a column widens to its longest value and the others keep in line.
+    A grid, as Tk's is: a column widens to its longest value and the others keep in line. F2: each gear's span row
+    (``readings``, A's gears.span per gear), and a Measured entry under the rows in the column of each gear with a
+    figure, holding ``measured`` (the text typed, per gear) and the caret when ``focused``.
     """
-    columns = [dict(ui_text.derived_rows(d)) for d in deriveds]
-    labels = list(dict.fromkeys(label for d in deriveds for label, _ in ui_text.derived_rows(d)))
+    readings = readings or [None] * len(deriveds)
+    ratings = ratings or [None] * len(deriveds)
+    rows_of = [rows_with_span(d, r, h) for d, r, h in zip(deriveds, readings, ratings)]
+    columns = [dict(rows) for rows in rows_of]
+    labels = list(dict.fromkeys(label for rows in rows_of for label, _ in rows))
     cells = ['<span></span>'] + [f'<span style="font-size: 11px; color: {READOUT}; line-height: 16px;">{tag}</span>'
                                  for tag in tags]
     for label_text in labels:
+        holds = label_text == ui_text.HOLDS_LABEL
         cells.append(f'<span style="font-size: 12px; color: {LABEL}; line-height: 18px;">{label_text}</span>')
         cells += [f'<span style="font-family: {MONO}; font-size: 11.5px; color: {INK}; line-height: 18px; '
-                  f'white-space: nowrap;">{c.get(label_text, "—")}</span>' for c in columns]
+                  f'white-space: nowrap;">{holds_cell(c.get(label_text, "—"), len(columns)) if holds else c.get(label_text, "—")}'
+                  f'</span>' for c in columns]
+    if any(r is not None and r.kind == spans.KIND_SPAN for r in readings):
+        cells.append(f'<span style="font-size: 12px; color: {LABEL}; line-height: 30px;">{ui_text.MEASURED_LABEL}</span>')
+        for i, r in enumerate(readings):
+            typed = (measured or [""] * len(readings))[i]
+            cells.append(gfield(typed, unit="mm", focused=focused and bool(typed))
+                         if r is not None and r.kind == spans.KIND_SPAN else '<span></span>')
     template = "104px " + " ".join(["minmax(96px, max-content)"] * len(deriveds))
     return (f'<div style="display: grid; grid-template-columns: {template}; column-gap: 8px; justify-content: start;">'
             + "".join(cells) + '</div>')
@@ -272,8 +312,15 @@ def warning(text, error=False):
 
 # ------------------------------------------------------- the field explainer
 
-def explainer(key, d, side_stem, pair=None):
-    title, symbol, what, comes_to = ui_text.explainer(key, d, side_stem, pair, FOLDER_TEXT)
+def explainer(key, d, side_stem, pair=None, spec=None):
+    if key == "span":                     # F2: the Measured entry's card, the span's, with the Teeth diagram (gui)
+        title, symbol, what, comes_to = ui_text.span_explainer(spans.span(d, "A"))
+        key = "teeth"
+    elif key in ui_text.BORE_EXPLAINERS:  # F3: Bore allowance's, Drive's and Flat's cards, with Bore's diagram (gui)
+        title, symbol, what, comes_to = ui_text.bore_explainer(key, spec, d)
+        key = ui_text.BORE_DIAGRAM
+    else:
+        title, symbol, what, comes_to = ui_text.explainer(key, d, side_stem, pair, FOLDER_TEXT)
     sym = f'<span style="font-family: {MONO}; font-weight: 400; color: {MUTED};"> · {symbol}</span>' if symbol else ""
     return (f'<div style="display: flex; align-items: flex-start; gap: 10px; box-sizing: border-box; border: 1px solid {CARD_BORDER}; '
             f'border-radius: 2px; background: {CARD_BG}; padding: 8px 10px;">{DIAGRAMS[key]}'
@@ -290,12 +337,21 @@ def explainer(key, d, side_stem, pair=None):
 KIND_SEG = {"spur": "Spur", "helical": "Helical", "herringbone": "Double", "bevel": "Bevel"}
 
 
-def gear_kind_panel(kind, mode):
-    return panel("Gear", ui_text.kind_readout(kind, "A"), [
+def gear_kind_panel(kind, mode, spec=None):
+    """F1: Process says what ``spec`` is (a spec built here without saying is machined, as in code; the window's row
+    starts at Printed), and Nozzle shows under it while Printed."""
+    spec = spec or GearSpec()
+    printed = spec.is_printed()
+    rows = [
         row(label("Kind"), seg(["Spur", "Helical", "Double", "Bevel"], KIND_SEG[kind])),
         row(label("Flank"), seg(["Involute", "Arcs"], "Involute", w="200px")),
         row(label("Make"), seg(["Single gear", "Gear pair"], mode, w="200px")),
-    ])
+        row(label("Process"), seg(["Printed", "Machined"], "Printed" if printed else "Machined", w="200px")),
+    ]
+    if printed:
+        rows.append(row(label("Nozzle"), gfield(spec.nozzle or ui_text.NOZZLE_PLACEHOLDER, unit="mm",
+                                                placeholder=not spec.nozzle), hint(ui_text.NOZZLE_HINT)))
+    return panel("Gear", ui_text.kind_readout(kind, "A"), rows)
 
 
 def pair_panel(pair, summary, readout, focused="", card=None, d=None):
@@ -363,6 +419,7 @@ def side_panel(title, spec, d, stem, focused="", card=None, pair=None, side="a")
         pair.mesh_value() != "internal"
     ring_pair = pair_mode and pair.mesh_value() == "internal" and not bevel
     takes_shift = not bevel and not ring and not (pair_mode and (ring_pair or crossed))
+    process = "printed" if spec.is_printed() else "machined"
     rows = [
         row(label("Module"), f("module", spec.module, unit="mm"), dropdown("", "72px"), hint("ISO 54")),
         row(label("Teeth"), f("teeth", spec.teeth)),
@@ -371,9 +428,20 @@ def side_panel(title, spec, d, stem, focused="", card=None, pair=None, side="a")
     ]
     if not ring:
         rows.append(row(label("Bore"), f("bore", spec.bore or "none", unit="mm", placeholder=not spec.bore)))
+        # F3 (PLAN-PRINTED §4.1, §4.2): Bore allowance, its placeholder what a blank means for this gear; Drive and,
+        # while it is Flat, Flat. A bevel gear takes no flat (G5), so no Drive; a ring none of the three.
+        typed = spec.bore_allowance.strip()
+        rows.append(row(label("Bore allowance"), f("bore_allowance", typed or ui_text.bore_allowance_placeholder(spec, d),
+                                                   unit="mm", w="150px", placeholder=not typed),
+                        hint(ui_text.BORE_ALLOWANCE_HINT)))
+        if not bevel:
+            flat = spec.has_flat()
+            rows.append(row(label("Drive"), seg(["Round", "Flat"], "Flat" if flat else "Round", w="140px")))
+            if flat:
+                rows.append(row(label("Flat"), f("flat", spec.flat, unit="mm"), hint(ui_text.FLAT_HINT)))
     rows += [
-        row(label("Backlash"), f("backlash", spec.backlash or "0.3 × module", unit="mm", w="150px",
-                                 placeholder=not spec.backlash), hint("ISO: 0.02–0.05 × m")),
+        row(label("Backlash"), f("backlash", spec.backlash or ui_text.BACKLASH_PLACEHOLDERS[process], unit="mm",
+                                 w="150px", placeholder=not spec.backlash), hint(ui_text.BACKLASH_HINTS[process])),
         row(label("Fillet"), f("fillet", spec.fillet or ("0.15 × module" if ring else "0.38 × module"), unit="mm",
                                w="150px", placeholder=not spec.fillet)),
     ]
@@ -401,16 +469,41 @@ def side_panel(title, spec, d, stem, focused="", card=None, pair=None, side="a")
         rows.append(row(label("Mate teeth"), f("mate_teeth", spec.mate_teeth), hint("the gear it meshes with")))
     rows.append(row(label("Name"), f("name", stem, grow=True, placeholder=True)))
     if card:
-        rows.append(explainer(card, d, stem, pair))
+        rows.append(explainer(card, d, stem, pair, spec=spec))
     return panel(title, ui_text.gear_readout(spec), rows)
 
 
-def derived_panel(gears, tags, diagnostics, readout, pair_rows=None, note=""):
+def measured_lines(deriveds, readings, measured, tags, ratings=None):
+    """GearApp._measured_lines: why a printed gear shows no span, and what a reading typed tells (F2); then a Holds
+    once row's full sentence where it has one (F4)."""
+    out = []
+    for i, (d, r) in enumerate(zip(deriveds, readings)):
+        prefix = f"{tags[i]}: " if len(deriveds) > 1 else ""
+        withheld = ui_text.span_withheld(r) if r is not None else ""
+        if withheld:
+            out.append(f"{prefix}{ui_text.SPAN_LABEL_ANY}: {withheld}")
+        elif r is not None and r.kind == spans.KIND_SPAN and (measured or [""] * len(deriveds))[i]:
+            alpha = getattr(d, "normal_pressure_angle_deg", d.pressure_angle_deg)
+            out.append(prefix + ui_text.span_rows(r, float(measured[i]), alpha, d.module)[-1][1])
+    for i, rating in enumerate(ratings or []):
+        line = ui_text.holds_line(rating)
+        if line:
+            out.append(f"{tags[i]}: {line}" if len(deriveds) > 1 else line)
+    return out
+
+
+def derived_panel(gears, tags, diagnostics, readout, pair_rows=None, note="", readings=None, measured=None,
+                  focused=False, ratings=None):
     body = [picture(gears, labels=tags, note=note)]
     if pair_rows:
         body.append('<div style="display: flex; flex-direction: column;">' + "".join(value_row(k, [v]) for k, v in pair_rows) + '</div>')
         body.append(rule("0 0 2px 0"))
-    body.append(derived_table([d for d, _ in gears], [f"{t} · mm" for t in tags] if len(gears) > 1 else ["mm"]))
+    deriveds = [d for d, _ in gears]
+    readings = readings or [spans.span(d, "A") for d in deriveds]
+    body.append(derived_table(deriveds, [f"{t} · mm" for t in tags] if len(gears) > 1 else ["mm"], readings,
+                              measured, focused, ratings))
+    for text in measured_lines(deriveds, readings, measured, tags, ratings):
+        body.append(f'<div style="font-size: 12px; color: {INK}; line-height: 1.35;">{text}</div>')
     for text, error in diagnostics:
         body.append(warning(text, error))
     return panel("Derived", readout, body)
@@ -427,17 +520,19 @@ def output_panel(pair_mode):
     return panel("Output", FOLDER_TEXT, rows)
 
 
-def sw_bar(note, manual):
+def sw_bar(note, manual, printing=""):
     header = (f'<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: {READOUT};">'
               f'{dot(OK)}SolidWorks 2026 — no document open</span>')
     rows = [row(INFO_ICON, f'<span style="font-size: 12px; color: {INK}; line-height: 1.35;">{note}</span>', gap=8, align="flex-start")]
+    if printing:                                                        # F2: which file Print files would write
+        rows.append(row('<span style="width: 15px; flex-shrink: 0;"></span>', f'<span style="font-size: 12px; color: {INK}; line-height: 1.35;">{printing}</span>', gap=8, align="flex-start"))
     if manual:
         rows.append(row('<span style="width: 15px; flex-shrink: 0;"></span>', f'<span style="font-size: 12px; color: {MUTED}; line-height: 1.35;">{manual}</span>', gap=8, align="flex-start"))
     return panel("SolidWorks", "", rows, gap=4, extra_header=header)
 
 
 def footer(status, update=False):
-    buttons = (button("Update values", h=32) if update else "") + button("Build", primary=True, h=32)
+    buttons = (button("Update values", h=32) if update else "") + button("Print files", h=32) + button("Build", primary=True, h=32)
     return (f'<div style="margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 12px;">'
             f'<div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: {OK}; min-width: 0;">{dot(OK, 8)}'
             f'<span style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">{status}</span></div>'
@@ -517,8 +612,11 @@ def pair_board(title_kind, pair, chosen=None, focus=("a", "module"), card=None, 
     rows = ui_text.pair_derived_rows(centre, ratio, eps, d_a.teeth, d_b.teeth,
                                      "Cone distance" if bevel else "Centre distance", working_angle=working)
     diagnostics = diagnostics_of([("A", diag_a), ("B", diag_b)])
-    if not bevel and not crossed and not ring:
+    if not crossed and ((not bevel and not ring) or d_a.printed or d_b.printed):     # GearApp._show_derived
         diagnostics += [(message, "cannot be built" in message) for message in pairs.mesh_warnings(d_a, d_b)]
+    if crossed and (d_a.printed or d_b.printed):                                     # … and its crossed pair (F1)
+        said = pairs.printed_clearance_sentence(pairs.tip_clearance(d_a.module, d_a.teeth, d_b.teeth, alpha), False)
+        diagnostics += [(said, False)] if said else []
     panel_card = {"a": card if focus[0] == "a" else None, "b": card if focus[0] == "b" else None,
                   "pair": card if focus[0] == "pair" else None}
     readout = ui_text.pair_readout(pair.cone_distance if bevel else pair.centre_distance, pair.ratio, chosen,
@@ -526,30 +624,39 @@ def pair_board(title_kind, pair, chosen=None, focus=("a", "module"), card=None, 
     manual = ui_text.manual_steps_line([f"Assign a material to {stem_a}; the build leaves it unset.",
                                         f"Assign a material to {stem_b}; the build leaves it unset."])
     return page("\n".join([
-        gear_kind_panel(title_kind, "Gear pair"),
+        gear_kind_panel(title_kind, "Gear pair", pair.gear_a),
         pair_panel(pair, summary, readout, focused=focus[1] if focus[0] == "pair" else "", card=panel_card["pair"], d=d_a),
         side_panel("Gear A", spec_a, d_a, stem_a, focused=focus[1] if focus[0] == "a" else "", card=panel_card["a"],
                    pair=pair, side="a"),
         side_panel("Gear B", spec_b, d_b, stem_b, focused=focus[1] if focus[0] == "b" else "", card=panel_card["b"],
                    pair=pair, side="b"),
         derived_panel([(d_a, o_a), (d_b, o_b)], ("A", "B"), diagnostics,
-                      ui_text.pair_derived_readout(centre, ratio, eps, symbol), pair_rows=rows, note=note),
+                      ui_text.pair_derived_readout(centre, ratio, eps, symbol), pair_rows=rows, note=note,
+                      readings=[spans.span(d_a, kind_for(spec_a).recipe_for(spec_a)),
+                                spans.span(d_b, kind_for(spec_b).recipe_for(spec_b))],
+                      ratings=[holds_of(spec_a, d_a, crossed), holds_of(spec_b, d_b, crossed)]),
         output_panel(True),
         sw_bar(ui_text.mode_note("pair", [stem_a, stem_b, stem_pair]), manual),
         footer(status or "Both gears now carry the chosen module and teeth."),
     ]))
 
 
-def single_board(spec, focus="module", status="Type a gear, or switch to Gear pair to solve one."):
+def single_board(spec, focus="module", status="Type a gear, or switch to Gear pair to solve one.", measured="",
+                 printing=""):
+    """F2: ``measured`` is what is typed in Measured (with the caret, and the span's card, when ``focus`` is
+    "span"); ``printing`` the SolidWorks bar's Print files line."""
     spec, d, o, diagnostics = worked(spec)
-    stem = spec.default_stem()
+    stem = spec.stem()
+    kind = kind_for(spec)
+    reading = spans.span(d, kind.recipe_for(spec))
     return page("\n".join([
-        gear_kind_panel(spec.kind, "Single gear"),
+        gear_kind_panel(spec.kind, "Single gear", spec),
         side_panel("Gear", spec, d, stem, focused=focus, card=focus),
-        derived_panel([(d, o)], ("",), diagnostics_of([("", diagnostics)]), ui_text.derived_line(d)),
+        derived_panel([(d, o)], ("",), diagnostics_of([("", diagnostics)]), ui_text.derived_line(d),
+                      readings=[reading], measured=[measured], focused=focus == "span", ratings=[holds_of(spec, d)]),
         output_panel(False),
         sw_bar(ui_text.mode_note("single", [stem]),
-               ui_text.manual_steps_line([f"Assign a material to {stem}; the build leaves it unset."])),
+               ui_text.manual_steps_line([f"Assign a material to {stem}; the build leaves it unset."]), printing),
         footer(status),
     ]))
 
@@ -600,7 +707,8 @@ _reads = {}
 def read_workbook(spec, copy=False):
     """``spec`` through a real file, written once and read by the window's own link: (path, spec, diagnostics,
     digest). The same spec is the same file, so a record's digest matches a later board's read of it; ``copy``
-    reads the same file copied to a folder of its own (a copied workbook)."""
+    reads the same file copied to a folder of its own (a copied workbook). F1: a spec whose Box's Process is blank is
+    written as a workbook written before F1 is, with no Process or Nozzle row on its Box sheet."""
     key = (repr(spec), copy)
     if key not in _reads:
         folder = tempfile.mkdtemp(prefix="gen-workbook-")
@@ -608,7 +716,11 @@ def read_workbook(spec, copy=False):
         if copy:
             shutil.copy(read_workbook(spec)[0], path)
         else:
-            wb_xlsx.write_new(path, wb_model.to_sheets(spec))
+            sheets = wb_model.to_sheets(spec)
+            if not spec.box.process.strip():
+                sheets = [dataclasses.replace(s, rows=[r for r in s.rows if not (r and r[0] in ("Process", "Nozzle"))])
+                          if s.name == "Box" else s for s in sheets]
+            wb_xlsx.write_new(path, sheets)
         reading = wb_link.Link(path).read()
         _reads[key] = (path, reading.spec, reading.diagnostics, reading.digest)
     return _reads[key]
@@ -680,8 +792,17 @@ class Desk:
             self.sw.turn(next(c.name for c in self.record.gearbox.components if c.gear == gear), degrees * k)
 
 
-def assessed(spec, diagnostics, chosen=()):                            # WorkbookWindow._assess
-    return wb_assess.assess(spec, diagnostics, spec.box.output_folder, "", chosen)
+def assessed(spec, diagnostics, chosen=(), blank="printed"):           # WorkbookWindow._assess
+    return wb_assess.assess(spec, diagnostics, spec.box.output_folder, "", chosen, blank_process=blank)
+
+
+def blank_for(record, here, disk):                                      # WorkbookWindow._blank_process
+    """What a blank Process means beside ``record`` (D11, ruled (B)): as built, by the record when it is this
+    workbook's, as :func:`planned` takes it (the boards' one workbook saved again is its own), else as a new gearbox."""
+    if (record is not None and store.record_owner(record, here, disk.exists)[0] == store.UNSURE
+            and any(store.same_path(record.workbook, read[0]) for read in _reads.values())):
+        return wb_assess.blank_process(record)
+    return wb_assess.blank_process(None if store.foreign_workbook(record, here, disk.exists) else record)
 
 
 def planned(a, record, disk):                                           # WorkbookWindow._plan_solidworks
@@ -710,10 +831,13 @@ def planned(a, record, disk):                                           # Workbo
     return plan, update, ours
 
 
-def press_build(desk, spec):
-    """Build pressed on ``spec``: the plan run by swbuild.build_gearbox, finished into the record; the note."""
+def press_build(desk, spec, blank=None):
+    """Build pressed on ``spec``: the plan run by swbuild.build_gearbox, finished into the record; the note.
+    ``blank`` is what a blank Process is built as, the window's by default (``machined`` for a gearbox an app
+    before F1 built)."""
     path, read_spec, diagnostics, digest = read_workbook(spec)
-    plan, _, _ = planned(assessed(read_spec, diagnostics), desk.record, desk.disk)
+    blank = blank or blank_for(desk.record, path, desk.disk)
+    plan, _, _ = planned(assessed(read_spec, diagnostics, blank=blank), desk.record, desk.disk)
     result = swbuild.build_gearbox(desk.sw, **plan.build_kwargs(), exists=desk.disk.exists)
     desk.positions = getattr(result, "positions_per_configuration", None)     # as WorkbookWindow._collect_job keeps it
     again = desk.record is not None and desk.record.gearbox is not None and bool(desk.record.gearbox.assembly)
@@ -729,7 +853,8 @@ def press_build(desk, spec):
 def press_update(desk, spec):
     """Update SolidWorks pressed on ``spec``: swbuild.update_gearbox, finished into the record; the note."""
     path, read_spec, diagnostics, digest = read_workbook(spec)
-    _, update, _ = planned(assessed(read_spec, diagnostics), desk.record, desk.disk)
+    blank = blank_for(desk.record, path, desk.disk)
+    _, update, _ = planned(assessed(read_spec, diagnostics, blank=blank), desk.record, desk.disk)
     result = swbuild.update_gearbox(desk.sw, **update.update_kwargs(), exists=desk.disk.exists)
     if result.user_work is not None:
         result.user_work.read_at = READ_STAMP          # the read's time, fixed for the boards (above)
@@ -905,9 +1030,10 @@ def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, c
     path, read_spec, read_diagnostics, digest = read_workbook(spec, copy)
     folder = read_spec.box.output_folder
     desk = desk or Desk()
+    blank = blank_for(desk.record, path, desk.disk)
 
     def plan(chosen, read=(read_spec, read_diagnostics)):              # WorkbookWindow._plan and _assess
-        state = assessed(read[0], read[1], chosen)
+        state = assessed(read[0], read[1], chosen, blank=blank)
         return state, state.spec, state.parts, state.report, state.diagnostics
 
     chosen = []
@@ -944,6 +1070,8 @@ def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, c
         row(label("Name"), f'<span style="{mono}">{effective.box.name}</span>'),
         row(label("Output folder"), f'<span style="{mono}">{ui_text.short_path(folder, wb_gui.PATH_CHARS - 20)}</span>',
             hint("from the Box sheet")),
+        row(label("Process"), f'<span style="font-size: 12.5px; color: {INK};">'
+                              f'{ui_text.workbook_process_line(read_spec.box, effective.box)}</span>'),
         row(label("Worked out as"), f'<span style="font-size: 12.5px; color: {INK};">{report.worked_out_as or "—"}</span>'),
     ], gap=2)
     gears = panel("Gears", ui_text.workbook_parts_readout(parts, record=record),
@@ -1000,13 +1128,14 @@ def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, c
     colour = OK if footer.ok else ERR
     exporting = building is None                                        # Export waits while a job runs
     buttons = [foot_button("Export", enabled=exporting), foot_button("Export as…", enabled=exporting),
+               foot_button("Print files", enabled=exporting),                # F2: held only while a job runs
                foot_button(footer.build_label, footer.build_primary, footer.build_enabled)]
     if footer.update_shown:
         buttons.append(foot_button("Update SolidWorks", footer.update_primary, footer.update_enabled))
     # The sentence wraps as WorkbookWindow._wrap_status wraps it: in the room the dot (8 px and 8 px after it) and
     # the buttons (12 px before Export, 8 px before each of the others) leave in the window's width less its body
     # padding, 2 px short of that, and never narrower than STATUS_MIN_WRAP. So the window keeps its width with all
-    # four buttons, and a board whose buttons leave too little room is pushed wider, as the window would be.
+    # five buttons, and a board whose buttons leave too little room is pushed wider, as the window would be.
     foot = (f'<div style="display: flex; align-items: center; gap: 12px;">'
             f'<div style="flex: 1 1 0; display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; color: {colour}; '
             f'min-width: {8 + 8 + wb_gui.STATUS_MIN_WRAP + 2}px; box-sizing: border-box; padding-right: 2px;">'
@@ -1039,6 +1168,10 @@ boards["Main"] = ("Gear pair · spur", pair_board("spur", spur_pair, chosen, ("a
                                                   status="Both gears now carry module 1.5: 20 and 60 teeth."))
 
 boards["SingleGear"] = ("Single gear · spur", single_board(GearSpec(), "pressure_angle"))
+# F1 (PLAN-PRINTED §1.3, §2.1, §2.2): the strip as it opens, Process Printed, with Nozzle under it, a module 1 gear of
+# 20 teeth, the card on Backlash with its printed default, and the printed warning its thin tip gives.
+boards["PrintedGear"] = ("Single gear · printed, a thin tip", single_board(
+    GearSpec(module="1", teeth="20", bore="6", process="printed"), "backlash"))
 
 # A pair that needs profile shift: C 47.5 at 32 : 15 on module 2.
 shift_base = PairSpec(mode="pair", centre_distance="47.5", ratio="32:15", module="2",
@@ -1332,6 +1465,74 @@ fixed_in_place = wb_model.replace(fixed_box, box=wb_model.replace(fixed_box.box,
 boards["WorkbookInPlace"] = ("Workbook · RangeBox edited to RangeBox_Fixed: one Update, said before the press",
                              workbook_board(fixed_in_place, before=rangebox, desk=user_desk,
                                             positions_per_configuration=user_desk.positions), WINDOW_WIDTH)
+
+# F1 (PLAN-PRINTED §1.3, §6; D11 ruled (B)). The reducer as an app before F1 built it: its workbook has no Process row
+# and every part was built machined. Opened after F1 it is Machined, as built, and nothing has changed: the Process line
+# says so and how to print it. Then Printed typed beside a Process row added on its Box sheet: every gear changes on
+# Update, its Backlash written in place.
+def _with_process(spec, process):
+    return wb_model.replace(spec, box=wb_model.replace(spec.box, process=process))
+
+
+before_f1 = _with_process(reducer, "")
+f1_desk = Desk()
+press_build(f1_desk, before_f1, blank="machined")
+boards["WorkbookBeforeF1"] = ("Workbook · built before printed gears, opened: Machined, as built",
+                              workbook_board(before_f1, desk=f1_desk), WINDOW_WIDTH)
+boards["WorkbookPrinted"] = ("Workbook · the same gearbox with Printed typed beside Process",
+                             workbook_board(_with_process(reducer, "printed"), before=before_f1, desk=f1_desk),
+                             WINDOW_WIDTH)
+
+# F2 (PLAN-PRINTED §3.0, §3.1.3). The first calibration coupon on the form, printed: its span over 3 teeth after Tooth
+# at pitch, a reading typed in Measured with the caret in it and the span's card, and the SolidWorks bar's Print files
+# line as it reads once writing a STEP file is measured (until then B's plan refuses and the bar shows no line).
+coupon_spec = GearSpec(module="1.5", teeth="20", face_width="8", bore="8", process="printed", name="Coupon_A")
+coupon_plan = printout.PrintPlan(None, (printout.PrintPart(path="C:\\Gears\\Coupon_A.SLDPRT", stem="Coupon_A"),),
+                                 folder="C:\\Gears\\print\\2026-11-19 10.05.12")
+boards["PrintedSpan"] = ("Single gear · printed coupon: its span, a reading typed in Measured", single_board(
+    coupon_spec, "span", measured="11.291", printing=ui_text.print_bar_line(coupon_plan)))
+# The built reducer with Print files pressed on a SolidWorks version writing a STEP file has not been measured on
+# (2025 here; the findings are set for 2024 and 2026): refused by name, nothing written, the footer's five buttons at
+# 1080 px.
+boards["WorkbookPrintRefused"] = ("Workbook · Print files pressed on a SolidWorks it is not measured on",
+                                  workbook_board(reducer, desk=built_desk, note=ui_text.Note(
+                                      ui_text.print_refusal(printout.Refusal(
+                                          printout.GATE, (), {"year": "2025", "revision": "33.1.0"})), False,
+                                      ui_text.NOTE_STANDING)), WINDOW_WIDTH)
+
+# F3 (PLAN-PRINTED §4.1, §4.2): a printed gear on an 8 mm D-shaft whose flat is 7 across, a Bore allowance of 0.2 typed
+# (a figure from the coupons), Drive Flat and the card on Drive: where the flat is cut, and that the assembly does not
+# model a shaft's flat. The Derived panel's Bore as cut and Flat as cut give the hole. Typed, so the board reads the same
+# whichever way package A's switch is set (F3-INTERFACES §13); a blank's placeholder is on every other printed board.
+d_shaft = GearSpec(module="1.5", teeth="20", face_width="8", bore="8", process="printed", bore_allowance="0.2",
+                   drive="flat", flat="7", name="Pinion_D8")
+boards["PrintedBore"] = ("Single gear · printed, on a D-shaft: Bore allowance, Drive and Flat", single_board(
+    d_shaft, "drive"))
+
+# F4 (PLAN-PRINTED §5.4; F4-INTERFACES §5, §6.2). A printed pinion in a printed ring, module 1, 20 in 54, face 10: each
+# gear's Holds once row last in its own column, each value laid into its column's room as the window lays it, the ring's
+# saying its stress factor is past its range, and the ring's full sentence under the rows, B: before it.
+strength_base = PairSpec(mode="pair", centre_distance="17", ratio="2.7", mesh="internal",
+                         gear_a=GearSpec(module="1", teeth="20", face_width="10", bore="6", process="printed"),
+                         gear_b=GearSpec(module="1", teeth="54", face_width="10", teeth_side="internal",
+                                         process="printed"))
+chosen, strength_pair = chosen_row(strength_base, lambda c: (c.module, c.teeth_driver, c.teeth_driven) == (1, 20, 54))
+boards["PrintedStrength"] = ("Gear pair · printed, a pinion in a ring: what a tooth is rated to take once",
+                             pair_board("spur", strength_pair, chosen, ("pair", "mesh"), "mesh"))
+
+# F4 (PLAN-PRINTED §5.2, §5.4; F4-INTERFACES §6.1). A printed gearbox of one mesh, read: In (input, 1000 rpm, 2 N·m) and
+# Out (output) at X 45, spur gears of module 1.5 and face 10, G1 of 20 teeth meshing G2 of 40. Its Checks list carries
+# package B's one warning at Meshes row 2, these teeth taking about 133 N at the pitch circle where G1's are rated to
+# take 39 N once. Drawn from B's workbook.strength, so the board shows the warning once B's module is in.
+one_mesh = wb_model.GearboxSpec(
+    box=wb_model.Box(name="One_Mesh", output_folder="C:\\Parts\\One_Mesh", efficiency="98", process="printed"),
+    shafts=(wb_model.Shaft("In", "frame", "0", "0", "0", "Z+", "input", "", "1000", "2"),
+            wb_model.Shaft("Out", "frame", "45", "0", "0", "Z+", "output")),
+    gears=(wb_model.Gear("G1", "In", "5", "spur", "external", "20", "1.5", "", "10", "6"),
+           wb_model.Gear("G2", "Out", "5", "spur", "external", "40", "1.5", "", "10", "8")),
+    meshes=(wb_model.Mesh("G1", "G2"),))
+boards["WorkbookStrength"] = ("Workbook · a printed mesh asked to take more than its teeth are rated to",
+                              workbook_board(one_mesh), WINDOW_WIDTH)
 
 layout = []
 x = 0

@@ -18,7 +18,7 @@ from typing import Dict, List, Optional, Tuple
 
 from ..gears import helical, internal as internal_gears, pair as pairs, spur
 from ..gears.base import ERROR, WARNING, Diagnostic
-from . import fixes as fixes_mod, geometry, kinematics, modes as modes_mod, planetary
+from . import fixes as fixes_mod, geometry, kinematics, modes as modes_mod, planetary, strength as strength_mod
 from .fixes import Fix
 from .geometry import Layout, Placed
 from .model import GearboxSpec
@@ -80,6 +80,9 @@ class Report:
     # Why the gearbox was not checked at all ("" when it was): a carrier or a turned axis, laid out in a later
     # phase. Then ``diagnostics`` is empty because nothing was looked at, not because nothing is wrong.
     unchecked: str = ""
+    # F4 (package B; PLAN-PRINTED §5.2, F4-INTERFACES §4): every Meshes row's teeth in every mode, against what they
+    # are rated to take (strength.mesh_strengths); () for a machined gearbox or one whose first input has no torque.
+    strength: Tuple[strength_mod.MeshStrength, ...] = ()
 
     @property
     def checked(self) -> bool:
@@ -220,8 +223,24 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
                 _error(report, spec.cell("Gears", gears[row].row, "id"), sentence)
             continue
         _warning(report, spec.cell("Gears", gears[row].row, "id"), sentence)
+    _check_strength(report, spec)
     report.worked_out_as = _worked_out_as(spec, report)
     return report
+
+
+def _check_strength(report: Report, spec: GearboxSpec) -> None:
+    """F4 (package B; PLAN-PRINTED §5.2, §5.4): a printed gearbox's teeth against what they are rated to take, mode by
+    mode, kept in ``report.strength`` for the Results sheet, and one warning at a Meshes row whose share passes 100 %
+    in some mode or that has a ring not rated in a loaded mode (``strength.warning_sentence``), the pair first as F1's
+    clearance warning is said. A machined gearbox, or one whose first input has no torque, is told nothing."""
+    report.strength = strength_mod.mesh_strengths(spec, report)
+    if not report.strength:
+        return
+    allowable, typed = strength_mod.allowable_of(spec)
+    for mesh in spec.meshes:
+        sentence = strength_mod.warning_sentence([r for r in report.strength if r.row == mesh.row], allowable, typed)
+        if sentence:
+            _warning(report, spec.cell("Meshes", mesh.row, "a"), f"{mesh.a} and {mesh.b}: {sentence}")
 
 
 def _mode_report(report: Report, spec: GearboxSpec, skip_gears, senses, placed: Dict[str, Placed],
@@ -466,6 +485,8 @@ def _check_mesh(report: Report, spec: GearboxSpec, mesh, a: Placed, b: Placed, w
     except ValueError as exc:
         _error(report, where, f"{a.gear} and {b.gear}: {exc}")
         return
+    if _printed(a, b):
+        _check_printed_clearance(report, where, a, b, pinion, other, pa_a, beta)
     placed_at = geometry.centre_distance(a, b)
     report.centres[(a.gear, b.gear)] = (needed, placed_at)
     report.contact[(a.gear, b.gear)] = epsilon
@@ -501,6 +522,42 @@ def _check_mesh(report: Report, spec: GearboxSpec, mesh, a: Placed, b: Placed, w
     elif a.herringbone and abs(a.z - b.z) > CENTRE_TOLERANCE:
         _error(report, where, f"{a.gear} and {b.gear} are herringbones whose middles are {_n(abs(a.z - b.z))} mm "
                               "apart along the axis; a herringbone pair meshes middle to middle.")
+
+
+def _printed(a: Placed, b: Placed) -> bool:
+    """Whether a pair is printed (F1): either gear's derived gear says so (its ``printed`` property, its nozzle set),
+    which is the Box's Process, one for the whole gearbox. A machined pair is told nothing new."""
+    return bool(getattr(a.derived, "printed", False) or getattr(b.derived, "printed", False))
+
+
+def _printed_clearance_warning(report: Report, where: str, a: Placed, b: Placed, clearance: float,
+                               shifted: bool) -> None:
+    """F1 (PLAN-PRINTED §2.2; F1-INTERFACES §8): a printed pair's tip clearance under the 0.3 mm two printed surfaces
+    take (less a rounding tolerance: module 0.75's computes as 0.2999999999999998), at its Meshes row, in the words
+    the form says it in (package A's ``pair.printed_clearance_sentence``), prefixed with the pair as this file
+    prefixes its sentences. The depth is left alone; the advice names less profile shift only when the pair has a
+    shift to take off."""
+    sentence = pairs.printed_clearance_sentence(clearance, shifted)
+    if sentence:
+        _warning(report, where, f"{a.gear} and {b.gear}: {sentence}")
+
+
+def _check_printed_clearance(report: Report, where: str, a: Placed, b: Placed, pinion: Placed, other: Placed,
+                             pressure_angle: float, beta: float) -> None:
+    """A printed pair on parallel shafts: its tip clearance at the working centre distance, by
+    ``pair.tip_clearance`` outside and ``pair.ring_tip_clearance`` for a pinion in a ring (package A's maths). A
+    shift the pair maths cannot answer is said elsewhere in this file, so nothing is said here."""
+    shift_a, shift_b = (getattr(g.derived, "shift", 0.0) or 0.0 for g in (a, b))
+    try:
+        if a.internal or b.internal:
+            clearance = pairs.ring_tip_clearance(a.module, pinion.teeth, other.teeth, pressure_angle, beta,
+                                                 getattr(pinion.derived, "shift", 0.0) or 0.0,
+                                                 getattr(other.derived, "shift", 0.0) or 0.0)
+        else:
+            clearance = pairs.tip_clearance(a.module, a.teeth, b.teeth, pressure_angle, beta, shift_a, shift_b)
+    except (ValueError, ArithmeticError):
+        return
+    _printed_clearance_warning(report, where, a, b, clearance, bool(shift_a or shift_b))
 
 
 def internal_working_centre(module: float, pinion_teeth: int, ring_teeth: int, pressure_angle: float,
@@ -637,6 +694,9 @@ def _check_turned(report: Report, spec: GearboxSpec, a: Placed, b: Placed, laid:
                               "gears share one.")
         return False
     if kind_a == "bevel":
+        if _printed(a, b):
+            # Gleason's clearance (0.188 × module, the same along the face), by the form's own figure (F1 review, S4).
+            _printed_clearance_warning(report, where, a, b, pairs.bevel_tip_clearance(a.derived, b.derived), False)
         if laid.placed > CENTRE_TOLERANCE:
             shafts = {x.id: x for x in spec.shafts}
             point = geometry._add(b.centre, b.axis, -float(gb.at or 0))
@@ -663,6 +723,13 @@ def _check_turned(report: Report, spec: GearboxSpec, a: Placed, b: Placed, laid:
         _error(report, where, f"{a.gear} and {b.gear} are crossed helical gears with profile shift; crossed gears are "
                               "built without it: set both shifts to 0.")
         return False
+    if _printed(a, b):
+        # Unshifted, each tip stands the depth less two addenda from the other's root, whatever the helix angles.
+        try:
+            _printed_clearance_warning(report, where, a, b, pairs.tip_clearance(a.module, a.teeth, b.teeth, pa_a),
+                                       False)
+        except (ValueError, ArithmeticError):
+            pass
     tilt = geometry._reduce_line(-(a.hand_sign * a.derived.helix_angle_deg + b.hand_sign * b.derived.helix_angle_deg))
     lines = min(laid.shaft_angle, 180.0 - laid.shaft_angle)
     foot_a, foot_b = geometry.lines_closest(a.centre, a.axis, b.centre, b.axis)

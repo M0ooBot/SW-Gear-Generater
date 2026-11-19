@@ -6,7 +6,31 @@ unless said; the Box's pressure angle is 20° and its efficiency 98 %. The demon
 
 from dataclasses import replace
 
+from gear_generator.spec import PROCESS_MACHINED
 from gear_generator.workbook.model import Box, Gear, GearboxSpec, Mesh, Mode, Shaft
+
+
+def machined(spec: GearboxSpec) -> GearboxSpec:
+    """``spec`` with its Box's Process set to machined (PLAN-PRINTED §2.7, F1-0): how every test marks a read of a
+    committed workbook, none of which has a Process row. Once package B keeps the user's blank Process as read, such a
+    read is printed (a blank with no record); marked here, it keeps what the test pins. Before B it changes nothing,
+    since a read's Box is then machined already. None (a read that failed) is passed through."""
+    if spec is None:
+        return spec
+    return replace(spec, box=replace(spec.box, process=PROCESS_MACHINED))
+
+
+def machined_reads(monkeypatch) -> None:
+    """Every read a Workbook window or ``link.Link`` makes in this test marked :func:`machined`: for the window tests
+    that read a committed workbook (or a copy of one) themselves, where no read is in the test's hands."""
+    from gear_generator.workbook import link
+    from_book = link.from_book
+
+    def read(book):
+        spec, diagnostics = from_book(book)
+        return machined(spec), diagnostics
+
+    monkeypatch.setattr(link, "from_book", read)
 
 SLIDERS = ("RangeSlv", "ModeSlv")
 MODES = (Mode("2H", (("RangeSlv", "H"), ("ModeSlv", "2WD")), "road", row=2),

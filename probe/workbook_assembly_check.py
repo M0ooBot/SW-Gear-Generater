@@ -5,6 +5,8 @@ python.exe probe/workbook_assembly_check.py <repo src> <output folder under C:\>
                                                     |modes|planetary|confirm7|w6|confirm|ring ...]
                                             [--fixtures FOLDER]
                                             [--m4-offset MM]
+python probe/workbook_assembly_check.py --self-check   (no SolidWorks, Excel or pywin32: the Desk reads a blank Process
+                                                       as the Workbook window does, F1's D11 answered (B))
 
 PLAN-WORKBOOK §6; W4 "Demonstrable" and the W4 decisions' item 10; W5-PLAN §4 with W5-DECISIONS' rulings; W6-PLAN §6
 with W6-INTERFACES §4 and §7.17. Every
@@ -334,6 +336,27 @@ import threading
 import time
 import traceback
 
+# ``--self-check`` (no SolidWorks, no Excel, no pywin32; F1, the coordinator's ruling of 2026-11-18): the Desk reads a
+# workbook's blank Process as the Workbook window does. The Windows-only modules are stood in for where they do not
+# import, and the run's arguments made a scratch folder's, so this file loads anywhere; ``self_check`` runs at its end.
+# Where pywin32 is installed (Windows' python.exe) its own modules are used, since swcom's win32com reads win32api
+# when it loads and fails on a stand-in (2026-11-19); the self-check calls none of them. xlhelp, the Excel helper, is
+# always stood in: the self-check opens no Excel.
+SELF_CHECK = "--self-check" in sys.argv
+if SELF_CHECK:
+    import importlib
+    import tempfile
+    import types
+    _SCRATCH = tempfile.mkdtemp(prefix="w8-self-check-")
+    for _name in ("win32api", "win32gui", "win32process"):
+        try:
+            importlib.import_module(_name)
+        except ImportError:
+            sys.modules[_name] = types.ModuleType(_name)
+    sys.modules["xlhelp"] = types.ModuleType("xlhelp")
+    sys.argv = [sys.argv[0], os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"),
+                _SCRATCH, "--pid", "0", "--log", os.path.join(_SCRATCH, "self-check.log")]
+
 sys.path.insert(0, sys.argv[1])
 SRC, OUT = sys.argv[1], sys.argv[2]
 PID = int(sys.argv[sys.argv.index("--pid") + 1])
@@ -398,7 +421,7 @@ from gear_generator.workbook import model as wb_model  # noqa: E402
 from gear_generator.workbook import update as wb_update  # noqa: E402
 from gear_generator.workbook import xlsx  # noqa: E402
 from gear_generator.workbook.model import Box, Gear, GearboxSpec, Mesh, Shaft  # noqa: E402
-from gear_generator.workbook_gui import _had_assembly, _update_gate  # noqa: E402  (the window's own helpers)
+from gear_generator.workbook_gui import WorkbookWindow, _had_assembly, _update_gate  # noqa: E402  (the window's own)
 
 LOG = []
 FAILS = []
@@ -1024,10 +1047,15 @@ def turn_degrees(rotation_a, rotation_b):
 
 
 class Desk:
-    """The Workbook window without Tk: the same calls, in the same order, on this thread."""
+    """The Workbook window without Tk: the same calls, in the same order, on this thread. Since F1 a blank Process is
+    resolved by the window's own ``_blank_process`` (with its ``_settled``), as ``WorkbookWindow._assess`` does."""
+
+    _blank_process = WorkbookWindow._blank_process
+    _settled = WorkbookWindow._settled
 
     def __init__(self, path, worker, strip=""):
         self.path = path
+        self.process_record = ""   # F1: "broken" or "newer" when _blank_process could not read the record
         self.link = wb_link.Link(path)
         self.worker = worker
         self.strip = strip         # the strip's Output folder (W6: the fixtures leave the Box's blank, W6-PLAN §5)
@@ -1076,7 +1104,12 @@ class Desk:
         r = self.reading
         check(r.ok, f"read {os.path.basename(self.path)}: {r.error or 'ok'}")
         spec = r.spec
-        self.a = wb_assess.assess(spec, r.diagnostics, self.folder(spec), spec.box.part_template)
+        # F1 (D11 answered (B)): a blank Process resolved as the Workbook window resolves it, by the window's own
+        # _blank_process (the record beside the workbook, settled and dropped when another workbook's): a gearbox whose
+        # record's parts were built machined reads Machined, as it did before F1. Without it assess's default read every
+        # W9 master Printed, and a W9 section on one would have written every part printed.
+        self.a = wb_assess.assess(spec, r.diagnostics, self.folder(spec), spec.box.part_template,
+                                  blank_process=self._blank_process())
         for d in self.a.diagnostics:
             say(f"        {d.level:7} {d.message}")
         say(f"        {len(spec.shafts)} shafts · {len(spec.gears)} gears · {len(spec.meshes)} meshes; "
@@ -8395,7 +8428,75 @@ def main():
     return 0 if not FAILS else 1
 
 
+def self_check():
+    """The Desk's read of a blank Process, without SolidWorks (F1, D11 answered (B)): on RangeBox as W9's own code built
+    it (``tests/fixtures/printed``, its record put onto a scratch copy of its workbook), the Workbook window's reading:
+    a gearbox whose record's parts were built machined reads Machined with no part changed; the same with Printed typed
+    in a row labelled Process reads printed with every part's Backlash to change; with no record, a new gearbox, it
+    reads Printed. Before the Desk resolved the blank as the window does, the first read Printed with every part
+    changed, so a W9 section on a master built before F1 would have written every part printed."""
+    bad = []
+
+    def ok(cond, what):
+        print(("ok      " if cond else "FAIL    ") + what)
+        if not cond:
+            bad.append(what)
+
+    fixtures = os.path.join(REPO, "tests", "fixtures", "printed")
+    parts = ["Gear_m1.25_N29", "Gear_m1.25_N13", "Ring_m1.25_N55", "Dog_m1.25_N17", "Sleeve_m1.25_N17"]
+    try:
+        with open(os.path.join(fixtures, "RangeBox_W9_record.json"), encoding="utf-8") as handle:
+            snap = json.load(handle)
+
+        def desk_of(name, record=True, printed=False):
+            folder = os.path.join(OUT, name)
+            os.makedirs(folder)
+            path = os.path.join(folder, "RangeBox.xlsx")
+            shutil.copy2(os.path.join(fixtures, "RangeBox_W9.xlsx"), path)
+            if printed:
+                box = xlsx.read(path).sheet("Box")
+                row = next(r for r in range(2, 80) if box.cell(r, 1) is None or not box.cell(r, 1).text.strip())
+                xlsx.write_cells(path, {"Box": {f"A{row}": "Process", f"B{row}": "Printed"}})
+            if record:
+                rec = store.link_record_from_json(snap["record"])
+                rec.workbook = path
+                store.save_link_record(rec, store.link_record_path(path))
+            desk = Desk(path, None, strip=folder)
+            desk.read()
+            return desk
+
+        def changed(desk):
+            return [os.path.splitext(os.path.basename(p.path.replace("\\", "/")))[0]
+                    for p in (desk.update.changed_parts if desk.update is not None else [])]
+
+        def printed_jobs(desk):
+            return [j.stem for j in desk.a.parts.jobs if j.spec.is_printed() or j.stem.endswith("_P")]
+
+        d = desk_of("w9-blank")
+        ok(d.reading.spec.box.process == "" and d.a.spec.box.process == d.a.read.box.process == "machined"
+           and not printed_jobs(d) and changed(d) == [],
+           f"a gearbox W9 built, its Process blank (no row): the Desk reads it {d.a.spec.box.process!r}, gears planned "
+           f"printed {printed_jobs(d) or 'none'}, parts changed {changed(d) or 'none'}")
+        d = desk_of("w9-printed", printed=True)
+        ok(d.reading.spec.box.process == "printed" and d.a.spec.box.process == "printed" and changed(d) == parts,
+           f"the same with Printed typed in a row labelled Process: read {d.a.spec.box.process!r}, parts changed "
+           f"{changed(d)}")
+        d = desk_of("new", record=False)
+        ok(d.a.spec.box.process == "printed" and d.record is None,
+           f"the same workbook with no record beside it, a new gearbox: read {d.a.spec.box.process!r}")
+        ok(not FAILS, f"the Desk's own checks while reading: {FAILS or 'none failed'}")
+    except Exception as exc:  # noqa: BLE001 - a fault of the self-check is a failure, said
+        ok(False, f"the self-check raised {type(exc).__name__}: {exc}")
+        traceback.print_exc()
+    finally:
+        shutil.rmtree(_SCRATCH, ignore_errors=True)
+    print(f"done    {len(bad)} failed")
+    return 0 if not bad else 1
+
+
 if __name__ == "__main__":
+    if SELF_CHECK:
+        raise SystemExit(self_check())
     code = 1
     try:
         code = main()

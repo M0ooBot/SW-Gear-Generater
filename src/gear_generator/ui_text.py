@@ -17,7 +17,11 @@ from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 from .gears import pair as pairs, standards
 from .gears.base import Diagnostic
 from .gears.equations import literal
-from .spec import MODE_PAIR, RECIPE_ARCS, RECIPE_INVOLUTE, GearSpec, InputError, PairSpec, pair_stems
+from .gears.span import SpanReading
+from .printout import PrintPlan, PrintResult, Refusal
+from .spec import (BORE_ALLOWANCE_DEFAULT, BORE_ALLOWANCE_GLOBAL, MODE_PAIR, NOZZLE_DEFAULT, PRINTED_STEM_MARK,
+                   PROCESS_MACHINED, PROCESS_PRINTED, RECIPE_ARCS, RECIPE_INVOLUTE, GearSpec, InputError, PairSpec,
+                   pair_stems)
 
 RECIPE_WORDS = {RECIPE_INVOLUTE: "involute curve", RECIPE_ARCS: "arc flanks"}
 RECIPE_LABELS = {RECIPE_INVOLUTE: "Involute", RECIPE_ARCS: "Arcs"}
@@ -33,6 +37,15 @@ HAND_LABELS = {"right": "Right", "left": "Left"}
 # the Gear panel's readout still says the whole word.
 KIND_BUTTON_LABELS = {**KIND_LABELS, "herringbone": "Double"}
 SERIES_LABELS = {standards.SERIES_1: "Series 1", standards.SERIES_1_2: "1 + 2", standards.SERIES_ALL: "+ fine"}
+# F1 (PLAN-PRINTED §1.3): the form's Process row, and what it does to the Backlash field beside each gear. A printed
+# gear's blank Backlash is the smaller of 0.3 mm and 0.3 × module (§2.1); a machined gear's is 0.3 × module, as before.
+PROCESS_LABELS = {PROCESS_PRINTED: "Printed", PROCESS_MACHINED: "Machined"}
+NOZZLE_PLACEHOLDER = literal(NOZZLE_DEFAULT)
+NOZZLE_HINT = "the printer's line width"
+BACKLASH_PLACEHOLDERS = {PROCESS_MACHINED: "0.3 × module", PROCESS_PRINTED: "0.3 · printed"}
+BACKLASH_HINTS = {PROCESS_MACHINED: "ISO: 0.02–0.05 × m", PROCESS_PRINTED: "0.3 × m below m1"}
+# The derived rows' and the card's mark for a printed gear's blank Backlash: the third state beside typed and 0.3m.
+PRINTED_DEFAULT = "printed default"
 
 # What a readout says when the gear it stands for does not work out yet.
 CHECK_THE_FIELDS = "check the fields"
@@ -125,8 +138,8 @@ def derived_rows(g) -> List[Tuple[str, str]]:
             ("Virtual teeth", "∞ · a rack" if g.crown else _n(g.virtual_teeth, 2) + (" · a ring" if g.ring else "")),
             ("Toe scale", _n(g.toe_scale, 4)),
             ("Tooth at pitch", _n(g.section.s)),
-            ("Backlash", _n(g.section.backlash) + ("" if g.section.backlash_typed else " · 0.3m")),
-        ]
+            ("Backlash", _n(g.section.backlash) + _backlash_note(g.section)),
+        ] + bore_rows(g)
     ring = []
     if is_ring(g):
         ring = [
@@ -164,9 +177,17 @@ def derived_rows(g) -> List[Tuple[str, str]]:
         ("Space at pitch", _n(g.space)),
         ("Tooth at pitch", _n(g.s)),
         ("Tip thickness", _n(g.tip_thickness)),
-        ("Backlash", _n(g.backlash) + ("" if g.backlash_typed else " · 0.3m")),
+        ("Backlash", _n(g.backlash) + _backlash_note(g)),
         ("Fillet", _n(g.fillet) + ("" if g.fillet_typed else fillet_note)),
-    ]
+    ] + bore_rows(g)
+
+
+def _backlash_note(section) -> str:
+    """What a derived Backlash row says of where its value came from: nothing when typed, `` · printed default`` for
+    a printed gear's blank (F1, PLAN-PRINTED §2.1), `` · 0.3m`` for a machined gear's blank, as before."""
+    if section.backlash_typed:
+        return ""
+    return f" · {PRINTED_DEFAULT}" if getattr(section, "backlash_printed", False) else " · 0.3m"
 
 
 def warning_lines(diagnostics: Sequence[Diagnostic]) -> List[str]:
@@ -231,6 +252,8 @@ def candidate_row(candidate: "pairs.Candidate") -> Tuple[str, str, str, str]:
         errors.append("undercut")
     if candidate.clashes:
         errors.append(f"clash {_n(candidate.clash, 2)} mm")
+    if getattr(candidate, "mark", ""):
+        errors.append(candidate.mark)          # F1 (PLAN-PRINTED §2.5): a printed row too thin for the nozzle
     text = " · ".join(errors) if errors else "exact"
     if candidate.shifted:
         text = f"x {shift_text(candidate.shift_1)}/{shift_text(candidate.shift_2)} · {text}"
@@ -309,16 +332,17 @@ def link_headline(available: bool, snapshot: Optional[dict]) -> Tuple[str, str]:
     return f"{label} — {title}", "ok"
 
 
-def mode_note(mode: str, stems: Sequence[str], update_count: int = 0, document: str = "") -> str:
-    """What the primary button is about to do, in a sentence."""
+def mode_note(mode: str, stems: Sequence[str], update_count: int = 0, document: str = "", keeps: str = "") -> str:
+    """What the primary button is about to do, in a sentence. ``keeps`` (F3, :func:`build_keeps`): what a single
+    gear's Build keeps of the record the strip holds open, said after the file."""
     if update_count and document:
         noun = "variable" if update_count == 1 else "variables"
         return f"Update values will change {update_count} {noun} in {document}."
     if mode == MODE_PAIR and len(stems) >= 3:
         return f"Build will make {stems[0]}.SLDPRT, {stems[1]}.SLDPRT and {stems[2]}.SLDASM."
     if stems:
-        return f"Build will make {stems[0]}.SLDPRT."
-    return "Build will make a new part."
+        return f"Build will make {stems[0]}.SLDPRT{keeps}."
+    return f"Build will make a new part{keeps}."
 
 
 def manual_steps_line(steps: Iterable[str]) -> str:
@@ -455,8 +479,201 @@ _EXPLAINER_COPY: Dict[str, Tuple[str, str, str]] = {
 }
 
 
+# F1 (PLAN-PRINTED §2.1, §8): what Backlash is, for a printed gear, in place of the machined copy above. The first
+# sentence is the machined one's; the rest say what a blank means printed, that it is a starting value, and that a
+# slicer's own compensation does the same job.
+_PRINTED_BACKLASH_COPY = (
+    "How much each tooth is thinned at the pitch circle so the pair does not bind: the space grows by this and the "
+    "tooth shrinks by it, on both gears, so the play in the mesh is twice the number. Printed, blank uses 0.3 mm, or "
+    "0.3 × module below module 1: room for walls printed a little fat, and a starting value until your own prints "
+    "are measured. A slicer's X-Y compensation does the same job, so use one or the other, not both.")
+
+
+# ------------------------------------------------ F3: the bore as cut (PLAN-PRINTED §4.1, §4.2; F3-INTERFACES §5, §9)
+#
+# A printed bore is cut at Bore + Bore allowance (on the diameter), so Bore stays the shaft's size; Drive flat cuts a D
+# whose Flat is the shaft's size across its flat. The figures said here are the derived gear's (package A's
+# bore_allowance and bore_flat, on the section of a helical or bevel gear), so a placeholder, a row and a worked line say
+# the hole the plan cuts; where the figure came from (typed, as built, the default) is read off the spec as the strip
+# holds it, through spec.as_built while a record is open.
+
+DRIVE_LABELS = {"round": "Round", "flat": "Flat"}
+# The three fields' cards. Kept out of EXPLAINER_FIELDS (as the span's card is): the machined card pin iterates it.
+BORE_EXPLAINERS = ("bore_allowance", "drive", "flat")
+BORE_DIAGRAM = "bore"           # their cards borrow Bore's diagram (widgets has none of their own)
+BORE_ALLOWANCE_HINT = "added to Bore"
+FLAT_HINT = "your shaft across its flat"
+BORE_AS_CUT_LABEL = "Bore as cut"
+FLAT_AS_CUT_LABEL = "Flat as cut"
+
+
+def _bore_of(g) -> Tuple[float, float, Optional[float]]:
+    """``(bore, allowance, flat)`` of a derived gear as its plan cuts it, mm: the shaft's Bore (0 with none, and for a
+    ring, which has no bore), the allowance the hole is cut with, and the shaft's Flat for a D (None round). A helical or
+    bevel gear passes these through to its section."""
+    def number(name: str, default: float) -> float:
+        try:
+            return float(getattr(g, name, default) or 0.0)
+        except (TypeError, ValueError):
+            return default
+    if g is None:
+        return 0.0, 0.0, None
+    flat = getattr(g, "bore_flat", None)
+    return number("bore", 0.0), number("bore_allowance", 0.0), (float(flat) if flat is not None else None)
+
+
+def _signed(a: float) -> str:
+    """``+ 0.2`` or ``− 0.1``: an allowance added to a size."""
+    return f"{'−' if a < 0 else '+'} {_n(abs(a))}"
+
+
+def bore_rows(g) -> List[Tuple[str, str]]:
+    """The Derived panel's rows for the hole as cut (F3, §4.1): *Bore as cut* ``8.2 · 8 + 0.2`` (``8`` with no
+    allowance), and for a D *Flat as cut* ``7.2 · 7 + 0.2``, the hole across its flat. A printed gear with a bore always
+    shows its hole; a machined gear only with an allowance or a D, so a plain machined gear's rows are as before F3 (the
+    card pin, F3-0's decision 12). None with no bore, nor for a ring."""
+    bore, a, flat = _bore_of(g)
+    if bore <= 0 or (not a and flat is None and not getattr(g, "printed", False)):
+        return []
+    rows = [(BORE_AS_CUT_LABEL, _n(bore + a) + (f" · {_n(bore)} {_signed(a)}" if a else ""))]
+    if flat is not None:
+        rows.append((FLAT_AS_CUT_LABEL, _n(flat + a) + (f" · {_n(flat)} {_signed(a)}" if a else "")))
+    return rows
+
+
+def _allowance_source(spec: Optional[GearSpec]) -> str:
+    """Where a gear's allowance comes from: ``typed``, ``built`` (blank, a part on record: spec.as_built set it),
+    ``printed`` (blank, not on record, the printed default) or ``machined`` (blank, 0)."""
+    if spec is None:
+        return "machined"
+    if str(spec.bore_allowance).strip():
+        return "typed"
+    if str(spec.built_allowance).strip():
+        return "built"
+    return "printed" if spec.is_printed() else "machined"
+
+
+def bore_allowance_placeholder(spec: GearSpec, derived=None) -> str:
+    """The Bore allowance field's placeholder, what a blank means for this gear: ``0.2 · printed`` for a printed gear
+    not on record, ``0 · as built`` (or the figure) while the strip holds a record open, ``0`` machined. The figure is
+    the derived gear's when it works out, so it says what the plan cuts."""
+    source = _allowance_source(spec)
+    figure = _n(_bore_of(derived)[1]) if derived is not None else ""
+    if source == "built":
+        return f"{figure or literal(float(spec.built_allowance))} · as built" if _is_number(spec.built_allowance) \
+            else "as built"
+    if source == "printed" or (source == "typed" and spec.is_printed()):
+        return f"{figure or _n(BORE_ALLOWANCE_DEFAULT)} · printed"
+    return "0"
+
+
+def _is_number(text: str) -> bool:
+    try:
+        float(str(text).strip())
+        return True
+    except ValueError:
+        return False
+
+
+def _hole_words(bore: float, a: float, flat: Optional[float]) -> str:
+    """``a hole of 8.2 mm``; a D ``a D 8.2 mm across its round and 7.2 across its flat``."""
+    if flat is None:
+        return f"a hole of {_n(bore + a)} mm"
+    return f"a D {_n(bore + a)} mm across its round and {_n(flat + a)} across its flat"
+
+
+def _flat_from_axis(bore: float, a: float, flat: float) -> float:
+    """h = F − D / 2 + a / 2 (§4.2): the hole's flat's distance from the axis, mm."""
+    return flat - bore / 2.0 + a / 2.0
+
+
+_BORE_COPY: Dict[str, Tuple[str, str, str]] = {
+    "bore_allowance": (
+        "Bore allowance", "a",
+        f"Added to Bore when the hole is cut, on the diameter, so Bore stays your shaft's size and the wall moves by "
+        f"half of it. Blank: {_n(BORE_ALLOWANCE_DEFAULT)} mm for a printed gear not yet built (a starting value until "
+        f"your coupons give your printer's figure), 0 machined, and for a gear already built the allowance it was "
+        f"built with, whatever its Process is now. Clearing a typed allowance keeps the figure as built; to take the "
+        f"default, type it. Bore as cut, under Derived, shows which. Negative for a press fit. A slicer's X-Y hole "
+        f"compensation does the same job, so keep it at 0."),
+    "drive": (
+        "Drive", "",
+        "Round cuts a round hole. Flat cuts a D, for a shaft with a flat: type its size across the flat in Flat. The "
+        "flat is cut on the gear's +X side, square to its X axis and facing the middle of a tooth space (on a helical "
+        "gear at its section plane, one overrun behind the face; on a herringbone at its middle), the same in every "
+        "gear. The assembly does not model a shaft's flat: it turns each gear to mesh on its own, so gears that "
+        "share a D-shaft are phased by their flats in your machine and by their meshes in the assembly."),
+    "flat": (
+        "Flat", "F",
+        "Your shaft's size across its flat, from the flat to the opposite round side, as your calipers read it. The "
+        "hole's flat takes the same half allowance as its round. The flat must be at least 0.3 mm deep on the shaft "
+        "(Bore less Flat) and stay well clear of the axis."),
+}
+
+
+def bore_explainer(field: str, spec: Optional[GearSpec], derived) -> Tuple[str, str, str, str]:
+    """``(name, symbol, what it is, the worked line)`` for Bore allowance, Drive or Flat (F3; F3-INTERFACES §9).
+    ``spec`` is the gear as the strip holds it (through spec.as_built while a record is open), which says where a
+    blank allowance comes from; ``derived`` the gear it works out to, whose figures are the hole the plan cuts. Not
+    among :data:`EXPLAINER_FIELDS`, so no machined gear's card moves."""
+    try:
+        name, symbol, what = _BORE_COPY[field]
+    except KeyError:
+        raise ValueError(f"There is no bore explainer for a field called {field!r}; the fields with one are "
+                         f"{', '.join(BORE_EXPLAINERS)}.") from None
+    return name, symbol, what, _bore_worked(field, spec, derived)
+
+
+def _bore_worked(field: str, spec: Optional[GearSpec], g) -> str:
+    if g is None or spec is None:
+        return CHECK_THE_FIELDS
+    if is_ring(g):
+        return "a ring has no bore to give an allowance or a flat"
+    bore, a, flat = _bore_of(g)
+    if bore <= 0:
+        return {"bore_allowance": "no Bore → no hole, so the allowance is not used",
+                "drive": "no Bore → no hole to drive by",
+                "flat": "no Bore → no hole to give a flat"}[field]
+    hole = _hole_words(bore, a, flat)
+    if field == "bore_allowance":
+        source = _allowance_source(spec)
+        lead = {"typed": f"{_n(a)} mm",
+                "built": f"blank → {_n(a)} mm, as built",
+                "printed": f"blank → {_n(a)} mm, the printed default",
+                "machined": f"blank → {_n(a)} mm, machined"}[source]
+        return f"{lead} → {hole}"
+    if field == "drive":
+        if not spec.has_flat():
+            return f"round → {hole}"
+        if flat is None:
+            return "flat → type your shaft's size across its flat in Flat"
+        return f"flat → {hole}, its flat {_n(_flat_from_axis(bore, a, flat))} mm from the axis on +X"
+    if flat is None:
+        if not spec.has_flat():
+            return "Drive is round, so Flat is not used"
+        return "blank → type your shaft's size across its flat"
+    return (f"{_n(flat)} mm → the hole {_n(flat + a)} mm across its flat, {_n(_flat_from_axis(bore, a, flat))} from "
+            f"the axis · {_n(bore - flat)} mm deep on the shaft")
+
+
+def build_keeps(spec: GearSpec, derived, part: str) -> str:
+    """What the mode note adds while the strip holds a record open and Bore allowance is blank (the coordinator's ruling
+    on F3-0's decision 11: a Build then keeps the opened part's as-built allowance, as Build again… does by ruling 1):
+    `` with the bore allowance Coupon_C was built with, 0.2 mm, since Bore allowance is blank``, or `` with no bore
+    allowance, as Gear_m1.5_N25_P was built, since Bore allowance is blank``. ``""`` when nothing is to be said: no
+    record, a typed allowance, no bore, or a machined gear built with none (whose blank means 0 either way)."""
+    if derived is None or _allowance_source(spec) != "built" or is_ring(derived):
+        return ""
+    bore, a, _ = _bore_of(derived)
+    if bore <= 0 or (not a and not spec.is_printed()):
+        return ""
+    if a:
+        return f" with the bore allowance {part} was built with, {_n(a)} mm, since Bore allowance is blank"
+    return f" with no bore allowance, as {part} was built, since Bore allowance is blank"
+
+
 def explainer(field: str, derived, stem: str = "", pair: Optional[PairSpec] = None,
-              folder: str = "") -> Tuple[str, str, str, str]:
+              folder: str = "", printed: Optional[bool] = None) -> Tuple[str, str, str, str]:
     """``(name, symbol, what it is, the worked line)`` for one field of the form.
 
     ``derived`` is the :class:`spur.SpurDerived` of the gear the caret is in and
@@ -469,6 +686,11 @@ def explainer(field: str, derived, stem: str = "", pair: Optional[PairSpec] = No
 
     The sentences are fixed copy; the worked line is derived text, so the card
     is filled in again on every re-derive and not only when the caret moves.
+
+    F1: Backlash says what a blank means for a printed gear in place of the
+    machined copy. ``printed`` is the form's Process (the strip passes it, so
+    the card is right while the gear does not work out); ``None`` reads it off
+    ``derived``, and a gear that says nothing is machined, as in code.
     """
     try:
         name, symbol, what = _EXPLAINER_COPY[field]
@@ -477,6 +699,10 @@ def explainer(field: str, derived, stem: str = "", pair: Optional[PairSpec] = No
             f"There is no explainer for a field called {field!r}; the fields with one are "
             f"{', '.join(EXPLAINER_FIELDS)}."
         ) from None
+    if printed is None:
+        printed = bool(getattr(derived, "printed", False))
+    if field == "backlash" and printed:
+        what = _PRINTED_BACKLASH_COPY
     return name, symbol, what, _worked_line(field, derived, stem, pair, folder)
 
 
@@ -513,10 +739,20 @@ def _gear_worked(field: str, g, stem: str, folder: str) -> str:
     if field == "bore":
         if g.bore <= 0:
             return "blank → a solid disc, no bore feature"
-        return f"{_n(g.bore)} mm → rim {_n((g.df - g.bore) / 2)} mm to the root circle"
+        # F3 (§4.1): the rim is to the hole as cut; with no allowance that is the Bore, and the line is as before.
+        cut = _bore_of(g)[0] + _bore_of(g)[1]
+        if abs(cut - g.bore) < 1e-9:
+            return f"{_n(g.bore)} mm → rim {_n((g.df - g.bore) / 2)} mm to the root circle"
+        return f"{_n(g.bore)} mm, cut at {_n(cut)} → rim {_n((g.df - cut) / 2)} mm to the root circle"
     if field == "backlash":
         # The equations thin the tooth by j and widen the space by j on both
         # gears, so what a mesh actually has to play with is 2 j.
+        if getattr(g, "backlash_printed", False):
+            # F1 (PLAN-PRINTED §2.1): a printed gear's blank. On a bevel gear the allowance shrinks toward the
+            # small end with the tooth, and the toe governs, so the card gives the toe's figure too.
+            toe = f", {_n(g.backlash * g.toe_scale)} at the toe" if is_bevel(g) else ""
+            return (f"blank → {_n(g.backlash)} mm · {PRINTED_DEFAULT}{toe} · tooth {_n(g.s)} · space {_n(g.space)} · "
+                    f"play in the mesh {_n(2 * g.backlash)}")
         blank = "" if g.backlash_typed else "blank → "
         default = "" if g.backlash_typed else " (0.3 m)"
         return (f"{blank}{_n(g.backlash)} mm{default} · tooth {_n(g.s)} · space {_n(g.space)} · "
@@ -757,6 +993,60 @@ def workbook_counts(spec) -> str:
 def workbook_read_line(clock_text: str, open_in_excel: bool) -> str:
     """``read 14:02:31 · open in Excel`` — when the file was last read, and whether Excel holds it."""
     return f"read {clock_text}" + (" · open in Excel" if open_in_excel else "")
+
+
+PROCESS_AS_BUILT = "Machined, as built: type Printed beside Process on the Box sheet to print it"
+PROCESS_NO_ROW = " (add a row labelled Process)"
+PROCESS_TYPED_MACHINED = "Machined, as the Box sheet says: type Printed beside Process to print it"
+PROCESS_UNREAD = "Process does not read: the Checks panel says why"
+PROCESS_NOZZLE_UNREAD = "Printed; its Nozzle does not read: the Checks panel says why"
+# The F1 review's S5: a blank Process beside a record the window could not read is not read as built.
+PROCESS_RECORD_BROKEN, PROCESS_RECORD_NEWER = "broken", "newer"
+PROCESS_BLANK_BROKEN = ("Printed, as for a new gearbox: the record of what was built beside this workbook cannot be "
+                        "read, so a blank Process is not read as built")
+PROCESS_BLANK_NEWER = ("Not known: the record beside this workbook is from a newer Gear Generator, so a blank Process "
+                       "is not read as built here")
+
+
+def workbook_process_line(read_box, box, record: str = "") -> str:
+    """The Workbook panel's Process line, for every gearbox (F1, PLAN-PRINTED §6 and open point 3).
+
+    ``read_box`` is the Box as the workbook was read, before :func:`workbook.assess.assess` (its ``process`` is
+    ``""`` for a blank cell or no row, and ``process_cell`` is ``""`` when the sheet has no Process row); ``box`` is
+    the Box as assessed, its blank resolved by :func:`workbook.assess.blank_process` (D11, ruled (B)).
+
+    - printed, typed or a blank resolved so: ``Printed, 0.4 mm nozzle`` (the Box's Nozzle, 0.4 when blank);
+    - a blank resolved machined, as built: :data:`PROCESS_AS_BUILT`, with :data:`PROCESS_NO_ROW` when the sheet has no
+      Process row, since a workbook written before F1 has none;
+    - Machined typed: :data:`PROCESS_TYPED_MACHINED`;
+    - a word that is neither (the Box's check is an error at its cell, said in Checks): :data:`PROCESS_UNREAD`; a
+      printed Box whose Nozzle is not a number above zero: :data:`PROCESS_NOZZLE_UNREAD`;
+    - a blank beside a record the window could not read (``record``, the window's ``process_record``): one it cannot
+      read at all, :data:`PROCESS_BLANK_BROKEN` (Build then makes a new gearbox, printed), with the nozzle; one from a
+      newer app, :data:`PROCESS_BLANK_NEWER` (both buttons wait).
+    """
+    typed = str(getattr(read_box, "process", "") or "").strip().lower()
+    word = str(getattr(box, "process", "") or "").strip().lower()
+    if typed and typed not in (PROCESS_PRINTED, PROCESS_MACHINED):
+        return PROCESS_UNREAD
+    if not typed and record == PROCESS_RECORD_NEWER:
+        return PROCESS_BLANK_NEWER
+    if word == PROCESS_PRINTED:
+        nozzle = str(getattr(box, "nozzle", "") or "").strip()
+        try:
+            width = float(nozzle) if nozzle else NOZZLE_DEFAULT
+        except ValueError:
+            width = 0.0
+        if not (width > 0 and math.isfinite(width)):
+            return PROCESS_NOZZLE_UNREAD
+        if not typed and record == PROCESS_RECORD_BROKEN:
+            return f"{PROCESS_BLANK_BROKEN}; {_n(width)} mm nozzle"
+        return f"Printed, {_n(width)} mm nozzle"
+    if word != PROCESS_MACHINED:
+        return PROCESS_UNREAD
+    if typed:
+        return PROCESS_TYPED_MACHINED
+    return PROCESS_AS_BUILT + ("" if getattr(read_box, "process_cell", "") else PROCESS_NO_ROW)
 
 
 GEAR_STATE_BUILDS, GEAR_STATE_SHARES, GEAR_STATE_LATER, GEAR_STATE_ERROR = "builds", "shares", "later", "error"
@@ -1857,6 +2147,9 @@ def _kept_name(path: str, spec) -> str:
     except Exception:  # noqa: BLE001 - a spec that does not work out has no name to compare
         return ""
     held = re.sub(r"_r\d+$", "", _stem(path))
+    # F1 (D10): the _P a part built printed is named with is never added or taken away by an Update; said once for the
+    # gearbox (_process_names_kept), not here for each part, so only what else its name says is compared.
+    held, wanted = (s[:-len(PRINTED_STEM_MARK)] if s.endswith(PRINTED_STEM_MARK) else s for s in (held, wanted))
     if held == wanted:
         return ""
     for mark, word in (("N", "{} teeth"), ("m", "module {}")):
@@ -1865,6 +2158,77 @@ def _kept_name(path: str, spec) -> str:
             now_ = "now has" if mark == "N" else "is now"
             return f" (it {now_} {word.format(new.group(1))}; its file keeps its name)"
     return " (its file keeps its name, which no longer says what it holds)"
+
+
+def _recorded_printed(planned) -> Optional[bool]:
+    """Whether the record says the part held a printed gear's blank Backlash (True), a machined gear's (False), or
+    cannot say: no recorded globals (a record from before W9a), or a typed Backlash, which either Process keeps."""
+    from .gears import spur
+    recorded = dict(getattr(planned, "recorded", None) or ())
+    if "Backlash" not in recorded:
+        return None
+    held = "".join(str(recorded["Backlash"]).split())
+    if held == "".join(spur.printed_backlash_expression().split()):
+        return True
+    if held == "".join(spur.backlash_expression(_MachinedBlank()).split()):
+        return False
+    return None
+
+
+class _MachinedBlank:
+    """A section with a machined gear's blank Backlash, for :func:`spur.backlash_expression`'s text of it."""
+    backlash_typed = False
+    nozzle = None
+
+
+def _entry_printed(record, path: str) -> Optional[bool]:
+    """Whether the record taken at the press built the part at ``path`` printed; None with no such entry."""
+    from . import store
+    for entry in (record.current_parts() if record is not None else ()):
+        if store.same_path(entry.path, path):
+            return GearSpec.from_dict(dict(entry.spec or {})).is_printed()
+    return None
+
+
+def _process_names_kept(update, result, record=None) -> str:
+    """F1 (PLAN-PRINTED D10): once for the gearbox, when this Update changed the Process of default-named parts, so
+    that their file names no longer carry, or still carry, the _P a part built printed is named with. An Update never
+    renames a file, and Build again… makes parts named for their Process. ``""`` when there are none."""
+    import re
+    now: Dict[bool, List[str]] = {True: [], False: []}
+    for index, part in enumerate(getattr(result, "parts", ()) or ()):
+        planned = update.parts[index] if index < len(update.parts) else None
+        spec = getattr(planned, "spec", None)
+        if not part.changed or planned is None or spec is None or str(getattr(spec, "name", "")).strip():
+            continue
+        named = re.sub(r"_r\d+$", "", _stem(planned.path)).endswith(PRINTED_STEM_MARK)
+        # Only on the Update that changes the Process (the F1 review's S2): what the part was on record before this
+        # press, from its entry's spec, else its recorded Backlash global; with neither, its file's name stands in.
+        was = _entry_printed(record, planned.path)
+        if was is None:
+            was = _recorded_printed(planned)
+        before = named if was is None else was
+        if spec.is_printed() != named and spec.is_printed() != before:
+            now[spec.is_printed()].append(_stem(planned.path))
+    out = []
+    for printed, names in now.items():
+        if not names:
+            continue
+        what = "printed" if printed else "machined"
+        if len(names) == 1:
+            subject = f"{names[0]}, now {what}, keeps its file name"
+            parts = "a new part"
+        else:
+            subject = f"The {len(names)} parts now {what} keep their file names"
+            parts = "new parts"
+        if printed:
+            out.append(f"{subject}, without the _P a part built printed is named with: Update SolidWorks never renames "
+                       f"a file, and Build again… makes {parts} named with _P if you want the mark.")
+        else:
+            out.append(f"{subject}, with the _P {'it was' if len(names) == 1 else 'they were'} built printed with: "
+                       f"Update SolidWorks never renames a file, and Build again… makes {parts} named without it if "
+                       "you want.")
+    return " ".join(out)
 
 
 def _layout_shafts(names: Sequence[str]) -> List[str]:
@@ -2133,6 +2497,9 @@ def _gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshe
     # W9a: what it did with and found of the user's work, after the assembly's rebuild laid to that work alone.
     after = after + _rebuild_from_user(update, result) + _user_after(update, result)
     after = after + in_place_after(update, result)                   # W9c: the modes' consequences for the user
+    names_kept = _process_names_kept(update, result, record)
+    if names_kept:
+        after = after + [names_kept]                                 # F1 (D10): once for the gearbox
     if leftovers_sentence(update):
         after = after + [leftovers_sentence(update)]                 # W9c: the app's leftovers, said as its own
 
@@ -2517,7 +2884,8 @@ def _unsaved_line(paths: Sequence[str], update_puts_back: bool = False, in_error
 def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=None, update=None,
                     error: str = "", folder: str = "", folder_exists: bool = True, building: bool = False,
                     updating: bool = False, progress=None, note=None, results_due: bool = False,
-                    digest: str = "", positions_per_configuration: Optional[bool] = None) -> Footer:
+                    digest: str = "", positions_per_configuration: Optional[bool] = None,
+                    printing: bool = False) -> Footer:
     """The footer for every state of the window (design/UI-DESIGN.md §9's table): its sentence, colour, buttons.
 
     ``assessment`` is the last good read's ``workbook.assess.Assessment``
@@ -2564,6 +2932,8 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
     the footer never invites a retry of an unchanged workbook). ``""``, as
     every W4 caller passes, never matches.
 
+    F2 (PLAN-PRINTED §3.1.3): ``printing`` while a Print files job runs: :data:`PRINTING`, both buttons held.
+
     W8 (W8-INTERFACES §9.12): ``positions_per_configuration`` is the running SolidWorks' answer as the last job's
     result carried it (None after a restart: neither claim is made), for the record line of a gearbox with modes,
     which also reads the workbook's Modes rows now (``assessment.spec.modes``) to say a reorder.
@@ -2593,6 +2963,8 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
         return Footer(text, ok, action, BUILD_LABELS[action], build, action != BUILD_AGAIN, on_record,
                       update_on and on_record, has_assembly)
 
+    if printing:                                  # F2: Print files' job, which holds both buttons as a build does
+        return footer(PRINTING, True)
     if building or updating:
         return footer(progress_text(progress, updating=updating), True)
     if error:
@@ -4852,7 +5224,12 @@ def _value_under(update, value) -> Tuple[str, str, str]:
     was, was_blank = _expression_words(value.name, old, value.was)
     now, _ = _expression_words(value.name, new, value.now)
     how = ""
-    if value.cell and (was_blank or value.was):
+    if value.cell and value.name == BORE_ALLOWANCE_GLOBAL and (was_blank or value.was):
+        # F3 (§4.1.1): a blank Bore allowance is the figure the part holds, and after this Update the part holds the
+        # new one, so clearing the cell would keep that, not have the old back; and whether the cell was blank or typed
+        # before is not known here. Typing the figure is the way back either way: never "clear … again", nor "again".
+        how = f"type {was} in {value.cell}"
+    elif value.cell and (was_blank or value.was):
         how = f"clear {value.cell} again" if was_blank else f"type {was} in {value.cell} again"
     return was, now, how
 
@@ -6281,3 +6658,694 @@ def carry_unsaid(again, result, exc: BaseException) -> str:
     unsaved = bool(getattr(getattr(result, "carry", None), "unsaved", False))
     return (f"What was carried into {name} could not be said ({said})"
             + ("; it holds it unsaved: save it in SolidWorks to keep it." if unsaved else "."))
+
+
+# -------------------------------------------------- F2: the span over k teeth and Print files (PLAN-PRINTED §3.0, §3.1)
+# Package C's words (docs/notes-printed/F2-INTERFACES.md §6): every sentence a user reads of the span over k teeth and of
+# Print files. Package A's gears.span hands over a SpanReading and package B's printout a Refusal (a code and its
+# detail), a PrintPlan and a PrintResult; nothing here decides what is refused or measured, only how it is said.
+
+SPAN_LABEL_ANY = "Span over k teeth"
+MEASURED_LABEL = "Measured"
+SPAN_WITHHELD = {
+    "arcs": "not one figure on arcs; choose Involute to measure",
+    "no_contact": "no span: no k has both jaws on the involute",
+}
+MEASURED_NOT_A_NUMBER = "Measured: type the calipers' reading in mm, a number such as 11.25."
+
+
+def span_label(reading: "SpanReading") -> str:
+    """*Span over 3 teeth* for a figure, *Span over k teeth* where none is given."""
+    return f"Span over {reading.k} teeth" if reading.kind == "span" and reading.k else SPAN_LABEL_ANY
+
+
+def span_withheld(reading: "SpanReading") -> str:
+    """Why a reading gives no figure, in the row's words; "" for a figure or for no row at all ("none")."""
+    if reading.kind == "narrow_face":
+        return f"face too narrow to measure: it needs {reading.needed_face_mm:.1f} mm"
+    return SPAN_WITHHELD.get(reading.kind, "")
+
+
+def measured_line(reading: "SpanReading", measured: float, alpha_n: float, module: float) -> str:
+    """What a calipers' reading of the span tells the user (§3.0), worded from package A's ``gears.span.measured`` (the
+    coordinator's ruling: the arithmetic is written once, there; this does no sums of its own): what the printer adds
+    to each flank, square to it; the backlash a gear that keeps 0.04 mm of play a flank, with the gear's own normal
+    pressure angle (degrees), and that it is the least proposed when A holds it at its floor; and, when it passes
+    0.3 × module, that this is more than a gear of this module is given today, which is the user's to decide (U4).
+    "" when there is nothing to work out (no figure to measure against)."""
+    from .gears.span import BACKLASH_FLOOR_MM, KEPT_PLAY_MM, measured as worked_out
+    told = worked_out(reading, measured, alpha_n, module)
+    if told is None:
+        return ""
+    e = told.flank_mm
+    if round(e, 3) == 0:
+        lead = "Your printer adds nothing to a flank"
+    elif e > 0:
+        lead = f"Your printer adds {_n(e)} mm a flank"
+    else:
+        lead = f"Your printer takes {_n(-e)} mm off a flank"
+    play = _n(KEPT_PLAY_MM)
+    if told.floored:
+        said = (f"{lead}: a backlash of {_n(BACKLASH_FLOOR_MM)} mm a gear, the least proposed ({play} mm of play a "
+                "flank alone would ask less).")
+    else:
+        said = f"{lead}: a backlash of {_n(told.backlash_mm)} mm a gear keeps {play} mm of play a flank."
+    if told.over_default:
+        # The coordinator's ruling on F2-REVIEW M2: A flags a backlash above this gear's printed default (the smaller of
+        # 0.3 mm and 0.3 × module, Measured.default_mm), the figure named here.
+        said += (f" That is more than the {_n(told.default_mm)} mm a printed gear of this module is given today: "
+                 "whether it should take more is yours to decide (README: Calibrating your printer, step 6).")
+    return said
+
+
+def span_rows(reading: "SpanReading", measured: Optional[float], alpha_n: float,
+              module: float) -> List[Tuple[str, str]]:
+    """The Derived panel's span row and, under it, the Measured entry's line (§3.0): ``[(label, value), ...]``.
+
+    - ``"span"``: ``("Span over 3 teeth", "11.209")``, the figure the calipers read square to the teeth (W_n on a
+      helical gear), then, when a reading is typed (``measured``), ``("Measured", <the line>)``.
+    - ``"arcs"``, ``"narrow_face"``, ``"no_contact"``: ``("Span over k teeth", <why no figure>)``; a reading typed
+      says nothing then.
+    - ``"none"`` (a machined gear, a ring, a sleeve, a bevel gear): ``[]``, no row at all.
+    """
+    if reading.kind == "span":
+        rows = [(span_label(reading), _n(reading.w_mm))]
+        if measured is not None:
+            rows.append((MEASURED_LABEL, measured_line(reading, measured, alpha_n, module)))
+        return rows
+    withheld = span_withheld(reading)
+    return [(SPAN_LABEL_ANY, withheld)] if withheld else []
+
+
+# The span's card: the Measured entry's (the strip's Derived panel), kept out of EXPLAINER_FIELDS so that no machined
+# gear's card moves (tests/test_printed_rule.py's CARD pins every field of that list).
+SPAN_CARD_TITLE = "Span over k teeth"
+SPAN_CARD_SYMBOL = "W"
+SPAN_CARD_COPY = (
+    "The distance across k teeth between two flat caliper jaws, each on the outside flank of an end tooth. On an "
+    "involute gear it reads the same wherever the jaws touch the flanks, so it is the one tooth size calipers measure "
+    "well. Hold the jaws square to the axis on a spur gear and tilted with the teeth on a helical one, at mid-face, "
+    "and take the smallest steady reading. The figure is the gear as drawn, backlash included: type your reading in "
+    "Measured to see what your printer adds to each flank.")
+
+
+def span_explainer(reading: "SpanReading") -> Tuple[str, str, str, str]:
+    """``(name, symbol, what it is, the worked line)`` of the span's card, as :func:`explainer` gives a field's: the
+    worked line *k 3 · W 11.209 mm · jaws touch at Ø 30.338 mm*, a helical gear's *W 15.844 mm across the teeth
+    (16.732 round the gear)*, or why there is no figure."""
+    if reading.kind == "span":
+        helical = abs(reading.w_t_mm - reading.w_mm) > 1e-9
+        across = f" across the teeth ({_n(reading.w_t_mm)} round the gear)" if helical else ""
+        worked = f"k {reading.k} · W {_n(reading.w_mm)} mm{across} · jaws touch at Ø {_n(reading.contact_d)} mm"
+    else:
+        worked = span_withheld(reading) or "no span on this gear"
+    return SPAN_CARD_TITLE, SPAN_CARD_SYMBOL, SPAN_CARD_COPY, worked
+
+
+# -- Print files: the sentences for B's codes (F2-INTERFACES §2.3) ----------------------------------------------------
+
+PRINT_REASONS = {
+    "FRAME": "the file is cut short or is not a STEP file",
+    "SCHEMA": "it is written in a STEP schema other than AP203, AP214 or AP242 (Tools > Options > Export sets it)",
+    "SOLIDS": "it does not hold exactly one solid",
+    "OPEN_SHELL": "it holds an open surface",
+    "SURFACE_MODEL": "it holds surfaces, not a solid",
+    "UNIT": "its length unit cannot be read",
+    "EXTENT": "its outer diameter or face width is not the gear's (by more than 0.01 mm)",
+}
+PRINTING = "Print files is writing STEP files from SolidWorks…"
+PRINT_WAITS_FOR_STRIP = "The strip is busy in SolidWorks; press Print files when it has finished."
+PRINT_WAITS_FOR_WORKBOOK = "A Workbook window is busy in SolidWorks; press Print files when it has finished."
+EXPORT_WAITS_FOR_PRINT = "Print files is running in SolidWorks; export when it has finished."
+PRINT_WAITS_FOR_UNOWNED = ("A job from a Workbook window that was closed while SolidWorks had not answered is still "
+                           "running in SolidWorks; press Print files when it has finished.")
+PRINT_WAITS_FOR_RECALC = ("Print files wrote nothing: Export wrote cells that formulas in the workbook may depend on; "
+                          "open and save it in Excel first, so what is built can be compared with what it says.")
+PRINT_WAITS_FOR_READ = "Print files wrote nothing: the workbook does not read as it is now; the footer says why."
+PRINT_CLOSES_WHEN_DONE = ("This window closes once Print files has finished and its print list is written; it stays "
+                          "open if something needs saying.")
+PRINT_CLOSE_ANYWAY = ("SolidWorks has not answered yet: Print files is still running there, perhaps held up by a "
+                      "dialog open in SolidWorks. Close this window anyway? Its print list will not be written, so do "
+                      "not print what it leaves in its folder; nothing will be overwritten.")
+
+
+def _pr_verb(items: Sequence[str], one: str, many: str) -> str:
+    return one if len(items) == 1 else many
+
+
+def _pr_them(items: Sequence[str]) -> str:
+    return "it" if len(items) == 1 else "them"
+
+
+def _year_and_revision(year: str, revision: str) -> str:
+    year, revision = str(year or "").strip(), str(revision or "").strip()
+    if year and revision:
+        return f"{year} ({revision})"
+    return year or revision
+
+
+def _print_file(refusal: "Refusal") -> str:
+    from .printout import STEP_SUFFIX
+    detail = refusal.detail or {}
+    if detail.get("file"):
+        return _file(str(detail["file"]))
+    return (refusal.parts[0] + STEP_SUFFIX) if refusal.parts else "a file"
+
+
+def print_refusal(refusal: "Refusal") -> str:
+    """The sentence for a :class:`printout.Refusal`, B's code and detail (F2-INTERFACES §2.3), one per code. The
+    planning refusals and the job's refusals before any file say *Print files wrote nothing*; the gate says what it
+    waits for; SOLIDWORKS_REFUSED and FILE_CHECK, which come after files are written, say *Print files stopped* (what
+    was written and its list are :func:`print_result`'s to say). Parts are the stems as B gives them, joined as
+    names are everywhere here."""
+    from . import printout as po
+    code, parts, detail = refusal.code, list(refusal.parts), dict(refusal.detail or {})
+    named = _and(parts)
+    if code == po.GATE_COPY:
+        return "Print files waits until writing a STEP file is measured on this SolidWorks; nothing was written."
+    if code == po.GATE:
+        if detail.get("planned_year") or detail.get("planned_revision"):
+            then = _year_and_revision(detail.get("planned_year", ""), detail.get("planned_revision", ""))
+            now = _year_and_revision(detail.get("year", ""), detail.get("revision", "")) or "none connected"
+            return (f"SolidWorks changed since Print files was pressed ({then} then, {now} now): press it again. "
+                    "Nothing was written.")
+        if not (detail.get("year") or detail.get("revision")):
+            return "Print files needs SolidWorks running and connected; nothing was written."
+        on = _year_and_revision(detail.get("year", ""), detail.get("revision", ""))
+        return f"Print files waits until writing a STEP file is measured on SolidWorks {on}; nothing was written."
+    if code == po.UNSAVED_MARK:
+        return (f"Print files wrote nothing: {named} {_pr_verb(parts, 'has', 'have')} changes from Update SolidWorks "
+                f"that are not saved; save {_pr_them(parts)} in SolidWorks, then print.")
+    if code == getattr(po, "NEW_REVISION", "NEW_REVISION"):
+        # F2-REVIEW M1: the Update plan needs a new revision, so Update SolidWorks is never run; Build again… is the way.
+        return (f"Print files wrote nothing: the workbook's changes to {named} need a new revision, which Update "
+                "SolidWorks cannot make; press Build again…, then print the new revision.")
+    if code == getattr(po, "NO_FOLDER", "NO_FOLDER"):
+        folder = str(detail.get("folder", "") or "")
+        if not folder:
+            return "Print files wrote nothing: choose an output folder; it writes into a print folder there."
+        return (f"Print files wrote nothing: the output folder {short_path(folder, 48)} does not exist; make it, or "
+                "choose another, then print.")
+    if code == po.MISMATCHED_MARK:
+        return (f"Print files wrote nothing: {named} no longer {_pr_verb(parts, 'holds', 'hold')} what the record says; "
+                "press Update SolidWorks, then print.")
+    if code == po.CHANGES_ON_UPDATE:
+        new = [p for p in parts if detail.get(p) == "new part"]
+        values = [p for p in parts if p not in new]
+        if values and new:
+            what = f"change the values in {_and(values)} (and make {_and(new)} new)"
+        elif new:
+            what = f"make {_and(new)} new"
+        else:
+            what = f"change the values in {_and(values)}"
+        then = "press Update SolidWorks and save, then print" if values else "press Update SolidWorks, then print"
+        return f"Print files wrote nothing: Update SolidWorks would {what}; {then}."
+    if code == po.NO_PART:
+        gone = [p for p in parts if detail.get(p) == "not on disk"]
+        none = [p for p in parts if p not in gone]
+        said = []
+        if none:
+            said.append(f"{_and(none)} {_pr_verb(none, 'has', 'have')} no part yet")
+        if gone:
+            said.append(f"{_and(gone)} {_pr_verb(gone, 'is', 'are')} not on disk")
+        return f"Print files wrote nothing: {', and '.join(said)}; build {_pr_them(parts)} first, then print."
+    if code == po.WORKBOOK_ERROR:
+        # B's WORKBOOK_ERROR covers an error, a provisional read, fixes chosen and not exported, and an Update that
+        # cannot say what it would change: each is said in the footer, so the sentence points there.
+        return ("Print files wrote nothing: the workbook as it stands cannot be compared with what is built; the footer "
+                "says why.")
+    if code == po.FOREIGN_RECORD:
+        return ("Print files wrote nothing: the record beside this workbook is another workbook's, so nothing built "
+                "is this workbook's to print yet; Build makes its own.")
+    if code == po.NO_RECORD:
+        who = _file(parts[0]) if parts else "the active part"
+        if detail.get("record") == "unreadable":
+            return (f"Print files prints a part Gear Generator built: the .gear.json beside {who} does not read, so "
+                    "nothing was written.")
+        return f"Print files prints a part Gear Generator built: {who} has no .gear.json beside it, so nothing was written."
+    if code == po.NOT_A_PART:
+        what = f", and {_file(parts[0])} is not a part" if parts else ""
+        return (f"Print files prints the part active in SolidWorks{what}: make a gear part active there; nothing was "
+                "written.")
+    if code == po.MODIFIED:
+        return (f"Print files wrote nothing: {named} {_pr_verb(parts, 'is', 'are')} changed in SolidWorks and not saved; "
+                f"save {_pr_them(parts)}, or close {_pr_them(parts)} without saving, then print.")
+    if code == po.GLOBALS_DIFFER:
+        stem = parts[0] if parts else "the part"
+        return (f'Print files wrote nothing: in {stem}, "{detail.get("name", "")}" is {detail.get("live", "")} where '
+                f'its record says {detail.get("recorded", "")}; press Update values (Update SolidWorks in the Workbook '
+                "window), or put it back, then print.")
+    if code == po.FEATURE_IN_ERROR:
+        said, every = [], []
+        for stem in parts:
+            features = [f for f in str(detail.get(stem, "")).split(", ") if f]
+            every += features or ["a feature"]
+            said.append(f"in {stem}, {_and(features) or 'a feature'} {_pr_verb(features or ['x'], 'is', 'are')} in "
+                        "error in SolidWorks")
+        return f"Print files wrote nothing: {'; '.join(said)}; fix {_pr_them(every)} there, then print."
+    if code == po.COMPONENT_ONLY:
+        inside: Dict[str, List[str]] = {}
+        for stem in parts:
+            inside.setdefault(_stem(str(detail.get(stem, ""))), []).append(stem)
+        said, ways = [], []
+        for assembly, stems in inside.items():
+            if assembly:
+                said.append(f"{_and(stems)} {_pr_verb(stems, 'is', 'are')} open only inside {assembly}")
+                ways.append("close the assembly or open the part")
+            else:
+                said.append(f"{_and(stems)} {_pr_verb(stems, 'is', 'are')} open in SolidWorks but not as the active "
+                            "document")
+                # Only one document is active at a time, so several such parts can only be closed.
+                ways.append("make it active, or close it" if len(stems) == 1 else "close them")
+        return f"Print files wrote nothing: {'; '.join(said)}; {' or '.join(dict.fromkeys(ways))}, then print."
+    if code == getattr(po, "LIGHTWEIGHT", "LIGHTWEIGHT"):
+        # B's job cannot tell a lightweight or suppressed component from a part simply closed while an assembly is open
+        # (F2-DEMONSTRATION-REVIEW §6.3), so the sentence says only what holds in every case: the part is not open where
+        # Print files can reach it, and it may be any of the three; opening the part itself clears each.
+        inside = {}
+        for stem in parts:
+            inside.setdefault(_stem(str(detail.get(stem, ""))), []).append(stem)
+        said = []
+        for assembly, stems in inside.items():
+            opened = f"{assembly} is open" if assembly else "an assembly is open"
+            one = len(stems) == 1
+            what = "a lightweight or suppressed component" if one else "lightweight or suppressed components"
+            said.append(f"{_and(stems)} {'is' if one else 'are'} not open where Print files can reach "
+                        f"{'it' if one else 'them'} while {opened}: {'it' if one else 'they'} may be {what} of it, "
+                        "or simply closed")
+        every = [s for stems in inside.values() for s in stems]
+        itself = "the part itself" if len(every) == 1 else "the parts themselves"
+        return (f"Print files wrote nothing: {'; '.join(said)}; resolve {_pr_them(every)} there, or open {itself}, "
+                "then print again.")
+    if code == po.SOLIDWORKS_REFUSED:
+        name = _print_file(refusal)
+        if detail.get("said"):
+            return f"Print files stopped: SolidWorks would not write {name}: {_sentence(str(detail['said']))}"
+        return (f"Print files stopped: SolidWorks would not write {name} (errors {detail.get('errors', '?')}, "
+                f"warnings {detail.get('warnings', '?')}).")
+    if code == po.FILE_CHECK:
+        reason = PRINT_REASONS.get(str(detail.get("reason", "")), "it did not pass the app's check")
+        return f"Print files stopped: {_print_file(refusal)} is not fit to print: {reason}."
+    return f"Print files wrote nothing ({code})."
+
+
+def print_result(result: "PrintResult") -> str:
+    """The status after a press's job: the files written and the folder, or the refusal; then a feature SolidWorks
+    warns about (written as built), a document the job left marked changed in SolidWorks, and the active document
+    not put back, each said. After a stop that left files (``result.folder`` not "") it says where they are and not
+    to print them. Whether the print list is claimed follows what ``printout.with_list`` answered (F2-REVIEW S2): *and
+    its print list* only with ``list_path``, the failure said with ``list_error``, so the status is composed after the
+    write and never claims a list that is not there."""
+    said: List[str] = []
+    if result.refusal is not None or result.failed:
+        refusal = result.refusal
+        if refusal is None:                       # a failed file B gave no refusal for: said as its check
+            from .printout import FILE_CHECK, Refusal
+            file_, reason = result.failed[0]
+            refusal = Refusal(FILE_CHECK, (_stem_of_print(file_),), {"file": file_, "reason": reason})
+        said.append(print_refusal(refusal))
+        if result.folder:
+            where = short_path(result.folder, 64)
+            if getattr(result, "list_path", ""):
+                said.append(f"What was written is in {where}, and its print list says not to print this set.")
+            elif getattr(result, "list_error", ""):
+                said.append(f"What was written is in {where}, but its print list could not be written "
+                            f"({result.list_error}), so nothing there says not to print it: do not print this set.")
+            else:
+                said.append(f"What was written is in {where}; do not print this set.")
+    else:
+        files = [f for _, f in result.written]
+        where = short_path(result.folder, 64) if result.folder else "the print folder"
+        what = _file(files[0]) if len(files) == 1 else f"{len(files)} STEP files"
+        if getattr(result, "list_path", ""):
+            said.append(f"Print files wrote {what} and {'its' if len(files) == 1 else 'their'} print list in {where}.")
+        elif getattr(result, "list_error", ""):
+            said.append(f"Print files wrote {what} in {where}, but the print list could not be written "
+                        f"({result.list_error}), so nothing in that folder says what each file is: press Print files "
+                        "again for a set with its list.")
+        else:
+            said.append(f"Print files wrote {what} in {where}.")
+    for path, features in result.warnings:
+        names = list(features)
+        said.append(f"SolidWorks warns about {_and(names)} in {_stem(path)}; "
+                    f"{'it was' if len(names) == 1 else 'they were'} written as SolidWorks built "
+                    f"{'it' if len(names) == 1 else 'them'}.")
+    if result.flags_turned_on:
+        names = [_file(p) for p in result.flags_turned_on]
+        said.append(f"SolidWorks now marks {_and(names)} as changed since Print files ran, and nothing was saved: "
+                    f"close {_pr_them(names)} without saving to leave {'its file' if len(names) == 1 else 'their files'} "
+                    "as before.")
+    if not result.active_restored:
+        said.append("The document you had active could not be made active again.")
+    # Package B's facts beyond the interface's (printout.FACT_CLOSE, FACT_FLAGS; the coordinator's to rule): a window
+    # the job opened and could not close, and save flags it could not read again at the end.
+    for key, value in (result.facts or {}).items():
+        name, _, what = str(key).rpartition("|")
+        if what == "close" and str(value).startswith("failed"):
+            said.append(f"Print files opened {_file(name)} and could not close it: close it in SolidWorks without "
+                        "saving.")
+        elif what == "flags" and str(value).startswith("unread"):
+            said.append("Whether Print files left any document marked as changed in SolidWorks could not be read; "
+                        "nothing was saved.")
+    return " ".join(said)
+
+
+def _stem_of_print(name: str) -> str:
+    from .printout import STEP_SUFFIX
+    base = _file(name)
+    return base[:-len(STEP_SUFFIX)] if base.lower().endswith(STEP_SUFFIX) else base
+
+
+def print_job_failed(error: BaseException) -> str:
+    """The job raised (``print_parts`` turns what it can into a result, so this is the connection failing, or worse)."""
+    from .swcom import SolidWorksError
+    if isinstance(error, SolidWorksError):
+        return f"Print files stopped: {_sentence(str(error))}"
+    return f"Print files stopped — {type(error).__name__}: {error}"
+
+
+def print_collect_failed(error: BaseException) -> str:
+    """The job answered, but what it did could not be said (or its list written)."""
+    return f"What Print files did could not be said — {type(error).__name__}: {error}"
+
+
+def print_unreachable(reason: str) -> str:
+    """No SolidWorks worker: nothing was asked of SolidWorks."""
+    return f"SolidWorks cannot be reached from here, so Print files wrote nothing. {reason}".strip()
+
+
+def print_bar_line(plan: "Optional[PrintPlan]") -> str:
+    """The form's SolidWorks bar line for Print files, from the form's own planning read (``printout.form_print``):
+    *Print files will write Gear_m1.5_N20_P.step from the active part.* when the plan has one part and no refusal;
+    "" otherwise (a refusal is said when the button is pressed)."""
+    from .printout import STEP_SUFFIX
+    if plan is None or plan.refusal is not None or len(plan.parts) != 1:
+        return ""
+    return f"Print files will write {plan.parts[0].stem}{STEP_SUFFIX} from the active part."
+
+
+# -- the print list (§3.1.3) ------------------------------------------------------------------------------------------
+
+PRINT_SETTINGS = (
+    "Settings for every part above (Bambu Studio's names, not checked against your version: if a name differs, the "
+    "setting described is the one meant):",
+    "- Lay each part flat on the bed, on the face it was built from.",
+    "- Layer height 0.2 mm; Wall loops 5; Sparse infill density 35 % or more.",
+    "- Elephant foot compensation 0.15 mm, so the first layer's squish is taken off.",
+    "- X-Y hole compensation 0 and X-Y contour compensation 0: a printed part's backlash already allows for walls "
+    "printed a little fat.",
+    "- Seam position Aligned; measure each print away from the tooth the seam is on.",
+    "- On import, keep Bambu Studio's mesh precision at its default: a coarser mesh makes a gear measure small.",
+    "- No brim, no supports; your usual PLA filament profile.",
+    "- Grease the running teeth.",
+    "",
+    "To measure a span: zero the calipers, lay the flat outside jaws across the teeth it names at mid-face, close "
+    "them with the thumb roller, and take the smallest steady reading at three places round the gear.",
+)
+
+
+def _print_backlash(spec) -> str:
+    """The part's backlash as the list gives it: *0.3 mm, printed default*, *0.45 mm (0.3 × module)*, or a typed
+    value alone."""
+    from .gears import kind_for
+    try:
+        g = kind_for(spec).derive(spec)
+        section = g.section if is_bevel(g) else g
+        value = _n(section.backlash)
+        typed, printed = section.backlash_typed, getattr(section, "backlash_printed", False)
+    except Exception:  # noqa: BLE001 - a part on record that no longer derives: its typed value, or blank
+        return f"{spec.backlash} mm" if str(spec.backlash).strip() else "blank"
+    if typed:
+        return f"{value} mm"
+    if printed:
+        return f"{value} mm, printed default"
+    return f"{value} mm (0.3 × module)"
+
+
+def _print_span_line(part) -> str:
+    """A part's span line in the list (§3.0, E1, E4)."""
+    from .spec import KIND_BEVEL, TEETH_INTERNAL
+    spec, reading = part.spec, part.span
+    if not spec.is_printed():
+        return "Machined: its backlash is a cutter's, not a printer's; no span."
+    if reading.kind == "span":
+        if abs(reading.w_t_mm - reading.w_mm) > 1e-9:
+            return (f"Span over {reading.k} teeth: {_n(reading.w_mm)} mm across the teeth (the calipers tilted with "
+                    "them, at mid-face).")
+        return f"Span over {reading.k} teeth: {_n(reading.w_mm)} mm (the calipers square to the axis, at mid-face)."
+    if reading.kind == "arcs":
+        return "Span: not one figure, since it is drawn with arcs; choose Involute to measure."
+    if reading.kind == "narrow_face":
+        return f"Span: the face is too narrow to measure; it needs {reading.needed_face_mm:.1f} mm."
+    if reading.kind == "no_contact":
+        return "No span: no k has both jaws on the involute."
+    if spec.kind == KIND_BEVEL:
+        return "No span: a bevel tooth is not one size along its face."
+    if spec.kind == "sleeve" or spec.teeth_side == TEETH_INTERNAL:
+        return "No span: internal teeth are measured over pins, not jaws."
+    return "No span worked out for this part."
+
+
+def _print_bore(part) -> str:
+    """The list's bore (F3, §4.1.1; F3-INTERFACES §7): the hole as built, from package B's printout.bore_figures, so a
+    part with no allowance and a round bore reads as before F3, *bore 10 mm*, Bore as recorded; *bore 8 mm + 0.2 mm
+    allowance (8.2 mm as cut)* for one cut with one; and a D adds *, D-flat 7 mm* (*(7.2 mm as cut)* with an
+    allowance)."""
+    spec = part.spec
+    if not str(spec.bore).strip():
+        return "no bore"
+    text = f"bore {spec.bore} mm"
+    from .printout import bore_figures
+    try:
+        figures = bore_figures(part)
+    except Exception:  # noqa: BLE001 - B's figures should never raise; the line then says the Bore as recorded
+        return text
+    a, flat = figures.allowance, figures.flat
+    if a:
+        text += f" {_signed(a)} mm allowance ({_n(figures.bore + a)} mm as cut)"
+    if flat is not None:
+        text += f", D-flat {_n(flat)} mm" + (f" ({_n(flat + a)} mm as cut)" if a else "")
+    return text
+
+
+def _print_sizes(part) -> str:
+    spec = part.spec
+    return (f"Module {spec.module} · {spec.teeth} teeth · face {spec.face_width} mm · {_print_bore(part)} · backlash "
+            f"{_print_backlash(spec)}")
+
+
+def _print_process(parts) -> str:
+    printed = [p.spec for p in parts if p.spec.is_printed()]
+    if not printed:
+        return "Process: Machined"
+    nozzles = {_n(s.nozzle_mm()) for s in printed}
+    nozzle = f", {nozzles.pop()} mm nozzle" if len(nozzles) == 1 else ", nozzles as each part says"
+    if len(printed) == len(parts):
+        return f"Process: Printed{nozzle}"
+    return f"Process: Printed{nozzle} (the parts marked Machined below are machined)"
+
+
+PRINT_UNITS = {"MILLI.METRE": "millimetres", "METRE": "metres", "CENTI.METRE": "centimetres", "INCH": "inches",
+               "FOOT": "feet"}
+
+
+# Why B's size check was skipped (printout.EXTENT_SKIPPED), in the list's words.
+PRINT_SIZE_SKIPPED = {"bevel": "a bevel gear", "ring": "a ring", "sleeve": "a sleeve", "dog": "a dog", "hub": "a hub",
+                      "user features": "your features in it", "not measured": "not yet shown on SolidWorks"}
+
+
+def _print_user_features(part, result: "PrintResult", written: bool) -> Tuple[str, ...]:
+    """The user's features a part's block names (F2-DEMONSTRATION-REVIEW §6.1): for a part written, those the job read
+    live in it (``PrintResult.live_features``, B's; tree order), whether or not its record lists them, since that is
+    what the file holds; for a part not written (the job stopped first), those its record lists."""
+    if not written:
+        return tuple(part.user_features)
+    for path, names in getattr(result, "live_features", ()) or ():
+        if _same_path(path, part.path):
+            return tuple(names)
+    return ()
+
+
+def _print_schema(name: str) -> str:
+    """*AP214 (AUTOMOTIVE_DESIGN)*: the schema a file declares, by printout.STEP_SCHEMAS' prefixes."""
+    from .printout import STEP_SCHEMAS
+    if not name:
+        return ""
+    for ap, prefixes in STEP_SCHEMAS:
+        if any(name.upper().startswith(p) for p in prefixes):
+            return f"{ap} ({name})"
+    return name
+
+
+def _print_checked(result: "PrintResult", name: str) -> str:
+    facts = {}
+    for key in result.facts:
+        file_, _, what = str(key).rpartition("|")
+        if _file(file_) == name:
+            facts[what] = str(result.facts[key])
+    read = ", ".join(x for x in (_print_schema(facts.get("schema", "")), PRINT_UNITS.get(facts.get("unit", ""),
+                                                                                       facts.get("unit", ""))) if x)
+    extent = facts.get("extent", "")
+    why = extent.split(": ", 1)[-1]
+    size = ("outer diameter and face width match the gear" if extent == "checked"
+            else f"size not checked ({PRINT_SIZE_SKIPPED.get(why, why)})" if extent else "")
+    return "; ".join(x for x in (f"one closed solid{', ' + read if read else ''}", size) if x)
+
+
+def print_list_text(plan: "PrintPlan", result: "PrintResult", version: str) -> str:
+    """The whole text of ``print list.txt`` (§3.1.3), plain lines for UTF-8: headed *DO NOT PRINT THIS SET:* with the
+    file and the reason when the job stopped (a file SolidWorks would not write, or one that failed its check); then
+    the gearbox's name (the part's stem on the form), the press's time, the app's ``version`` and the SolidWorks it
+    ran on, the process and nozzle; one block per part, its file, the rows it serves and how many to print, its sizes
+    and backlash, its span over k teeth (or why none; *Machined* for a machined part), the user's features left in
+    it, the features SolidWorks warns about, and what the check read of its file; and the settings, said once."""
+    import time as _time
+    from .printout import FILE_CHECK, SOLIDWORKS_REFUSED, STEP_SUFFIX
+    lines: List[str] = []
+    failed = {_file(f): reason for f, reason in result.failed}
+    stop = [f"{name} is not fit to print: {PRINT_REASONS.get(reason, reason)}." for name, reason in failed.items()]
+    refusal = result.refusal
+    if refusal is not None and refusal.code == SOLIDWORKS_REFUSED:
+        stop.append(print_refusal(refusal).replace("Print files stopped: ", "", 1).rstrip(".")
+                    + ", so this set is not whole.")
+    elif refusal is not None and refusal.code == FILE_CHECK and not stop:
+        stop.append(print_refusal(refusal).replace("Print files stopped: ", "", 1))
+    elif refusal is not None and not stop:
+        stop.append(print_refusal(refusal))
+    if stop:
+        lines += ["DO NOT PRINT THIS SET: " + " ".join(stop), ""]
+    lines.append(f"Print list: {plan.name or 'Gear Generator'}")
+    head = []
+    if plan.pressed:
+        head.append("Pressed " + _time.strftime("%Y-%m-%d %H:%M:%S", _time.localtime(plan.pressed)))
+    on = ""
+    if plan.revision:
+        from .swcom import release_year
+        on = f", on SolidWorks {release_year(plan.revision[0])} ({'.'.join(str(n) for n in plan.revision)})"
+    head.append(f"Gear Generator {version}{on}")
+    lines.append(" · ".join(head))
+    lines.append(_print_process(plan.parts))
+    lines.append("")
+    written = {_file(f) for _, f in result.written}
+    for part in plan.parts:
+        name = part.stem + STEP_SUFFIX
+        lines.append(name)
+        lines.append(f"  {'For ' + _and(part.rows) + ' · ' if part.rows else ''}print {part.count}")
+        lines.append(f"  {_print_sizes(part)}")
+        lines.append(f"  {_print_span_line(part)}")
+        features = _print_user_features(part, result, name in written)
+        if features:
+            lines.append(f"  Your features left in it: {_and(features)}.")
+        for path, features in result.warnings:
+            if _same_path(path, part.path):
+                lines.append(f"  SolidWorks warns about {_and(features)}; written as SolidWorks built it.")
+        if name in failed:
+            lines.append(f"  NOT FIT TO PRINT: {PRINT_REASONS.get(failed[name], failed[name])}.")
+        elif name not in written:
+            lines.append("  Not written.")
+        else:
+            lines.append(f"  Checked: {_print_checked(result, name)}.")
+        lines.append("")
+    lines.extend(PRINT_SETTINGS)
+    return "\n".join(lines) + "\n"
+
+
+def _same_path(a: str, b: str) -> bool:
+    """Two paths compared as Windows compares them (``store.same_path``), imported late as ``ui_text`` keeps ``store``."""
+    from .store import same_path
+    return same_path(a, b)
+
+
+# -- F4 (PLAN-PRINTED §5.4; F4-INTERFACES §5): what a printed tooth is rated to take, once, on the form's Derived panel --
+
+HOLDS_LABEL = "Holds once"
+# The kinds whose printed gears show the row (§5.1): a spur, helical or herringbone gear, outside or a ring. Never a
+# bevel gear, nor a dog, a hub or a sleeve (their couplings are splines, not meshes; the strip never offers them).
+HOLDS_KINDS = ("spur", "helical", "herringbone")
+HOLDS_PAST_RANGE = "stress factor past its range"
+
+
+def holds_rating(spec: GearSpec, derived, recipe: str, crossed: bool = False):
+    """The rating the *Holds once* row words for one gear on the form (`gears.strength.rate`), or None when the gear
+    shows no row (F4-INTERFACES §5): a machined gear, a bevel gear, a dog, a hub or a sleeve, either gear of a crossed
+    pair (``crossed``: its teeth meet at a point, §5.1), a gear that does not work out, and a gear not rated for any
+    reason but a ring's tips inside its base circle (M1), which shows *not rated*: every other reason is a gear that
+    does not validate and is never built."""
+    from .gears import strength
+    if derived is None or crossed or not getattr(derived, "printed", False):
+        return None
+    if str(getattr(spec, "kind", "")).strip().lower() not in HOLDS_KINDS:
+        return None
+    rating = strength.rate(derived, recipe)
+    if rating.rated or rating.short == strength.SHORT_TIPS_INSIDE_BASE:
+        return rating
+    return None
+
+
+def holds_row(rating, allowable: Optional[float] = None) -> Optional[Tuple[str, str]]:
+    """The Derived panel's row for one printed gear, (label, value), from `gears.strength.rate`'s rating:
+
+    - rated: *Holds once* — *about 0.58 N·m · 39 N at 17 MPa* (A1): the torque about the gear's own axis, then the
+      force at its pitch circle, at its own toothed width, for a single load, at ``allowable`` (blank: the 17 MPa of
+      `strength.ALLOWABLE_DEFAULT`, the form having no Box), each rounded by `gears.strength`'s one home;
+    - YS carried past its range (a ring's 0.15 × module fillet, or a fillet typed that sharp): the same, then
+      *· stress factor past its range* (A6);
+    - a ring whose tips lie inside its base circle (M1): *not rated: tips inside the base circle* (A10).
+
+    None for no rating and for a gear not rated for any other reason (`holds_rating` gives none of those). The body is
+    package C's, over F4-0's stub."""
+    from .gears import strength
+    if rating is None:
+        return None
+    if not rating.rated:
+        if rating.short != strength.SHORT_TIPS_INSIDE_BASE:
+            return None
+        return HOLDS_LABEL, f"not rated: {rating.short}"
+    stress = strength.ALLOWABLE_DEFAULT if allowable is None else allowable
+    force = strength.holds(rating, stress)
+    value = (f"about {strength.newton_metres(strength.torque_held(rating, force))} N·m · {strength.newtons(force)} N "
+             f"at {strength.megapascals(stress)} MPa")
+    if rating.past_range:
+        value += f" · {HOLDS_PAST_RANGE}"
+    return HOLDS_LABEL, value
+
+
+def holds_value_lines(value: str, room: float, measure) -> str:
+    """The row's value laid into a column ``room`` wide (``measure(text)`` its width in the same units), lines
+    joined by newlines: whole phrases first, a new line starting *· * where the value's own *·* falls, and a phrase
+    too long for a line wrapped at its spaces. A value that fits is returned as it is. The value is a long one beside
+    the other rows' figures, and two columns of it in a pair would otherwise widen the strip past its 460 px."""
+    if measure(value) <= room:
+        return value
+    lines: List[str] = []
+    for index, phrase in enumerate(value.split(" · ")):
+        piece = phrase if index == 0 else "· " + phrase
+        if lines and index and measure(lines[-1] + " " + piece) <= room:
+            lines[-1] += " " + piece
+            continue
+        line = ""
+        for word in piece.split(" "):
+            if line and measure(line + " " + word) > room:
+                lines.append(line)
+                line = word
+            else:
+                line = f"{line} {word}" if line else word
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def holds_line(rating) -> str:
+    """The row's full sentence, on its own line under the Derived rows (after any of F2's), or "" when the row says it
+    all: *Holds once: the ring's 0.15 mm fillet is sharper than the stress factor's range, which is carried past it.*
+    (YS past its range; *the gear's* for an outside gear with a fillet typed that sharp), or *Holds once: not rated:
+    its tips lie inside its base circle (…), so …* with `ToothRating.why`, package A's clause (M1). The window puts
+    *A:* or *B:* before it in a pair."""
+    if rating is None:
+        return ""
+    if not rating.rated:
+        return f"{HOLDS_LABEL}: not rated: {rating.why}." if holds_row(rating) else ""
+    if rating.past_range:
+        whose = "ring" if rating.ring else "gear"
+        return (f"{HOLDS_LABEL}: the {whose}'s {_n(rating.rho_f)} mm fillet is sharper than the stress factor's range, "
+                "which is carried past it.")
+    return ""

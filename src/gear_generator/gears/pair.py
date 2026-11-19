@@ -32,7 +32,7 @@ mesh is ranked after the clean ones, as an undercut row is.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from fractions import Fraction
 from typing import List, Optional, Tuple
 
@@ -49,6 +49,9 @@ from ..spec import (
     KIND_SPUR,
     MESH_EXTERNAL,
     MESH_INTERNAL,
+    NOZZLE_DEFAULT,
+    PROCESS_MACHINED,
+    PROCESS_PRINTED,
     GearSpec,
     InputError,
     PairSpec,
@@ -56,6 +59,7 @@ from ..spec import (
 from . import bevel, crossed, equations, helical, internal, standards
 from .base import (
     AddComponent,
+    GeometryError,
     AddGlobal,
     BuildPlan,
     Fix,
@@ -70,9 +74,13 @@ from .base import (
 )
 from .spur import (
     AXIS_NAME,
+    PRINTED_MODULE_NOZZLES,
+    PRINTED_TOLERANCE,
     TIP_THICKNESS_WARNING,
     contact_ratio,
     inv,
+    inv_inverse as spur_inv_inverse,
+    printed_backlash,
     tooth_depth,
     undercut_free_shift,
     undercut_minimum,
@@ -90,6 +98,7 @@ DEFAULT_LIMIT = 120
 SHIFT_SUM_LIMIT = 1.0    # the most x1 + x2 the solver offers, either way
 SHIFT_LIMIT = 1.0        # and the most either gear takes
 CLEARANCE_MIN = 0.1      # × module: a shifted row whose tips come nearer the other gear's root is not offered
+PRINTED_CLEARANCE = 0.3  # mm: the tip clearance two printed surfaces take (F1, PLAN-PRINTED §2.2)
 
 
 @dataclass(frozen=True)
@@ -114,6 +123,10 @@ class Candidate:
     shift_1: float = 0.0        # profile shift coefficients; centre_distance is then the working one
     shift_2: float = 0.0
     opposite: bool = False      # a crossed pair of opposite hands: shaft_angle = |β1 − β2|
+    # F1 (PLAN-PRINTED §2.5): a printed row's mark, "thin for a 0.4 nozzle", when its module is under 2.5 nozzle
+    # widths or a tip after the printed backlash is under one nozzle line; "" for a clean or machined row. Out of
+    # repr, so a machined row reads exactly as before F1.
+    mark: str = field(default="", repr=False)
 
     @property
     def crossed(self) -> bool:
@@ -143,6 +156,7 @@ class Candidate:
         return (
             abs(self.centre_error) > TOLERANCE,
             not self.standard,
+            bool(self.mark),            # F1: printed rows too thin to print, after the clean ones; never a machined row
             self.undercut,
             self.clashes,
             self.shifted,
@@ -204,6 +218,103 @@ def tip_clearance(module: float, teeth_1: int, teeth_2: int, pressure_angle: flo
     return min(centre - tip_1 - (tip_2 - depth), centre - tip_2 - (tip_1 - depth))
 
 
+def ring_tip_clearance(module: float, teeth_1: int, teeth_2: int, pressure_angle: float = 20.0,
+                       helix_angle: float = 0.0, shift_1: float = 0.0, shift_2: float = 0.0) -> float:
+    """A pinion's and its ring's smaller tip-to-root gap, mm (PLAN-PRINTED §2.2): the pinion's tip to the ring's
+    root and the ring's tip to the pinion's root. Of :func:`tip_clearance`'s signature, ``teeth_2`` the ring's.
+
+    As the app draws them (``internal.section``): the ring's tip circle is ``r2 − m`` and its root ``r2 − m + h``,
+    the pinion's tip ``r1 + m (1 + x1)`` and its root that less ``h``, with ``h`` the user's depth IIF in the
+    normal module and the pitch radii in the transverse one. At centre distance ``a`` the two gaps, on the line of
+    centres, are ``rf2 − (a + ra1)`` and ``ra2 − (a + rf1)``. Unshifted both are ``h − 2m``: 0.4 × module up to
+    module 1.25 and 0.25 × module above it, as an outside pair's. A shifted pinion meshes at its working centre
+    distance, ``inv αw = inv αt + 2 tan αn (x2 − x1) / (z2 − z1)``, ``a = mt (z2 − z1) cos αt / (2 cos αw)``
+    (the formula ``workbook.checks.internal_working_centre`` uses). A ring is cut without profile shift here, so
+    ``shift_2`` other than 0 is a ValueError, as is a pinion shift no working angle answers.
+    """
+    if shift_2:
+        raise ValueError("A ring is cut without profile shift here.")
+    if teeth_2 <= teeth_1:
+        raise ValueError(f"A ring needs more teeth than the gear inside it (got {teeth_1} and {teeth_2}).")
+    mt = module / math.cos(math.radians(helix_angle))
+    alpha_t = math.radians(helical.transverse_pressure_angle(pressure_angle, helix_angle)
+                           if helix_angle else pressure_angle)
+    plain = mt * (teeth_2 - teeth_1) / 2.0
+    centre = plain
+    if shift_1:
+        value = inv(alpha_t) + 2.0 * math.tan(math.radians(pressure_angle)) * (shift_2 - shift_1) / (teeth_2 - teeth_1)
+        if value <= 0.0:
+            raise ValueError(f"A profile shift of {shift_1:+g} on a {teeth_1}-tooth pinion is too much for it to mesh "
+                             f"inside a {teeth_2}-tooth ring at all.")
+        centre = plain * math.cos(alpha_t) / math.cos(spur_inv_inverse(value))
+    depth = tooth_depth(module)
+    pinion_tip = teeth_1 * mt / 2.0 + module * (1.0 + shift_1)
+    ring_tip = teeth_2 * mt / 2.0 - module
+    return min(ring_tip + depth - (centre + pinion_tip), ring_tip - (centre + pinion_tip - depth))
+
+
+def printed_tip_thickness(module: float, teeth: int, pressure_angle: float = 20.0, helix_angle: float = 0.0,
+                          shift: float = 0.0, nozzle: float = 0.4) -> float:
+    """A printed gear's transverse tooth thickness at its tip circle, mm, after the printed default backlash is taken
+    off it (PLAN-PRINTED §2.5), for the test against ``nozzle``.
+
+    The backlash widens the space at the pitch circle by ``j / cos β`` (the transverse backlash every derive cuts,
+    ``j = spur.printed_backlash(module)``), and an involute's thickness scales with its radius less the involute
+    function, so at the tip circle it takes ``(d_a / d) · j / cos β`` off :func:`tip_thickness`. It is the
+    figure ``spur.profile`` gives as ``tip_thickness`` for the printed gear (tested), and the one a layer is
+    sliced through when the gear lies on its face. ``nozzle`` changes no figure: the printed default backlash does
+    not depend on it. It is kept, as F1-0's interface names it, for the caller's test beside it.
+    """
+    del nozzle
+    cos_beta = math.cos(math.radians(helix_angle))
+    mt = module / cos_beta
+    d = teeth * mt
+    da = d + 2.0 * module * (1.0 + shift)
+    return tip_thickness(module, teeth, pressure_angle, helix_angle, shift) - da / d * printed_backlash(module) / cos_beta
+
+
+def printed_ring_tip_thickness(module: float, teeth: int, pressure_angle: float = 20.0,
+                               helix_angle: float = 0.0) -> float:
+    """A printed ring's tooth thickness at its tip circle, mm, after the printed default backlash: what
+    ``internal.section`` gives a printed ring of these sizes (F1, PLAN-PRINTED §2.5)."""
+    cos_beta = math.cos(math.radians(helix_angle))
+    alpha_t = helical.transverse_pressure_angle(pressure_angle, helix_angle) if helix_angle else pressure_angle
+    j = printed_backlash(module)
+    ring = internal.section(teeth, module, alpha_t, 10.0, None, j, internal.FILLET_FACTOR * module,
+                            transverse_module=module / cos_beta, transverse_backlash=j / cos_beta)
+    return ring.tip_thickness
+
+
+def printed_mark(module: float, nozzle: float, tips: Tuple[float, ...]) -> Optional[str]:
+    """A printed Solve row's mark (F1, PLAN-PRINTED §2.5): None when a tip comes to a point, so the row is not
+    offered; ``thin for a 0.4 nozzle`` when the module is under 2.5 nozzle widths or a tip after backlash is under
+    one nozzle line; else "". ``tips`` are the row's gears' tip thicknesses after the printed backlash."""
+    if min(tips) <= 0.0:
+        return None
+    if module < PRINTED_MODULE_NOZZLES * nozzle - PRINTED_TOLERANCE or min(tips) < nozzle - PRINTED_TOLERANCE:
+        return f"thin for a {_num(nozzle)} nozzle"
+    return ""
+
+
+def bevel_tip_clearance(g1, g2) -> float:
+    """A bevel pair's smaller tip-to-root gap, mm, from the two derived gears (``bevel.BevelDerived``): each gear's
+    dedendum less its mate's addendum, at the heel. Gleason's uniform clearance makes it 0.188 × module along the
+    face for any cone pair (``bevel.WHOLE_DEPTH`` less ``WORKING_DEPTH``). The one figure the form
+    (:func:`mesh_warnings`) and the workbook (``workbook.checks``) judge a printed bevel pair by (F1 review, S4)."""
+    return min(g1.dedendum - g2.addendum, g2.dedendum - g1.addendum)
+
+
+def printed_clearance_sentence(clearance: float, shifted: bool = True) -> Optional[str]:
+    """F1 (PLAN-PRINTED §2.2): a printed pair's tip clearance under the 0.3 mm two printed surfaces take, as one
+    sentence; None at 0.3 mm or more, less a rounding tolerance (module 0.75's computes as 0.2999999999999998).
+    The advice names less profile shift only when the pair has a shift to take off."""
+    if clearance >= PRINTED_CLEARANCE - PRINTED_TOLERANCE:
+        return None
+    cure = "use a larger module or less profile shift" if shifted else "use a larger module"
+    return (f"Printed, the tip clearance is {_num(clearance)} mm, under the {_num(PRINTED_CLEARANCE)} mm two printed "
+            f"surfaces take; {cure}.")
+
+
 def tip_thickness(module: float, teeth: int, pressure_angle: float = 20.0, helix_angle: float = 0.0,
                   shift: float = 0.0) -> float:
     """A gear's transverse tooth thickness at its tip circle, mm, with no backlash.
@@ -246,11 +357,15 @@ def split_shift(total: float, teeth_1: int, teeth_2: int, limit_1: float, limit_
 
 
 def _shifted(row: Candidate, centre: float, pressure_angle: float, limit_1: float,
-             limit_2: float) -> Optional[Candidate]:
+             limit_2: float, nozzle: Optional[float] = None) -> Optional[Candidate]:
     """``row`` again with profile shift, or None when shifting does not help or cannot be done cleanly.
 
     A row that misses ``centre`` gets the shifts that move it onto it; an
     exact row that undercuts gets equal and opposite ones that clear it.
+
+    ``nozzle`` (F1, PLAN-PRINTED §2.5) is a printed pair's line width, None for a machined one: a printed row's tips
+    are tested after the printed backlash against it, and its clearance against the larger of 0.1 × module and
+    0.3 mm, in place of the machined tests.
     """
     m, n1, n2, beta = row.module, row.teeth_driver, row.teeth_driven, row.helix_angle
     alpha_t = helical.transverse_pressure_angle(pressure_angle, beta) if beta else pressure_angle
@@ -275,10 +390,7 @@ def _shifted(row: Candidate, centre: float, pressure_angle: float, limit_1: floa
         return None
     if max(abs(x1), abs(x2)) > SHIFT_LIMIT:
         return None
-    if min(tip_thickness(m, n1, pressure_angle, beta, x1),
-           tip_thickness(m, n2, pressure_angle, beta, x2)) < TIP_THICKNESS_WARNING * m:
-        return None
-    if tip_clearance(m, n1, n2, pressure_angle, beta, x1, x2) < CLEARANCE_MIN * m:
+    if _shift_refusal(m, n1, n2, pressure_angle, beta, x1, x2, nozzle) is not None:
         return None
     actual, _, epsilon = describe(m, n1, n2, pressure_angle, beta, shift_1=x1, shift_2=x2)
     return Candidate(
@@ -290,7 +402,8 @@ def _shifted(row: Candidate, centre: float, pressure_angle: float, limit_1: floa
 
 
 def shift_for_centre(module: float, teeth_1: int, teeth_2: int, centre: float, pressure_angle: float = 20.0,
-                     helix_angle: float = 0.0) -> Tuple[float, float]:
+                     helix_angle: float = 0.0, printed: bool = False,
+                     nozzle: float = NOZZLE_DEFAULT) -> Tuple[float, float]:
     """The profile shifts ``(x1, x2)`` that put an outside pair exactly at ``centre``, or a sentence why not.
 
     The same sum the solver's shifted rows use, shared out by :func:`split_shift`
@@ -300,6 +413,10 @@ def shift_for_centre(module: float, teeth_1: int, teeth_2: int, centre: float, p
     than solved for: a workbook's shafts (PLAN-WORKBOOK §3.6). Full precision is
     returned; rounding it to look tidy moves the centre (x 0.085 instead of
     0.084550 misses 64 mm by 0.0013 mm).
+
+    ``printed`` (F1, PLAN-PRINTED §2.5): test the tip after the printed backlash against one ``nozzle`` line, and
+    the clearance against the larger of 0.1 × module and 0.3 mm, in place of the machined tests
+    (:func:`_shift_refusal`). ``nozzle`` is read only when printed.
     """
     m, z1, z2, beta = module, teeth_1, teeth_2, helix_angle
     alpha_t = helical.transverse_pressure_angle(pressure_angle, beta) if beta else pressure_angle
@@ -320,20 +437,40 @@ def shift_for_centre(module: float, teeth_1: int, teeth_2: int, centre: float, p
     if max(abs(x1), abs(x2)) > SHIFT_LIMIT:
         raise ValueError(f"Meeting {_num(centre)} mm needs a shift of {max(abs(x1), abs(x2)):.3f} on one gear, past "
                          f"the {SHIFT_LIMIT:g} this tool offers; move the shaft instead.")
-    if min(tip_thickness(m, z1, pressure_angle, beta, x1),
-           tip_thickness(m, z2, pressure_angle, beta, x2)) < TIP_THICKNESS_WARNING * m:
-        raise ValueError(f"The shifts that meet {_num(centre)} mm leave a tooth tip too thin; move the shaft instead.")
-    if tip_clearance(m, z1, z2, pressure_angle, beta, x1, x2) < CLEARANCE_MIN * m:
-        raise ValueError(f"The shifts that meet {_num(centre)} mm bring the tips too near the other gear's root; "
-                         "move the shaft instead.")
+    refusal = _shift_refusal(m, z1, z2, pressure_angle, beta, x1, x2, nozzle if printed else None)
+    if refusal is not None:
+        raise ValueError(f"The shifts that meet {_num(centre)} mm {refusal}; move the shaft instead.")
     return x1, x2
+
+
+def _shift_refusal(m: float, z1: int, z2: int, pressure_angle: float, beta: float, x1: float, x2: float,
+                   nozzle: Optional[float]) -> Optional[str]:
+    """Why a shifted pair is not offered, as the end of a sentence, or None when it may be.
+
+    Machined (``nozzle`` None): a tip before backlash under 0.3 × module, or a clearance under 0.1 × module.
+    Printed (F1, PLAN-PRINTED §2.5): a tip after the printed backlash under one nozzle line, or a clearance under
+    the larger of 0.1 × module and 0.3 mm."""
+    if nozzle is None:
+        if min(tip_thickness(m, z1, pressure_angle, beta, x1),
+               tip_thickness(m, z2, pressure_angle, beta, x2)) < TIP_THICKNESS_WARNING * m:
+            return "leave a tooth tip too thin"
+        if tip_clearance(m, z1, z2, pressure_angle, beta, x1, x2) < CLEARANCE_MIN * m:
+            return "bring the tips too near the other gear's root"
+        return None
+    if min(printed_tip_thickness(m, z1, pressure_angle, beta, x1, nozzle),
+           printed_tip_thickness(m, z2, pressure_angle, beta, x2, nozzle)) < nozzle - PRINTED_TOLERANCE:
+        return f"leave a printed tooth tip under one {_num(nozzle)} mm nozzle line after backlash"
+    least = max(CLEARANCE_MIN * m, PRINTED_CLEARANCE)
+    if tip_clearance(m, z1, z2, pressure_angle, beta, x1, x2) < least - PRINTED_TOLERANCE:
+        return f"bring the tips nearer the other gear's root than the {_num(least)} mm a print takes"
+    return None
 
 
 def _num(value: float) -> str:
     return f"{value:.3f}".rstrip("0").rstrip(".")
 
 
-def _offer_shifted(found: dict, centre: float, pressure_angle: float) -> None:
+def _offer_shifted(found: dict, centre: float, pressure_angle: float, nozzle: Optional[float] = None) -> None:
     """Add a shifted row for every standard row that misses the centre distance or undercuts.
 
     Undercut here is the rack's own limit, ``2 cos β (1 − x) / sin² αt``, which
@@ -346,7 +483,7 @@ def _offer_shifted(found: dict, centre: float, pressure_angle: float) -> None:
             limit = helical.undercut_minimum(pressure_angle, row.helix_angle)
         else:
             limit = undercut_minimum(pressure_angle)
-        made = _shifted(row, centre, pressure_angle, limit, limit)
+        made = _shifted(row, centre, pressure_angle, limit, limit, nozzle)
         if made is not None:
             found[(round(made.module, 9), made.teeth_driver, made.teeth_driven, round(made.helix_angle, 9),
                    round(made.shift_1, 9), round(made.shift_2, 9))] = made
@@ -389,7 +526,8 @@ def solve(centre: float, ratio: float, pressure_angle: float = 20.0, module: Opt
           limit: int = DEFAULT_LIMIT, kind: str = KIND_SPUR, helix_angle: Optional[float] = None,
           helix_range: Tuple[float, float] = helical.DEFAULT_RANGE[helical.KIND_HELICAL],
           face_width: Optional[float] = None, mesh: str = MESH_EXTERNAL, shafts: str = "parallel",
-          shaft_angle: float = 90.0, opposite: bool = False) -> List[Candidate]:
+          shaft_angle: float = 90.0, opposite: bool = False, process: str = PROCESS_MACHINED,
+          nozzle: float = NOZZLE_DEFAULT) -> List[Candidate]:
     """Every candidate worth listing, best first.
 
     For the helical kinds ``module`` and ``pressure_angle`` are normal, and
@@ -402,18 +540,28 @@ def solve(centre: float, ratio: float, pressure_angle: float = 20.0, module: Opt
     ``mesh`` internal makes the driven gear a ring round the driver: the ratio
     must then be more than one. ``opposite`` makes a crossed pair's hands
     opposite, so its shaft angle is the helix angles' difference.
+
+    ``process`` and ``nozzle`` (F1, PLAN-PRINTED §2.5): a printed pair's rows (``process`` "printed", in any
+    case) are judged against the nozzle. A row whose module is under 2.5 nozzle widths, or a tip of which after the
+    printed backlash is under one nozzle line, is marked (:attr:`Candidate.mark`) and ranked after the clean ones;
+    a row a tip of which comes to a point is not offered; shifted rows are tested as :func:`_shift_refusal` says.
+    A bevel pair's tips are judged at the toe, with ``face_width`` (blank: the form's default, at most a third of
+    the cone distance). Any other process is machined, and its rows are exactly as before F1.
     """
+    nozzle_mm: Optional[float] = float(nozzle) if str(process).strip().lower() == PROCESS_PRINTED else None
     if kind == KIND_BEVEL:
-        return _solve_bevel(centre, ratio, shaft_angle, pressure_angle, module, series, min_teeth, max_teeth, limit)
+        return _solve_bevel(centre, ratio, shaft_angle, pressure_angle, module, series, min_teeth, max_teeth, limit,
+                            nozzle_mm, face_width)
     if mesh == MESH_INTERNAL:
         return _solve_internal(centre, ratio, pressure_angle, module, series, min_teeth, max_teeth, limit,
-                               kind, helix_angle, helix_range, face_width)
+                               kind, helix_angle, helix_range, face_width, nozzle_mm)
     if shafts == "crossed":
         return _solve_crossed(centre, ratio, shaft_angle, pressure_angle, module, series, min_teeth, max_teeth, limit,
-                              helix_angle, opposite)
+                              helix_angle, opposite, nozzle_mm)
     if kind in HELICAL_KINDS:
         return _solve_helical(centre, ratio, pressure_angle, module, series, min_teeth, max_teeth, limit,
-                              helix_angle, helix_range, face_width)
+                              helix_angle, helix_range, face_width, nozzle_mm)
+    nozzle = nozzle_mm
     if centre <= 0:
         raise InputError("Centre distance must be more than zero.")
     if ratio <= 0:
@@ -451,14 +599,14 @@ def solve(centre: float, ratio: float, pressure_angle: float = 20.0, module: Opt
                 offer(m_star, n1, n2, standard=False)
             k += 1
 
-    _offer_shifted(found, centre, pressure_angle)
-    ranked = sorted(found.values(), key=Candidate.rank)
-    return ranked[:limit]
+    _offer_shifted(found, centre, pressure_angle, nozzle)
+    return _finish(found, limit, pressure_angle, nozzle, face_width)
 
 
 def _solve_helical(centre: float, ratio: float, pressure_angle: float, module: Optional[float], series: str,
                    min_teeth: int, max_teeth: int, limit: int, helix_angle: Optional[float],
-                   helix_range: Tuple[float, float], face_width: Optional[float]) -> List[Candidate]:
+                   helix_range: Tuple[float, float], face_width: Optional[float],
+                   nozzle: Optional[float] = None) -> List[Candidate]:
     if centre <= 0:
         raise InputError("Centre distance must be more than zero.")
     if ratio <= 0:
@@ -513,14 +661,14 @@ def _solve_helical(centre: float, ratio: float, pressure_angle: float, module: O
                 for n1, n2 in splits(s):
                     offer(m, n1, n2, module is None or standards.is_standard(m), beta)
 
-    _offer_shifted(found, centre, pressure_angle)
-    ranked = sorted(found.values(), key=Candidate.rank)
-    return ranked[:limit]
+    _offer_shifted(found, centre, pressure_angle, nozzle)
+    return _finish(found, limit, pressure_angle, nozzle, face_width)
 
 
 def _solve_internal(centre: float, ratio: float, pressure_angle: float, module: Optional[float], series: str,
                     min_teeth: int, max_teeth: int, limit: int, kind: str, helix_angle: Optional[float],
-                    helix_range: Tuple[float, float], face_width: Optional[float]) -> List[Candidate]:
+                    helix_range: Tuple[float, float], face_width: Optional[float],
+                    nozzle: Optional[float] = None) -> List[Candidate]:
     """A pinion inside a ring: every whole tooth difference ``S`` near ``2C cos β / m``, the pinion at ``S / (i − 1)``."""
     if centre <= 0:
         raise InputError("Centre distance must be more than zero.")
@@ -581,13 +729,13 @@ def _solve_internal(centre: float, ratio: float, pressure_angle: float, module: 
                 for n1, n2 in splits(s):
                     offer(m, n1, n2, module is None or standards.is_standard(m), beta)
 
-    ranked = sorted(found.values(), key=Candidate.rank)
-    return ranked[:limit]
+    return _finish(found, limit, pressure_angle, nozzle, face_width)
 
 
 def _solve_crossed(centre: float, ratio: float, shaft: float, pressure_angle: float, module: Optional[float],
                    series: str, min_teeth: int, max_teeth: int, limit: int,
-                   helix_angle: Optional[float], opposite: bool = False) -> List[Candidate]:
+                   helix_angle: Optional[float], opposite: bool = False,
+                   nozzle: Optional[float] = None, face_width: Optional[float] = None) -> List[Candidate]:
     """Two helical gears on shafts ``shaft`` degrees apart: the same hand, ``β1 + β2 = Σ``, or
     opposite hands, ``|β1 − β2| = Σ``.
 
@@ -662,8 +810,62 @@ def _solve_crossed(centre: float, ratio: float, shaft: float, pressure_angle: fl
                 offer(m_star, n1, n2, False, helix_angle, typed_2)
             k += 1
 
-    ranked = sorted(found.values(), key=Candidate.rank)
-    return ranked[:limit]
+    return _finish(found, limit, pressure_angle, nozzle, face_width)
+
+
+def _finish(found: dict, limit: int, pressure_angle: float, nozzle: Optional[float],
+            face_width: Optional[float]) -> List[Candidate]:
+    """The rows found, best first, at most ``limit``: a printed pair's (``nozzle`` given) marked first, and a row
+    a tip of which comes to a point dropped (F1, PLAN-PRINTED §2.5); a machined pair's exactly as before F1."""
+    rows = list(found.values())
+    if nozzle is not None:
+        rows = [row for row in (_printed_row(row, pressure_angle, nozzle, face_width) for row in rows)
+                if row is not None]
+    return sorted(rows, key=Candidate.rank)[:limit]
+
+
+def _printed_row(row: Candidate, pressure_angle: float, nozzle: float,
+                 face_width: Optional[float]) -> Optional[Candidate]:
+    """``row`` with its printed mark, or None when a tip of it comes to a point (:func:`printed_mark`), or, for a bevel
+    row, when a gear of it does not derive printed with the form's face width, so its toes cannot be judged (F1
+    review, S7: it was offered unmarked, as if clean)."""
+    m, n1, n2 = row.module, row.teeth_driver, row.teeth_driven
+    if row.cone:
+        tips = _bevel_toe_tips(m, n1, n2, row.shaft_angle, pressure_angle, face_width)
+        if tips is None:
+            return None                 # a gear of it does not derive printed, so it is not offered (F1 review, S7)
+    elif row.mesh == MESH_INTERNAL:
+        tips = (printed_tip_thickness(m, n1, pressure_angle, row.helix_angle, 0.0, nozzle),
+                printed_ring_tip_thickness(m, n2, pressure_angle, row.helix_angle))
+    elif row.crossed:
+        tips = (printed_tip_thickness(m, n1, pressure_angle, row.helix_angle, 0.0, nozzle),
+                printed_tip_thickness(m, n2, pressure_angle, row.helix_angle_b, 0.0, nozzle))
+    else:
+        tips = (printed_tip_thickness(m, n1, pressure_angle, row.helix_angle, row.shift_1, nozzle),
+                printed_tip_thickness(m, n2, pressure_angle, row.helix_angle, row.shift_2, nozzle))
+    mark = printed_mark(m, nozzle, tips)
+    return None if mark is None else replace(row, mark=mark)
+
+
+def _bevel_toe_tips(module: float, n1: int, n2: int, shaft: float, pressure_angle: float,
+                    face_width: Optional[float]) -> Optional[Tuple[float, ...]]:
+    """Each printed bevel gear's tip thickness at the toe, after the printed backlash (``bevel.toe_tip_thickness``);
+    a tip pointed at the heel reads as 0. A blank face width is the form's default, at most a third of the cone
+    distance (Gleason's limit). None when a gear of the pair does not derive."""
+    radius = bevel.cone_distance(module, n1, n2, shaft)
+    width = face_width if face_width is not None else min(float(GearSpec().face_width), radius / 3.0)
+    tips = []
+    for teeth, mate in ((n1, n2), (n2, n1)):
+        spec = GearSpec(kind=KIND_BEVEL, module=equations.literal(module), teeth=str(teeth), mate_teeth=str(mate),
+                        shaft_angle=equations.literal(shaft), pressure_angle=equations.literal(pressure_angle),
+                        face_width=equations.literal(width), process=PROCESS_PRINTED)
+        try:
+            g = bevel.derive(spec)
+        except (GeometryError, InputError, ValueError):
+            return None
+        heel = g.section.tip_thickness
+        tips.append(heel if heel <= 0.0 else heel * max(0.0, g.toe_scale))
+    return tuple(tips)
 
 
 def bevel_forms(n1: int, n2: int, shaft: float) -> Tuple[str, str]:
@@ -715,7 +917,8 @@ def bevel_candidate(module: float, n1: int, n2: int, shaft: float, pressure_angl
 
 
 def _solve_bevel(cone_distance: float, ratio: float, shaft: float, pressure_angle: float, module: Optional[float],
-                 series: str, min_teeth: int, max_teeth: int, limit: int) -> List[Candidate]:
+                 series: str, min_teeth: int, max_teeth: int, limit: int, nozzle: Optional[float] = None,
+                 face_width: Optional[float] = None) -> List[Candidate]:
     """Straight bevel gears on shafts ``shaft`` degrees apart, from the cone distance and the ratio.
 
     For each module the pinion is ``K / √(1 + i² + 2 i cos Σ)`` with ``K = 2 R sin Σ / m``,
@@ -762,13 +965,16 @@ def _solve_bevel(cone_distance: float, ratio: float, shaft: float, pressure_angl
                 offer(m_star, n1, n2, False)
             k += 1
 
-    ranked = sorted(found.values(), key=Candidate.rank)
-    return ranked[:limit]
+    return _finish(found, limit, pressure_angle, nozzle, face_width)
 
 
 def solve_spec(pair: PairSpec) -> List[Candidate]:
+    """:func:`solve` for the form's pair, with the form's Process (gear A's: one row for both gears) and its Nozzle
+    when printed (F1, PLAN-PRINTED §1.3, §2.5); a printed form's Nozzle that does not read is an InputError."""
     kind = pair.gear_a.kind
     mesh = pair.mesh_value()
+    printed = ({"process": PROCESS_PRINTED, "nozzle": pair.gear_a.nozzle_mm()} if pair.gear_a.is_printed()
+               else {})
     if kind == KIND_BEVEL:
         return solve(
             centre=pair.cone_distance_mm(),
@@ -780,6 +986,8 @@ def solve_spec(pair: PairSpec) -> List[Candidate]:
             max_teeth=pair.max_teeth_count(),
             kind=kind,
             shaft_angle=pair.shaft_angle_deg(),
+            face_width=_face_width(pair.gear_a),
+            **printed,
         )
     if kind in HELICAL_KINDS and pair.shafts_value() == "crossed":
         return solve(
@@ -795,6 +1003,7 @@ def solve_spec(pair: PairSpec) -> List[Candidate]:
             shafts="crossed",
             shaft_angle=pair.shaft_angle_deg(),
             opposite=pair.hands_value() == HANDS_OPPOSITE,
+            **printed,
         )
     if mesh == MESH_INTERNAL:
         try:
@@ -815,6 +1024,7 @@ def solve_spec(pair: PairSpec) -> List[Candidate]:
             helix_range=pair.helix_range(helical.DEFAULT_RANGE[kind]) if helical_kind else (8.0, 25.0),
             face_width=width,
             mesh=MESH_INTERNAL,
+            **printed,
         )
     if kind in HELICAL_KINDS:
         try:
@@ -833,6 +1043,7 @@ def solve_spec(pair: PairSpec) -> List[Candidate]:
             helix_angle=pair.helix_angle_deg(),
             helix_range=pair.helix_range(helical.DEFAULT_RANGE[kind]),
             face_width=width,
+            **printed,
         )
     return solve(
         centre=pair.centre_distance_mm(),
@@ -842,7 +1053,15 @@ def solve_spec(pair: PairSpec) -> List[Candidate]:
         series=pair.series or standards.SERIES_1,
         min_teeth=pair.min_teeth_count(),
         max_teeth=pair.max_teeth_count(),
+        **printed,
     )
+
+
+def _face_width(gear: GearSpec) -> Optional[float]:
+    try:
+        return gear.face_width_mm()
+    except InputError:
+        return None
 
 
 def partner_hand(hand_a: str, ring: bool = False, crossed_shafts: bool = False, opposite: bool = False) -> str:
@@ -990,7 +1209,15 @@ def mesh_warnings(g1, g2) -> List[str]:
     """What is worth knowing about how two derived external gears mesh, as sentences.
 
     Only shifted pairs have anything to say: the tip clearance their shifts leave.
+
+    F1 (PLAN-PRINTED §2.2): when either gear is printed, every pair says a tip clearance under the 0.3 mm two printed
+    surfaces take (:func:`printed_clearance_sentence`): an outside pair's by :func:`tip_clearance`, a pinion in a ring
+    by :func:`ring_tip_clearance` (either may be passed first), a bevel pair by Gleason's figure at the heel, each
+    gear's dedendum less the other's addendum (0.188 × module). A machined pair is told exactly what it was before F1.
+    A crossed pair is not judged.
     """
+    if getattr(g1, "printed", False) or getattr(g2, "printed", False):
+        return _printed_mesh_warnings(g1, g2)
     x1, x2 = getattr(g1, "shift", 0.0), getattr(g2, "shift", 0.0)
     if not (x1 or x2):
         return []
@@ -1003,6 +1230,46 @@ def mesh_warnings(g1, g2) -> List[str]:
     if clearance <= 0.0:
         return [f"With these shifts a tooth tip reaches the other gear's root ({clearance:.3f} mm of clearance), "
                 "so the pair cannot be built; make the shifts add up to less."]
+    if clearance < CLEARANCE_MIN * g1.module:
+        return [f"The tip clearance is {clearance:.3f} mm, under a tenth of a module: the tips run close to "
+                "the other gear's root fillets."]
+    return []
+
+
+def _is_ring(g) -> bool:
+    return isinstance(getattr(g, "section", g), internal.InternalDerived)
+
+
+def _printed_mesh_warnings(g1, g2) -> List[str]:
+    """:func:`mesh_warnings` for a pair either gear of which is printed."""
+    if isinstance(g1, bevel.BevelDerived) and isinstance(g2, bevel.BevelDerived):
+        said = printed_clearance_sentence(bevel_tip_clearance(g1, g2), shifted=False)
+        return [said] if said else []
+    beta = getattr(g1, "helix_angle_deg", 0.0)
+    normal = getattr(g1, "normal_pressure_angle_deg", g1.pressure_angle_deg)
+    if beta and (abs(beta - getattr(g2, "helix_angle_deg", 0.0)) > 1e-9
+                 or (getattr(g1, "hand", "") == getattr(g2, "hand", "")) != (_is_ring(g1) or _is_ring(g2))):
+        return []                       # a crossed pair, which this does not judge
+    if _is_ring(g1) or _is_ring(g2):
+        pinion, ring = (g2, g1) if _is_ring(g1) else (g1, g2)
+        x = getattr(pinion, "shift", 0.0) or 0.0
+        try:
+            clearance = ring_tip_clearance(pinion.module, pinion.teeth, ring.teeth, normal, beta, x, 0.0)
+        except ValueError as exc:
+            return [str(exc)]
+        said = printed_clearance_sentence(clearance, shifted=bool(x))
+        return [said] if said else []
+    x1, x2 = getattr(g1, "shift", 0.0), getattr(g2, "shift", 0.0)
+    try:
+        clearance = tip_clearance(g1.module, g1.teeth, g2.teeth, normal, beta, x1, x2)
+    except ValueError as exc:
+        return [str(exc)]
+    if clearance <= 0.0:
+        return [f"With these shifts a tooth tip reaches the other gear's root ({clearance:.3f} mm of clearance), "
+                "so the pair cannot be built; make the shifts add up to less."]
+    said = printed_clearance_sentence(clearance, shifted=bool(x1 or x2))
+    if said:
+        return [said]
     if clearance < CLEARANCE_MIN * g1.module:
         return [f"The tip clearance is {clearance:.3f} mm, under a tenth of a module: the tips run close to "
                 "the other gear's root fillets."]

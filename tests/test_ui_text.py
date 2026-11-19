@@ -3875,3 +3875,846 @@ def test_a_part_left_in_error_and_one_still_in_error_say_stays_alone_never_next_
     # neither number may stand beside STAYS (the re-check of 7d96316, should-fix 2).
     assert ui_text.whats_wrong_next_sentence(1) not in text and ui_text.whats_wrong_next_sentence(2) not in text, text
     assert "What's Wrong" not in ui_text.gearbox_update_status(_update(), stopped, finished=finished, revision=Y26)[0]
+
+
+# -- F1: what a printed gear and a gearbox's Process are told (PLAN-PRINTED §1.3, §2.1, §6; package C) -------------
+
+from gear_generator.gears import kind_for  # noqa: E402
+from gear_generator.spec import PROCESS_MACHINED, PROCESS_PRINTED  # noqa: E402
+
+PRINTED_BACKLASH_WHAT = (
+    "How much each tooth is thinned at the pitch circle so the pair does not bind: the space grows by this and the "
+    "tooth shrinks by it, on both gears, so the play in the mesh is twice the number. Printed, blank uses 0.3 mm, or "
+    "0.3 × module below module 1: room for walls printed a little fat, and a starting value until your own prints "
+    "are measured. A slicer's X-Y compensation does the same job, so use one or the other, not both.")
+
+
+def _printed(**fields):
+    spec = GearSpec(process="printed", **fields)
+    return kind_for(spec).derive(spec)
+
+
+@pytest.mark.parametrize("fields, row", [
+    ({}, "0.3 · printed default"),
+    ({"module": "0.5", "teeth": "30"}, "0.15 · printed default"),          # 0.3 × module below module 1
+    ({"kind": "helical", "helix_angle": "15"}, "0.3 · printed default"),
+    ({"teeth": "60", "teeth_side": "internal"}, "0.3 · printed default"),
+    ({"kind": "bevel", "teeth": "20", "mate_teeth": "40", "face_width": "10"}, "0.3 · printed default"),
+    ({"backlash": "0.1"}, "0.1"),                                            # typed: as typed, printed or not
+])
+def test_a_printed_gears_derived_backlash_row_says_the_printed_default(fields, row):
+    assert dict(ui_text.derived_rows(_printed(**fields)))["Backlash"] == row
+
+
+def test_a_printed_gears_backlash_card_says_the_printed_default_and_the_bevels_toe():
+    assert ui_text.explainer("backlash", _printed(), "Gear_m1.5_N25_P") == (
+        "Backlash", "j", PRINTED_BACKLASH_WHAT,
+        "blank → 0.3 mm · printed default · tooth 2.056 · space 2.656 · play in the mesh 0.6")
+    assert ui_text.explainer("backlash", _printed(module="0.5", teeth="30"), "x")[3] == (
+        "blank → 0.15 mm · printed default · tooth 0.635 · space 0.935 · play in the mesh 0.3")
+    bevel = _printed(kind="bevel", teeth="20", mate_teeth="40", face_width="10")
+    assert round(bevel.toe_scale, 2) == 0.70                                 # §2.1's 20 / 40 at module 1.5, face 10
+    assert ui_text.explainer("backlash", bevel, "x")[3] == (
+        "blank → 0.3 mm · printed default, 0.211 at the toe · tooth 2.433 · space 2.279 · play in the mesh 0.6")
+    typed = ui_text.explainer("backlash", _printed(backlash="0.1"), "x")
+    assert typed[2] == PRINTED_BACKLASH_WHAT and typed[3].startswith("0.1 mm · tooth ")
+
+
+def test_the_backlash_card_takes_the_forms_process_when_the_gear_does_not_work_out():
+    assert ui_text.explainer("backlash", None, printed=True)[2:] == (PRINTED_BACKLASH_WHAT, "check the fields")
+    machined = ui_text.explainer("backlash", None, printed=False)[2]
+    assert machined == ui_text.explainer("backlash", None)[2] and "Blank uses 0.3 × module" in machined
+    # Only Backlash changes its copy: every other card is the machined gear's, printed or not.
+    g, m = _printed(), KINDS["spur"].derive(GearSpec())
+    for field in ui_text.GEAR_EXPLAINERS:
+        if field != "backlash":
+            assert ui_text.explainer(field, g, "x")[2] == ui_text.explainer(field, m, "x")[2], field
+
+
+def test_a_printed_solves_row_too_thin_for_the_nozzle_says_so_and_a_machined_row_never_does():
+    """§2.5: package A marks a printed row whose module or tips are thin for the nozzle; the candidate list says it."""
+    printed = PairSpec(centre_distance="30", ratio="3", series="1+2+fine", gear_a=GearSpec(process="printed"),
+                       gear_b=GearSpec(process="printed"))
+    rows = {ui_text.candidate_row(c)[:3]: c.mark for c in pair.solve_spec(printed)}
+    assert rows[("0.6", "25 : 75", "thin for a 0.4 nozzle")] == "thin for a 0.4 nozzle"
+    assert rows[("1", "15 : 45", "undercut · thin for a 0.4 nozzle")]
+    machined = pair.solve_spec(PairSpec(centre_distance="30", ratio="3", series="1+2+fine"))
+    assert not any("nozzle" in ui_text.candidate_row(c)[2] for c in machined)
+
+
+def test_the_forms_process_row_and_what_it_does_to_the_backlash_field():
+    assert ui_text.PROCESS_LABELS == {PROCESS_PRINTED: "Printed", PROCESS_MACHINED: "Machined"}
+    assert (ui_text.NOZZLE_PLACEHOLDER, ui_text.NOZZLE_HINT) == ("0.4", "the printer's line width")
+    assert ui_text.BACKLASH_PLACEHOLDERS == {PROCESS_MACHINED: "0.3 × module", PROCESS_PRINTED: "0.3 · printed"}
+    assert ui_text.BACKLASH_HINTS == {PROCESS_MACHINED: "ISO: 0.02–0.05 × m", PROCESS_PRINTED: "0.3 × m below m1"}
+
+
+def _boxes(typed, resolved=None, cell="Box!B9", nozzle=""):
+    """The Box as read (``typed``, "" for a blank) and as assessed (its blank resolved to ``resolved``)."""
+    read = model.Box(name="R", process=typed, nozzle=nozzle, process_cell=cell)
+    return read, dataclasses.replace(read, process=resolved if resolved is not None else typed)
+
+
+@pytest.mark.parametrize("typed, resolved, cell, nozzle, line", [
+    ("printed", None, "Box!B9", "", "Printed, 0.4 mm nozzle"),
+    ("Printed", "printed", "Box!B9", "0.6", "Printed, 0.6 mm nozzle"),
+    ("", "printed", "Box!B9", "", "Printed, 0.4 mm nozzle"),                  # a new gearbox left blank
+    ("", "printed", "", "", "Printed, 0.4 mm nozzle"),                        # … with no row: Printed all the same
+    ("", "machined", "Box!B9", "",
+     "Machined, as built: type Printed beside Process on the Box sheet to print it"),
+    ("", "machined", "", "",                                                  # built before F1: no Process row
+     "Machined, as built: type Printed beside Process on the Box sheet to print it (add a row labelled Process)"),
+    ("machined", None, "Box!B9", "", "Machined, as the Box sheet says: type Printed beside Process to print it"),
+    ("MACHINED", "machined", "Box!B12", "0.6",
+     "Machined, as the Box sheet says: type Printed beside Process to print it"),
+    ("wood", None, "Box!B9", "", "Process does not read: the Checks panel says why"),
+    ("", "wood", "Box!B9", "", "Process does not read: the Checks panel says why"),
+    ("printed", None, "Box!B9", "x", "Printed; its Nozzle does not read: the Checks panel says why"),
+    ("printed", None, "Box!B9", "0", "Printed; its Nozzle does not read: the Checks panel says why"),
+])
+def test_the_workbook_panels_process_line(typed, resolved, cell, nozzle, line):
+    assert ui_text.workbook_process_line(*_boxes(typed, resolved, cell, nozzle)) == line
+
+
+@pytest.mark.parametrize("typed, record, line", [
+    ("", "broken", "Printed, as for a new gearbox: the record of what was built beside this workbook cannot be read, "
+                   "so a blank Process is not read as built; 0.4 mm nozzle"),
+    ("", "newer", "Not known: the record beside this workbook is from a newer Gear Generator, so a blank Process is "
+                  "not read as built here"),
+    ("printed", "broken", "Printed, 0.4 mm nozzle"),              # a typed word needs no record
+    ("machined", "newer", "Machined, as the Box sheet says: type Printed beside Process to print it"),
+])
+def test_a_blank_process_beside_a_record_that_cannot_be_read_is_not_said_as_built(typed, record, line):
+    """The F1 review's S5: the window resolves such a blank with no record, Printed; the line says why, or, for a
+    newer app's record (both buttons wait), that it is not known."""
+    resolved = typed or "printed"
+    assert ui_text.workbook_process_line(*_boxes(typed, resolved), record=record) == line
+
+
+def _backlash_part(stem, **fields):
+    return PartUpdate(_path(stem), ("G1",), GearSpec(**fields), None, (GlobalVariable("Backlash", "x"),), changed=True)
+
+
+def _backlash_result(*stems):
+    return _updated(parts=[swbuild.UpdateResult(document=f"{s}.SLDPRT", changed=["Backlash"], rebuilt=True)
+                           for s in stems], layout=None, placed=[], changed=[_path(s) for s in stems])
+
+
+def test_parts_made_printed_by_an_update_keep_their_names_said_once_for_the_gearbox():
+    """D10: an Update never renames a file, so parts built machined and made printed keep names without _P. Said once
+    for the gearbox, with what to do for the mark, never once a part as a name that no longer says what it holds."""
+    update = _update(parts=(_backlash_part("Gear_m1.5_N17", teeth="17", process="printed"),
+                            _backlash_part("Gear_m1.5_N68", teeth="68", process="printed")),
+                     moved_shafts=(), replaced=())
+    assert ui_text.gearbox_update_status(update, _backlash_result("Gear_m1.5_N17", "Gear_m1.5_N68")) == (
+        "Updated SolidWorks: changed 1 variable in Gear_m1.5_N17, changed 1 variable in Gear_m1.5_N68; no "
+        "interference between the gears. The 2 parts now printed keep their file names, without the _P a part built "
+        "printed is named with: Update SolidWorks never renames a file, and Build again… makes new parts named with _P "
+        "if you want the mark. Save Gear_m1.5_N17 and Gear_m1.5_N68 in SolidWorks to keep them.", True)
+    one = _update(parts=(_backlash_part("Gear_m1.5_N17", teeth="17", process="printed"),), moved_shafts=(),
+                  replaced=())
+    assert ui_text.gearbox_update_status(one, _backlash_result("Gear_m1.5_N17"))[0] == (
+        "Updated SolidWorks: changed 1 variable in Gear_m1.5_N17; no interference between the gears. Gear_m1.5_N17, "
+        "now printed, keeps its file name, without the _P a part built printed is named with: Update SolidWorks never "
+        "renames a file, and Build again… makes a new part named with _P if you want the mark. Save Gear_m1.5_N17 in "
+        "SolidWorks to keep it.")
+
+
+def test_a_printed_part_made_machined_keeps_its_p_and_a_printed_parts_teeth_are_said_as_before():
+    back = _update(parts=(_backlash_part("Gear_m1.5_N17_P", teeth="18"),), moved_shafts=(), replaced=())
+    assert ui_text.gearbox_update_status(back, _backlash_result("Gear_m1.5_N17_P"))[0] == (
+        "Updated SolidWorks: changed 1 variable in Gear_m1.5_N17_P (it now has 18 teeth; its file keeps its name); no "
+        "interference between the gears. Gear_m1.5_N17_P, now machined, keeps its file name, with the _P it was built "
+        "printed with: Update SolidWorks never renames a file, and Build again… makes a new part named without it if "
+        "you want. Save Gear_m1.5_N17_P in SolidWorks to keep it.")
+    printed = _update(parts=(_backlash_part("Gear_m1.5_N17_P_r2", teeth="18", process="printed"),), moved_shafts=(),
+                      replaced=())
+    assert ui_text.gearbox_update_status(printed, _backlash_result("Gear_m1.5_N17_P_r2"))[0] == (
+        "Updated SolidWorks: changed 1 variable in Gear_m1.5_N17_P_r2 (it now has 18 teeth; its file keeps its name); "
+        "no interference between the gears. Save Gear_m1.5_N17_P_r2 in SolidWorks to keep it.")
+    named = _update(parts=(_backlash_part("Pinion", teeth="17", process="printed", name="Pinion"),), moved_shafts=(),
+                    replaced=())
+    assert "keeps its file name" not in ui_text.gearbox_update_status(named, _backlash_result("Pinion"))[0]
+
+
+def test_the_name_sentence_is_said_only_on_the_update_that_changes_the_process():
+    """The F1 review's S2: a part an earlier Update made printed is not told again on a later Update that changes
+    something else; one the record at the press holds as machined is. The record's entry says (the window passes the
+    job's record, taken at the press); without one, the recorded Backlash global says; without either, the name."""
+    from gear_generator.gears import spur
+    part = _backlash_part("Gear_m1.5_N17", teeth="18", process="printed", backlash="0.2")    # typed: no global says
+
+    def said(spec_on_record=None, recorded=None):
+        planned = dataclasses.replace(part, recorded=recorded)
+        record = None
+        if spec_on_record is not None:
+            record = store.LinkRecord(workbook=f"{P}\\Reducer_12to1.xlsx", parts=[
+                store.PartEntry(path=_path("Gear_m1.5_N17"), gears=["G1"], revision=0, spec=spec_on_record.to_dict())])
+        return ui_text.gearbox_update_status(_update(parts=(planned,), moved_shafts=(), replaced=()),
+                                             _backlash_result("Gear_m1.5_N17"), record=record)[0]
+
+    quiet = ("Updated SolidWorks: changed 1 variable in Gear_m1.5_N17 (it now has 18 teeth; its file keeps its name); "
+             "no interference between the gears. Save Gear_m1.5_N17 in SolidWorks to keep it.")
+    told = "Gear_m1.5_N17, now printed, keeps its file name, without the _P"
+    assert said(GearSpec(teeth="17", process="printed", backlash="0.2")) == quiet       # made printed earlier
+    assert said(GearSpec(teeth="17", backlash="0.2")).count(told) == 1                   # made printed now
+    assert said(recorded=(("Backlash", spur.printed_backlash_expression()),)) == quiet  # no entry: the global says
+    assert said(recorded=(("Backlash", '0.3 * "Module"'),)).count(told) == 1
+    assert said().count(told) == 1                                                       # neither: the name says
+
+
+# -- F2 (PLAN-PRINTED §3.0, §3.1; package C): the span over k teeth and Print files' words --------------------------------
+
+import math as _math  # noqa: E402
+import time as _time  # noqa: E402
+
+from gear_generator import printout as po  # noqa: E402
+from gear_generator.gears import kind_for  # noqa: E402
+from gear_generator.gears import span as sp  # noqa: E402
+
+COUPON = GearSpec(module="1.5", teeth="20", face_width="8", bore="8", process="printed")
+
+
+def _reading(spec):
+    kind = kind_for(spec)
+    g = kind.derive(spec)
+    return g, sp.span(g, kind.recipe_for(spec))
+
+
+def test_the_span_row_is_the_figure_the_calipers_read_and_none_for_a_machined_gear():
+    g, reading = _reading(COUPON)
+    assert ui_text.span_rows(reading, None, 20, 1.5) == [("Span over 3 teeth", "11.209")]
+    _, machined = _reading(GearSpec(module="1.5", teeth="20"))
+    assert ui_text.span_rows(machined, 11.3, 20, 1.5) == []
+    _, helical = _reading(GearSpec(kind="helical", module="1.5", teeth="25", helix_angle="20", process="printed"))
+    assert ui_text.span_rows(helical, None, 20, 1.5) == [("Span over 4 teeth", "15.844")]
+
+
+def test_a_span_withheld_says_why_in_one_line():
+    """§3.0: recipe B's ruling, the narrow face with the face it needs, and no contact; a reading typed adds nothing."""
+    _, arcs = _reading(GearSpec(module="1.5", teeth="20", recipe="B", process="printed"))
+    assert arcs.kind == "arcs"
+    assert ui_text.span_rows(arcs, 11.3, 20, 1.5) == [
+        ("Span over k teeth", "not one figure on arcs; choose Involute to measure")]
+    _, narrow = _reading(GearSpec(kind="helical", module="2", teeth="20", helix_angle="30", face_width="12",
+                                  process="printed"))
+    assert narrow.kind == "narrow_face"
+    assert ui_text.span_rows(narrow, None, 20, 2) == [
+        ("Span over k teeth", "face too narrow to measure: it needs 13.0 mm")]
+    assert ui_text.span_rows(sp.SpanReading("no_contact"), None, 20, 1) == [
+        ("Span over k teeth", "no span: no k has both jaws on the involute")]
+    assert ui_text.span_rows(sp.NONE, 11.0, 20, 1) == []
+
+
+MEASURED = [
+    # (reading, alpha_n, module, the line): above, at and below the span; the floor; cos alpha_n; past 0.3 x module
+    (11.291, 20, 1.5, "Your printer adds 0.041 mm a flank: a backlash of 0.173 mm a gear keeps 0.04 mm of play a "
+                      "flank."),
+    (11.20875, 20, 1.5, "Your printer adds nothing to a flank: a backlash of 0.1 mm a gear, the least proposed (0.04 "
+                        "mm of play a flank alone would ask less)."),
+    (11.17, 20, 1.5, "Your printer takes 0.019 mm off a flank: a backlash of 0.1 mm a gear, the least proposed (0.04 mm "
+                     "of play a flank alone would ask less)."),
+    (11.409, 20, 1.5, "Your printer adds 0.1 mm a flank: a backlash of 0.298 mm a gear keeps 0.04 mm of play a flank."),
+    # The coordinator's ruling on F2-REVIEW M2: flagged above the printed default (0.3 mm from module 1 up, 0.3 x
+    # module under it), so 0.309 at 25 degrees on a module 1.5 gear is flagged, where 0.3 x module (0.45) was not.
+    (11.409, 25, 1.5, "Your printer adds 0.1 mm a flank: a backlash of 0.309 mm a gear keeps 0.04 mm of play a flank. "
+                      "That is more than the 0.3 mm a printed gear of this module is given today: whether it should "
+                      "take more is yours to decide (README: Calibrating your printer, step 6)."),
+    (11.6, 20, 1.5, "Your printer adds 0.196 mm a flank: a backlash of 0.501 mm a gear keeps 0.04 mm of play a flank. "
+                    "That is more than the 0.3 mm a printed gear of this module is given today: whether it should take "
+                    "more is yours to decide (README: Calibrating your printer, step 6)."),
+    (11.4488, 20, 1.0, "Your printer adds 0.12 mm a flank: a backlash of 0.341 mm a gear keeps 0.04 mm of play a flank. "
+                       "That is more than the 0.3 mm a printed gear of this module is given today: whether it should "
+                       "take more is yours to decide (README: Calibrating your printer, step 6)."),
+    (11.409, 20, 0.8, "Your printer adds 0.1 mm a flank: a backlash of 0.298 mm a gear keeps 0.04 mm of play a flank. "
+                      "That is more than the 0.24 mm a printed gear of this module is given today: whether it should "
+                      "take more is yours to decide (README: Calibrating your printer, step 6)."),
+]
+
+
+@pytest.mark.parametrize("measured,alpha,module,line", MEASURED)
+def test_the_measured_line(measured, alpha, module, line):
+    _, reading = _reading(COUPON)
+    assert ui_text.span_rows(reading, measured, alpha, module) == [("Span over 3 teeth", "11.209"),
+                                                                  ("Measured", line)]
+
+
+@pytest.mark.parametrize("spec", [COUPON, GearSpec(module="2", teeth="30", process="printed"),
+                                  GearSpec(module="1", teeth="12", process="printed"),
+                                  GearSpec(kind="helical", module="1.5", teeth="25", helix_angle="20",
+                                           process="printed")])
+@pytest.mark.parametrize("delta", [-0.2, -0.05, 0.0, 0.082, 0.2, 0.5])
+def test_the_measured_line_says_what_span_measured_works_out(spec, delta):
+    """The coordinator's ruling on A's choice 1: the arithmetic is A's (span.measured) and the line only words it, on
+    the plan's coupons and its helical row: the flank and the backlash it says are A's figures, the floor and the
+    line past 0.3 x module A's flags."""
+    g, reading = _reading(spec)
+    alpha = getattr(g, "normal_pressure_angle_deg", g.pressure_angle_deg)
+    value = reading.w_mm + delta
+    told = sp.measured(reading, value, alpha, g.module)
+    line = ui_text.span_rows(reading, value, alpha, g.module)[-1][1]
+    e = told.flank_mm
+    if round(e, 3) != 0:
+        assert f" {ui_text._n(abs(e))} mm " in line
+    assert f"a backlash of {ui_text._n(told.backlash_mm)} mm a gear" in line
+    assert ("the least proposed" in line) == told.floored
+    assert ("a printed gear of this module is given today" in line) == told.over_default
+    if told.over_default:
+        assert f"more than the {ui_text._n(told.default_mm)} mm " in line
+
+
+def test_the_span_card():
+    _, reading = _reading(COUPON)
+    name, symbol, what, worked = ui_text.span_explainer(reading)
+    assert (name, symbol) == ("Span over k teeth", "W")
+    assert what == ui_text.SPAN_CARD_COPY
+    assert "square to the axis on a spur gear and tilted with the teeth on a helical one" in what
+    assert "backlash included" in what
+    assert worked == f"k 3 · W 11.209 mm · jaws touch at Ø {ui_text._n(reading.contact_d)} mm"
+    _, helical = _reading(GearSpec(kind="helical", module="1.5", teeth="25", helix_angle="20", process="printed"))
+    assert ui_text.span_explainer(helical)[3] == (f"k 4 · W 15.844 mm across the teeth (16.731 round the gear) · jaws "
+                                                  f"touch at Ø {ui_text._n(helical.contact_d)} mm")
+    _, arcs = _reading(GearSpec(module="1.5", teeth="20", recipe="B", process="printed"))
+    assert ui_text.span_explainer(arcs)[3] == "not one figure on arcs; choose Involute to measure"
+    assert ui_text.span_explainer(sp.NONE)[3] == "no span on this gear"
+    assert "span" not in ui_text.EXPLAINER_FIELDS          # no machined card moves (test_printed_rule's CARD)
+
+
+REFUSALS = [
+    (po.Refusal(po.GATE_COPY),
+     "Print files waits until writing a STEP file is measured on this SolidWorks; nothing was written."),
+    (po.Refusal(po.GATE, (), {"year": "2024", "revision": "32.5.0"}),
+     "Print files waits until writing a STEP file is measured on SolidWorks 2024 (32.5.0); nothing was written."),
+    (po.Refusal(po.GATE), "Print files needs SolidWorks running and connected; nothing was written."),
+    (po.Refusal(po.GATE, (), {"year": "2024", "revision": "32.5.0", "planned_year": "2026",
+                              "planned_revision": "34.1.1"}),
+     "SolidWorks changed since Print files was pressed (2026 (34.1.1) then, 2024 (32.5.0) now): press it again. "
+     "Nothing was written."),
+    (po.Refusal(po.GATE, (), {"planned_year": "2026", "planned_revision": "34.1.1"}),
+     "SolidWorks changed since Print files was pressed (2026 (34.1.1) then, none connected now): press it again. "
+     "Nothing was written."),
+    (po.Refusal(po.UNSAVED_MARK, ("Gear_m1.5_N20_P",)),
+     "Print files wrote nothing: Gear_m1.5_N20_P has changes from Update SolidWorks that are not saved; save it in "
+     "SolidWorks, then print."),
+    (po.Refusal(po.UNSAVED_MARK, ("Gear_m1.5_N17_P", "Gear_m2_N17_P")),
+     "Print files wrote nothing: Gear_m1.5_N17_P and Gear_m2_N17_P have changes from Update SolidWorks that are not "
+     "saved; save them in SolidWorks, then print."),
+    (po.Refusal(po.MISMATCHED_MARK, ("Gear_m1.5_N20_P",)),
+     "Print files wrote nothing: Gear_m1.5_N20_P no longer holds what the record says; press Update SolidWorks, then "
+     "print."),
+    (po.Refusal(po.CHANGES_ON_UPDATE, ("Gear_m1.25_N29_P", "Gear_m1.25_N13_P"),
+                {"Gear_m1.25_N29_P": "values", "Gear_m1.25_N13_P": "new part"}),
+     "Print files wrote nothing: Update SolidWorks would change the values in Gear_m1.25_N29_P (and make "
+     "Gear_m1.25_N13_P new); press Update SolidWorks and save, then print."),
+    (po.Refusal(po.CHANGES_ON_UPDATE, ("Gear_m1.25_N29_P",), {"Gear_m1.25_N29_P": "values"}),
+     "Print files wrote nothing: Update SolidWorks would change the values in Gear_m1.25_N29_P; press Update "
+     "SolidWorks and save, then print."),
+    (po.Refusal(po.CHANGES_ON_UPDATE, ("Gear_m1.25_N13_P",), {"Gear_m1.25_N13_P": "new part"}),
+     "Print files wrote nothing: Update SolidWorks would make Gear_m1.25_N13_P new; press Update SolidWorks, then "
+     "print."),
+    (po.Refusal(po.NEW_REVISION, ("Gear_m1.5_N20_P", "Gear_m1.5_N40_P"),
+                {"Gear_m1.5_N20_P": "values", "Gear_m1.5_N40_P": "new part"}),
+     "Print files wrote nothing: the workbook's changes to Gear_m1.5_N20_P and Gear_m1.5_N40_P need a new revision, "
+     "which Update SolidWorks cannot make; press Build again…, then print the new revision."),
+    (po.Refusal(po.NO_FOLDER, (), {"folder": ""}),
+     "Print files wrote nothing: choose an output folder; it writes into a print folder there."),
+    (po.Refusal(po.NO_FOLDER, (), {"folder": "C:\\Gears\\Out"}),
+     "Print files wrote nothing: the output folder C:\\Gears\\Out does not exist; make it, or choose another, then "
+     "print."),
+    (po.Refusal(po.NO_PART, ("G3",), {"G3": "no part"}),
+     "Print files wrote nothing: G3 has no part yet; build it first, then print."),
+    (po.Refusal(po.NO_PART, ("G3", "Gear_x"), {"G3": "no part", "Gear_x": "not on disk"}),
+     "Print files wrote nothing: G3 has no part yet, and Gear_x is not on disk; build them first, then print."),
+    (po.Refusal(po.WORKBOOK_ERROR), "Print files wrote nothing: the workbook as it stands cannot be compared with what "
+                                    "is built; the footer says why."),
+    (po.Refusal(po.FOREIGN_RECORD),
+     "Print files wrote nothing: the record beside this workbook is another workbook's, so nothing built is this "
+     "workbook's to print yet; Build makes its own."),
+    (po.Refusal(po.NO_RECORD, ("Part1.SLDPRT",)),
+     "Print files prints a part Gear Generator built: Part1.SLDPRT has no .gear.json beside it, so nothing was "
+     "written."),
+    (po.Refusal(po.NO_RECORD, ("Part1.SLDPRT",), {"record": "unreadable"}),
+     "Print files prints a part Gear Generator built: the .gear.json beside Part1.SLDPRT does not read, so nothing was "
+     "written."),
+    (po.Refusal(po.NO_RECORD),
+     "Print files prints a part Gear Generator built: the active part has no .gear.json beside it, so nothing was "
+     "written."),
+    (po.Refusal(po.NOT_A_PART, ("Assem1.SLDASM",)),
+     "Print files prints the part active in SolidWorks, and Assem1.SLDASM is not a part: make a gear part active "
+     "there; nothing was written."),
+    (po.Refusal(po.NOT_A_PART),
+     "Print files prints the part active in SolidWorks: make a gear part active there; nothing was written."),
+    (po.Refusal(po.MODIFIED, ("Gear_m1.5_N20_P",)),
+     "Print files wrote nothing: Gear_m1.5_N20_P is changed in SolidWorks and not saved; save it, or close it "
+     "without saving, then print."),
+    (po.Refusal(po.GLOBALS_DIFFER, ("Gear_m1.5_N20_P",), {"name": "Face Width", "live": "9", "recorded": "8"}),
+     'Print files wrote nothing: in Gear_m1.5_N20_P, "Face Width" is 9 where its record says 8; press Update values '
+     "(Update SolidWorks in the Workbook window), or put it back, then print."),
+    (po.Refusal(po.FEATURE_IN_ERROR, ("Gear_m1.5_N20_P",), {"Gear_m1.5_N20_P": "User Keyway"}),
+     "Print files wrote nothing: in Gear_m1.5_N20_P, User Keyway is in error in SolidWorks; fix it there, then "
+     "print."),
+    (po.Refusal(po.FEATURE_IN_ERROR, ("A", "B"), {"A": "Cut1, Cut2", "B": "Hole"}),
+     "Print files wrote nothing: in A, Cut1 and Cut2 are in error in SolidWorks; in B, Hole is in error in "
+     "SolidWorks; fix them there, then print."),
+    (po.Refusal(po.COMPONENT_ONLY, ("Gear_m1.25_N29_P",), {"Gear_m1.25_N29_P": "C:\\Box\\RangeBox.SLDASM"}),
+     "Print files wrote nothing: Gear_m1.25_N29_P is open only inside RangeBox; close the assembly or open the "
+     "part, then print."),
+    (po.Refusal(po.COMPONENT_ONLY, ("Gear_m1.25_N29_P",), {"Gear_m1.25_N29_P": ""}),
+     "Print files wrote nothing: Gear_m1.25_N29_P is open in SolidWorks but not as the active document; make it "
+     "active, or close it, then print."),
+    (po.Refusal(po.LIGHTWEIGHT, ("Gear_m1.25_N29_P",), {"Gear_m1.25_N29_P": "C:\\Box\\RangeBox.SLDASM"}),
+     "Print files wrote nothing: Gear_m1.25_N29_P is not open where Print files can reach it while RangeBox is open: "
+     "it may be a lightweight or suppressed component of it, or simply closed; resolve it there, or open the part "
+     "itself, then print again."),
+    (po.Refusal(po.LIGHTWEIGHT, ("A", "B"), {"A": "", "B": ""}),
+     "Print files wrote nothing: A and B are not open where Print files can reach them while an assembly is open: "
+     "they may be lightweight or suppressed components of it, or simply closed; resolve them there, or open the parts "
+     "themselves, then print again."),
+    (po.Refusal(po.SOLIDWORKS_REFUSED, ("Gear_m1.5_N20_P",),
+                {"file": "C:\\Out\\print\\x\\Gear_m1.5_N20_P.step", "errors": "1", "warnings": "0"}),
+     "Print files stopped: SolidWorks would not write Gear_m1.5_N20_P.step (errors 1, warnings 0)."),
+    (po.Refusal(po.SOLIDWORKS_REFUSED, ("Gear_m1.5_N20_P",), {"said": "The document could not be reached"}),
+     "Print files stopped: SolidWorks would not write Gear_m1.5_N20_P.step: The document could not be reached."),
+]
+REASONS = {
+    po.FRAME: "the file is cut short or is not a STEP file",
+    po.SCHEMA: "it is written in a STEP schema other than AP203, AP214 or AP242 (Tools > Options > Export sets it)",
+    po.SOLIDS: "it does not hold exactly one solid",
+    po.OPEN_SHELL: "it holds an open surface",
+    po.SURFACE_MODEL: "it holds surfaces, not a solid",
+    po.UNIT: "its length unit cannot be read",
+    po.EXTENT: "its outer diameter or face width is not the gear's (by more than 0.01 mm)",
+}
+
+
+@pytest.mark.parametrize("refusal,sentence", REFUSALS)
+def test_each_print_refusal_is_said(refusal, sentence):
+    assert ui_text.print_refusal(refusal) == sentence
+
+
+@pytest.mark.parametrize("reason", po.REASONS)
+def test_each_file_check_reason_is_said(reason):
+    refusal = po.Refusal(po.FILE_CHECK, ("Gear_m1.5_N20_P",), {"file": "Gear_m1.5_N20_P.step", "reason": reason})
+    assert ui_text.print_refusal(refusal) == (f"Print files stopped: Gear_m1.5_N20_P.step is not fit to print: "
+                                              f"{REASONS[reason]}.")
+
+
+def test_every_code_has_a_sentence_of_its_own():
+    said = {r.code for r, _ in REFUSALS} | {po.FILE_CHECK}
+    assert said == set(po.CODES)
+    assert not any(ui_text.print_refusal(po.Refusal(code)).endswith(f"({code}).") for code in po.CODES)
+
+
+def _part(spec, stem, **kw):
+    g, reading = _reading(spec)
+    return po.PrintPart(path=f"C:\\Out\\{stem}.SLDPRT", stem=stem, spec=spec, span=reading, process=spec.process, **kw)
+
+
+PRESSED = 1795600000.0
+WHEN = _time.strftime("%Y-%m-%d %H:%M:%S", _time.localtime(PRESSED))
+SETTINGS = "\n".join(ui_text.PRINT_SETTINGS)
+
+
+def test_the_bar_line_names_the_file_only_for_a_plan_that_would_write():
+    part = _part(COUPON, "Coupon_A")
+    assert ui_text.print_bar_line(po.PrintPlan(None, (part,), folder="F")) == (
+        "Print files will write Coupon_A.step from the active part.")
+    assert ui_text.print_bar_line(po.PrintPlan(po.Refusal(po.GATE_COPY))) == ""
+    assert ui_text.print_bar_line(None) == ""
+    assert ui_text.print_bar_line(po.PrintPlan(None, (part, part), folder="F")) == ""
+
+
+def test_print_result_after_a_clean_press():
+    one = po.PrintResult(written=(("C:\\Out\\Coupon_A.SLDPRT", "C:\\Out\\print\\2026-11-19 10.05.12\\Coupon_A.step"),),
+                         folder="C:\\Out\\print\\2026-11-19 10.05.12", active_restored=True,
+                         list_path="C:\\Out\\print\\2026-11-19 10.05.12\\print list.txt")
+    assert ui_text.print_result(one) == ("Print files wrote Coupon_A.step and its print list in "
+                                         "C:\\Out\\print\\2026-11-19 10.05.12.")
+    many = po.PrintResult(written=(("a", "F\\A.step"), ("b", "F\\B.step"), ("c", "F\\C.step")), folder="F",
+                          warnings=(("C:\\Out\\B.SLDPRT", ("Fillet3",)),), active_restored=True,
+                          list_path="F\\print list.txt")
+    assert ui_text.print_result(many) == ("Print files wrote 3 STEP files and their print list in F. SolidWorks warns "
+                                          "about Fillet3 in B; it was written as SolidWorks built it.")
+
+
+def test_print_result_says_a_flag_turned_on_and_the_active_document_not_put_back():
+    result = po.PrintResult(written=(("a", "F\\A.step"),), folder="F", flags_turned_on=("C:\\Out\\A.SLDPRT",),
+                            active_restored=False, list_path="F\\print list.txt")
+    assert ui_text.print_result(result) == (
+        "Print files wrote A.step and its print list in F. SolidWorks now marks A.SLDPRT as changed since Print files "
+        "ran, and nothing was saved: close it without saving to leave its file as before. The document you had active "
+        "could not be made active again.")
+
+
+def test_print_result_of_a_refusal_and_of_a_stop_that_left_files():
+    refused = po.PrintResult(refusal=po.Refusal(po.MODIFIED, ("Gear_m1.5_N20_P",)), active_restored=True)
+    assert ui_text.print_result(refused) == ui_text.print_refusal(refused.refusal)
+    stopped = po.PrintResult(written=(("a", "F\\A.step"),), folder="F", failed=(("F\\A.step", po.SOLIDS),),
+                             refusal=po.Refusal(po.FILE_CHECK, ("A",), {"file": "F\\A.step", "reason": po.SOLIDS}),
+                             active_restored=True, list_path="F\\print list.txt")
+    assert ui_text.print_result(stopped) == (
+        "Print files stopped: A.step is not fit to print: it does not hold exactly one solid. What was written is in F, "
+        "and its print list says not to print this set.")
+    from dataclasses import replace
+    assert ui_text.print_result(replace(stopped, list_path="", list_error="the disk is full")) == (
+        "Print files stopped: A.step is not fit to print: it does not hold exactly one solid. What was written is in F, "
+        "but its print list could not be written (the disk is full), so nothing there says not to print it: do not "
+        "print this set.")
+
+
+def test_print_result_never_claims_a_list_that_was_not_written():
+    """F2-REVIEW S2: the status is composed after printout.with_list, from list_path and list_error."""
+    from dataclasses import replace
+    done = po.PrintResult(written=(("a", "F\\A.step"), ("b", "F\\B.step")), folder="F", active_restored=True)
+    assert ui_text.print_result(replace(done, list_path="F\\print list.txt")) == (
+        "Print files wrote 2 STEP files and their print list in F.")
+    assert ui_text.print_result(replace(done, list_error="[Errno 28] No space left on device")) == (
+        "Print files wrote 2 STEP files in F, but the print list could not be written ([Errno 28] No space left on "
+        "device), so nothing in that folder says what each file is: press Print files again for a set with its list.")
+    assert ui_text.print_result(done) == "Print files wrote 2 STEP files in F."
+
+
+def test_the_print_list_of_one_coupon():
+    part = _part(COUPON, "Coupon_A")
+    folder = "C:\\Out\\print\\2026-11-19 10.05.12"
+    plan = po.PrintPlan(None, (part,), folder=folder, revision=(34, 1, 1), name="Coupon_A", pressed=PRESSED)
+    result = po.PrintResult(written=((part.path, folder + "\\Coupon_A.step"),), folder=folder,
+                            facts={"Coupon_A.step|schema": "AUTOMOTIVE_DESIGN", "Coupon_A.step|unit": "MILLI.METRE",
+                                   "Coupon_A.step|extent": "checked"}, active_restored=True)
+    assert ui_text.print_list_text(plan, result, "0.9") == (
+        "Print list: Coupon_A\n"
+        f"Pressed {WHEN} · Gear Generator 0.9, on SolidWorks 2026 (34.1.1)\n"
+        "Process: Printed, 0.4 mm nozzle\n"
+        "\n"
+        "Coupon_A.step\n"
+        "  print 1\n"
+        "  Module 1.5 · 20 teeth · face 8 mm · bore 8 mm · backlash 0.3 mm, printed default\n"
+        "  Span over 3 teeth: 11.209 mm (the calipers square to the axis, at mid-face).\n"
+        "  Checked: one closed solid, AP214 (AUTOMOTIVE_DESIGN), millimetres; outer diameter and face width match the "
+        "gear.\n"
+        "\n" + SETTINGS + "\n")
+
+
+def test_the_print_list_says_each_kind_of_part_and_heads_a_failed_set():
+    hel = GearSpec(kind="helical", module="1.5", teeth="25", helix_angle="20", process="printed")
+    arcs = GearSpec(module="1.5", teeth="20", recipe="B", process="printed")
+    machined = GearSpec(module="1.5", teeth="68")
+    ring = GearSpec(module="1.5", teeth="60", teeth_side="internal", process="printed")
+    bevel = GearSpec(kind="bevel", module="1.5", teeth="20", mate_teeth="40", process="printed")
+    parts = (_part(hel, "Gear_h", rows=("G1",)), _part(arcs, "Gear_a", rows=("G2", "G3"), count=2),
+             _part(machined, "Gear_m1.5_N68", rows=("G4",), user_features=("User Keyway",)),
+             _part(ring, "Ring", rows=("R",)), _part(bevel, "Bev", rows=("B",), count=3))
+    plan = po.PrintPlan(None, parts, folder="F", revision=(32, 5, 0), name="Reducer", pressed=PRESSED)
+    result = po.PrintResult(
+        written=tuple((p.path, f"F\\{p.stem}.step") for p in parts[:3]), folder="F",
+        failed=(("F\\Gear_a.step", po.SOLIDS),),
+        refusal=po.Refusal(po.FILE_CHECK, ("Gear_a",), {"file": "F\\Gear_a.step", "reason": po.SOLIDS}),
+        warnings=((parts[0].path, ("Fillet3",)),), live_features=((parts[2].path, ("User Keyway",)),),
+        facts={"Gear_h.step|extent": "skipped: user features",
+                                                           "Gear_m1.5_N68.step|extent": "skipped: not measured"},
+        active_restored=True)
+    text = ui_text.print_list_text(plan, result, "0.9")
+    assert text.startswith("DO NOT PRINT THIS SET: Gear_a.step is not fit to print: it does not hold exactly one "
+                           "solid.\n\nPrint list: Reducer\n")
+    assert f"Pressed {WHEN} · Gear Generator 0.9, on SolidWorks 2024 (32.5.0)\n" in text
+    assert "Process: Printed, 0.4 mm nozzle (the parts marked Machined below are machined)\n" in text
+    assert ("Gear_h.step\n  For G1 · print 1\n  Module 1.5 · 25 teeth · face 10 mm · bore 10 mm · backlash 0.3 mm, "
+            "printed default\n  Span over 4 teeth: 15.844 mm across the teeth (the calipers tilted with them, at "
+            "mid-face).\n  SolidWorks warns about Fillet3; written as SolidWorks built it.\n  Checked: one closed "
+            "solid; size not checked (your features in it).\n") in text
+    assert ("Gear_a.step\n  For G2 and G3 · print 2\n  Module 1.5 · 20 teeth · face 10 mm · bore 10 mm · backlash 0.3 "
+            "mm, printed default\n  Span: not one figure, since it is drawn with arcs; choose Involute to measure.\n"
+            "  NOT FIT TO PRINT: it does not hold exactly one solid.\n") in text
+    assert ("Gear_m1.5_N68.step\n  For G4 · print 1\n  Module 1.5 · 68 teeth · face 10 mm · bore 10 mm · backlash "
+            "0.45 mm (0.3 × module)\n  Machined: its backlash is a cutter's, not a printer's; no span.\n  Your "
+            "features left in it: User Keyway.\n  Checked: one closed solid; size not checked (not yet shown on "
+            "SolidWorks).\n") in text
+    assert "Ring.step\n  For R · print 1\n" in text and "No span: internal teeth are measured over pins, not jaws.\n" \
+        "  Not written.\n" in text
+    assert "Bev.step\n  For B · print 3\n" in text and "No span: a bevel tooth is not one size along its face.\n" in text
+    assert text.endswith("\n\n" + SETTINGS + "\n") and text.count(ui_text.PRINT_SETTINGS[0]) == 1
+
+
+def test_a_set_solidworks_would_not_finish_is_headed_not_to_print():
+    part = _part(COUPON, "A")
+    plan = po.PrintPlan(None, (part,), folder="F", name="Box", pressed=PRESSED)
+    result = po.PrintResult(folder="F", refusal=po.Refusal(po.SOLIDWORKS_REFUSED, ("A",),
+                                                           {"file": "F\\A.step", "errors": "1", "warnings": "0"}),
+                            active_restored=True)
+    text = ui_text.print_list_text(plan, result, "0.9")
+    assert text.startswith("DO NOT PRINT THIS SET: SolidWorks would not write A.step (errors 1, warnings 0), so this "
+                           "set is not whole.\n\nPrint list: Box\n")
+    assert "A.step\n  print 1\n" in text and "  Not written.\n" in text
+
+
+def test_the_footer_while_print_files_runs_holds_both_buttons():
+    f = ui_text.workbook_footer(None, printing=True)
+    assert f.text == "Print files is writing STEP files from SolidWorks…"
+    assert not f.build_enabled and not f.update_enabled
+
+
+
+def test_the_print_list_names_the_users_features_the_job_found_live():
+    """F2-DEMONSTRATION-REVIEW §6.1: a written part's block names the user's features B's job read live in it
+    (PrintResult.live_features), whether or not its record lists them; a part with none has no such line; a part the
+    job stopped before writing names what its record lists."""
+    listed = _part(COUPON, "Listed", user_features=("User Keyway",))
+    unlisted = _part(COUPON, "Unlisted")
+    plain = _part(COUPON, "Plain")
+    stopped = _part(COUPON, "Stopped", user_features=("Boss",))
+    plan = po.PrintPlan(None, (listed, unlisted, plain, stopped), folder="F", name="Box", pressed=PRESSED)
+    result = po.PrintResult(written=tuple((p.path, f"F\\{p.stem}.step") for p in (listed, unlisted, plain)), folder="F",
+                            live_features=((listed.path, ("User Keyway",)), (unlisted.path, ("Cut-Extrude1", "Fillet9"))),
+                            active_restored=True)
+    blocks = {b.split("\n", 1)[0]: b for b in ui_text.print_list_text(plan, result, "0.9").split("\n\n")}
+    assert "  Your features left in it: User Keyway.\n" in blocks["Listed.step"] + "\n"
+    assert "  Your features left in it: Cut-Extrude1 and Fillet9.\n" in blocks["Unlisted.step"] + "\n"
+    assert "Your features" not in blocks["Plain.step"]
+    assert "  Your features left in it: Boss.\n  Not written." in blocks["Stopped.step"]
+    # A written part the job found none in names none, whatever its record lists (the file is what the job read).
+    gone = po.PrintResult(written=((listed.path, "F\\Listed.step"),), folder="F", active_restored=True)
+    text = ui_text.print_list_text(po.PrintPlan(None, (listed,), folder="F", name="Box", pressed=PRESSED), gone, "0.9")
+    assert "Your features" not in text
+
+
+
+# -- F3, package C (PLAN-PRINTED §4.1, §4.2, §4.6; F3-INTERFACES §5, §7, §9): the bore as cut, in words -------------
+# -- The figures are package A's derived gear (spur.bore_allowance_of, read with the switch of F3-INTERFACES §13 on
+# -- where a test means the printed default); where a blank allowance comes from is read off the spec, through
+# -- spec.as_built for a part on record. A plain machined gear says nothing new (the card pin in test_printed_rule).
+
+from gear_generator.gears import kind_for as _kind_for  # noqa: E402
+from gear_generator.gears import spur as _spur  # noqa: E402
+from gear_generator.spec import as_built as _as_built  # noqa: E402
+
+
+@pytest.fixture
+def default_on(monkeypatch):
+    """A printed gear's blank Bore allowance plans the printed default (F3-INTERFACES §13), as once the switch is on."""
+    monkeypatch.setattr(_spur, "PRINTED_DEFAULT_IN_PLANS", True, raising=False)
+
+
+def _g(**fields):
+    spec = GearSpec(**fields)
+    return _kind_for(spec).derive(spec)
+
+
+def _rows(**fields):
+    return dict(ui_text.derived_rows(_g(**fields)))
+
+
+def test_a_plain_machined_gear_shows_no_bore_as_cut_and_one_with_an_allowance_or_a_d_does(default_on):
+    assert "Bore as cut" not in _rows() and "Flat as cut" not in _rows()
+    assert _rows(bore_allowance="0.3")["Bore as cut"] == "10.3 · 10 + 0.3"
+    assert _rows(bore="8", drive="flat", flat="7")["Flat as cut"] == "7"
+    assert "Bore as cut" not in _rows(bore="", bore_allowance="0.3")
+
+
+def test_a_printed_gear_shows_its_hole_as_cut_whatever_its_allowance(default_on):
+    printed = dict(process="printed", bore="8")
+    assert _rows(**printed)["Bore as cut"] == "8.2 · 8 + 0.2"
+    assert _rows(**printed, bore_allowance="0")["Bore as cut"] == "8"
+    assert _rows(**printed, bore_allowance="-0.1")["Bore as cut"] == "7.9 · 8 − 0.1"
+    rows = _rows(**printed, drive="flat", flat="7")
+    assert (rows["Bore as cut"], rows["Flat as cut"]) == ("8.2 · 8 + 0.2", "7.2 · 7 + 0.2")
+    assert list(rows)[-2:] == ["Bore as cut", "Flat as cut"]               # after Fillet, the last of the rows
+    assert "Bore as cut" not in _rows(process="printed", bore="")
+    assert "Bore as cut" not in _rows(process="printed", teeth="60", teeth_side="internal")   # a ring has no bore
+    helical = _rows(kind="helical", helix_angle="15", **printed)
+    bevel = _rows(kind="bevel", mate_teeth="40", teeth="20", **printed)
+    assert helical["Bore as cut"] == bevel["Bore as cut"] == "8.2 · 8 + 0.2"
+    # Read as built from a record with no global, the hole is the Bore: a part built before F3.
+    on_record = _as_built(GearSpec(**printed), [["Bore Diameter", "8"]])
+    assert dict(ui_text.derived_rows(_kind_for(on_record).derive(on_record)))["Bore as cut"] == "8"
+
+
+BORE_ALLOWANCE_COPY = (
+    "Added to Bore when the hole is cut, on the diameter, so Bore stays your shaft's size and the wall moves by half "
+    "of it. Blank: 0.2 mm for a printed gear not yet built (a starting value until your coupons give your printer's "
+    "figure), 0 machined, and for a gear already built the allowance it was built with, whatever its Process is now. "
+    "Clearing a typed allowance keeps the figure as built; to take the default, type it. Bore as cut, under Derived, "
+    "shows which. Negative for a press fit. A slicer's X-Y hole compensation does the same job, so keep it at 0.")
+DRIVE_COPY = (
+    "Round cuts a round hole. Flat cuts a D, for a shaft with a flat: type its size across the flat in Flat. The flat "
+    "is cut on the gear's +X side, square to its X axis and facing the middle of a tooth space (on a helical gear at its "
+    "section plane, one overrun behind the face; on a herringbone at its middle), the same in every gear. The assembly does not model a shaft's flat: it turns each gear to mesh on its own, so gears that share a "
+    "D-shaft are phased by their flats in your machine and by their meshes in the assembly.")
+FLAT_COPY = (
+    "Your shaft's size across its flat, from the flat to the opposite round side, as your calipers read it. The hole's "
+    "flat takes the same half allowance as its round. The flat must be at least 0.3 mm deep on the shaft (Bore less "
+    "Flat) and stay well clear of the axis.")
+
+
+def test_the_bore_fields_cards_say_what_each_is():
+    spec = GearSpec(process="printed", bore="8")
+    g = _kind_for(spec).derive(spec)
+    assert ui_text.bore_explainer("bore_allowance", spec, g)[:3] == ("Bore allowance", "a", BORE_ALLOWANCE_COPY)
+    assert ui_text.bore_explainer("drive", spec, g)[:3] == ("Drive", "", DRIVE_COPY)
+    assert ui_text.bore_explainer("flat", spec, g)[:3] == ("Flat", "F", FLAT_COPY)
+    assert not set(ui_text.BORE_EXPLAINERS) & set(ui_text.EXPLAINER_FIELDS)    # no machined card moves
+    with pytest.raises(ValueError, match="no bore explainer for a field called 'bore'"):
+        ui_text.bore_explainer("bore", spec, g)
+
+
+def _worked(field, spec):
+    g = _kind_for(spec).derive(spec)
+    return ui_text.bore_explainer(field, spec, g)[3]
+
+
+def test_the_allowance_card_works_out_where_a_blank_comes_from(default_on):
+    printed = GearSpec(process="printed", bore="8")
+    assert _worked("bore_allowance", printed) == "blank → 0.2 mm, the printed default → a hole of 8.2 mm"
+    assert _worked("bore_allowance", GearSpec(bore="8")) == "blank → 0 mm, machined → a hole of 8 mm"
+    assert _worked("bore_allowance", GearSpec(bore="8", bore_allowance="0.3")) == "0.3 mm → a hole of 8.3 mm"
+    built = _as_built(printed, [["Bore Diameter", "8"]])
+    assert _worked("bore_allowance", built) == "blank → 0 mm, as built → a hole of 8 mm"
+    built = _as_built(printed, [["Bore Diameter", "8"], ["Bore Allowance", "0.25"]])
+    assert _worked("bore_allowance", built) == "blank → 0.25 mm, as built → a hole of 8.25 mm"
+    # The as-built figure holds across a Process change, and a typed figure is what it says.
+    machined_now = _as_built(GearSpec(bore="8"), [["Bore Allowance", "0.25"]])
+    assert _worked("bore_allowance", machined_now) == "blank → 0.25 mm, as built → a hole of 8.25 mm"
+    assert _worked("bore_allowance", GearSpec(bore="", bore_allowance="0.2")) == (
+        "no Bore → no hole, so the allowance is not used")
+    d = GearSpec(process="printed", bore="8", drive="flat", flat="7")
+    assert _worked("bore_allowance", d) == (
+        "blank → 0.2 mm, the printed default → a D 8.2 mm across its round and 7.2 across its flat")
+    assert ui_text.bore_explainer("bore_allowance", printed, None)[3] == "check the fields"
+
+
+def test_the_drive_and_flat_cards_work_out_the_d(default_on):
+    d = GearSpec(process="printed", bore="8", drive="flat", flat="7")
+    assert _worked("drive", d) == (
+        "flat → a D 8.2 mm across its round and 7.2 across its flat, its flat 3.1 mm from the axis on +X")
+    assert _worked("flat", d) == "7 mm → the hole 7.2 mm across its flat, 3.1 from the axis · 1 mm deep on the shaft"
+    assert _worked("drive", GearSpec(process="printed", bore="8")) == "round → a hole of 8.2 mm"
+    assert _worked("drive", GearSpec(bore="")) == "no Bore → no hole to drive by"
+    assert _worked("flat", GearSpec(bore="")) == "no Bore → no hole to give a flat"
+    assert _worked("flat", GearSpec(bore="8")) == "Drive is round, so Flat is not used"
+    ring = GearSpec(process="printed", teeth="60", teeth_side="internal")
+    assert _worked("drive", ring) == "a ring has no bore to give an allowance or a flat"
+
+
+def test_the_bore_card_gives_the_rim_to_the_hole_as_cut(default_on):
+    assert ui_text.explainer("bore", _g())[3] == "10 mm → rim 11.875 mm to the root circle"       # as before F3
+    assert ui_text.explainer("bore", _g(bore_allowance="0.3"))[3] == (
+        "10 mm, cut at 10.3 → rim 11.725 mm to the root circle")
+    assert ui_text.explainer("bore", _g(process="printed"))[3] == (
+        "10 mm, cut at 10.2 → rim 11.775 mm to the root circle")
+
+
+def test_the_allowance_placeholder_says_what_a_blank_means_for_this_gear(default_on):
+    printed = GearSpec(process="printed", bore="8")
+    assert ui_text.bore_allowance_placeholder(printed, _kind_for(printed).derive(printed)) == "0.2 · printed"
+    assert ui_text.bore_allowance_placeholder(GearSpec(), _g()) == "0"
+    for variables, said in (([["Bore Diameter", "8"]], "0 · as built"),
+                            ([["Bore Allowance", "0.25"]], "0.25 · as built")):
+        built = _as_built(printed, variables)
+        assert ui_text.bore_allowance_placeholder(built, _kind_for(built).derive(built)) == said
+        assert ui_text.bore_allowance_placeholder(built, None) == said
+    assert ui_text.bore_allowance_placeholder(GearSpec()) == "0"
+
+
+def test_with_the_switch_off_the_placeholder_says_the_0_the_plan_cuts(monkeypatch):
+    monkeypatch.setattr(_spur, "PRINTED_DEFAULT_IN_PLANS", False, raising=False)
+    printed = GearSpec(process="printed", bore="8")
+    g = _kind_for(printed).derive(printed)
+    assert ui_text.bore_allowance_placeholder(printed, g) == "0 · printed"
+    assert dict(ui_text.derived_rows(g))["Bore as cut"] == "8"
+
+
+def test_a_build_with_a_record_open_says_it_keeps_the_allowance_as_built(default_on):
+    printed = GearSpec(process="printed", bore="8")
+
+    def keeps(spec, part="Coupon_C"):
+        return ui_text.build_keeps(spec, _kind_for(spec).derive(spec), part)
+    none = keeps(_as_built(printed, [["Bore Diameter", "8"]]), "Gear_m1.5_N25_P")
+    assert ui_text.mode_note("single", ["Coupon_F3"], keeps=none) == (
+        "Build will make Coupon_F3.SLDPRT with no bore allowance, as Gear_m1.5_N25_P was built, since Bore allowance "
+        "is blank.")
+    some = keeps(_as_built(printed, [["Bore Allowance", "0.2"]]))
+    assert ui_text.mode_note("single", ["Coupon_F3"], keeps=some) == (
+        "Build will make Coupon_F3.SLDPRT with the bore allowance Coupon_C was built with, 0.2 mm, since Bore "
+        "allowance is blank.")
+    # Nothing to say: not on record, a typed figure, no bore, a machined part built with none (a blank is 0 either way).
+    assert keeps(printed) == keeps(_as_built(dataclasses.replace(printed, bore_allowance="0.3"), [])) == ""
+    assert keeps(_as_built(GearSpec(process="printed", bore=""), [])) == ""
+    assert keeps(_as_built(GearSpec(bore="8"), [["Bore Diameter", "8"]])) == ""
+    assert keeps(_as_built(GearSpec(bore="8"), [["Bore Allowance", "0.1"]])) == (
+        " with the bore allowance Coupon_C was built with, 0.1 mm, since Bore allowance is blank")
+    # Update values, when it has something to change, is what the note says, as before.
+    assert ui_text.mode_note("single", ["X"], 2, "Coupon_C.SLDPRT", keeps=some) == (
+        "Update values will change 2 variables in Coupon_C.SLDPRT.")
+
+
+def _k3(name, was, now, cell, recorded, variables):
+    from types import SimpleNamespace
+    path = "C:\\Parts\\Gear_m1.5_N20_P.SLDPRT"
+    keyway = SimpleNamespace(path=path, name="User Keyway")
+    result = SimpleNamespace(user_features_in_error=[keyway], user_feature_was_in_error=lambda f: False,
+                             values_under=lambda f: [swbuild.ValueSet(path, name, was, now, cell)])
+    update = SimpleNamespace(parts=[SimpleNamespace(path=path, recorded=recorded, variables=variables)], layout=None,
+                             carriers=())
+    return ui_text._user_feature_sentences(result, update)
+
+
+def test_k3_says_the_way_back_to_an_allowance_as_typing_it_never_clearing_the_cell():
+    """§4.4 K3: a keyway of the user's in error after an Update set the part's Bore Allowance. A blank allowance is the
+    figure the part holds, and after this Update the part holds the new one, so clearing the cell would not have the
+    old figure back; typing it would, whether the cell was blank or typed before (which this sentence cannot see)."""
+    said = _k3("Bore Allowance", "0.2", "0.3", "Gears!V2", (("Bore Allowance", "0.2"),),
+               (GlobalVariable("Bore Allowance", "0.3"),))
+    assert said == ["Your User Keyway in Gear_m1.5_N20_P is in error in SolidWorks now, after this Update set Bore "
+                    "Allowance 0.2 to 0.3 (Gears!V2) in that part: change your User Keyway to fit, or type 0.2 in "
+                    "Gears!V2."]
+    assert "clear" not in said[0] and "again" not in said[0]
+    # Every other global's way back is as before F3.
+    said = _k3("Face Width", "10", "12", "Gears!I2", (("Face Width", "10"),), (GlobalVariable("Face Width", "12"),))
+    assert said[0].endswith("change your User Keyway to fit, or type 10 in Gears!I2 again.")
+    said = _k3("Bore Flat", "7", "6.5", "Gears!X2", (("Bore Flat", "7"),), (GlobalVariable("Bore Flat", "6.5"),))
+    assert said[0].endswith("set Bore Flat 7 to 6.5 (Gears!X2) in that part: change your User Keyway to fit, or type 7 "
+                            "in Gears!X2 again.")
+
+
+def test_the_print_list_says_a_bore_as_built(monkeypatch):
+    """F3-INTERFACES §7: the list's bore from package B's printout.bore_figures, the hole as built. A part with no
+    allowance and a round bore reads as before F3; the others say the allowance and the hole as cut."""
+    part = _part(COUPON, "Coupon_A")
+
+    def line(**figures):
+        monkeypatch.setattr(po, "bore_figures", lambda p: po.BoreFigures(**figures))
+        return ui_text._print_sizes(part)
+    lead = "Module 1.5 · 20 teeth · face 8 mm · "
+    assert line(bore=8.0) == lead + "bore 8 mm · backlash 0.3 mm, printed default"
+    assert line(bore=8.0, allowance=0.2) == lead + (
+        "bore 8 mm + 0.2 mm allowance (8.2 mm as cut) · backlash 0.3 mm, printed default")
+    assert line(bore=8.0, allowance=-0.1) == lead + (
+        "bore 8 mm − 0.1 mm allowance (7.9 mm as cut) · backlash 0.3 mm, printed default")
+    assert line(bore=8.0, flat=7.0) == lead + "bore 8 mm, D-flat 7 mm · backlash 0.3 mm, printed default"
+    assert line(bore=8.0, allowance=0.2, flat=7.0) == lead + (
+        "bore 8 mm + 0.2 mm allowance (8.2 mm as cut), D-flat 7 mm (7.2 mm as cut) · backlash 0.3 mm, printed default")
+    monkeypatch.setattr(po, "bore_figures", lambda p: 1 / 0)
+    assert ui_text._print_sizes(part) == lead + "bore 8 mm · backlash 0.3 mm, printed default"
+    nothing = po.PrintPart(path="C:\\Out\\D.SLDPRT", stem="D", spec=dataclasses.replace(COUPON, bore=""))
+    assert ui_text._print_sizes(nothing).startswith(lead + "no bore · ")
+
+
+def test_the_readme_gives_the_coupons_as_the_shaft_in_bore_and_the_offset_in_bore_allowance():
+    """M3 of F3's review, as the coordinator gives it to package C: once F3 is in, the coupon table types the shaft in
+    Bore and 0 to 0.3 in Bore allowance (0 typed, never left blank), and never the shaft plus an offset in Bore."""
+    import pathlib
+    readme = (pathlib.Path(__file__).resolve().parent.parent / "README.md").read_text(encoding="utf-8")
+    section = readme.split("#### Calibrating your printer", 1)[1].split("\n## ", 1)[0]
+    rows = [line for line in section.splitlines() if line.strip().startswith("| Coupon_")]
+    assert rows[:4] == ["   | Coupon_A | shaft | **0** (typed, not left blank) |",
+                        "   | Coupon_B | shaft | 0.1 |",
+                        "   | Coupon_C | shaft | 0.2 |",
+                        "   | Coupon_D | shaft | 0.3 |"]
+    assert "   | Name | Bore | Bore allowance |" in section.splitlines()
+    assert "shaft +" not in section and "shaft −" not in section
+    assert "X-Y hole compensation** 0" in section
+    # What the D-flat is, how to choose it, and what the app does not model (ruling 2).
+    flat = " ".join(readme.split("**D-flat**", 1)[1].split())
+    for words in ("on the gear's +X side, square to its X axis and facing the middle of a tooth space",
+                  "The app's assembly does not model a shaft's flat.",
+                  "phased to each other by their flats in your machine, and by their meshes in the assembly"):
+        assert words in flat, words

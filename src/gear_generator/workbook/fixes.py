@@ -159,6 +159,8 @@ def shift_fix(spec: GearboxSpec, a: Placed, b: Placed) -> Optional[Fix]:
     """Keep the shafts where they are: profile-shift two outside spur or helical gears to meet their distance.
 
     Not offered when either gear meshes with a third: shifting it moves that mesh's centre too (an idler).
+    When either gear is printed the shifts are tested after the printed backlash against its nozzle, and the
+    clearance against the larger of 0.1 × module and 0.3 mm (F1, PLAN-PRINTED §2.5).
     """
     if a.internal or b.internal or a.herringbone != b.herringbone:
         return None
@@ -169,8 +171,13 @@ def shift_fix(spec: GearboxSpec, a: Placed, b: Placed) -> Optional[Fix]:
     beta = getattr(da, "helix_angle_deg", 0.0)
     normal = getattr(da, "normal_pressure_angle_deg", da.pressure_angle_deg)
     actual = centre_distance(a, b)
+    # F1 (PLAN-PRINTED §2.5): a printed pair's shifts are tested as a print needs (pair.shift_for_centre's printed).
+    nozzle = getattr(da, "nozzle", None)
+    if nozzle is None:
+        nozzle = getattr(db, "nozzle", None)
+    printed = {} if nozzle is None else {"printed": True, "nozzle": nozzle}
     try:
-        x1, x2 = pairs.shift_for_centre(a.module, a.teeth, b.teeth, actual, normal, beta)
+        x1, x2 = pairs.shift_for_centre(a.module, a.teeth, b.teeth, actual, normal, beta, **printed)
     except ValueError:
         return None
     centre, _, epsilon = pairs.describe(a.module, a.teeth, b.teeth, normal, beta, shift_1=x1, shift_2=x2)

@@ -1,0 +1,1554 @@
+awake   display and system held awake for the run (previous state -0x80000000)
+run     2026-11-18 12:13:09; F2 demonstration from C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\snap\src (snapshot: b3fe4a1); sections ['gates', 'form', 'workbook', 'refusals']; masters {'rangebox': '', 'setup': '', 'reducer': ''}; redo False
+ok      the app's settings and Recent list go into this run's folder, not the user's: C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\appdata\Gear Generator\recent.json
+attach  SolidWorks 2024 (revision 32.5.0) (revision 32.5.0), PID 45812; SolidWorks 0.66 GB private, 8.90 GB free
+open    before: []
+findings USER_MATE_PUT_ROUTE "put along, the user's locks left on", USER_TIE_RULE 'not COMPONENT_UNDER_DEFINED', WHATS_WRONG_OPENS_ON_PART_REBUILD False, the branches {'USER_MATE_PUT_FIXED_GEAR_ON_2024': None, 'USER_MATE_PUT_FIXED_GEAR_ON_2026': None, 'USER_MATE_PUT_HELD_GEAR_ON_2024': None, 'USER_MATE_PUT_HELD_GEAR_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2024': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_ON_2024': True, 'USER_MATE_PUT_NO_CARRIER_ON_2026': True, 'USER_MATE_PUT_SUBASSEMBLY_ON_2024': None, 'USER_MATE_PUT_SUBASSEMBLY_ON_2026': None}
+rule    What's Wrong: swbuild.whats_wrong_shows_in_update reads True; a What's Wrong box owned by SolidWorks' frame during any job the script waits on is logged as a fact (under an app Update or Build, as the app's Update shows it; under the script's own steps and W8's helpers, as SolidWorks shows it when a person does this), the job waited for, and at its end the box must go within 60 s and the frame be enabled (else a STOP)
+rule    --close-outlived-whats-wrong: a What's Wrong owned by SolidWorks' frame, the frame enabled, still up 60 s after a job is said to have outlived it and closed with its own Close button, to be gone within 10 s; anything else stays the STOP (the coordinator's ruling of 2026-11-18, SolidWorks 2024 only): in force here
+excel   started our own Excel, PID 16348, 16.0 build 20527.0
+== gates  the six F2 findings and EXTENT_MEASURED as they stand; Print files on the form and in the Workbook window with them as they stand, then with SAVE_AS_COPY None and with STEP_EXPORT_ON_<year> None in this process only; then the job's own gate on a plan read for the other version
+finding SAVE_AS_COPY = 2: the review's value
+finding STEP_EXPORT_ON_2024 = True: the review's value
+finding STEP_EXPORT_NEEDS_ACTIVE_ON_2024 = False: the review's value
+finding STEP_EXPORT_FROM_COMPONENT_ON_2024 = True: the review's value
+finding OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_2024 = True: the review's value
+finding PART_WINDOW_READ_ON_2024 = 'Visible': the review's value
+finding EXTENT_MEASURED = True; swcom.DOCUMENT_BY_PATH_ROUTE = 'walk'
+fact    gates: as they stand the gate lets a press go on
+== user parts  Sprocket (spur 20 teeth, module 1.25, face 6, bore 10) and Housing (spur 40, module 1.25, face 4, bore 30, standing in) built by the strip's own plan_for and swbuild.build
+ok      user parts: Sprocket.SLDPRT built and saved: ok True, failures []
+ok      user parts: Housing.SLDPRT built and saved: ok True, failures []
+ok      user parts: closed: left []
+user    gates: the user's own document is Housing.SLDPRT, open in its own window and active
+ok      gates: Coupon_G: the form plans Coupon_G.SLDPRT, printed, a new file
+        build   Part3 · spur · recipe A · trig degrees
+        ok      new part Part3
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Coupon_G; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\gates\Coupon_G.SLDPRT
+status  gates: Coupon_G: Built Coupon_G.SLDPRT. 1 thing to do by hand: Assign a material to Coupon_G; the build leaves it unset.
+ok      gates: Coupon_G: built and saved by the form's job, its .gear.json written by the form: ok True, failures []
+write   Reducer_12to1.xlsx by the app's own write_new, its Output folder blank (the strip's is C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\gates-window)
+ok      Excel opened Reducer_12to1.xlsx with no dialog or repair: []
+excel   saved Reducer_12to1.xlsx
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      gates: the 12 : 1 written for the window with Printed on its Box, nothing built ('printed')
+-- gates  as the findings stand
+        the job's calls by member {'ActiveDoc': 3, 'Equation': 30, 'Extension': 1, 'FirstFeature': 1, 'GetCount': 1, 'GetEquationMgr': 1, 'GetErrorCode2': 25, 'GetFirstDocument': 5, 'GetNext': 10, 'GetNextFeature': 25, 'GetPathName': 16, 'GetSaveFlag': 5, 'GetTitle': 10, 'GetType': 10, 'GetTypeName2': 25, 'Name': 25, 'SaveAs': 1, 'Value': 30}
+bar     gates, as they stand: the form: 'Print files will write Coupon_G.step from the active part.' (shown)
+status  gates, as they stand: the form: Print files wrote Coupon_G.step and its print list in C:\…\out\gates\print\2026-11-18 12.14.03.
+ok      gates, as they stand: the gate open, the form's press wrote ['Coupon_G.step'] (the form section judges such a press whole): 'Print files wrote Coupon_G.step and its print list in C:\\…\\out\\gates\\print\\2026-11-18 12.14.03.'
+window  gates, as they stand: the window: [red] Print files wrote nothing: G1, G2, G3 and G4 have no part yet; build them first, then print.
+ok      gates, as they stand: the window (the gate open, nothing built): said word for word: 'Print files wrote nothing: G1, G2, G3 and G4 have no part yet; build them first, then print.'
+ok      gates, as they stand: the window (the gate open, nothing built): nothing written: no press folder; SolidWorks files as they were
+ok      gates, as they stand: the window (the gate open, nothing built): SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      gates, as they stand: the window (the gate open, nothing built): refused at planning, nothing submitted to SolidWorks
+-- gates  SAVE_AS_COPY None, in this process only
+patch   in this process only: {'SAVE_AS_COPY': None} (as committed: {'SAVE_AS_COPY': 2})
+bar     gates, SAVE_AS_COPY None: the form: '' (not shown)
+status  gates, SAVE_AS_COPY None: the form: Print files waits until writing a STEP file is measured on this SolidWorks; nothing was written.
+ok      gates, SAVE_AS_COPY None: the form: said word for word: 'Print files waits until writing a STEP file is measured on this SolidWorks; nothing was written.'
+ok      gates, SAVE_AS_COPY None: the form: nothing written: no press folder; SolidWorks files as they were
+ok      gates, SAVE_AS_COPY None: the form: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      gates, SAVE_AS_COPY None: the form: refused at planning, nothing submitted to SolidWorks
+ok      gates, SAVE_AS_COPY None: the bar names no file while the gate is shut
+window  gates, SAVE_AS_COPY None: the window: [red] Print files waits until writing a STEP file is measured on this SolidWorks; nothing was written.
+ok      gates, SAVE_AS_COPY None: the window: said word for word: 'Print files waits until writing a STEP file is measured on this SolidWorks; nothing was written.'
+ok      gates, SAVE_AS_COPY None: the window: nothing written: no press folder; SolidWorks files as they were
+ok      gates, SAVE_AS_COPY None: the window: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      gates, SAVE_AS_COPY None: the window: refused at planning, nothing submitted to SolidWorks
+patch   put back: {'SAVE_AS_COPY': 2}
+-- gates  STEP_EXPORT_ON_2024 None, SAVE_AS_COPY the review's, in this process only
+patch   in this process only: {'SAVE_AS_COPY': 2, 'STEP_EXPORT_ON_2024': None} (as committed: {'SAVE_AS_COPY': 2, 'STEP_EXPORT_ON_2024': True})
+bar     gates, STEP_EXPORT_ON_2024 None: the form: '' (not shown)
+status  gates, STEP_EXPORT_ON_2024 None: the form: Print files waits until writing a STEP file is measured on SolidWorks 2024 (32.5.0); nothing was written.
+ok      gates, STEP_EXPORT_ON_2024 None: the form: said word for word: 'Print files waits until writing a STEP file is measured on SolidWorks 2024 (32.5.0); nothing was written.'
+ok      gates, STEP_EXPORT_ON_2024 None: the form: nothing written: no press folder; SolidWorks files as they were
+ok      gates, STEP_EXPORT_ON_2024 None: the form: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      gates, STEP_EXPORT_ON_2024 None: the form: refused at planning, nothing submitted to SolidWorks
+ok      gates, STEP_EXPORT_ON_2024 None: the bar names no file while the gate is shut
+window  gates, STEP_EXPORT_ON_2024 None: the window: [red] Print files waits until writing a STEP file is measured on SolidWorks 2024 (32.5.0); nothing was written.
+ok      gates, STEP_EXPORT_ON_2024 None: the window: said word for word: 'Print files waits until writing a STEP file is measured on SolidWorks 2024 (32.5.0); nothing was written.'
+ok      gates, STEP_EXPORT_ON_2024 None: the window: nothing written: no press folder; SolidWorks files as they were
+ok      gates, STEP_EXPORT_ON_2024 None: the window: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      gates, STEP_EXPORT_ON_2024 None: the window: refused at planning, nothing submitted to SolidWorks
+patch   put back: {'SAVE_AS_COPY': 2, 'STEP_EXPORT_ON_2024': True}
+-- gates  the job's own gate: the form's plan, read for the other version, handed to the job
+ok      gates: the form's plan for Coupon_G, the gate open: None
+        the job's calls by member {}
+ok      gates: the job refuses a plan read for SolidWorks 34.1.1 before any SolidWorks call, nothing written: 'SolidWorks changed since Print files was pressed (2026 (34.1.1) then, 2024 (32.5.0) now): press it again. Nothing was written.'; calls none
+ok      gates: gates's documents closed unsaved: left []
+ok      gates: user-parts's documents closed unsaved: left []
+time    gates: 57 s; 0 failed; SolidWorks 1.40 GB private, 8.45 GB free
+== form  §3.2's coupon (Coupon_A) built by the strip's form, the user's part open behind it; its span on the form; Print files twice; then a printed helical and a printed herringbone gear the same way
+findings form: {'SAVE_AS_COPY': 2, 'STEP_EXPORT': True, 'STEP_EXPORT_NEEDS_ACTIVE': False, 'STEP_EXPORT_FROM_COMPONENT': True, 'OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN': True, 'PART_WINDOW_READ': 'Visible'}; EXTENT_MEASURED True; document route 'walk'
+user    form: the user's own document is Housing.SLDPRT, open in its own window and active
+ok      form, coupon: the form plans Coupon_A.SLDPRT, printed, a new file
+        build   Part4 · spur · recipe A · trig degrees
+        ok      new part Part4
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Coupon_A; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\form\Coupon_A.SLDPRT
+status  form, coupon: Built Coupon_A.SLDPRT. 1 thing to do by hand: Assign a material to Coupon_A; the build leaves it unset.
+ok      form, coupon: built and saved by the form's job, its .gear.json written by the form: ok True, failures []
+ok      form, coupon: the form's Derived panel shows Span over 3 teeth '11.209'; this script works W 11.2088 (W_t 11.2088, the jaws at diameter 30.337), package A 11.2088 over 3: as said
+-- form  coupon: Print files, press 1
+        the job's calls by member {'ActiveDoc': 3, 'Equation': 30, 'Extension': 1, 'FirstFeature': 1, 'GetCount': 1, 'GetEquationMgr': 1, 'GetErrorCode2': 25, 'GetFirstDocument': 5, 'GetNext': 10, 'GetNextFeature': 25, 'GetPathName': 16, 'GetSaveFlag': 5, 'GetTitle': 10, 'GetType': 10, 'GetTypeName2': 25, 'Name': 25, 'SaveAs': 1, 'Value': 30}
+bar     form, coupon, press 1: 'Print files will write Coupon_A.step from the active part.' (shown)
+status  form, coupon, press 1: Print files wrote Coupon_A.step and its print list in C:\…\out\form\print\2026-11-18 12.14.25.
+ok      form, coupon: before the press the SolidWorks bar says 'Print files will write Coupon_A.step from the active part.': 'Print files will write Coupon_A.step from the active part.'
+ok      form, coupon, press 1: every part written and checked by the app, none failed, the active document as it was, no save flag turned on: written ['Coupon_A'], refusal None, failed [], active restored True, flags turned on []
+ok      form, coupon, press 1: a new folder of its own in the Output folder's print folder, named by the press's date and time, holding the STEP files and print list.txt alone, every earlier folder as it was: '2026-11-18 12.14.25' ['Coupon_A.step', 'print list.txt']: as said
+ok      form, coupon, press 1: the status is C's: 'Print files wrote Coupon_A.step and its print list in C:\\…\\out\\form\\print\\2026-11-18 12.14.25.'
+fact    form, coupon, press 1: Coupon_A.step: 882620 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 346 vertices reaching radius 16.500000 over 8.000009 along Z (the gear's 16.5 and 8.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      form, coupon, press 1: Coupon_A.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+ok      form, coupon, press 1: print list.txt names every part with its rows, how many to print, its span, what the check read and the user's features, the settings once: as said
+ok      form, coupon, press 1: SolidWorks as it was: no document opened, closed, renamed or marked, every window and the active document as they were; no SolidWorks file saved: the same; no file changed
+ok      form, coupon, press 1: the job called {'SaveAs': 1}, as its way of reaching each part says: as expected
+-- form  coupon: Print files, press 2
+        the job's calls by member {'ActiveDoc': 3, 'Equation': 30, 'Extension': 1, 'FirstFeature': 1, 'GetCount': 1, 'GetEquationMgr': 1, 'GetErrorCode2': 25, 'GetFirstDocument': 5, 'GetNext': 10, 'GetNextFeature': 25, 'GetPathName': 16, 'GetSaveFlag': 5, 'GetTitle': 10, 'GetType': 10, 'GetTypeName2': 25, 'Name': 25, 'SaveAs': 1, 'Value': 30}
+bar     form, coupon, press 2: 'Print files will write Coupon_A.step from the active part.' (shown)
+status  form, coupon, press 2: Print files wrote Coupon_A.step and its print list in C:\…\out\form\print\2026-11-18 12.14.27.
+ok      form, coupon: before the press the SolidWorks bar says 'Print files will write Coupon_A.step from the active part.': 'Print files will write Coupon_A.step from the active part.'
+ok      form, coupon, press 2: every part written and checked by the app, none failed, the active document as it was, no save flag turned on: written ['Coupon_A'], refusal None, failed [], active restored True, flags turned on []
+ok      form, coupon, press 2: a new folder of its own in the Output folder's print folder, named by the press's date and time, holding the STEP files and print list.txt alone, every earlier folder as it was: '2026-11-18 12.14.27' ['Coupon_A.step', 'print list.txt']: as said
+ok      form, coupon, press 2: the status is C's: 'Print files wrote Coupon_A.step and its print list in C:\\…\\out\\form\\print\\2026-11-18 12.14.27.'
+fact    form, coupon, press 2: Coupon_A.step: 882663 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 346 vertices reaching radius 16.500000 over 8.000009 along Z (the gear's 16.5 and 8.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      form, coupon, press 2: Coupon_A.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+ok      form, coupon, press 2: print list.txt names every part with its rows, how many to print, its span, what the check read and the user's features, the settings once: as said
+ok      form, coupon, press 2: SolidWorks as it was: no document opened, closed, renamed or marked, every window and the active document as they were; no SolidWorks file saved: the same; no file changed
+ok      form, coupon, press 2: the job called {'SaveAs': 1}, as its way of reaching each part says: as expected
+ok      form, coupon: the second press's file is the first's part (the same 346 vertices, one to one, within 0.0001 mm), in a folder of its own
+ok      form, helical: the form plans Helical_m2_N20_15R_P.SLDPRT, printed, a new file
+        build   Part5 · helical · recipe A · trig degrees
+        ok      new part Part5
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Helix Angle"
+        ok      global "Transverse Module"
+        ok      global "Transverse Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Lead"
+        ok      global "Overrun"
+        ok      global "Path Length"
+        ok      global "Twist Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      plane Profile Plane
+        ok      link "Offset@Profile Plane"
+        ok      sketch space opened on plane plane
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      sketch path opened on plane 2
+        ok      line lead
+        ok      line P
+        ok      coincident lead.start origin
+        ok      vertical lead
+        ok      vertical P
+        ok      coincident P.start lead.end (already one point)
+        ok      dimension Lead In
+        ok      dimension Length
+        ok      sketch Path Sketch
+        ok      link "Lead In@Path Sketch"
+        ok      link "Length@Path Sketch"
+        ok      sweep Tooth Space, twist 10.3805°
+        ok      link "Twist@Tooth Space"
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      31 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Path Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Helical_m2_N20_15R_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\form\Helical_m2_N20_15R_P.SLDPRT
+status  form, helical: Built Helical_m2_N20_15R_P.SLDPRT. 1 thing to do by hand: Assign a material to Helical_m2_N20_15R_P; the build leaves it unset.
+ok      form, helical: built and saved by the form's job, its .gear.json written by the form: ok True, failures []
+ok      form, helical: the form's Derived panel shows Span over 3 teeth '15.097'; this script works W 15.0972 (W_t 15.5645, the jaws at diameter 41.426), package A 15.0972 over 3: as said
+-- form  helical: Print files, press 1
+        the job's calls by member {'ActiveDoc': 3, 'Equation': 40, 'Extension': 1, 'FirstFeature': 1, 'GetCount': 1, 'GetEquationMgr': 1, 'GetErrorCode2': 25, 'GetFirstDocument': 5, 'GetNext': 15, 'GetNextFeature': 25, 'GetPathName': 21, 'GetSaveFlag': 7, 'GetTitle': 12, 'GetType': 12, 'GetTypeName2': 25, 'Name': 25, 'SaveAs': 1, 'Value': 40}
+bar     form, helical, press 1: 'Print files will write Helical_m2_N20_15R_P.step from the active part.' (shown)
+status  form, helical, press 1: Print files wrote Helical_m2_N20_15R_P.step and its print list in C:\…\out\form\print\2026-11-18 12.14.49.
+ok      form, helical: before the press the SolidWorks bar says 'Print files will write Helical_m2_N20_15R_P.step from the active part.': 'Print files will write Helical_m2_N20_15R_P.step from the active part.'
+ok      form, helical, press 1: every part written and checked by the app, none failed, the active document as it was, no save flag turned on: written ['Helical_m2_N20_15R_P'], refusal None, failed [], active restored True, flags turned on []
+ok      form, helical, press 1: a new folder of its own in the Output folder's print folder, named by the press's date and time, holding the STEP files and print list.txt alone, every earlier folder as it was: '2026-11-18 12.14.49' ['Helical_m2_N20_15R_P.step', 'print list.txt']: as said
+ok      form, helical, press 1: the status is C's: 'Print files wrote Helical_m2_N20_15R_P.step and its print list in C:\\…\\out\\form\\print\\2026-11-18 12.14.49.'
+fact    form, helical, press 1: Helical_m2_N20_15R_P.step: 1868277 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 322 vertices reaching radius 22.705524 over 10.000000 along Z (the gear's 22.70552360820166 and 10.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      form, helical, press 1: Helical_m2_N20_15R_P.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+ok      form, helical, press 1: print list.txt names every part with its rows, how many to print, its span, what the check read and the user's features, the settings once: as said
+ok      form, helical, press 1: SolidWorks as it was: no document opened, closed, renamed or marked, every window and the active document as they were; no SolidWorks file saved: the same; no file changed
+ok      form, helical, press 1: the job called {'SaveAs': 1}, as its way of reaching each part says: as expected
+ok      form, herringbone: the form plans Herringbone_m2_N20_15R_P.SLDPRT, printed, a new file
+        build   Part6 · herringbone · recipe A · trig degrees
+        ok      new part Part6
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Helix Angle"
+        ok      global "Transverse Module"
+        ok      global "Transverse Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Lead"
+        ok      global "Overrun"
+        ok      global "Mid Width"
+        ok      global "Path Length"
+        ok      global "Twist Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      plane Mid Plane
+        ok      link "Offset@Mid Plane"
+        ok      sketch space opened on plane plane
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      sketch path opened on plane 2
+        ok      line lead
+        ok      line P
+        ok      coincident lead.start origin
+        ok      vertical lead
+        ok      vertical P
+        ok      coincident P.start lead.end (already one point)
+        ok      dimension Mid
+        ok      dimension Length
+        ok      sketch Path Sketch
+        ok      link "Mid@Path Sketch"
+        ok      link "Length@Path Sketch"
+        ok      sweep Tooth Space, twist 8.8975°
+        ok      link "Twist@Tooth Space"
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      mirror Mirror
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      32 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Path Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Herringbone_m2_N20_15R_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\form\Herringbone_m2_N20_15R_P.SLDPRT
+status  form, herringbone: Built Herringbone_m2_N20_15R_P.SLDPRT. 1 thing to do by hand: Assign a material to Herringbone_m2_N20_15R_P; the build leaves it unset.
+ok      form, herringbone: built and saved by the form's job, its .gear.json written by the form: ok True, failures []
+ok      form, herringbone: the form's Derived panel shows Span over 3 teeth '15.097'; this script works W 15.0972 (W_t 15.5645, the jaws at diameter 41.426), package A 15.0972 over 3: as said
+-- form  herringbone: Print files, press 1
+        the job's calls by member {'ActiveDoc': 3, 'Equation': 41, 'Extension': 1, 'FirstFeature': 1, 'GetCount': 1, 'GetEquationMgr': 1, 'GetErrorCode2': 26, 'GetFirstDocument': 5, 'GetNext': 20, 'GetNextFeature': 26, 'GetPathName': 26, 'GetSaveFlag': 9, 'GetTitle': 14, 'GetType': 14, 'GetTypeName2': 26, 'Name': 26, 'SaveAs': 1, 'Value': 41}
+bar     form, herringbone, press 1: 'Print files will write Herringbone_m2_N20_15R_P.step from the active part.' (shown)
+status  form, herringbone, press 1: Print files wrote Herringbone_m2_N20_15R_P.step and its print list in C:\…\out\form\print\2026-11-18 12.15.14.
+ok      form, herringbone: before the press the SolidWorks bar says 'Print files will write Herringbone_m2_N20_15R_P.step from the active part.': 'Print files will write Herringbone_m2_N20_15R_P.step from the active part.'
+ok      form, herringbone, press 1: every part written and checked by the app, none failed, the active document as it was, no save flag turned on: written ['Herringbone_m2_N20_15R_P'], refusal None, failed [], active restored True, flags turned on []
+ok      form, herringbone, press 1: a new folder of its own in the Output folder's print folder, named by the press's date and time, holding the STEP files and print list.txt alone, every earlier folder as it was: '2026-11-18 12.15.14' ['Herringbone_m2_N20_15R_P.step', 'print list.txt']: as said
+ok      form, herringbone, press 1: the status is C's: 'Print files wrote Herringbone_m2_N20_15R_P.step and its print list in C:\\…\\out\\form\\print\\2026-11-18 12.15.14.'
+fact    form, herringbone, press 1: Herringbone_m2_N20_15R_P.step: 3362042 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 480 vertices reaching radius 22.705524 over 20.000000 along Z (the gear's None and 20.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'skipped: herringbone'}
+ok      form, herringbone, press 1: Herringbone_m2_N20_15R_P.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres) and by the app's check (size 'skipped: herringbone'): holds
+ok      form, herringbone, press 1: print list.txt names every part with its rows, how many to print, its span, what the check read and the user's features, the settings once: as said
+ok      form, herringbone, press 1: SolidWorks as it was: no document opened, closed, renamed or marked, every window and the active document as they were; no SolidWorks file saved: the same; no file changed
+ok      form, herringbone, press 1: the job called {'SaveAs': 1}, as its way of reaching each part says: as expected
+fact    form, herringbone: a herringbone (the size check measured on spur and helical gears only): the app's size check 'skipped: herringbone'; this script reads radius 22.705523608201677 over 20.0 along Z, against d_a / 2 22.705524 and the face 20.0
+NOTE    form, herringbone: the herringbone's size reading holds against d_a / 2 and the face to 0.01 mm (within): a fact for the ruling on "herringbone" in printout.EXTENT_SKIPPED
+ok      form: form's documents closed unsaved: left []
+ok      form: user-parts's documents closed unsaved: left []
+time    form: 73 s; 0 failed; SolidWorks 1.70 GB private, 8.32 GB free
+== workbook  the printed 12 : 1, its assembly open and its parts loaded only as components, the user's part active: Print files from the Workbook window; the job's reads on parts not active (a component, a part behind the user's); the job opening parts itself; the open-beside fallback, its finding patched
+findings workbook: {'SAVE_AS_COPY': 2, 'STEP_EXPORT': True, 'STEP_EXPORT_NEEDS_ACTIVE': False, 'STEP_EXPORT_FROM_COMPONENT': True, 'OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN': True, 'PART_WINDOW_READ': 'Visible'}; EXTENT_MEASURED True; document route 'walk'
+-- the printed 12 : 1 (W9's fixture with Printed on its Box) written by the app's write_new and built to turn through the app's own Build, kept as f2-reducer.master
+write   Reducer_12to1.xlsx by the app's own write_new, its Output folder blank (the strip's is C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer)
+ok      Excel opened Reducer_12to1.xlsx with no dialog or repair: []
+excel   saved Reducer_12to1.xlsx
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      f2-reducer: the Box reads Printed and the four parts plan printed under the names here: {'G1': ('Gear_m1.5_N17_P', 'printed'), 'G2': ('Gear_m1.5_N68_P', 'printed'), 'G3': ('Gear_m2_N17_P', 'printed'), 'G4': ('OutputGear', 'printed')}
+footer  (f2-reducer, read) [green] Ready: Build makes 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM in C:\…\out\f2-reducer. Its gears are mated to their shafts and to each other, so they turn together in SolidWorks.
+        button 'Build' on primary; Update SolidWorks hidden
+plan    revision 0 Reducer_12to1: refusal ''; reason ''; turning True; static reason ''
+        layout C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\Reducer_12to1_Layout.SLDPRT; assembly C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\Reducer_12to1.SLDASM
+        build Gear_m1.5_N17_P for G1 at C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\Gear_m1.5_N17_P.SLDPRT (83 ops)
+        build Gear_m1.5_N68_P for G2 at C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\Gear_m1.5_N68_P.SLDPRT (83 ops)
+        build Gear_m2_N17_P for G3 at C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\Gear_m2_N17_P.SLDPRT (83 ops)
+        build OutputGear for G4 at C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\OutputGear.SLDPRT (83 ops)
+        shaft S1: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; S1 Axis
+        shaft S2: (63.75, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X plus 'S2 X', Y base '', Z  ''; line ''; S2 Axis
+        shaft S3: (131.75, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X plus 'S3 X', Y base '', Z  ''; line ''; S3 Axis
+        frame G1: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 0.0]
+        frame G2: R [0.998932975, -0.046183459, 0.0, 0.046183459, 0.998932975, 0.0, 0.0, 0.0, 1.0] at [63.75, 0.0, 0.0]
+        frame G3: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [63.75, 0.0, 17.0]
+        frame G4: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [131.75, 0.0, 17.0]
+        motion: trains [('S1', 'S2', 'S3')]; drag ['G1']; fixed []; unmated []
+        mate 'G1 on S1 Axis': axis ['G1'] S1 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G1 along S1': along ['G1'] S1 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G2 on S2 Axis': axis ['G2'] S2 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G2 along S2': along ['G2'] S2 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G3 locked to G2': lock ['G2', 'G3']  ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G4 on S3 Axis': axis ['G4'] S3 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G4 along S3': along ['G4'] S3 ratio [] face 'G4 Face Z' z_front 17 plane 'front' sense 0
+        mate 'G1 meshes G2': mesh ['G1', 'G2']  ratio [17, 68] face '' z_front 0 plane 'front' sense 1
+        mate 'G3 meshes G4': mesh ['G3', 'G4']  ratio [17, 51] face '' z_front 0 plane 'front' sense 1
+        ops of Reducer_12to1_Layout.SLDPRT:
+          new     NewPart from (default template)
+          global  "S2 X"= 63.75
+          global  "S3 X"= 131.75
+          axis    'S1 Axis' through planes 2 and 3
+          plane   'S2 X Plane' 63.75 mm from plane 3 (Offset)
+          link    "Offset@S2 X Plane"= "S2 X"
+          axis    'S2 Axis' through plane 2 and x2
+          plane   'S3 X Plane' 131.75 mm from plane 3 (Offset)
+          link    "Offset@S3 X Plane"= "S3 X"
+          axis    'S3 Axis' through plane 2 and x3
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\Reducer_12to1_Layout.SLDPRT
+        ops of Reducer_12to1.SLDASM:
+          new     NewAssembly from (default template)
+          global  "G4 Face Z"= 17
+          insert  layout C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\Reducer_12to1_Layout.SLDPRT at (0, 0, 0)
+          place   layout at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     layout
+          insert  gear1 C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\Gear_m1.5_N17_P.SLDPRT at (0, 0, 0)
+          place   gear1 at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear1
+          insert  gear2 C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\Gear_m1.5_N68_P.SLDPRT at (63.75, 0, 0)
+          place   gear2 at (63.75, 0, 0) turned (0.998933, -0.046183, 0, 0.046183, 0.998933, 0, 0, 0, 1)
+          fix     gear2
+          insert  gear3 C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\Gear_m2_N17_P.SLDPRT at (63.75, 0, 17)
+          place   gear3 at (63.75, 0, 17) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear3
+          insert  gear4 C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\OutputGear.SLDPRT at (131.75, 0, 17)
+          place   gear4 at (131.75, 0, 17) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear4
+          unfix   gear1
+          mate    coincident gear1:Gear Axis ~ layout:S1 Axis as 'G1 on S1 Axis'
+          mate    point gear1:origin ~ layout:plane1 as 'G1 along S1'
+          unfix   gear2
+          mate    coincident gear2:Gear Axis ~ layout:S2 Axis as 'G2 on S2 Axis'
+          mate    point gear2:origin ~ layout:plane1 as 'G2 along S2'
+          unfix   gear3
+          mate    lock gear2 ~ gear3 as 'G3 locked to G2'
+          unfix   gear4
+          mate    coincident gear4:Gear Axis ~ layout:S3 Axis as 'G4 on S3 Axis'
+          mate    point distance 17 gear4:origin ~ layout:plane1 as 'G4 along S3'
+          link    "D1@G4 along S3"= "G4 Face Z"
+          mate    gear 17:68 gear1:Gear Axis ~ gear2:Gear Axis as 'G1 meshes G2'
+          mate    gear 17:51 gear3:Gear Axis ~ gear4:Gear Axis as 'G3 meshes G4'
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\Reducer_12to1.SLDASM
+ok      f2-reducer: the plan turns (W5): static reason ''
+journal written: 6 paths
+build   Reducer_12to1: SolidWorks 1.50 GB private, 8.36 GB free
+        build   Part7 · spur · recipe A · trig degrees
+        ok      new part Part7
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 17
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N17_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\Gear_m1.5_N17_P.SLDPRT
+        build   Part8 · spur · recipe A · trig degrees
+        ok      new part Part8
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 68
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N68_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\Gear_m1.5_N68_P.SLDPRT
+        build   Part9 · spur · recipe A · trig degrees
+        ok      new part Part9
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 17
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m2_N17_P; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\Gear_m2_N17_P.SLDPRT
+        build   Part10 · spur · recipe A · trig degrees
+        ok      new part Part10
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 51
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to OutputGear; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\OutputGear.SLDPRT
+        build   Part11 · layout · recipe  · trig degrees
+        ok      new part Part11
+        ok      trig units measured: degrees
+        ok      global "S2 X"
+        ok      global "S3 X"
+        ok      axis S1 Axis
+        ok      plane S2 X Plane
+        ok      link "Offset@S2 X Plane"
+        ok      axis S2 Axis
+        ok      plane S3 X Plane
+        ok      link "Offset@S3 X Plane"
+        ok      axis S3 Axis
+        ok      2 globals read back and match the maths
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\Reducer_12to1_Layout.SLDPRT
+        build   Assem1 · assembly · recipe  · trig degrees
+        ok      new assembly Assem1
+        ok      trig units measured: degrees
+        ok      global "G4 Face Z"
+        ok      component Reducer_12to1_Layout-1
+        ok      placed layout
+        ok      fixed layout
+        ok      component Gear_m1.5_N17_P-1
+        ok      placed gear1
+        ok      fixed gear1
+        ok      component Gear_m1.5_N68_P-1
+        ok      placed gear2
+        ok      fixed gear2
+        ok      component Gear_m2_N17_P-1
+        ok      placed gear3
+        ok      fixed gear3
+        ok      component OutputGear-1
+        ok      placed gear4
+        ok      fixed gear4
+        ok      unfixed gear1
+        ok      mate coincident gear1:Gear Axis ~ layout:S1 Axis as G1 on S1 Axis
+        ok      mate point gear1:origin ~ layout:plane1 as G1 along S1
+        ok      unfixed gear2
+        ok      mate coincident gear2:Gear Axis ~ layout:S2 Axis as G2 on S2 Axis
+        ok      mate point gear2:origin ~ layout:plane1 as G2 along S2
+        ok      unfixed gear3
+        ok      mate lock gear2 ~ gear3 as G3 locked to G2
+        ok      unfixed gear4
+        ok      mate coincident gear4:Gear Axis ~ layout:S3 Axis as G4 on S3 Axis
+        ok      mate point distance gear4:origin ~ layout:plane1 as G4 along S3
+        ok      link "D1@G4 along S3"
+        ok      mate gear gear1:Gear Axis ~ gear2:Gear Axis as G1 meshes G2
+        ok      mate gear gear3:Gear Axis ~ gear4:Gear Axis as G3 meshes G4
+        ok      1 globals read back and match the maths
+        ok      every mate sound, every gear free to turn
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G1 meshes G2
+        mate    G3 meshes G4
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\f2-reducer\Reducer_12to1.SLDASM
+        ok      no interference between the gears
+        in 75.7 s; SolidWorks 3.81 GB private, 7.94 GB free; kind 'motion'; turned round (made again with the other Flip) []
+        steps [('part', 'Gear_m1.5_N17_P', 1, 4), ('part', 'Gear_m1.5_N68_P', 2, 4), ('part', 'Gear_m2_N17_P', 3, 4), ('part', 'OutputGear', 4, 4), ('layout', 'Reducer_12to1_Layout', 0, 0), ('assembly', 'Reducer_12to1', 0, 0), ('interference', 'Reducer_12to1', 0, 0)]
+        progress words ['Building in SolidWorks: part 1 of 4, Gear_m1.5_N17_P…', 'Building in SolidWorks: checking interference…']
+record  4 sidecar(s) written; record written; notes []
+status  [green] Built 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 4 parts; the build leaves it unset.
+ok      f2-reducer: 4 part(s), the layout part and the assembly built and saved, turning: ok True, parts built 4, kind 'motion'
+ok      f2-reducer: no interference: []
+ok      f2-reducer: on SolidWorks 2024 every gear mate reads right as first made (probe ring_mate_sense): turned round []
+ok      f2-reducer: the record holds a turning gearbox built from this read
+ok      f2-reducer: the record's mates are the plan's: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G1 meshes G2', 'G3 meshes G4']
+ok      f2-reducer: the build's sentence says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+footer  (f2-reducer, built) [green] Built 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 4 parts; the build leaves it unset.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      f2-reducer: the footer says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+tag     ' · built from this version'
+ok      f2-reducer: 6 files on disk
+        marked modified in SolidWorks right after the build: {'Gear_m1.5_N17_P.SLDPRT': False, 'Gear_m1.5_N68_P.SLDPRT': False, 'Gear_m2_N17_P.SLDPRT': False, 'OutputGear.SLDPRT': False, 'Reducer_12to1_Layout.SLDPRT': False, 'Reducer_12to1.SLDASM': True}
+ok      f2-reducer: the assembly is marked after the build (a read after its save)
+ok      f2-reducer, right after the build and its saves: SolidWorks marks modified exactly ['Reducer_12to1.SLDASM']
+        f2-reducer, the builder's end: SolidWorks 2024, this run's modified documents saved before the close: ['Reducer_12to1.SLDASM']
+ok      f2-reducer, the builder's end: f2-reducer ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Reducer_12to1.xlsx']), no open document by a file name it holds ([])
+master  f2-reducer renamed f2-reducer.master: it stays so for the rest of the run
+copy    f2-reducer.master -> workbook: 12 files, mtimes kept
+        Reducer_12to1.xlsx's record: 12 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part']
+        Gear_m1.5_N17_P.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.5_N68_P.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m2_N17_P.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        OutputGear.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      workbook: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+probe   W6-PLAN §7.1: Reducer_12to1.SLDASM of workbook, whose stored references name a folder that is gone, opened under the dialog watch (120 s at most)
+DIALOG  SolidWorks shows '': ['Close', 'Opened 5\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 1 seconds', 'For more information, view: ']
+fact    workbook: the copy's assembly opened in 2.7 s; marked modified straight after the open: {'Reducer_12to1_Layout.SLDPRT': False, 'Gear_m1.5_N17_P.SLDPRT': False, 'Gear_m1.5_N68_P.SLDPRT': False, 'Gear_m2_N17_P.SLDPRT': False, 'OutputGear.SLDPRT': False, 'Reducer_12to1.SLDASM': False}
+fact    W6-PLAN §7.1: dialogs while the copied assembly opened: none
+ok      workbook: SolidWorks found all 5 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      workbook: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened Reducer_12to1.xlsx with no dialog or repair: []
+ok      the record's parts are the printed 12 : 1's: ['Gear_m1.5_N17_P', 'Gear_m1.5_N68_P', 'Gear_m2_N17_P', 'OutputGear']
+user    workbook: the user's own document is Housing.SLDPRT, open in its own window and active
+ok      workbook: every part loaded only as a component (Visible False, the read PART_WINDOW_READ names): {'G1': False, 'G2': False, 'G3': False, 'G4': False}; the assembly in its own window; the user's part active (Housing.SLDPRT)
+-- workbook  every part loaded only as a component: written by the job's own handle, nothing activated
+ok      the record's parts are the printed 12 : 1's: ['Gear_m1.5_N17_P', 'Gear_m1.5_N68_P', 'Gear_m2_N17_P', 'OutputGear']
+        the job's calls by member {'ActiveDoc': 3, 'Equation': 120, 'Extension': 4, 'FirstFeature': 4, 'GetCount': 4, 'GetEquationMgr': 4, 'GetErrorCode2': 100, 'GetFirstDocument': 8, 'GetNext': 56, 'GetNextFeature': 100, 'GetPathName': 61, 'GetSaveFlag': 18, 'GetTitle': 29, 'GetType': 29, 'GetTypeName2': 100, 'Name': 100, 'SaveAs': 4, 'Value': 120, 'Visible': 4}
+window  workbook: component-only: [green] Print files wrote 4 STEP files and their print list in C:\…\out\workbook\print\2026-11-18 12.16.50.
+ok      workbook: component-only: every part written and checked by the app, none failed, the active document as it was, no save flag turned on: written ['Gear_m1.5_N17_P', 'Gear_m1.5_N68_P', 'Gear_m2_N17_P', 'OutputGear'], refusal None, failed [], active restored True, flags turned on []
+ok      workbook: component-only: a new folder of its own in the Output folder's print folder, named by the press's date and time, holding the STEP files and print list.txt alone, every earlier folder as it was: '2026-11-18 12.16.50' ['Gear_m1.5_N17_P.step', 'Gear_m1.5_N68_P.step', 'Gear_m2_N17_P.step', 'OutputGear.step', 'print list.txt']: as said
+ok      workbook: component-only: the status is C's: 'Print files wrote 4 STEP files and their print list in C:\\…\\out\\workbook\\print\\2026-11-18 12.16.50.'
+fact    workbook: component-only: Gear_m1.5_N17_P.step: 735480 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 296 vertices reaching radius 14.250000 over 15.000008 along Z (the gear's 14.25 and 15.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      workbook: component-only: Gear_m1.5_N17_P.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+fact    workbook: component-only: Gear_m1.5_N68_P.step: 2936920 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 1162 vertices reaching radius 52.500000 over 15.000008 along Z (the gear's 52.5 and 15.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      workbook: component-only: Gear_m1.5_N68_P.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+fact    workbook: component-only: Gear_m2_N17_P.step: 735337 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 296 vertices reaching radius 19.000000 over 20.000008 along Z (the gear's 19.0 and 20.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      workbook: component-only: Gear_m2_N17_P.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+fact    workbook: component-only: OutputGear.step: 2148205 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 876 vertices reaching radius 53.000000 over 20.000008 along Z (the gear's 53.0 and 20.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      workbook: component-only: OutputGear.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+ok      workbook: component-only: print list.txt names every part with its rows, how many to print, its span, what the check read and the user's features, the settings once: as said
+ok      workbook: component-only: SolidWorks as it was: no document opened, closed, renamed or marked, every window and the active document as they were, the user’s active; no SolidWorks file saved: the same; no file changed
+ok      workbook: component-only: the job called {'SaveAs': 4}, as its way of reaching each part says: as expected
+fact    workbook: the components after the press: {'Gear_m1.5_N68_P-1': 2, 'Gear_m2_N17_P-1': 2, 'OutputGear-1': 2, 'Reducer_12to1_Layout-1': 2, 'Gear_m1.5_N17_P-1': 2}
+ok      workbook: every component of the assembly read, each still resolved after the press: {'Gear_m1.5_N68_P-1': 2, 'Gear_m2_N17_P-1': 2, 'OutputGear-1': 2, 'Reducer_12to1_Layout-1': 2, 'Gear_m1.5_N17_P-1': 2}
+-- workbook  a global changed and saved in a part loaded only as a component (G2): GLOBALS_DIFFER
+person  workbook: G2's Face Width 16, saved, its window closed: "Face Width"= 16 in Gear_m1.5_N68_P.SLDPRT; rebuilt True; saved [('Gear_m1.5_N68_P.SLDPRT', True)]; its window closed
+ok      workbook: G2's Face Width 16, saved, its window closed: made as a person makes it
+ok      workbook: G2 loaded only as a component again: {'title': 'Gear_m1.5_N68_P.SLDPRT', 'type': 1, 'flag': False, 'visible': False}
+        the job's calls by member {'ActiveDoc': 3, 'Equation': 120, 'FirstFeature': 4, 'GetCount': 4, 'GetEquationMgr': 4, 'GetErrorCode2': 100, 'GetFirstDocument': 8, 'GetNext': 56, 'GetNextFeature': 100, 'GetPathName': 57, 'GetSaveFlag': 18, 'GetTitle': 25, 'GetType': 25, 'GetTypeName2': 100, 'Name': 100, 'Value': 120, 'Visible': 4}
+window  workbook: G2 changed: [red] Print files wrote nothing: in Gear_m1.5_N68_P, "Face Width" is 16 where its record says 15; press Update values (Update SolidWorks in the Workbook window), or put it back, then print.
+ok      workbook: G2's global, a component only: said word for word: 'Print files wrote nothing: in Gear_m1.5_N68_P, "Face Width" is 16 where its record says 15; press Update values (Update SolidWorks in the Workbook window), or put it back, then print.'
+ok      workbook: G2's global, a component only: nothing written: no press folder; SolidWorks files as they were
+ok      workbook: G2's global, a component only: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      workbook: G2's global, a component only: refused in the job, before any file, calling nothing that opens, activates, saves or writes: as said
+person  workbook: G2's Face Width put back to 15, saved, its window closed: "Face Width"= 15 in Gear_m1.5_N68_P.SLDPRT; rebuilt True; saved [('Gear_m1.5_N68_P.SLDPRT', True)]; its window closed
+ok      workbook: G2's Face Width put back to 15, saved, its window closed: made as a person makes it
+-- workbook  a global changed in a part open behind the user's (G1), not saved: MODIFIED; then saved: GLOBALS_DIFFER
+person  workbook: G1's Face Width 16, not saved, its window left open: "Face Width"= 16 in Gear_m1.5_N17_P.SLDPRT; rebuilt True; saved nothing; its window left open
+ok      workbook: G1's Face Width 16, not saved, its window left open: made as a person makes it
+ok      workbook: G1 open in its own window, changed and not saved, not active: {'title': 'Gear_m1.5_N17_P.SLDPRT', 'type': 1, 'flag': True, 'visible': True}
+        the job's calls by member {'ActiveDoc': 3, 'Equation': 120, 'FirstFeature': 4, 'GetCount': 4, 'GetEquationMgr': 4, 'GetErrorCode2': 100, 'GetFirstDocument': 8, 'GetNext': 56, 'GetNextFeature': 100, 'GetPathName': 57, 'GetSaveFlag': 18, 'GetTitle': 25, 'GetType': 25, 'GetTypeName2': 100, 'Name': 100, 'Value': 120, 'Visible': 4}
+window  workbook: G1 changed: [red] Print files wrote nothing: Gear_m1.5_N17_P is changed in SolidWorks and not saved; save it, or close it without saving, then print.
+ok      workbook: G1 changed, not saved, behind the user's part: said word for word: 'Print files wrote nothing: Gear_m1.5_N17_P is changed in SolidWorks and not saved; save it, or close it without saving, then print.'
+ok      workbook: G1 changed, not saved, behind the user's part: nothing written: no press folder; SolidWorks files as they were
+ok      workbook: G1 changed, not saved, behind the user's part: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      workbook: G1 changed, not saved, behind the user's part: refused in the job, before any file, calling nothing that opens, activates, saves or writes: as said
+ok      workbook: G1 saved: Gear_m1.5_N17_P.SLDPRT saved as a person saves it: [('Gear_m1.5_N17_P.SLDPRT', True)]
+        the job's calls by member {'ActiveDoc': 3, 'Equation': 120, 'FirstFeature': 4, 'GetCount': 4, 'GetEquationMgr': 4, 'GetErrorCode2': 100, 'GetFirstDocument': 8, 'GetNext': 56, 'GetNextFeature': 100, 'GetPathName': 57, 'GetSaveFlag': 18, 'GetTitle': 25, 'GetType': 25, 'GetTypeName2': 100, 'Name': 100, 'Value': 120, 'Visible': 4}
+window  workbook: G1 saved: [red] Print files wrote nothing: in Gear_m1.5_N17_P, "Face Width" is 16 where its record says 15; press Update values (Update SolidWorks in the Workbook window), or put it back, then print.
+ok      workbook: G1's global, saved, behind the user's part: said word for word: 'Print files wrote nothing: in Gear_m1.5_N17_P, "Face Width" is 16 where its record says 15; press Update values (Update SolidWorks in the Workbook window), or put it back, then print.'
+ok      workbook: G1's global, saved, behind the user's part: nothing written: no press folder; SolidWorks files as they were
+ok      workbook: G1's global, saved, behind the user's part: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      workbook: G1's global, saved, behind the user's part: refused in the job, before any file, calling nothing that opens, activates, saves or writes: as said
+person  workbook: G1's Face Width put back to 15, saved, its window left open: "Face Width"= 15 in Gear_m1.5_N17_P.SLDPRT; rebuilt True; saved [('Gear_m1.5_N17_P.SLDPRT', True)]; its window left open
+ok      workbook: G1's Face Width put back to 15, saved, its window left open: made as a person makes it
+-- workbook  G1 open in its own window behind the user's part, as recorded: written by its object, not activated
+ok      the record's parts are the printed 12 : 1's: ['Gear_m1.5_N17_P', 'Gear_m1.5_N68_P', 'Gear_m2_N17_P', 'OutputGear']
+        the job's calls by member {'ActiveDoc': 3, 'Equation': 120, 'Extension': 4, 'FirstFeature': 4, 'GetCount': 4, 'GetEquationMgr': 4, 'GetErrorCode2': 100, 'GetFirstDocument': 8, 'GetNext': 56, 'GetNextFeature': 100, 'GetPathName': 61, 'GetSaveFlag': 18, 'GetTitle': 29, 'GetType': 29, 'GetTypeName2': 100, 'Name': 100, 'SaveAs': 4, 'Value': 120, 'Visible': 4}
+window  workbook: G1 behind: [green] Print files wrote 4 STEP files and their print list in C:\…\out\workbook\print\2026-11-18 12.17.29.
+ok      workbook: G1 behind the user's part: every part written and checked by the app, none failed, the active document as it was, no save flag turned on: written ['Gear_m1.5_N17_P', 'Gear_m1.5_N68_P', 'Gear_m2_N17_P', 'OutputGear'], refusal None, failed [], active restored True, flags turned on []
+ok      workbook: G1 behind the user's part: a new folder of its own in the Output folder's print folder, named by the press's date and time, holding the STEP files and print list.txt alone, every earlier folder as it was: '2026-11-18 12.17.29' ['Gear_m1.5_N17_P.step', 'Gear_m1.5_N68_P.step', 'Gear_m2_N17_P.step', 'OutputGear.step', 'print list.txt']: as said
+ok      workbook: G1 behind the user's part: the status is C's: 'Print files wrote 4 STEP files and their print list in C:\\…\\out\\workbook\\print\\2026-11-18 12.17.29.'
+fact    workbook: G1 behind the user's part: Gear_m1.5_N17_P.step: 735470 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 296 vertices reaching radius 14.250000 over 15.000008 along Z (the gear's 14.25 and 15.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      workbook: G1 behind the user's part: Gear_m1.5_N17_P.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+fact    workbook: G1 behind the user's part: Gear_m1.5_N68_P.step: 2936932 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 1162 vertices reaching radius 52.500000 over 15.000008 along Z (the gear's 52.5 and 15.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      workbook: G1 behind the user's part: Gear_m1.5_N68_P.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+fact    workbook: G1 behind the user's part: Gear_m2_N17_P.step: 735340 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 296 vertices reaching radius 19.000000 over 20.000008 along Z (the gear's 19.0 and 20.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      workbook: G1 behind the user's part: Gear_m2_N17_P.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+fact    workbook: G1 behind the user's part: OutputGear.step: 2148185 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 876 vertices reaching radius 53.000000 over 20.000008 along Z (the gear's 53.0 and 20.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      workbook: G1 behind the user's part: OutputGear.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+ok      workbook: G1 behind the user's part: print list.txt names every part with its rows, how many to print, its span, what the check read and the user's features, the settings once: as said
+ok      workbook: G1 behind the user's part: SolidWorks as it was: no document opened, closed, renamed or marked, every window and the active document as they were, the user’s active; no SolidWorks file saved: the same; no file changed
+ok      workbook: G1 behind the user's part: the job called {'SaveAs': 4}, as its way of reaching each part says: as expected
+ok      workbook: G1's own window closed: Gear_m1.5_N17_P.SLDPRT was open and its window was closed
+-- workbook  the assembly and its parts closed, no assembly open: the job opens each part, writes it, closes it
+ok      workbook: nothing of the copy open: left []
+ok      the record's parts are the printed 12 : 1's: ['Gear_m1.5_N17_P', 'Gear_m1.5_N68_P', 'Gear_m2_N17_P', 'OutputGear']
+        the job's calls by member {'ActivateDoc3': 4, 'ActiveDoc': 7, 'CloseDoc': 4, 'Equation': 120, 'Extension': 4, 'FirstFeature': 4, 'GetCount': 4, 'GetEquationMgr': 4, 'GetErrorCode2': 100, 'GetFirstDocument': 16, 'GetNext': 32, 'GetNextFeature': 100, 'GetPathName': 51, 'GetSaveFlag': 6, 'GetTitle': 17, 'GetType': 17, 'GetTypeName2': 100, 'Name': 100, 'OpenDoc6': 4, 'SaveAs': 4, 'Value': 120}
+window  workbook: parts closed: [green] Print files wrote 4 STEP files and their print list in C:\…\out\workbook\print\2026-11-18 12.17.39.
+ok      workbook: the job opens the parts: every part written and checked by the app, none failed, the active document as it was, no save flag turned on: written ['Gear_m1.5_N17_P', 'Gear_m1.5_N68_P', 'Gear_m2_N17_P', 'OutputGear'], refusal None, failed [], active restored True, flags turned on []
+ok      workbook: the job opens the parts: a new folder of its own in the Output folder's print folder, named by the press's date and time, holding the STEP files and print list.txt alone, every earlier folder as it was: '2026-11-18 12.17.39' ['Gear_m1.5_N17_P.step', 'Gear_m1.5_N68_P.step', 'Gear_m2_N17_P.step', 'OutputGear.step', 'print list.txt']: as said
+ok      workbook: the job opens the parts: the status is C's: 'Print files wrote 4 STEP files and their print list in C:\\…\\out\\workbook\\print\\2026-11-18 12.17.39.'
+fact    workbook: the job opens the parts: Gear_m1.5_N17_P.step: 735483 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 296 vertices reaching radius 14.250000 over 15.000008 along Z (the gear's 14.25 and 15.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      workbook: the job opens the parts: Gear_m1.5_N17_P.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+fact    workbook: the job opens the parts: Gear_m1.5_N68_P.step: 2936830 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 1162 vertices reaching radius 52.500000 over 15.000008 along Z (the gear's 52.5 and 15.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      workbook: the job opens the parts: Gear_m1.5_N68_P.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+fact    workbook: the job opens the parts: Gear_m2_N17_P.step: 735326 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 296 vertices reaching radius 19.000000 over 20.000008 along Z (the gear's 19.0 and 20.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      workbook: the job opens the parts: Gear_m2_N17_P.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+fact    workbook: the job opens the parts: OutputGear.step: 2148224 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 876 vertices reaching radius 53.000000 over 20.000008 along Z (the gear's 53.0 and 20.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      workbook: the job opens the parts: OutputGear.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+ok      workbook: the job opens the parts: print list.txt names every part with its rows, how many to print, its span, what the check read and the user's features, the settings once: as said
+ok      workbook: the job opens the parts: SolidWorks as it was: no document opened, closed, renamed or marked, every window and the active document as they were, the user’s active; no SolidWorks file saved: the same; no file changed
+ok      workbook: the job opens the parts: the job called {'ActivateDoc3': 4, 'OpenDoc6': 4, 'CloseDoc': 4, 'SaveAs': 4}, as its way of reaching each part says: as expected
+-- workbook  the open-beside fallback: STEP_EXPORT_FROM_COMPONENT_ON_2024 False in this process only, the assembly open, its parts loaded only as components
+patch   in this process only: {'STEP_EXPORT_FROM_COMPONENT_ON_2024': False} (as committed: {'STEP_EXPORT_FROM_COMPONENT_ON_2024': True})
+ok      the record's parts are the printed 12 : 1's: ['Gear_m1.5_N17_P', 'Gear_m1.5_N68_P', 'Gear_m2_N17_P', 'OutputGear']
+        the job's calls by member {'ActivateDoc3': 4, 'ActiveDoc': 7, 'CloseDoc': 4, 'Equation': 120, 'Extension': 4, 'FirstFeature': 4, 'GetCount': 4, 'GetEquationMgr': 4, 'GetErrorCode2': 100, 'GetFirstDocument': 16, 'GetNext': 112, 'GetNextFeature': 100, 'GetPathName': 111, 'GetSaveFlag': 18, 'GetTitle': 29, 'GetType': 29, 'GetTypeName2': 100, 'Name': 100, 'OpenDoc6': 4, 'SaveAs': 4, 'Value': 120, 'Visible': 4}
+window  workbook: open beside: [green] Print files wrote 4 STEP files and their print list in C:\…\out\workbook\print\2026-11-18 12.17.58.
+ok      workbook: opened beside the assembly: every part written and checked by the app, none failed, the active document as it was, no save flag turned on: written ['Gear_m1.5_N17_P', 'Gear_m1.5_N68_P', 'Gear_m2_N17_P', 'OutputGear'], refusal None, failed [], active restored True, flags turned on []
+ok      workbook: opened beside the assembly: a new folder of its own in the Output folder's print folder, named by the press's date and time, holding the STEP files and print list.txt alone, every earlier folder as it was: '2026-11-18 12.17.58' ['Gear_m1.5_N17_P.step', 'Gear_m1.5_N68_P.step', 'Gear_m2_N17_P.step', 'OutputGear.step', 'print list.txt']: as said
+ok      workbook: opened beside the assembly: the status is C's: 'Print files wrote 4 STEP files and their print list in C:\\…\\out\\workbook\\print\\2026-11-18 12.17.58.'
+fact    workbook: opened beside the assembly: Gear_m1.5_N17_P.step: 735462 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 296 vertices reaching radius 14.250000 over 15.000008 along Z (the gear's 14.25 and 15.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      workbook: opened beside the assembly: Gear_m1.5_N17_P.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+fact    workbook: opened beside the assembly: Gear_m1.5_N68_P.step: 2936901 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 1162 vertices reaching radius 52.500000 over 15.000008 along Z (the gear's 52.5 and 15.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      workbook: opened beside the assembly: Gear_m1.5_N68_P.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+fact    workbook: opened beside the assembly: Gear_m2_N17_P.step: 735488 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 296 vertices reaching radius 19.000000 over 20.000008 along Z (the gear's 19.0 and 20.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      workbook: opened beside the assembly: Gear_m2_N17_P.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+fact    workbook: opened beside the assembly: OutputGear.step: 2148203 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 876 vertices reaching radius 53.000000 over 20.000008 along Z (the gear's 53.0 and 20.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      workbook: opened beside the assembly: OutputGear.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+ok      workbook: opened beside the assembly: print list.txt names every part with its rows, how many to print, its span, what the check read and the user's features, the settings once: as said
+ok      workbook: opened beside the assembly: SolidWorks as it was: no document opened, closed, renamed or marked, every window and the active document as they were, the user’s active; no SolidWorks file saved: the same; no file changed
+ok      workbook: opened beside the assembly: the job called {'ActivateDoc3': 4, 'OpenDoc6': 4, 'CloseDoc': 4, 'SaveAs': 4}, as its way of reaching each part says: as expected
+patch   put back: {'STEP_EXPORT_FROM_COMPONENT_ON_2024': True}
+fact    workbook: the components after the fallback: {'Gear_m1.5_N68_P-1': 2, 'Gear_m2_N17_P-1': 2, 'OutputGear-1': 2, 'Reducer_12to1_Layout-1': 2, 'Gear_m1.5_N17_P-1': 2}
+ok      workbook: after the fallback's closes every component of the assembly read and still resolved: {'Gear_m1.5_N68_P-1': 2, 'Gear_m2_N17_P-1': 2, 'OutputGear-1': 2, 'Reducer_12to1_Layout-1': 2, 'Gear_m1.5_N17_P-1': 2}
+ok      workbook: the record's parts throughout: ['Gear_m1.5_N17_P', 'Gear_m1.5_N68_P', 'Gear_m2_N17_P', 'OutputGear']
+ok      workbook, the copy's end: workbook ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Reducer_12to1.xlsx']), no open document by a file name it holds ([])
+time    workbook: 175 s; 0 failed; SolidWorks 2.50 GB private, 8.23 GB free
+== refusals  each refusal made and read: on the form MODIFIED, GLOBALS_DIFFER, the user's keyway written with its size check skipped, NO_RECORD; in the window on the printed 12 : 1 LIGHTWEIGHT (a lightweight component, then a suppressed one), the keyway recorded and the set written, CHANGES_ON_UPDATE, UNSAVED_MARK, FEATURE_IN_ERROR; then the reducer closed and an unrelated assembly of the user's open: LIGHTWEIGHT, and the form's NOT_A_PART
+findings refusals: {'SAVE_AS_COPY': 2, 'STEP_EXPORT': True, 'STEP_EXPORT_NEEDS_ACTIVE': False, 'STEP_EXPORT_FROM_COMPONENT': True, 'OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN': True, 'PART_WINDOW_READ': 'Visible'}; EXTENT_MEASURED True; document route 'walk'
+user    refusals: the user's own document is Housing.SLDPRT, open in its own window and active
+ok      refusals, the form: Coupon_R: the form plans Coupon_R.SLDPRT, printed, a new file
+        build   Part12 · spur · recipe A · trig degrees
+        ok      new part Part12
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Coupon_R; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\out\refusals\Coupon_R.SLDPRT
+status  refusals, the form: Coupon_R: Built Coupon_R.SLDPRT. 1 thing to do by hand: Assign a material to Coupon_R; the build leaves it unset.
+ok      refusals, the form: Coupon_R: built and saved by the form's job, its .gear.json written by the form: ok True, failures []
+-- refusals  the form: a global changed in SolidWorks and not saved, then saved
+person  refusals, the form: Coupon_R's Face Width 9, not saved: "Face Width"= 9 in Coupon_R.SLDPRT; rebuilt True; saved nothing; its window left open
+ok      refusals, the form: Coupon_R's Face Width 9, not saved: made as a person makes it
+        the job's calls by member {'ActiveDoc': 3, 'Equation': 30, 'FirstFeature': 1, 'GetCount': 1, 'GetEquationMgr': 1, 'GetErrorCode2': 25, 'GetFirstDocument': 5, 'GetNext': 10, 'GetNextFeature': 25, 'GetPathName': 15, 'GetSaveFlag': 5, 'GetTitle': 9, 'GetType': 9, 'GetTypeName2': 25, 'Name': 25, 'Value': 30}
+bar     refusals, the form: changed: 'Print files will write Coupon_R.step from the active part.' (shown)
+status  refusals, the form: changed: Print files wrote nothing: Coupon_R is changed in SolidWorks and not saved; save it, or close it without saving, then print.
+ok      refusals, the form: MODIFIED: said word for word: 'Print files wrote nothing: Coupon_R is changed in SolidWorks and not saved; save it, or close it without saving, then print.'
+ok      refusals, the form: MODIFIED: nothing written: no press folder; SolidWorks files as they were
+ok      refusals, the form: MODIFIED: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      refusals, the form: MODIFIED: refused in the job, before any file, calling nothing that opens, activates, saves or writes: as said
+ok      refusals, the form: Coupon_R saved: Coupon_R.SLDPRT saved as a person saves it: [('Coupon_R.SLDPRT', True)]
+        the job's calls by member {'ActiveDoc': 3, 'Equation': 30, 'FirstFeature': 1, 'GetCount': 1, 'GetEquationMgr': 1, 'GetErrorCode2': 25, 'GetFirstDocument': 5, 'GetNext': 10, 'GetNextFeature': 25, 'GetPathName': 15, 'GetSaveFlag': 5, 'GetTitle': 9, 'GetType': 9, 'GetTypeName2': 25, 'Name': 25, 'Value': 30}
+bar     refusals, the form: saved: 'Print files will write Coupon_R.step from the active part.' (shown)
+status  refusals, the form: saved: Print files wrote nothing: in Coupon_R, "Face Width" is 9 where its record says 8; press Update values (Update SolidWorks in the Workbook window), or put it back, then print.
+ok      refusals, the form: GLOBALS_DIFFER: said word for word: 'Print files wrote nothing: in Coupon_R, "Face Width" is 9 where its record says 8; press Update values (Update SolidWorks in the Workbook window), or put it back, then print.'
+ok      refusals, the form: GLOBALS_DIFFER: nothing written: no press folder; SolidWorks files as they were
+ok      refusals, the form: GLOBALS_DIFFER: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      refusals, the form: GLOBALS_DIFFER: refused in the job, before any file, calling nothing that opens, activates, saves or writes: as said
+-- refusals  the form: Face Width put back by the form's own Update values (the form still says the record's value), saved as the person saves; then a press writes into a folder of its own
+        the job's calls by member {'ActiveDoc': 6, 'Add2': 1, 'Delete': 1, 'Equation': 43, 'ForceRebuild3': 1, 'GetCount': 2, 'GetEquationMgr': 4, 'GetPathName': 1, 'GetTitle': 1, 'GetType': 2, 'GetUserPreferenceToggle': 1, 'SetUserPreferenceToggle': 2, 'Value': 31}
+status  refusals, the form: Update values: Changed 1 variable in Coupon_R.SLDPRT and rebuilt it.
+ok      refusals, the form: Update values set "Face Width" back to 8 and rebuilt Coupon_R: 'Changed 1 variable in Coupon_R.SLDPRT and rebuilt it.'
+ok      refusals, the form: Coupon_R saved after Update values: Coupon_R.SLDPRT saved as a person saves it: [('Coupon_R.SLDPRT', True)]
+        the job's calls by member {'ActiveDoc': 3, 'Equation': 30, 'Extension': 1, 'FirstFeature': 1, 'GetCount': 1, 'GetEquationMgr': 1, 'GetErrorCode2': 25, 'GetFirstDocument': 5, 'GetNext': 10, 'GetNextFeature': 25, 'GetPathName': 16, 'GetSaveFlag': 5, 'GetTitle': 10, 'GetType': 10, 'GetTypeName2': 25, 'Name': 25, 'SaveAs': 1, 'Value': 30}
+bar     refusals, the form: after Update values: 'Print files will write Coupon_R.step from the active part.' (shown)
+status  refusals, the form: after Update values: Print files wrote Coupon_R.step and its print list in C:\…\out\refusals\print\2026-11-18 12.18.39.
+ok      refusals, the form: after Update values: every part written and checked by the app, none failed, the active document as it was, no save flag turned on: written ['Coupon_R'], refusal None, failed [], active restored True, flags turned on []
+ok      refusals, the form: after Update values: a new folder of its own in the Output folder's print folder, named by the press's date and time, holding the STEP files and print list.txt alone, every earlier folder as it was: '2026-11-18 12.18.39' ['Coupon_R.step', 'print list.txt']: as said
+ok      refusals, the form: after Update values: the status is C's: 'Print files wrote Coupon_R.step and its print list in C:\\…\\out\\refusals\\print\\2026-11-18 12.18.39.'
+fact    refusals, the form: after Update values: Coupon_R.step: 882628 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 346 vertices reaching radius 16.500000 over 8.000009 along Z (the gear's 16.5 and 8.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      refusals, the form: after Update values: Coupon_R.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+ok      refusals, the form: after Update values: print list.txt names every part with its rows, how many to print, its span, what the check read and the user's features, the settings once: as said
+ok      refusals, the form: after Update values: SolidWorks as it was: no document opened, closed, renamed or marked, every window and the active document as they were; no SolidWorks file saved: the same; no file changed
+ok      refusals, the form: after Update values: the job called {'SaveAs': 1}, as its way of reaching each part says: as expected
+-- refusals  the form: the user's keyway cut in the coupon and saved: written, its size check skipped on the job's own read of the part
+ok      refusals, the form: the user's keyway in Coupon_R: User Keyway made in Coupon_R.SLDPRT, rebuilt True, its code 0
+ok      refusals, the form: Coupon_R saved with the keyway: Coupon_R.SLDPRT saved as a person saves it: [('Coupon_R.SLDPRT', True)]
+ok      refusals, the form: the script reads the user's keyway in Coupon_R: ('User Keyway Sketch', 'User Keyway')
+        the job's calls by member {'ActiveDoc': 3, 'Equation': 30, 'Extension': 1, 'FirstFeature': 1, 'GetCount': 1, 'GetEquationMgr': 1, 'GetErrorCode2': 27, 'GetFirstDocument': 5, 'GetNext': 10, 'GetNextFeature': 27, 'GetPathName': 16, 'GetSaveFlag': 5, 'GetTitle': 10, 'GetType': 10, 'GetTypeName2': 27, 'Name': 27, 'SaveAs': 1, 'Value': 30}
+bar     refusals, the form: keyway: 'Print files will write Coupon_R.step from the active part.' (shown)
+status  refusals, the form: keyway: Print files wrote Coupon_R.step and its print list in C:\…\out\refusals\print\2026-11-18 12.18.46.
+ok      refusals, the form: the user's keyway: every part written and checked by the app, none failed, the active document as it was, no save flag turned on: written ['Coupon_R'], refusal None, failed [], active restored True, flags turned on []
+ok      refusals, the form: the user's keyway: a new folder of its own in the Output folder's print folder, named by the press's date and time, holding the STEP files and print list.txt alone, every earlier folder as it was: '2026-11-18 12.18.46' ['Coupon_R.step', 'print list.txt']: as said
+ok      refusals, the form: the user's keyway: the status is C's: 'Print files wrote Coupon_R.step and its print list in C:\\…\\out\\refusals\\print\\2026-11-18 12.18.46.'
+fact    refusals, the form: the user's keyway: Coupon_R.step: 885235 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 348 vertices reaching radius 16.500000 over 8.000009 along Z (the gear's None and 8.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'skipped: user features'}
+ok      refusals, the form: the user's keyway: Coupon_R.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres) and by the app's check (size 'skipped: user features'): holds
+ok      refusals, the form: the user's keyway: print list.txt names every part with its rows, how many to print, its span, what the check read and the user's features, the settings once: as said
+ok      refusals, the form: the user's keyway: SolidWorks as it was: no document opened, closed, renamed or marked, every window and the active document as they were; no SolidWorks file saved: the same; no file changed
+ok      refusals, the form: the user's keyway: the job called {'SaveAs': 1}, as its way of reaching each part says: as expected
+-- refusals  the form: an Output folder that does not exist
+bar     refusals, the form: no folder: '' (not shown)
+status  refusals, the form: no folder: Print files wrote nothing: the output folder C:\…\out\refusals\no such folder does not exist; make it, or choose another, then print.
+ok      refusals, the form: NO_FOLDER: said word for word: 'Print files wrote nothing: the output folder C:\\…\\out\\refusals\\no such folder does not exist; make it, or choose another, then print.'
+ok      refusals, the form: NO_FOLDER: nothing written: no press folder; SolidWorks files as they were
+ok      refusals, the form: NO_FOLDER: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      refusals, the form: NO_FOLDER: refused at planning, nothing submitted to SolidWorks
+ok      refusals, the form: the missing Output folder was not made
+-- refusals  the form: a part with no .gear.json active (the user's Sprocket)
+bar     refusals, the form: no record: '' (not shown)
+status  refusals, the form: no record: Print files prints a part Gear Generator built: Sprocket.SLDPRT has no .gear.json beside it, so nothing was written.
+ok      refusals, the form: NO_RECORD: said word for word: 'Print files prints a part Gear Generator built: Sprocket.SLDPRT has no .gear.json beside it, so nothing was written.'
+ok      refusals, the form: NO_RECORD: nothing written: no press folder; SolidWorks files as they were
+ok      refusals, the form: NO_RECORD: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      refusals, the form: NO_RECORD: refused at planning, nothing submitted to SolidWorks
+ok      refusals: the user's Sprocket closed: Sprocket.SLDPRT was open and its window was closed
+-- refusals  the window, on a copy of the printed 12 : 1, its assembly open, the user's part active
+fact    the printed 12 : 1 kept earlier in this <out> is copied: f2-reducer.master
+copy    f2-reducer.master -> refusals-reducer: 12 files, mtimes kept
+        Reducer_12to1.xlsx's record: 12 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part']
+        Gear_m1.5_N17_P.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.5_N68_P.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m2_N17_P.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        OutputGear.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      refusals-reducer: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+fact    refusals-reducer: the copy's assembly opened in 2.6 s; marked modified straight after the open: {'Reducer_12to1_Layout.SLDPRT': False, 'Gear_m1.5_N17_P.SLDPRT': False, 'Gear_m1.5_N68_P.SLDPRT': False, 'Gear_m2_N17_P.SLDPRT': False, 'OutputGear.SLDPRT': False, 'Reducer_12to1.SLDASM': False}
+ok      refusals-reducer: SolidWorks found all 5 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      refusals-reducer: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened Reducer_12to1.xlsx with no dialog or repair: []
+ok      the record's parts are the printed 12 : 1's: ['Gear_m1.5_N17_P', 'Gear_m1.5_N68_P', 'Gear_m2_N17_P', 'OutputGear']
+DIALOG  SolidWorks shows '': ['Close', 'Opened 5\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 1 seconds', 'For more information, view: ']
+person  refusals: G4's component set lightweight: OutputGear-1 set to 1, reads 1
+ok      refusals: OutputGear-1 reads lightweight: 1
+        the job's calls by member {'ActiveDoc': 3, 'GetFirstDocument': 8, 'GetNext': 56, 'GetPathName': 53, 'GetSaveFlag': 14, 'GetTitle': 17, 'GetType': 17, 'Visible': 3}
+window  refusals, the window: lightweight: [red] Print files wrote nothing: OutputGear is not open where Print files can reach it while Reducer_12to1 is open: it may be a lightweight or suppressed component of it, or simply closed; resolve it there, or open the part itself, then print again.
+ok      refusals, the window: a lightweight component: said word for word: 'Print files wrote nothing: OutputGear is not open where Print files can reach it while Reducer_12to1 is open: it may be a lightweight or suppressed component of it, or simply closed; resolve it there, or open the part itself, then print again.'
+ok      refusals, the window: a lightweight component: nothing written: no press folder; SolidWorks files as they were
+ok      refusals, the window: a lightweight component: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      refusals, the window: a lightweight component: refused in the job, before any file, calling nothing that opens, activates, saves or writes: as said
+fact    refusals: after the press: {'Gear_m1.5_N68_P-1': 2, 'Reducer_12to1_Layout-1': 2, 'Gear_m1.5_N17_P-1': 2, 'OutputGear-1': 1, 'Gear_m2_N17_P-1': 2}
+ok      refusals: OutputGear-1 still lightweight after the press (the job read it, set nothing): {'Gear_m1.5_N68_P-1': 2, 'Reducer_12to1_Layout-1': 2, 'Gear_m1.5_N17_P-1': 2, 'OutputGear-1': 1, 'Gear_m2_N17_P-1': 2}
+person  refusals: G4's component resolved again: OutputGear-1 set to 2, reads 2
+-- refusals  the window: a component suppressed, the sentence's other case
+person  refusals: G4's component suppressed: OutputGear-1 set to 0, reads 0
+        the job's calls by member {'ActiveDoc': 3, 'GetFirstDocument': 8, 'GetNext': 56, 'GetPathName': 53, 'GetSaveFlag': 14, 'GetTitle': 17, 'GetType': 17, 'Visible': 3}
+window  refusals, the window: suppressed: [red] Print files wrote nothing: OutputGear is not open where Print files can reach it while Reducer_12to1 is open: it may be a lightweight or suppressed component of it, or simply closed; resolve it there, or open the part itself, then print again.
+fact    refusals: with OutputGear-1 suppressed (state 0) the app meets it with LIGHTWEIGHT's sentence, which names a suppressed component among its cases since 567773c
+ok      refusals, the window: suppressed: said word for word: 'Print files wrote nothing: OutputGear is not open where Print files can reach it while Reducer_12to1 is open: it may be a lightweight or suppressed component of it, or simply closed; resolve it there, or open the part itself, then print again.'
+ok      refusals, the window: suppressed: nothing written: no press folder; SolidWorks files as they were
+ok      refusals, the window: suppressed: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      refusals, the window: suppressed: refused in the job, before any file, calling nothing that opens, activates, saves or writes: as said
+person  refusals: G4's component resolved again: OutputGear-1 set to 2, reads 2
+ok      refusals: nothing of the copy left open: []
+-- refusals  the window: the user's keyway in G1's part, recorded by a quiet press; the set written
+ok      refusals: the user's keyway in G1's part: User Keyway made in Gear_m1.5_N17_P.SLDPRT, rebuilt True, its code 0
+person  saved in SolidWorks (the user's keyway in G1's part): ['Gear_m1.5_N17_P.SLDPRT']
+ok      refusals: a quiet Update SolidWorks (the keyway recorded): the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 5.51 GB private, 8.08 GB free
+        in 17.1 s; SolidWorks 7.13 GB private, 8.06 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] SolidWorks already matches the workbook: nothing was changed.
+fact    refusals: a quiet Update SolidWorks (the keyway recorded): the press took 17.1 s; SolidWorks calls by member {'OpenDoc6': 7, 'IsSuppressed2': 9}
+        shows and puts in order: []
+        configuration ''; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration None; failures []
+fact    refusals: a quiet Update SolidWorks (the keyway recorded): the press took 17 s
+ok      refusals: the record lists the User Keyway in G1's part: [('User Keyway Sketch', 'Gear_m1.5_N17_P.SLDPRT'), ('User Keyway', 'Gear_m1.5_N17_P.SLDPRT')]
+ok      the record's parts are the printed 12 : 1's: ['Gear_m1.5_N17_P', 'Gear_m1.5_N68_P', 'Gear_m2_N17_P', 'OutputGear']
+        the job's calls by member {'ActiveDoc': 3, 'Equation': 120, 'Extension': 4, 'FirstFeature': 4, 'GetCount': 4, 'GetEquationMgr': 4, 'GetErrorCode2': 102, 'GetFirstDocument': 8, 'GetNext': 64, 'GetNextFeature': 102, 'GetPathName': 69, 'GetSaveFlag': 20, 'GetTitle': 31, 'GetType': 31, 'GetTypeName2': 102, 'Name': 102, 'SaveAs': 4, 'Value': 120, 'Visible': 4}
+window  refusals, the window: keyway on record: [green] Print files wrote 4 STEP files and their print list in C:\…\out\refusals-reducer\print\2026-11-18 12.19.35.
+ok      refusals, the window: the set with the user's keyway: every part written and checked by the app, none failed, the active document as it was, no save flag turned on: written ['Gear_m1.5_N17_P', 'Gear_m1.5_N68_P', 'Gear_m2_N17_P', 'OutputGear'], refusal None, failed [], active restored True, flags turned on []
+ok      refusals, the window: the set with the user's keyway: a new folder of its own in the Output folder's print folder, named by the press's date and time, holding the STEP files and print list.txt alone, every earlier folder as it was: '2026-11-18 12.19.35' ['Gear_m1.5_N17_P.step', 'Gear_m1.5_N68_P.step', 'Gear_m2_N17_P.step', 'OutputGear.step', 'print list.txt']: as said
+ok      refusals, the window: the set with the user's keyway: the status is C's: 'Print files wrote 4 STEP files and their print list in C:\\…\\out\\refusals-reducer\\print\\2026-11-18 12.19.35.'
+fact    refusals, the window: the set with the user's keyway: Gear_m1.5_N17_P.step: 738067 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 298 vertices reaching radius 14.250000 over 15.000008 along Z (the gear's 14.25 and 15.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'skipped: user features'}
+ok      refusals, the window: the set with the user's keyway: Gear_m1.5_N17_P.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'skipped: user features'): holds
+fact    refusals, the window: the set with the user's keyway: Gear_m1.5_N68_P.step: 2936931 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 1162 vertices reaching radius 52.500000 over 15.000008 along Z (the gear's 52.5 and 15.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      refusals, the window: the set with the user's keyway: Gear_m1.5_N68_P.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+fact    refusals, the window: the set with the user's keyway: Gear_m2_N17_P.step: 735332 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 296 vertices reaching radius 19.000000 over 20.000008 along Z (the gear's 19.0 and 20.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      refusals, the window: the set with the user's keyway: Gear_m2_N17_P.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+fact    refusals, the window: the set with the user's keyway: OutputGear.step: 2148126 characters, schema CONFIG_CONTROL_DESIGN, units ['MILLI.METRE'], 876 vertices reaching radius 53.000000 over 20.000008 along Z (the gear's 53.0 and 20.0); the app read {'schema': 'CONFIG_CONTROL_DESIGN', 'unit': 'MILLI.METRE', 'extent': 'checked'}
+ok      refusals, the window: the set with the user's keyway: OutputGear.step by this script's reading (framed, AP203/214/242, one closed solid, millimetres, the outer radius and face to 0.01 mm) and by the app's check (size 'checked'): holds
+ok      refusals, the window: the set with the user's keyway: print list.txt names every part with its rows, how many to print, its span, what the check read and the user's features, the settings once: as said
+ok      refusals, the window: the set with the user's keyway: SolidWorks as it was: no document opened, closed, renamed or marked, every window and the active document as they were, the user’s active; no SolidWorks file saved: the same; no file changed
+ok      refusals, the window: the set with the user's keyway: the job called {'SaveAs': 4}, as its way of reaching each part says: as expected
+-- refusals  the window: G4's Flank typed arcs in Excel, a change Update cannot carry (G4's part made new, as W9d's Sun): NEW_REVISION; then the cell cleared again
+excel   Gears!K5 := 'arcs'
+excel   saved Reducer_12to1.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!K5 G4 Flank blank → arcs
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!K5: G4: Arcs stand in for the involute on this gear to within 42.2 µm.
+        3 shafts · 4 gears · 2 meshes; gate ''
+classify parts changed ['OutputGear.SLDPRT']; moved []; re-place []; structural ['OutputGear (G4): Flank changed from involute to arcs, which its values cannot carry; build it again as a new part.']; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['S2 X = 63.75', 'S3 X = 131.75']
+summary OutputGear (G4): Flank changed from involute to arcs, which its values cannot carry, so it needs a new part. Update SolidWorks offers to build again as a new revision.
+ok      refusals: Update needs a new revision for G4's Flank: ['OutputGear (G4): Flank changed from involute to arcs, which its values cannot carry; build it again as a new part.']
+window  refusals, the window: G4 arcs: [red] Print files wrote nothing: the workbook's changes to OutputGear need a new revision, which Update SolidWorks cannot make; press Build again…, then print the new revision.
+ok      refusals, the window: NEW_REVISION: said word for word: "Print files wrote nothing: the workbook's changes to OutputGear need a new revision, which Update SolidWorks cannot make; press Build again…, then print the new revision."
+ok      refusals, the window: NEW_REVISION: nothing written: no press folder; SolidWorks files as they were
+ok      refusals, the window: NEW_REVISION: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      refusals, the window: NEW_REVISION: refused at planning, nothing submitted to SolidWorks
+excel   Gears!K5 := None
+excel   saved Reducer_12to1.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!K5 G4 Flank arcs → blank
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+classify parts changed []; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['S2 X = 63.75', 'S3 X = 131.75']
+summary SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move.
+ok      refusals: with the Flank cleared, Update plans nothing changed again
+-- refusals  the window: G1's Bore typed 14 in Excel (the keyway falls inside the bore)
+excel   Gears!J2 := 14
+excel   saved Reducer_12to1.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!J2 G1 Bore 8 → 14
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.5_N17_P.SLDPRT']; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['S2 X = 63.75', 'S3 X = 131.75']
+summary Update SolidWorks will change G1's values (Gear_m1.5_N17_P).
+window  refusals, the window: Bore 14: [red] Print files wrote nothing: Update SolidWorks would change the values in Gear_m1.5_N17_P; press Update SolidWorks and save, then print.
+ok      refusals, the window: CHANGES_ON_UPDATE: said word for word: 'Print files wrote nothing: Update SolidWorks would change the values in Gear_m1.5_N17_P; press Update SolidWorks and save, then print.'
+ok      refusals, the window: CHANGES_ON_UPDATE: nothing written: no press folder; SolidWorks files as they were
+ok      refusals, the window: CHANGES_ON_UPDATE: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      refusals, the window: CHANGES_ON_UPDATE: refused at planning, nothing submitted to SolidWorks
+-- refusals  the window: Update SolidWorks (the keyway rebuilt into error), not saved
+ok      refusals: Update SolidWorks, G1's Bore 14: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 7.16 GB private, 8.12 GB free
+fact    Update SolidWorks: What's Wrong came up 9.55 s into the job, the worker in ActivateDoc3, owned by SolidWorks' frame: as the app's Update shows it (the ruling: a fact, not a STOP)
+DIALOG  SolidWorks shows "What's Wrong": ['Show &errors', 'Show &warnings', "&Display What's Wrong during rebuild", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    ']
+NOTE    a SolidWorks window "What's Wrong" ['Show &errors', 'Show &warnings', "&Display What's Wrong during rebuild", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    '] came up while ActivateDoc3 was in progress, before this run made any configuration
+fact    Update SolidWorks: What's Wrong gone 10.56 s into the job after staying 1.01 s, the worker in GetNextFeature; nothing here closed it
+fact    Update SolidWorks: What's Wrong showed during the job, as the app's Update shows it: came at [9.55] s, stayed [1.01] s; after the job it took 0.00 s to go (allowed 60); 0 up at the end, SolidWorks' frame enabled True
+        in 13.1 s; SolidWorks 7.18 GB private, 8.03 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error [('User Keyway', 'Gear_m1.5_N17_P.SLDPRT', 51)]; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] Updated SolidWorks: changed 1 variable in Gear_m1.5_N17_P; no interference between the gears where they stand. SolidWorks reports an error rebuilding Reducer_12to1.SLDASM, from your own work alone: nothing of the app's is in error, so the Update was made. Your User Keyway in Gear_m1.5_N17_P is in error in SolidWorks now, after this Update set Bore Diameter 8 to 14 (Gears!J2) in that part: change your User Keyway to fit, or type 8 in Gears!J2 again. SolidWorks may have shown its What's Wrong box for up to half a minute during the Update; nothing in it needed answering. Save Gear_m1.5_N17_P in SolidWorks to keep it.
+fact    refusals: Update SolidWorks, G1's Bore 14: the press took 13.1 s; SolidWorks calls by member {'OpenDoc6': 8, 'IsSuppressed2': 27, 'ForceRebuild3': 2}
+        shows and puts in order: []
+        configuration ''; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration None; failures []
+fact    refusals: Update SolidWorks, G1's Bore 14: the press took 13 s
+ok      refusals: the Update ran: None
+fact    refusals: the Update: ok True; failures []; the user's features in error [('User Keyway', 'Gear_m1.5_N17_P.SLDPRT')]
+ok      refusals: the record marks G1's part alone unsaved: ['Gear_m1.5_N17_P']
+window  refusals, the window: updated, not saved: [red] Print files wrote nothing: Gear_m1.5_N17_P has changes from Update SolidWorks that are not saved; save it in SolidWorks, then print.
+ok      refusals, the window: UNSAVED_MARK: said word for word: 'Print files wrote nothing: Gear_m1.5_N17_P has changes from Update SolidWorks that are not saved; save it in SolidWorks, then print.'
+ok      refusals, the window: UNSAVED_MARK: nothing written: no press folder; SolidWorks files as they were
+ok      refusals, the window: UNSAVED_MARK: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      refusals, the window: UNSAVED_MARK: refused at planning, nothing submitted to SolidWorks
+-- refusals  the window: saved as the person saves; G1's keyway in error, G1 not active
+person  saved in SolidWorks (the Update's result): ['Gear_m1.5_N17_P.SLDPRT', 'Reducer_12to1.SLDASM']
+ok      refusals: G1's part holds the User Keyway in error: ['User Keyway']
+        the job's calls by member {'ActiveDoc': 3, 'Equation': 120, 'FirstFeature': 4, 'GetCount': 4, 'GetEquationMgr': 4, 'GetErrorCode2': 102, 'GetFirstDocument': 8, 'GetNext': 64, 'GetNextFeature': 102, 'GetPathName': 65, 'GetSaveFlag': 20, 'GetTitle': 27, 'GetType': 27, 'GetTypeName2': 102, 'Name': 102, 'Value': 120, 'Visible': 4}
+window  refusals, the window: keyway in error: [red] Print files wrote nothing: in Gear_m1.5_N17_P, User Keyway is in error in SolidWorks; fix it there, then print.
+ok      refusals, the window: FEATURE_IN_ERROR: said word for word: 'Print files wrote nothing: in Gear_m1.5_N17_P, User Keyway is in error in SolidWorks; fix it there, then print.'
+ok      refusals, the window: FEATURE_IN_ERROR: nothing written: no press folder; SolidWorks files as they were
+ok      refusals, the window: FEATURE_IN_ERROR: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      refusals, the window: FEATURE_IN_ERROR: refused in the job, before any file, calling nothing that opens, activates, saves or writes: as said
+-- refusals  the reducer closed, an unrelated assembly of the user's open and active
+ok      refusals: nothing of the copy open: []
+ok      refusals: the user's own assembly Pair_m1.5_25T_50T.SLDASM built and saved: ok True
+        the job's calls by member {'ActiveDoc': 3, 'GetFirstDocument': 8, 'GetNext': 40, 'GetPathName': 43, 'GetSaveFlag': 10, 'GetTitle': 13, 'GetType': 13}
+window  refusals, the window: parts closed: [red] Print files wrote nothing: Gear_m1.5_N17_P, Gear_m1.5_N68_P, Gear_m2_N17_P and OutputGear are not open where Print files can reach them while Pair_m1.5_25T_50T is open: they may be lightweight or suppressed components of it, or simply closed; resolve them there, or open the parts themselves, then print again.
+ok      refusals, the window: parts closed, the user's assembly open: said word for word: 'Print files wrote nothing: Gear_m1.5_N17_P, Gear_m1.5_N68_P, Gear_m2_N17_P and OutputGear are not open where Print files can reach them while Pair_m1.5_25T_50T is open: they may be lightweight or suppressed components of it, or simply closed; resolve them there, or open the parts themselves, then print again.'
+ok      refusals, the window: parts closed, the user's assembly open: nothing written: no press folder; SolidWorks files as they were
+ok      refusals, the window: parts closed, the user's assembly open: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      refusals, the window: parts closed, the user's assembly open: refused in the job, before any file, calling nothing that opens, activates, saves or writes: as said
+fact    refusals: the parts are closed and in no assembly; the sentence names that case among the three it stands for (LIGHTWEIGHT is inferred, not read: F2-PROBES-REVIEW §3.3)
+bar     refusals, the form: an assembly active: '' (not shown)
+status  refusals, the form: an assembly active: Print files prints the part active in SolidWorks, and Pair_m1.5_25T_50T.SLDASM is not a part: make a gear part active there; nothing was written.
+ok      refusals, the form: NOT_A_PART: said word for word: 'Print files prints the part active in SolidWorks, and Pair_m1.5_25T_50T.SLDASM is not a part: make a gear part active there; nothing was written.'
+ok      refusals, the form: NOT_A_PART: nothing written: no press folder; SolidWorks files as they were
+ok      refusals, the form: NOT_A_PART: SolidWorks' documents as they were (none opened or closed, every flag and window, the active one): the same
+ok      refusals, the form: NOT_A_PART: refused at planning, nothing submitted to SolidWorks
+ok      refusals-reducer, the copy's end: refusals-reducer ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Reducer_12to1.xlsx']), no open document by a file name it holds ([])
+time    refusals: 157 s; 0 failed; SolidWorks 3.23 GB private, 8.25 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 3.02 GB private, 8.43 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 0, 'Updating...': 0, 'Opening': 0, 'Loading...': 0}; other windows the watch logged: 1
+awake   display and system released (previous state -0x7ffffffd)
+result  written to C:\Users\M0obo\Documents\GearGeneratorProbe\f2-demo-sw2024-20261118-120146\f2-demo-20261118-121309.json; masters kept {'rangebox': '', 'setup': '', 'reducer': ''}
+noted   form, herringbone: the herringbone's size reading holds against d_a / 2 and the face to 0.01 mm (within): a fact for the ruling on "herringbone" in printout.EXTENT_SKIPPED
+noted   a SolidWorks window "What's Wrong" ['Show &errors', 'Show &warnings', "&Display What's Wrong during rebuild", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    '] came up while ActivateDoc3 was in progress, before this run made any configuration
+done    0 failed: []; 2 noted; 0 STOP(s), a hung worker included: []

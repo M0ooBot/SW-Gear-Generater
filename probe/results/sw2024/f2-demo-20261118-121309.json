@@ -1,0 +1,191 @@
+{
+ "sections": {
+  "gates": {
+   "findings": {
+    "SAVE_AS_COPY": "2",
+    "STEP_EXPORT": "True",
+    "STEP_EXPORT_NEEDS_ACTIVE": "False",
+    "STEP_EXPORT_FROM_COMPONENT": "True",
+    "OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN": "True",
+    "PART_WINDOW_READ": "'Visible'"
+   },
+   "extent_measured": true,
+   "job_gate": "SolidWorks changed since Print files was pressed (2026 (34.1.1) then, 2024 (32.5.0) now): press it again. Nothing was written.",
+   "seconds": 57,
+   "failed": []
+  },
+  "form": {
+   "presses": {
+    "coupon 1": {
+     "folder": "2026-11-18 12.14.25",
+     "app": {
+      "schema": "CONFIG_CONTROL_DESIGN",
+      "unit": "MILLI.METRE",
+      "extent": "checked"
+     },
+     "radius": 16.500000000000007,
+     "along_z": 8.000008500000002,
+     "vertices": 346
+    },
+    "coupon 2": {
+     "folder": "2026-11-18 12.14.27",
+     "app": {
+      "schema": "CONFIG_CONTROL_DESIGN",
+      "unit": "MILLI.METRE",
+      "extent": "checked"
+     },
+     "radius": 16.500000000000007,
+     "along_z": 8.000008500000002,
+     "vertices": 346
+    },
+    "helical 1": {
+     "folder": "2026-11-18 12.14.49",
+     "app": {
+      "schema": "CONFIG_CONTROL_DESIGN",
+      "unit": "MILLI.METRE",
+      "extent": "checked"
+     },
+     "radius": 22.705523608201666,
+     "along_z": 10.000000000000002,
+     "vertices": 322
+    },
+    "herringbone 1": {
+     "folder": "2026-11-18 12.15.14",
+     "app": {
+      "schema": "CONFIG_CONTROL_DESIGN",
+      "unit": "MILLI.METRE",
+      "extent": "skipped: herringbone"
+     },
+     "radius": 22.705523608201677,
+     "along_z": 20.0,
+     "vertices": 480
+    }
+   },
+   "herringbone": {
+    "holds": true,
+    "radius": 22.705523608201677,
+    "along_z": 20.0,
+    "d_a/2": 22.70552360820166,
+    "face": 20.0,
+    "app": "skipped: herringbone"
+   },
+   "seconds": 73,
+   "failed": []
+  },
+  "workbook": {
+   "component_only": {
+    "Gear_m1.5_N17_P": {
+     "characters": 735480,
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "units": [
+      "MILLI.METRE"
+     ],
+     "vertices": 296,
+     "radius": 14.250000000000004,
+     "along_z": 15.0000085,
+     "app": {
+      "schema": "CONFIG_CONTROL_DESIGN",
+      "unit": "MILLI.METRE",
+      "extent": "checked"
+     }
+    },
+    "Gear_m1.5_N68_P": {
+     "characters": 2936920,
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "units": [
+      "MILLI.METRE"
+     ],
+     "vertices": 1162,
+     "radius": 52.500000000000014,
+     "along_z": 15.0000085,
+     "app": {
+      "schema": "CONFIG_CONTROL_DESIGN",
+      "unit": "MILLI.METRE",
+      "extent": "checked"
+     }
+    },
+    "Gear_m2_N17_P": {
+     "characters": 735337,
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "units": [
+      "MILLI.METRE"
+     ],
+     "vertices": 296,
+     "radius": 19.000000000000007,
+     "along_z": 20.0000085,
+     "app": {
+      "schema": "CONFIG_CONTROL_DESIGN",
+      "unit": "MILLI.METRE",
+      "extent": "checked"
+     }
+    },
+    "OutputGear": {
+     "characters": 2148205,
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "units": [
+      "MILLI.METRE"
+     ],
+     "vertices": 876,
+     "radius": 53.00000000000141,
+     "along_z": 20.0000085,
+     "app": {
+      "schema": "CONFIG_CONTROL_DESIGN",
+      "unit": "MILLI.METRE",
+      "extent": "checked"
+     }
+    }
+   },
+   "seconds": 175,
+   "failed": []
+  },
+  "refusals": {
+   "suppressed": {
+    "state": 0,
+    "said": "Print files wrote nothing: OutputGear is not open where Print files can reach it while Reducer_12to1 is open: it may be a lightweight or suppressed component of it, or simply closed; resolve it there, or open the part itself, then print again.",
+    "written": []
+   },
+   "seconds": 157,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {},
+ "revision": [
+  32,
+  5,
+  0
+ ],
+ "snapshot": "b3fe4a1",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": true,
+  "allowance_seconds": 60.0,
+  "close_outlived": {
+   "asked": true,
+   "in_force": true,
+   "within_seconds": 10.0,
+   "buttons": [
+    "&Close",
+    "Close"
+   ]
+  }
+ },
+ "fails": [],
+ "notes": [
+  "form, herringbone: the herringbone's size reading holds against d_a / 2 and the face to 0.01 mm (within): a fact for the ruling on \"herringbone\" in printout.EXTENT_SKIPPED",
+  "a SolidWorks window \"What's Wrong\" ['Show &errors', 'Show &warnings', \"&Display What's Wrong during rebuild\", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    '] came up while ActivateDoc3 was in progress, before this run made any configuration"
+ ],
+ "whats_wrong_lifetimes": [
+  {
+   "job": "Update SolidWorks",
+   "kind": "app",
+   "came": [
+    9.55
+   ],
+   "stayed": [
+    1.01
+   ],
+   "still_up": 0
+  }
+ ]
+}

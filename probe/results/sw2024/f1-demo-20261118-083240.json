@@ -1,0 +1,80 @@
+{
+ "sections": {
+  "rangebox": {
+   "master_schema": 7,
+   "as_built": {
+    "footer": "SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move. It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. Carrier (the carrier) is axes and planes only, so it has nothing to drag. As read at 00:35 on 2026-11-17, Update SolidWorks leaves your Sprocket-3, Housing-1, Sprocket-4, 2 other components and 8 mates as they are, and your User Keyway Sketch and User Keyway in Gear_m1.25_N29 too.",
+    "line": "Machined, as built: type Printed beside Process on the Box sheet to print it (add a row labelled Process)",
+    "written": []
+   },
+   "judged": [
+    {
+     "label": "rangebox as copied",
+     "clean": true
+    },
+    {
+     "label": "rangebox after the press",
+     "clean": true
+    }
+   ],
+   "foreseen_carry": [
+    [
+     "Sprocket-1",
+     "Sun"
+    ],
+    [
+     "Sprocket-2",
+     "RangeSlv"
+    ],
+    [
+     "Sprocket-3",
+     "Sun"
+    ]
+   ],
+   "press": {
+    "ok": true,
+    "failures": [],
+    "user_in_error": [],
+    "user_features_in_error": [],
+    "in_error_before": [],
+    "sentence": "Updated SolidWorks: changed 1 variable in Gear_m1.25_N29, changed 1 variable in Gear_m1.25_N13, changed 1 variable in Ring_m1.25_N55, changed 1 variable in Dog_m1.25_N17, changed 1 variable in Sleeve_m1.25_N17, re-placed Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your Sprocket-1 went with Sun in every mode, which your locks hold it to. Your Sprocket-3 went with Sun in every mode, which your locks hold it to. Your Sprocket-2 went with RangeSlv in every mode, which your locks hold it to. The 5 parts now printed keep their file names, without the _P a part built printed is named with: Update SolidWorks never renames a file, and Build again\u2026 makes new parts named with _P if you want the mark. Save Gear_m1.25_N29, Gear_m1.25_N13, Ring_m1.25_N55, Dog_m1.25_N17, Sleeve_m1.25_N17 and RangeBox in SolidWorks to keep them."
+   },
+   "sentence": "Updated SolidWorks: changed 1 variable in Gear_m1.25_N29, changed 1 variable in Gear_m1.25_N13, changed 1 variable in Ring_m1.25_N55, changed 1 variable in Dog_m1.25_N17, changed 1 variable in Sleeve_m1.25_N17, re-placed Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your Sprocket-1 went with Sun in every mode, which your locks hold it to. Your Sprocket-3 went with Sun in every mode, which your locks hold it to. Your Sprocket-2 went with RangeSlv in every mode, which your locks hold it to. The 5 parts now printed keep their file names, without the _P a part built printed is named with: Update SolidWorks never renames a file, and Build again\u2026 makes new parts named with _P if you want the mark. Save Gear_m1.25_N29, Gear_m1.25_N13, Ring_m1.25_N55, Dog_m1.25_N17, Sleeve_m1.25_N17 and RangeBox in SolidWorks to keep them.",
+   "backlash": true,
+   "second": {
+    "ok": true,
+    "failures": [],
+    "user_in_error": [],
+    "user_features_in_error": [],
+    "in_error_before": [],
+    "sentence": "SolidWorks already matches the workbook: nothing was changed. It worked in H, the configuration that was active; it did not show the other modes, since nothing in H needed changing."
+   },
+   "seconds": 711,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {},
+ "revision": [
+  32,
+  5,
+  0
+ ],
+ "snapshot": "c1c9046",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": true,
+  "allowance_seconds": 60.0,
+  "close_outlived": {
+   "asked": true,
+   "in_force": true,
+   "within_seconds": 10.0,
+   "buttons": [
+    "&Close",
+    "Close"
+   ]
+  }
+ },
+ "fails": [],
+ "notes": []
+}

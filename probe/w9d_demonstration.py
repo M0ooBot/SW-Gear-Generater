@@ -1022,9 +1022,11 @@ def self_check():
     ok(status.startswith("Carried into RangeBox_r2, unsaved") and "fixed where" in status
        and "Keyway" in status, "carry on the fake: the result says what was carried unsaved, the fallback, the Keyway")
     on_disk = json.loads(store.link_record_to_json(record))
-    ok(on_disk["link_schema_version"] == 10 and record.gearbox.carry.unsaved_at > 0
+    # The record at the schema the app writes: 10 when W9d was shown on SolidWorks, 11 since F1 (PLAN-PRINTED §1.2).
+    ok(on_disk["link_schema_version"] == store.LINK_SCHEMA_VERSION and record.gearbox.carry.unsaved_at > 0
        and ui_text.carry_footer_line(record) != "",
-       "carry on the fake: the record at schema 10 holds the carry, unsaved_at set, the footer's line said")
+       f"carry on the fake: the record at schema {store.LINK_SCHEMA_VERSION} holds the carry, unsaved_at set, the "
+       "footer's line said")
 
     desk, twc = _fake_desk(c9)
     _closed_fake(desk)
@@ -2470,7 +2472,8 @@ def record_judged(label, desk, result, unsaved=True):
     # finished asks in the build's own phrase (and §9.4's line is not repeated), one that stopped does not (§9.4's).
     standing = (has_line and not asks) if stopped else (asks and not has_line)
     reached = (not unsaved) or bool(result.carry and result.carry.unsaved)
-    ok = check(reached and on_disk.get(store.LINK_SCHEMA_KEY) == 10 and carry is not None
+    # The record at the schema the app writes: 10 when W9d was shown on SolidWorks, 11 since F1 (PLAN-PRINTED §1.2).
+    ok = check(reached and on_disk.get(store.LINK_SCHEMA_KEY) == store.LINK_SCHEMA_VERSION and carry is not None
                and (not unsaved or abs(carry.unsaved_at - mtime) < 1e-6)
                and (not unsaved or (bool(line) and line in idle.text and standing)),
                f"{label}: the record on disk at schema {on_disk.get(store.LINK_SCHEMA_KEY)} holds the carry (how "

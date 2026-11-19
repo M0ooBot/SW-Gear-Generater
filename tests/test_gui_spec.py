@@ -48,8 +48,10 @@ def test_the_gear_table_covers_every_field_of_the_gear_spec():
     """A field added to GearSpec and forgotten here would be silently dropped."""
     mapped = {field for field, _ in _constant("GEAR_VARS")} | set(_constant("GEAR_COMPOUND"))
     workbook_only = set(_constant("GEAR_WORKBOOK_ONLY"))          # W9b: a sleeve's bands, never on the strip's form
+    record_only = set(_constant("GEAR_RECORD_ONLY"))              # F3: the allowance as built, set by spec.as_built only
     assert workbook_only == {"start_band", "end_band"} and not workbook_only & mapped
-    assert mapped | workbook_only == {f.name for f in dataclasses.fields(GearSpec)}
+    assert record_only == {"built_allowance"} and not record_only & (mapped | workbook_only)
+    assert mapped | workbook_only | record_only == {f.name for f in dataclasses.fields(GearSpec)}
 
 
 def test_the_pair_table_covers_every_field_of_the_pair_spec():

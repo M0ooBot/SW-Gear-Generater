@@ -77,7 +77,6 @@ from .spur import (
     ARC_LENGTH,
     AXIS_NAME,
     BACKLASH,
-    BACKLASH_FACTOR,
     BLANK,
     BORE,
     DEPTH,
@@ -123,6 +122,9 @@ HELIX_MAX = 45.0
 # HELIX_MAX; a gear of a crossed-axis pair can be steeper, since the two helix
 # angles add up to the shaft angle.
 HELIX_LIMIT = 80.0
+# F1 (PLAN-PRINTED §2.2): a printed gear's flank steeper than this prints as an overhang. Conservative by a few
+# degrees, since the flank's own angle is the base helix angle (41.6° at 45°).
+PRINTED_HELIX_MAX = 45.0
 # What the pair solver searches when the helix angle is left blank, and what
 # the form does not warn about.
 DEFAULT_RANGE = {KIND_HELICAL: (8.0, 25.0), KIND_HERRINGBONE: (20.0, 40.0)}
@@ -249,8 +251,18 @@ class HelicalDerived:
             out.update({GROOVE_WIDTH: self.groove, TOOTHED_WIDTH: self.toothed_width, GROOVE_DIAMETER: self.groove_d})
         return out
 
+    @property
+    def printed(self) -> bool:
+        """Whether the gear is made printed (F1): its section's."""
+        return self.section.printed
+
+    @property
+    def backlash_printed(self) -> bool:
+        """Its section's: printed, with the Backlash left blank (F1)."""
+        return self.section.backlash_printed
+
     def to_dict(self) -> Dict[str, Any]:
-        data = asdict(self.section)
+        data = spur.derived_dict(self.section)
         data.update({key: value for key, value in asdict(self).items() if key != "section"})
         return data
 
@@ -330,16 +342,19 @@ class HelicalGear:
         mt = mn / cos_beta
         typed_backlash = spec.backlash_mm()
         typed_fillet = spec.fillet_mm()
-        j = BACKLASH_FACTOR * mn if typed_backlash is None else typed_backlash
+        j = spur.blank_backlash(spec, mn) if typed_backlash is None else typed_backlash
         width = spec.face_width_mm()
         # The normal shift: in the transverse section it moves the tip out x·mn and
         # thickens the tooth by 2·x·mn·tan αt, which is what spur.profile does with these.
         shift = {} if self.internal else {"shift": spec.profile_shift_value()}
+        # F3 (§4.1, §4.2): the hole as cut, on the section as a spur gear's; a ring has no bore.
+        bore = {} if self.internal else {"bore_allowance": spur.bore_allowance_of(spec),
+                                         "bore_flat": spur.bore_flat_of(spec)}
         section = self._section(
             spec, spec.teeth_count(), mn, transverse_pressure_angle(normal, beta), width, j,
             self.fillet_factor * mn if typed_fillet is None else typed_fillet,
             backlash_typed=typed_backlash is not None, fillet_typed=typed_fillet is not None,
-            transverse_module=mt, transverse_backlash=j / cos_beta, **shift,
+            transverse_module=mt, transverse_backlash=j / cos_beta, nozzle=spur.spec_nozzle(spec), **shift, **bore,
         )
         lead = math.pi * section.d / math.tan(math.radians(beta))
         path = width / 2.0 + mn if self.kind == KIND_HERRINGBONE else width + 2.0 * mn
@@ -368,7 +383,7 @@ class HelicalGear:
         """From ``"Outer Diameter"`` to the end of the section's globals."""
         s = g.section
         beta = _q(HELIX_ANGLE)
-        backlash = equations.literal(s.backlash) if s.backlash_typed else f"{BACKLASH_FACTOR} * {_q(MODULE)}"
+        backlash = spur.backlash_expression(s)
         fillet = equations.literal(s.fillet) if s.fillet_typed else f"{FILLET_FACTOR} * {_q(MODULE)}"
         tm = _q(TRANSVERSE_MODULE)
         if s.shift:
@@ -426,6 +441,8 @@ class HelicalGear:
             return [Diagnostic(ERROR, str(exc), "recipe")]
         g = derived if derived is not None else self.derive(spec)
         out = self._section_diagnostics(g.section, recipe, g.undercut_limit)
+        if not self.internal:
+            out += spur.bore_checks(spec, self.kind)   # F3: a ring's bore fields are field_errors' (G9)
         if any(d.is_error for d in out):
             return out
         low, high = USUAL_RANGE[self.kind]
@@ -433,6 +450,10 @@ class HelicalGear:
             out.append(Diagnostic(WARNING, (
                 f"A helix angle of {_num(g.helix_angle_deg)}° is outside the usual {_num(low)}–{_num(high)}° "
                 f"for a {self.kind} gear."), "helix_angle"))
+        if g.printed and g.helix_angle_deg > PRINTED_HELIX_MAX + 1e-9:
+            out.append(Diagnostic(WARNING, (
+                f"Printed, a helix angle of {_num(g.helix_angle_deg)}° is over {_num(PRINTED_HELIX_MAX)}°, so the "
+                "flanks print as an overhang."), "helix_angle"))
         if self.kind == KIND_HELICAL and g.overlap < 1.0:
             out.append(Diagnostic(WARNING, (
                 f"The teeth overlap {_num(g.overlap, 2)} of a pitch along the face, under one, which loses most "
@@ -443,9 +464,10 @@ class HelicalGear:
                     f"A groove of {_num(g.groove)} mm leaves no teeth on a {_num(g.face_width)} mm face; "
                     "it must be narrower than the face."), "groove"))
                 return out
-            if g.bore >= g.groove_d:
+            if g.bore_as_cut >= g.groove_d:     # F3 (§4.1): on the hole as cut, g.bore with no allowance
                 out.append(Diagnostic(ERROR, (
-                    f"The groove's floor, at {_num(g.groove_d)} mm, reaches the bore of {_num(g.bore)} mm; "
+                    f"The groove's floor, at {_num(g.groove_d)} mm, reaches the bore of "
+                    f"{spur.bore_size_words(g.bore, g.bore_allowance)}; "
                     "make the bore smaller."), "groove"))
             if g.toothed_width < GROOVE_WARNING_MODULES * g.module:
                 out.append(Diagnostic(WARNING, (
@@ -474,6 +496,7 @@ class HelicalGear:
             GlobalVariable(TEETH, equations.literal(s.teeth)),
             GlobalVariable(MODULE, equations.literal(s.module)),
             *([GlobalVariable(BORE, equations.literal(s.bore))] if self.has_bore_global else []),
+            *([] if self.internal else spur.bore_globals(s)),    # F3: "Bore Allowance", "Bore Flat" when cut
             GlobalVariable(PRESSURE_ANGLE, equations.literal(g.normal_pressure_angle_deg)),
             *([GlobalVariable(spur.PROFILE_SHIFT, equations.literal(s.shift))] if getattr(s, "shift", 0.0) else []),
             GlobalVariable(HELIX_ANGLE, equations.literal(g.helix_angle_deg)),

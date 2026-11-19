@@ -1,0 +1,401 @@
+switch  the run's head: spur.PRINTED_DEFAULT_IN_PLANS reads True (on: a printed gear's blank Bore allowance on a part not yet built plans 0.2 mm)
+awake   display and system held awake for the run (previous state -0x80000000)
+run     2026-11-18 21:51:50; F3 demonstration from C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2026-20261118-214917\snap\src (snapshot: c5d439185be3e2c63e4ea9187987df9883483112); sections ['dshape']; masters {'rangebox': '', 'setup': '', 'reducer': ''}; redo False
+ok      the app's settings and Recent list go into this run's folder, not the user's: C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2026-20261118-214917\out\appdata\Gear Generator\recent.json
+attach  SolidWorks 2026 (revision 34.1.1) (revision 34.1.1), PID 56800; SolidWorks 0.68 GB private, 10.06 GB free
+open    before: []
+findings USER_MATE_PUT_ROUTE "put along, the user's locks left on", USER_TIE_RULE 'not COMPONENT_UNDER_DEFINED', WHATS_WRONG_OPENS_ON_PART_REBUILD False, the branches {'USER_MATE_PUT_FIXED_GEAR_ON_2024': None, 'USER_MATE_PUT_FIXED_GEAR_ON_2026': None, 'USER_MATE_PUT_HELD_GEAR_ON_2024': None, 'USER_MATE_PUT_HELD_GEAR_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2024': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_ON_2024': True, 'USER_MATE_PUT_NO_CARRIER_ON_2026': True, 'USER_MATE_PUT_SUBASSEMBLY_ON_2024': None, 'USER_MATE_PUT_SUBASSEMBLY_ON_2026': None}
+rule    What's Wrong: swbuild.whats_wrong_shows_in_update reads False; What's Wrong during a job is a STOP, as any dialog
+fact    a SolidWorks balloon tip ['Check1', 'Simplified Interface', 'The Simplified Interface provides a minimalist layout for quick and basic modeling. It can be customized similarly to the standard interface.\n\nShow how to turn off the Simplified Interface.'] came up while no SolidWorks call was in progress (left standing, never answered)
+excel   started our own Excel, PID 43340, 16.0 build 20527.0
+== dshape  the D's Updates measured first (S6): a printed spur with a D bore built by the strip's form, then Flat, Bore and Bore allowance changed by the form's own Update values across their range, to and past each bound, back, and to a press fit; the allowance to 0 and Drive to round refused; then D to round and back, each made new by the form's Build; every state read by its faces, its links, its globals and its volume against the same gear built from scratch
+switch  dshape (typed figures only: judged whatever it reads): spur.PRINTED_DEFAULT_IN_PLANS reads True (on: a printed gear's blank Bore allowance on a part not yet built plans 0.2 mm)
+ok      dshape: the form shows Bore as cut '8.2 · 8 + 0.2' and Flat as cut '7.2 · 7 + 0.2'
+ok      dshape: DShape: the form plans DShape.SLDPRT, a new file
+        build   Part1 · spur · recipe A · trig degrees
+        ok      new part Part1
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Bore Allowance"
+        ok      global "Bore Flat"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      arc bore_arc
+        ok      line bore_flat
+        ok      coincident bore_arc.centre origin
+        ok      coincident bore_flat.start bore_arc.end (already one point)
+        ok      coincident bore_flat.end bore_arc.start (already one point)
+        ok      vertical bore_flat
+        ok      dimension Bore
+        ok      dimension Flat
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      link "Flat@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      26 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to DShape; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2026-20261118-214917\out\dshape\DShape.SLDPRT
+status  dshape: DShape: Built DShape.SLDPRT. 1 thing to do by hand: Assign a material to DShape; the build leaves it unset.
+ok      dshape: DShape: built and saved by the form's job, every sketch fully defined, its .gear.json written by the form: ok True, failures [], not fully defined none
+ok      dshape: DShape's .gear.json at schema 4 (4: it holds the bore's globals)
+fact    dshape: as built: twin 1 (Twin1): built ok True, failures [], not fully defined none, {'volume': 4983.795575580371, 'in_error': []}; left open []
+ok      dshape: as built: twin 1 built from scratch clean and closed
+fact    dshape: as built: {'in_error': [], 'sketch': 3, 'volume': 4983.795575580371, 'coaxial_radii': [4.1, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [4.1, 5.3665631459994945], 'globals': {'Bore Diameter': 8.0, 'Bore Allowance': 0.2, 'Bore Flat': 7.0}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-4.1, 3.1], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': 0.0, 'flat_span': 5.3666, 'chord': 5.3666}, 'tip_lands': {'nearest_above': 8.983, 'nearest_below': -8.982, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 4983.795575580371
+ok      dshape: as built: D 8, a 0.2, Flat 7: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, Flat 7 to 5 (value)
+status  dshape, Flat 7 to 5: Changed 1 variable in DShape.SLDPRT and rebuilt it.
+ok      dshape, Flat 7 to 5: the strip counted 1 and Update values set ['Bore Flat'] in one rebuild, its record following: changed ['Bore Flat'], failures []
+fact    dshape, Flat 7 to 5: twin 2 (Twin2): built ok True, failures [], not fully defined none, {'volume': 5094.3499235505615, 'in_error': []}; left open []
+ok      dshape, Flat 7 to 5: twin 2 built from scratch clean and closed
+fact    dshape, Flat 7 to 5: {'in_error': [], 'sketch': 3, 'volume': 5094.3499235505615, 'coaxial_radii': [4.1, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [4.1, 7.899367063252599], 'globals': {'Bore Diameter': 8.0, 'Bore Allowance': 0.2, 'Bore Flat': 5.0}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-4.1, 1.1], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': -0.0, 'flat_span': 7.8994, 'chord': 7.8994}, 'tip_lands': {'nearest_above': 8.983, 'nearest_below': -8.982, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 5094.3499235505615
+ok      dshape, Flat 7 to 5: D 8, a 0.2, Flat 5: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, Flat 5 to 7.6 (value)
+status  dshape, Flat 5 to 7.6: Changed 1 variable in DShape.SLDPRT and rebuilt it.
+ok      dshape, Flat 5 to 7.6: the strip counted 1 and Update values set ['Bore Flat'] in one rebuild, its record following: changed ['Bore Flat'], failures []
+fact    dshape, Flat 5 to 7.6: twin 3 (Twin3): built ok True, failures [], not fully defined none, {'volume': 4962.0071223177265, 'in_error': []}; left open []
+ok      dshape, Flat 5 to 7.6: twin 3 built from scratch clean and closed
+fact    dshape, Flat 5 to 7.6: {'in_error': [], 'sketch': 3, 'volume': 4962.0071223177265, 'coaxial_radii': [4.1, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [4.1, 3.532704346531139], 'globals': {'Bore Diameter': 8.0, 'Bore Allowance': 0.2, 'Bore Flat': 7.6}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-4.1, 3.7], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': -0.0, 'flat_span': 3.5327, 'chord': 3.5327}, 'tip_lands': {'nearest_above': 8.983, 'nearest_below': -8.982, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 4962.0071223177265
+ok      dshape, Flat 5 to 7.6: D 8, a 0.2, Flat 7.6: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, Flat 7.6 to 7 (value)
+status  dshape, Flat 7.6 to 7: Changed 1 variable in DShape.SLDPRT and rebuilt it.
+ok      dshape, Flat 7.6 to 7: the strip counted 1 and Update values set ['Bore Flat'] in one rebuild, its record following: changed ['Bore Flat'], failures []
+fact    dshape, Flat 7.6 to 7: {'in_error': [], 'sketch': 3, 'volume': 4983.795575580371, 'coaxial_radii': [4.1, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [4.1, 5.3665631459994945], 'globals': {'Bore Diameter': 8.0, 'Bore Allowance': 0.2, 'Bore Flat': 7.0}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-4.1, 3.1], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': -0.0, 'flat_span': 5.3666, 'chord': 5.3666}, 'tip_lands': {'nearest_above': 8.983, 'nearest_below': -8.982, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 4983.795575580371
+ok      dshape, Flat 7.6 to 7: D 8, a 0.2, Flat 7: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, Bore 8 to 10 with Flat 7 to 9 (value)
+status  dshape, Bore 8 to 10 with Flat 7 to 9: Changed 2 variables in DShape.SLDPRT and rebuilt it.
+ok      dshape, Bore 8 to 10 with Flat 7 to 9: the strip counted 2 and Update values set ['Bore Diameter', 'Bore Flat'] in one rebuild, its record following: changed ['Bore Diameter', 'Bore Flat'], failures []
+fact    dshape, Bore 8 to 10 with Flat 7 to 9: twin 4 (Twin4): built ok True, failures [], not fully defined none, {'volume': 4756.219123989764, 'in_error': []}; left open []
+ok      dshape, Bore 8 to 10 with Flat 7 to 9: twin 4 built from scratch clean and closed
+fact    dshape, Bore 8 to 10 with Flat 7 to 9: {'in_error': [], 'sketch': 3, 'volume': 4756.219123989764, 'coaxial_radii': [5.1, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [5.1, 6.06630035524124], 'globals': {'Bore Diameter': 10.0, 'Bore Allowance': 0.2, 'Bore Flat': 9.0}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-5.1, 4.1], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': 0.0, 'flat_span': 6.0663, 'chord': 6.0663}, 'tip_lands': {'nearest_above': 8.983, 'nearest_below': -8.982, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 4756.219123989764
+ok      dshape, Bore 8 to 10 with Flat 7 to 9: D 10, a 0.2, Flat 9: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, allowance 0.2 to 0.4 (value)
+status  dshape, allowance 0.2 to 0.4: Changed 1 variable in DShape.SLDPRT and rebuilt it.
+ok      dshape, allowance 0.2 to 0.4: the strip counted 1 and Update values set ['Bore Allowance'] in one rebuild, its record following: changed ['Bore Allowance'], failures []
+fact    dshape, allowance 0.2 to 0.4: twin 5 (Twin5): built ok True, failures [], not fully defined none, {'volume': 4730.6749840998, 'in_error': []}; left open []
+ok      dshape, allowance 0.2 to 0.4: twin 5 built from scratch clean and closed
+fact    dshape, allowance 0.2 to 0.4: {'in_error': [], 'sketch': 3, 'volume': 4730.674984099802, 'coaxial_radii': [5.2, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [5.2, 6.131883886702357], 'globals': {'Bore Diameter': 10.0, 'Bore Allowance': 0.4, 'Bore Flat': 9.0}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-5.2, 4.2], 'padding_beyond_minus_r': -0.0, 'round_past_the_flat': -0.0, 'flat_span': 6.1319, 'chord': 6.1319}, 'tip_lands': {'nearest_above': 8.983, 'nearest_below': -8.982, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 4730.6749840998
+ok      dshape, allowance 0.2 to 0.4: D 10, a 0.4, Flat 9: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, Flat 9 to 6.1, h at 0.25 R exactly (value)
+status  dshape, Flat 9 to 6.1, h at 0.25 R exactly: Changed 1 variable in DShape.SLDPRT and rebuilt it.
+ok      dshape, Flat 9 to 6.1, h at 0.25 R exactly: the strip counted 1 and Update values set ['Bore Flat'] in one rebuild, its record following: changed ['Bore Flat'], failures []
+fact    dshape, Flat 9 to 6.1, h at 0.25 R exactly: twin 6 (Twin6): built ok True, failures [], not fully defined none, {'volume': 4930.05813742544, 'in_error': []}; left open []
+ok      dshape, Flat 9 to 6.1, h at 0.25 R exactly: twin 6 built from scratch clean and closed
+fact    dshape, Flat 9 to 6.1, h at 0.25 R exactly: {'in_error': [], 'sketch': 3, 'volume': 4930.058137425438, 'coaxial_radii': [5.2, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [5.2, 10.069756700139283], 'globals': {'Bore Diameter': 10.0, 'Bore Allowance': 0.4, 'Bore Flat': 6.1000000000000005}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-5.2, 1.3], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': 0.0, 'flat_span': 10.0698, 'chord': 10.0698}, 'tip_lands': {'nearest_above': 8.983, 'nearest_below': -8.982, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 4930.05813742544
+ok      dshape, Flat 9 to 6.1, h at 0.25 R exactly: D 10, a 0.4, Flat 6.1: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, Flat 6, past h >= 0.25 R (bound)
+status  dshape, Flat 6, past h >= 0.25 R: The gear on the form does not work out yet, so nothing was updated.
+ok      dshape, Flat 6, past h >= 0.25 R: refused by the form at Flat in A's words ("The flat is 1.2 mm from the axis, under a quarter of the hole's radius (1.3 mm); type a Flat of at least 6.1 mm, or use a round bore."), Update values saying 'The gear on the form does not work out yet, so nothing was updated.', nothing sent, the part's globals and record as they were: errors ["The flat is 1.2 mm from the axis, under a quarter of the hole's radius (1.3 mm); type a Flat of at least 6.1 mm, or use a round bore."]
+-- dshape, Flat 6.1 to 9.7, the flat 0.3 deep exactly (value)
+status  dshape, Flat 6.1 to 9.7, the flat 0.3 deep exactly: Changed 1 variable in DShape.SLDPRT and rebuilt it.
+ok      dshape, Flat 6.1 to 9.7, the flat 0.3 deep exactly: the strip counted 1 and Update values set ['Bore Flat'] in one rebuild, its record following: changed ['Bore Flat'], failures []
+fact    dshape, Flat 6.1 to 9.7, the flat 0.3 deep exactly: twin 7 (Twin7): built ok True, failures [], not fully defined none, {'volume': 4702.88916140113, 'in_error': []}; left open []
+ok      dshape, Flat 6.1 to 9.7, the flat 0.3 deep exactly: twin 7 built from scratch clean and closed
+fact    dshape, Flat 6.1 to 9.7, the flat 0.3 deep exactly: {'in_error': [], 'sketch': 3, 'volume': 4702.889161401129, 'coaxial_radii': [5.2, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [5.2, 3.4813790371058366], 'globals': {'Bore Diameter': 10.0, 'Bore Allowance': 0.4, 'Bore Flat': 9.700000000000001}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-5.2, 4.9], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': 0.0, 'flat_span': 3.4814, 'chord': 3.4814}, 'tip_lands': {'nearest_above': 8.983, 'nearest_below': -8.982, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 4702.88916140113
+ok      dshape, Flat 6.1 to 9.7, the flat 0.3 deep exactly: D 10, a 0.4, Flat 9.7: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, Flat 9.8, past 0.3 deep (bound)
+status  dshape, Flat 9.8, past 0.3 deep: The gear on the form does not work out yet, so nothing was updated.
+ok      dshape, Flat 9.8, past 0.3 deep: refused by the form at Flat in A's words ("Your shaft's flat is 0.2 mm deep (Bore 10 less Flat 9.8), under the 0.3 mm a printed D needs to hold; type a Flat of at most 9.7 mm, which leaves the flat a little play, or use a round bore."), Update values saying 'The gear on the form does not work out yet, so nothing was updated.', nothing sent, the part's globals and record as they were: errors ["Your shaft's flat is 0.2 mm deep (Bore 10 less Flat 9.8), under the 0.3 mm a printed D needs to hold; type a Flat of at most 9.7 mm, which leaves the flat a little play, or use a round bore."]
+-- dshape, back: Bore 10 to 8, Flat 9.7 to 7, allowance 0.4 to 0.2 (value)
+status  dshape, back: Bore 10 to 8, Flat 9.7 to 7, allowance 0.4 to 0.2: Changed 3 variables in DShape.SLDPRT and rebuilt it.
+ok      dshape, back: Bore 10 to 8, Flat 9.7 to 7, allowance 0.4 to 0.2: the strip counted 3 and Update values set ['Bore Allowance', 'Bore Diameter', 'Bore Flat'] in one rebuild, its record following: changed ['Bore Diameter', 'Bore Allowance', 'Bore Flat'], failures []
+fact    dshape, back: Bore 10 to 8, Flat 9.7 to 7, allowance 0.4 to 0.2: {'in_error': [], 'sketch': 3, 'volume': 4983.79557558037, 'coaxial_radii': [4.1, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [4.1, 5.3665631459994945], 'globals': {'Bore Diameter': 8.0, 'Bore Allowance': 0.2, 'Bore Flat': 7.0}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-4.1, 3.1], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': -0.0, 'flat_span': 5.3666, 'chord': 5.3666}, 'tip_lands': {'nearest_above': 8.983, 'nearest_below': -8.982, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 4983.795575580371
+ok      dshape, back: Bore 10 to 8, Flat 9.7 to 7, allowance 0.4 to 0.2: D 8, a 0.2, Flat 7: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, allowance 0.2 to -0.1, a press fit (value)
+status  dshape, allowance 0.2 to -0.1, a press fit: Changed 1 variable in DShape.SLDPRT and rebuilt it.
+ok      dshape, allowance 0.2 to -0.1, a press fit: the strip counted 1 and Update values set ['Bore Allowance'] in one rebuild, its record following: changed ['Bore Allowance'], failures []
+fact    dshape, allowance 0.2 to -0.1, a press fit: twin 8 (Twin8): built ok True, failures [], not fully defined none, {'volume': 5013.556866728033, 'in_error': []}; left open []
+ok      dshape, allowance 0.2 to -0.1, a press fit: twin 8 built from scratch clean and closed
+fact    dshape, allowance 0.2 to -0.1, a press fit: {'in_error': [], 'sketch': 3, 'volume': 5013.556866728033, 'coaxial_radii': [3.95, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [3.95, 5.253570214625479], 'globals': {'Bore Diameter': 8.0, 'Bore Allowance': -0.1, 'Bore Flat': 7.0}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-3.95, 2.95], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': 0.0, 'flat_span': 5.2536, 'chord': 5.2536}, 'tip_lands': {'nearest_above': 8.983, 'nearest_below': -8.982, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 5013.556866728033
+ok      dshape, allowance 0.2 to -0.1, a press fit: D 8, a -0.1, Flat 7: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+-- dshape, allowance -0.1 to 0 (structural)
+status  dshape, allowance -0.1 to 0: A bore allowance cannot be added to or taken out of a built part through its values; build it again as a new part.
+ok      dshape, allowance -0.1 to 0: refused by Update values in B's words ('A bore allowance cannot be added to or taken out of a built part through its values; build it again as a new part.'), nothing sent, the part's globals and record as they were
+-- dshape, Drive flat to round (structural)
+status  dshape, Drive flat to round: The drive changed from 'flat' to 'round'; build it again as a new part.
+ok      dshape, Drive flat to round: refused by Update values in B's words ("The drive changed from 'flat' to 'round'; build it again as a new part."), nothing sent, the part's globals and record as they were
+-- dshape  from D to round and back: Drive is structural, so each is made new by the form's Build with the record open (the ruling on decision 11 keeps nothing here: the allowance is typed)
+ok      dshape: DShape_Round: the form plans DShape_Round.SLDPRT, a new file
+        build   Part10 · spur · recipe A · trig degrees
+        ok      new part Part10
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Bore Allowance"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      25 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to DShape_Round; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2026-20261118-214917\out\dshape\DShape_Round.SLDPRT
+status  dshape: DShape_Round: Built DShape_Round.SLDPRT. 1 thing to do by hand: Assign a material to DShape_Round; the build leaves it unset.
+ok      dshape: DShape_Round: built and saved by the form's job, every sketch fully defined, its .gear.json written by the form: ok True, failures [], not fully defined none
+fact    dshape: round: twin 9 (Twin9): built ok True, failures [], not fully defined none, {'volume': 4954.393946416014, 'in_error': []}; left open []
+ok      dshape: round: twin 9 built from scratch clean and closed
+fact    dshape: round: {'in_error': [], 'sketch': 3, 'volume': 4954.393946416014, 'coaxial_radii': [4.1, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= "Bore Diameter" + "Bore Allowance"'], 'link_values': [8.2], 'globals': {'Bore Diameter': 8.0, 'Bore Allowance': 0.2}, 'boxes': {'cylinders': 1, 'flats': 0, 'round_x': [-4.1, 4.1], 'padding_beyond_minus_r': 0.0}, 'tip_lands': {'nearest_above': 8.983, 'nearest_below': -8.982, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm']}; its twin's volume 4954.393946416014
+ok      dshape: round: D 8, a 0.2, round: nothing in error, the Bore Sketch fully defined, the bore by its faces (round, no flat), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+ok      dshape: Drive flat on the round part refused by Update values in B's words, nothing sent: "The drive changed from 'round' to 'flat'; build it again as a new part."
+ok      dshape: DShape_D: the form plans DShape_D.SLDPRT, a new file
+        build   Part12 · spur · recipe A · trig degrees
+        ok      new part Part12
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Bore Allowance"
+        ok      global "Bore Flat"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      arc bore_arc
+        ok      line bore_flat
+        ok      coincident bore_arc.centre origin
+        ok      coincident bore_flat.start bore_arc.end (already one point)
+        ok      coincident bore_flat.end bore_arc.start (already one point)
+        ok      vertical bore_flat
+        ok      dimension Bore
+        ok      dimension Flat
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      link "Flat@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      26 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to DShape_D; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2026-20261118-214917\out\dshape\DShape_D.SLDPRT
+status  dshape: DShape_D: Built DShape_D.SLDPRT. 1 thing to do by hand: Assign a material to DShape_D; the build leaves it unset.
+ok      dshape: DShape_D: built and saved by the form's job, every sketch fully defined, its .gear.json written by the form: ok True, failures [], not fully defined none
+fact    dshape: round to D: {'in_error': [], 'sketch': 3, 'volume': 4983.7955755803705, 'coaxial_radii': [4.1, 13.125, 16.5], 'side_planes': [(14.057193, [-0.073568906, -0.997290136, -0.0]), (14.057193, [-0.073568906, 0.997290136, 0.0]), (13.68963, [0.238211413, 0.971213325, 0.0]), (13.04874, [-0.378147788, -0.92574524, -0.0]), (11.982031, [0.526673939, 0.850067387, 0.0]), (10.762985, [-0.64571093, -0.76358195, -0.0])], 'links': ['"Bore@Bore Sketch"= ( "Bore Diameter" + "Bore Allowance" ) / 2', '"Flat@Bore Sketch"= 2 * ( ( abs ( ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) * ( ( "Bore Diameter" + "Bore Allowance" ) / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) * ( "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2 ) ) ) ^ 0.5 )'], 'link_values': [4.1, 5.3665631459994945], 'globals': {'Bore Diameter': 8.0, 'Bore Allowance': 0.2, 'Bore Flat': 7.0}, 'boxes': {'cylinders': 1, 'flats': 1, 'round_x': [-4.1, 3.1], 'padding_beyond_minus_r': 0.0, 'round_past_the_flat': 0.0, 'flat_span': 5.3666, 'chord': 5.3666}, 'tip_lands': {'nearest_above': 8.983, 'nearest_below': -8.982, 'half_pitch': 9.0, 'crossing_plus_x': 0, 'space_on_plus_x': True}, 'link_value_units': ['mm', 'mm']}; its twin's volume 4983.795575580371
+ok      dshape: round to D: D 8, a 0.2, Flat 7: nothing in error, the Bore Sketch fully defined, the bore by its faces (the round of R about the axis reaching -X, one flat at h on +X, the tip lands counted), the links as SolidWorks holds them and its Values, the globals, the volume within 0.1 % of its twin: as said
+ok      dshape: its documents closed unsaved: left []
+time    dshape: 268 s; 0 failed; SolidWorks 1.12 GB private, 9.47 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 0.98 GB private, 9.59 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 0, 'Updating...': 0, 'Opening': 0, 'Loading...': 0}; other windows the watch logged: 0
+awake   display and system released (previous state -0x7ffffffd)
+result  written to C:\Users\M0obo\Documents\GearGeneratorProbe\f3-demo-sw2026-20261118-214917\f3-demo-20261118-215150.json; masters kept {'rangebox': '', 'setup': '', 'reducer': ''}
+done    0 failed: []; 0 noted; 0 STOP(s), a hung worker included: []

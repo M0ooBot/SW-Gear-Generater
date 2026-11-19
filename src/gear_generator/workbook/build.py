@@ -23,11 +23,11 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from ..gears import kind_for, plan_for
 from ..gears.base import ERROR, WARNING, BuildPlan, Diagnostic, GeometryError
-from ..spec import GearSpec, InputError
+from ..spec import GearSpec, InputError, as_built
 from .geometry import bevel_cuts, cut_overrides
 from .model import Gear, GearboxSpec
 
@@ -74,12 +74,17 @@ def _where(spec: GearboxSpec, gear: Gear, field_name: str) -> str:
     return spec.cell("Gears", gear.row, "id")
 
 
-def check_gear(spec: GearboxSpec, gear: Gear, cuts: Optional[Dict[str, Any]] = None
-               ) -> Tuple[Optional[GearSpec], Any, List[Diagnostic]]:
+def check_gear(spec: GearboxSpec, gear: Gear, cuts: Optional[Dict[str, Any]] = None,
+               variables: Optional[Sequence[Sequence[str]]] = None) -> Tuple[Optional[GearSpec], Any, List[Diagnostic]]:
     """The strip's checks on one row: (its GearSpec, what it works out to or None, diagnostics naming cells).
 
     A bevel row (W6) is checked as cut for its partner and shaft angle (``geometry.bevel_cuts``; ``cuts`` when the
-    caller has them already); a cut with a problem is an error at the gear's cell, and the gear is not planned."""
+    caller has them already); a cut with a problem is an error at the gear's cell, and the gear is not planned.
+
+    F3 (PLAN-PRINTED §4.1.1; F3-INTERFACES §14, S3): ``variables``, the globals on record of the part the row's gear
+    has, read the row as built (``spec.as_built``), so its checks speak of the hole that part was cut with (a blank
+    Bore allowance on a part built before F3 is none); None, a row with no part on record. :func:`plan_parts` plans the
+    job as typed (F3-REVIEW M2)."""
     if gear.kind_word() == "bevel":
         cut = (cuts if cuts is not None else bevel_cuts(spec)).get(gear.id)
         if cut is not None and cut.problem:
@@ -88,6 +93,8 @@ def check_gear(spec: GearboxSpec, gear: Gear, cuts: Optional[Dict[str, Any]] = N
         gear_spec = gear.gear_spec(spec.box, **cut_overrides(cut))
     else:
         gear_spec = gear.gear_spec(spec.box)
+    if variables is not None:
+        gear_spec = as_built(gear_spec, variables)
     kind = kind_for(gear_spec)
     if kind is None:
         return gear_spec, None, []
@@ -116,7 +123,8 @@ def rows_with_errors(diagnostics) -> set:
     return rows
 
 
-def plan_parts(spec: GearboxSpec, folder: str, part_template: str = "", skip_rows=()) -> PartsPlan:
+def plan_parts(spec: GearboxSpec, folder: str, part_template: str = "", skip_rows=(),
+               built: Optional[Mapping[str, Sequence[Sequence[str]]]] = None) -> PartsPlan:
     """A plan per distinct part: each buildable row checked, identical rows sharing one file.
 
     Two rows share a file when they would build the same part: their plans are
@@ -128,6 +136,12 @@ def plan_parts(spec: GearboxSpec, folder: str, part_template: str = "", skip_row
 
     A gear with an error is not planned, but the others still are: the window
     shows what each good gear will become, and Build waits for the errors.
+
+    F3 (F3-INTERFACES §14, S3; the coordinator's ruling on F3-REVIEW M2): ``built`` maps a gear to the globals on record
+    of its part (``built_globals``), and each such row is checked as built (:func:`check_gear`), so its diagnostics speak
+    of the hole that part was cut with, while its job is planned as typed, so two identical rows share one file whether
+    or not one is on record (the job of a typed row that does not work out is planned as built). A gear not in it, or
+    None, as a row with no part.
     """
     out = PartsPlan()
     template = spec.box.part_template or part_template
@@ -141,10 +155,19 @@ def plan_parts(spec: GearboxSpec, folder: str, part_template: str = "", skip_row
             continue
         if gear.row in skip_rows:
             continue                       # its own cell is already an error; it is not built
-        gear_spec, derived, diagnostics = check_gear(spec, gear, cuts)
+        held = (built or {}).get(gear.id)
+        gear_spec, derived, diagnostics = check_gear(spec, gear, cuts, held)
         out.diagnostics.extend(diagnostics)
         if derived is None:
             continue
+        if held is not None:
+            # F3 (the coordinator's ruling on F3-REVIEW M2): a row on record is checked as built, and its job planned as
+            # typed, so a new row identical to it shares its file; reuse, Update and ruling 1 read each part as built
+            # from its own entry. Only a typed row that does not work out (its hole at the default reaching the root,
+            # say) is planned as built, the part it has.
+            typed_spec, typed_derived, _ = check_gear(spec, gear, cuts)
+            if typed_derived is not None:
+                gear_spec, derived = typed_spec, typed_derived
         stem = gear_spec.stem()
         key = stem.lower()
         if key in jobs:
@@ -201,12 +224,25 @@ def later_rows(spec: GearboxSpec) -> List[Diagnostic]:
     return out
 
 
-def gear_diagnostics(spec: GearboxSpec, skip_rows=()) -> List[Diagnostic]:
-    """Every row's own checks, for the window to show as the file changes — no plans are made."""
+def gear_diagnostics(spec: GearboxSpec, skip_rows=(),
+                     built: Optional[Mapping[str, Sequence[Sequence[str]]]] = None) -> List[Diagnostic]:
+    """Every row's own checks, for the window to show as the file changes — no plans are made. ``built`` as for
+    :func:`plan_parts`."""
     out: List[Diagnostic] = []
     cuts = bevel_cuts(spec)
     for gear in spec.gears:
         if gear.kind_word() in LATER or gear.row in skip_rows:
             continue
-        out.extend(check_gear(spec, gear, cuts)[2])
+        out.extend(check_gear(spec, gear, cuts, (built or {}).get(gear.id))[2])
+    return out
+
+
+def built_globals(record: Any) -> Dict[str, Sequence[Sequence[str]]]:
+    """Each gear the record's current parts serve (``LinkRecord.current_parts()``), and the globals on record of its
+    part (``PartEntry.variables``), the first part in the record's order for a gear listed twice: what
+    :func:`plan_parts` reads a row on record as built from (F3). Empty with no record."""
+    out: Dict[str, Sequence[Sequence[str]]] = {}
+    for entry in (record.current_parts() if record is not None else []):
+        for gear in entry.gears:
+            out.setdefault(gear, list(entry.variables or []))
     return out

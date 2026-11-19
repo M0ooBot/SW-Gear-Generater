@@ -13,6 +13,9 @@ import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
+from ..gears.strength import ALLOWABLE_DEFAULT
+from ..spec import BORE_ALLOWANCE_DEFAULT, DRIVES, PROCESS_MACHINED, PROCESS_PRINTED
+
 FORMAT = "1"
 
 
@@ -80,6 +83,8 @@ SIDES = ("external", "internal")
 HANDS = ("right", "left")
 FLANKS = ("involute", "arcs")
 FLANK_RECIPE = {"involute": "A", "arcs": "B"}
+PROCESS_WORDS = (PROCESS_PRINTED, PROCESS_MACHINED)     # F1: the Box's Process (PLAN-PRINTED §1.3)
+DRIVE_WORDS = DRIVES                                      # F3: a gear's Drive, round or flat (PLAN-PRINTED §4.2)
 
 # -- Box: two columns, a setting per row --------------------------------------
 
@@ -93,6 +98,9 @@ class Setting:
     default: str = ""
     numeric: bool = False
     note: str = ""
+    # F1 (PLAN-PRINTED §1.3): the words a word setting takes, canonical lower case (Process: printed, machined). The
+    # Box has no drop-down lists, so they are checked as the cell is read.
+    words: Tuple[str, ...] = ()
 
     @property
     def title(self) -> str:
@@ -109,6 +117,16 @@ BOX_SETTINGS: Tuple[Setting, ...] = (
             note="used where a gear's own cell is blank"),
     Setting("efficiency", "Efficiency per mesh", unit="%", default="98", numeric=True,
             note="used where a mesh's own cell is blank"),
+    # F1 (PLAN-PRINTED §1.3): how the gearbox's gears are made, and the printer's line width.
+    Setting("process", "Process", words=PROCESS_WORDS,
+            note="Printed or Machined; blank: Printed for a new gearbox, as built for one already built"),
+    Setting("nozzle", "Nozzle", unit="mm", default="0.4", numeric=True, note="the printer's line width; blank: 0.4"),
+    # F4 (PLAN-PRINTED §5.4): the root stress a printed tooth is rated to take once. Not a gear's field: no record,
+    # sidecar or plan sees it, and a machined gearbox reads it and uses none of it.
+    Setting("allowable", "Allowable stress", unit="MPa", default=f"{ALLOWABLE_DEFAULT:g}", numeric=True,
+            note=f"printed teeth only: the root stress a tooth is rated to take once; blank: {ALLOWABLE_DEFAULT:g}, "
+                 "provisional (about half a printed PLA data sheet's 35 MPa within the layers) until you type your own "
+                 "figure here"),
     Setting("units", "Units", default="mm · degrees · rpm · N·m", note="fixed; shown so the file explains itself"),
 )
 BOX = SheetDef("Box", (
@@ -152,7 +170,9 @@ GEARS = SheetDef("Gears", (
     Column("hand", "Hand", blank="right", words=HANDS, aliases={"r": "right", "l": "left"}, width=8),
     Column("groove", "Groove", "mm", blank="none", numeric=True, width=13),
     Column("profile_shift", "Profile shift", "× m", blank="0", numeric=True, width=18),
-    Column("backlash", "Backlash", "mm", blank="0.3 × module", numeric=True, width=15),
+    # F1 (PLAN-PRINTED §2.1): a blank Backlash is the Box's Process's default.
+    Column("backlash", "Backlash", "mm", blank="printed: 0.3, or 0.3 × module below module 1; machined: 0.3 × module",
+           numeric=True, width=15),
     Column("fillet", "Fillet", "mm", blank="0.38 × module", numeric=True, width=12),
     Column("rim", "Rim", "mm", blank="root + 6 × module", numeric=True, width=10),
     Column("slides", "Slides", blank="doesn't slide", width=20, help="Named positions from At: H=-10, N=0, L=+10."),
@@ -162,6 +182,18 @@ GEARS = SheetDef("Gears", (
                 "side. With End band, the span between is a relief bore."),
     Column("end_band", "End band", "mm", blank="teeth over the whole face", numeric=True, width=14,
            help="A sleeve only: its toothed length at the end of its face."),
+    # F3 (PLAN-PRINTED §4.1, §4.2, G3; F3-INTERFACES §4): the bore as cut, after the bands as W9b placed them. The
+    # allowance is on the diameter; the blank's words follow spec.BORE_ALLOWANCE_DEFAULT, the one constant V1 moves.
+    Column("bore_allowance", "Bore allowance", "mm",
+           blank=f"{BORE_ALLOWANCE_DEFAULT:g} printed for a new part, as built for a part on record, 0 machined",
+           numeric=True, width=19,
+           help="Added to Bore when the hole is cut, on the diameter: Bore stays your shaft's size. Negative for a "
+                "press fit. Not on a ring or a sleeve."),
+    Column("drive", "Drive", blank="round", words=DRIVE_WORDS, width=8,
+           help="flat cuts a D-shaped hole for a shaft with a flat: give Flat. Not on a bevel gear, a ring or a "
+                "sleeve."),
+    Column("flat", "Flat", "mm", numeric=True, width=10,
+           help="With Drive flat: your shaft's size across its flat, from the flat to the opposite round side."),
     Column("part_name", "Part name", blank="as the strip names it", width=20),
     Column("notes", "Notes", width=30),
 ))

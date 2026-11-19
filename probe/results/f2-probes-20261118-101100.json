@@ -1,0 +1,716 @@
+{
+ "sections": {
+  "export": {
+   "built": {
+    "spur": {
+     "outer_radius": 16.5,
+     "face": 8.0
+    },
+    "helical": {
+     "outer_radius": 22.70552360820166,
+     "face": 10.0
+    }
+   },
+   "constants": {
+    "silent": 1,
+    "copy": 2
+   },
+   "spur": {
+    "reach": "active",
+    "before": {
+     "active": "Gear_m1.5_N20_P.SLDPRT",
+     "folder": {
+      "Gear_m1.5_N20_P.SLDPRT": false,
+      "Helical_m2_N20_15R_P.SLDPRT": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-export\\Gear_m1.5_N20_P.SLDPRT",
+      "title": "Gear_m1.5_N20_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "read": {
+     "options": 3,
+     "seconds": 0.495,
+     "form": "plain",
+     "returned": true,
+     "errors": 0,
+     "warnings": 0,
+     "on_disk": true,
+     "size": 909855,
+     "mtime": 1795014699.4068305,
+     "error_names": [],
+     "warning_names": []
+    },
+    "after": {
+     "active": "Gear_m1.5_N20_P.SLDPRT",
+     "folder": {
+      "Gear_m1.5_N20_P.SLDPRT": false,
+      "Helical_m2_N20_15R_P.SLDPRT": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-export\\Gear_m1.5_N20_P.SLDPRT",
+      "title": "Gear_m1.5_N20_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "dialogs": [],
+    "facts": {
+     "frame": true,
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "ap": "AP203",
+     "solids": 1,
+     "closed_shells": 1,
+     "open_shells": 0,
+     "surface_models": 0,
+     "unit": "MILLI.METRE",
+     "mm_per_unit": 1.0,
+     "vertices": 340,
+     "max_radius_mm": 16.5011849074409,
+     "axial_extent_mm": 8.000030745716968,
+     "instances": 9096
+    },
+    "extent_holds": true
+   },
+   "helical": {
+    "reach": "active",
+    "before": {
+     "active": "Helical_m2_N20_15R_P.SLDPRT",
+     "folder": {
+      "Gear_m1.5_N20_P.SLDPRT": false,
+      "Helical_m2_N20_15R_P.SLDPRT": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-export\\Helical_m2_N20_15R_P.SLDPRT",
+      "title": "Helical_m2_N20_15R_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "read": {
+     "options": 3,
+     "seconds": 0.466,
+     "form": "plain",
+     "returned": true,
+     "errors": 0,
+     "warnings": 0,
+     "on_disk": true,
+     "size": 1888148,
+     "mtime": 1795014700.5208957,
+     "error_names": [],
+     "warning_names": []
+    },
+    "after": {
+     "active": "Helical_m2_N20_15R_P.SLDPRT",
+     "folder": {
+      "Gear_m1.5_N20_P.SLDPRT": false,
+      "Helical_m2_N20_15R_P.SLDPRT": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-export\\Helical_m2_N20_15R_P.SLDPRT",
+      "title": "Helical_m2_N20_15R_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "dialogs": [],
+    "facts": {
+     "frame": true,
+     "schema": "CONFIG_CONTROL_DESIGN",
+     "ap": "AP203",
+     "solids": 1,
+     "closed_shells": 1,
+     "open_shells": 0,
+     "surface_models": 0,
+     "unit": "MILLI.METRE",
+     "mm_per_unit": 1.0,
+     "vertices": 322,
+     "max_radius_mm": 22.70552360820167,
+     "axial_extent_mm": 10.000000000000002,
+     "instances": 13659
+    },
+    "extent_holds": true
+   },
+   "again": {
+    "reach": "active",
+    "before": {
+     "active": "Gear_m1.5_N20_P.SLDPRT",
+     "folder": {
+      "Gear_m1.5_N20_P.SLDPRT": false,
+      "Helical_m2_N20_15R_P.SLDPRT": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-export\\Gear_m1.5_N20_P.SLDPRT",
+      "title": "Gear_m1.5_N20_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "read": {
+     "options": 3,
+     "seconds": 0.4,
+     "form": "plain",
+     "returned": true,
+     "errors": 0,
+     "warnings": 0,
+     "on_disk": true,
+     "size": 909864,
+     "mtime": 1795014701.8104296,
+     "error_names": [],
+     "warning_names": []
+    },
+    "after": {
+     "active": "Gear_m1.5_N20_P.SLDPRT",
+     "folder": {
+      "Gear_m1.5_N20_P.SLDPRT": false,
+      "Helical_m2_N20_15R_P.SLDPRT": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-export\\Gear_m1.5_N20_P.SLDPRT",
+      "title": "Gear_m1.5_N20_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "dialogs": [],
+    "overwrote": true,
+    "control": false
+   },
+   "inactive": {
+    "reach": "object",
+    "before": {
+     "active": "Helical_m2_N20_15R_P.SLDPRT",
+     "folder": {
+      "Gear_m1.5_N20_P.SLDPRT": false,
+      "Helical_m2_N20_15R_P.SLDPRT": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-export\\Gear_m1.5_N20_P.SLDPRT",
+      "title": "Gear_m1.5_N20_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "read": {
+     "options": 3,
+     "seconds": 0.405,
+     "form": "plain",
+     "returned": true,
+     "errors": 0,
+     "warnings": 0,
+     "on_disk": true,
+     "size": 909879,
+     "mtime": 1795014703.1227295,
+     "error_names": [],
+     "warning_names": []
+    },
+    "after": {
+     "active": "Helical_m2_N20_15R_P.SLDPRT",
+     "folder": {
+      "Gear_m1.5_N20_P.SLDPRT": false,
+      "Helical_m2_N20_15R_P.SLDPRT": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-export\\Gear_m1.5_N20_P.SLDPRT",
+      "title": "Gear_m1.5_N20_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "dialogs": [],
+    "right": [
+     null,
+     "two exports of one document differ beyond FILE_NAME, so a file cannot be told by its text"
+    ]
+   },
+   "part_failures": {
+    "modified": "AssertionError: export (8): the spur's Face Width set to 9 and rebuilt, not saved: SolidWorksError: \"Face Width\" reads '\"Face Width\"= 8' after being set to '\"Face Width\"= 9'."
+   },
+   "seconds": 42,
+   "failed": [
+    "export (8) a modified part: AssertionError: export (8): the spur's Face Width set to 9 and rebuilt, not saved: SolidWorksError: \"Face Width\" reads '\"Face Width\"= 8' after being set to '\"Face Width\"= 9'."
+   ]
+  },
+  "component": {
+   "built": {
+    "stems": [
+     "Pinion_m1.5_N25_P",
+     "Gear_m1.5_N50_P",
+     "Pair_m1.5_25T_50T_P"
+    ]
+   },
+   "loaded": {
+    "bracket": {
+     "active": "Pair_m1.5_25T_50T_P.SLDASM",
+     "folder": {
+      "Pinion_m1.5_N25_P.SLDPRT": false,
+      "Gear_m1.5_N50_P.SLDPRT": false,
+      "Pair_m1.5_25T_50T_P.SLDASM": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-component\\Pair_m1.5_25T_50T_P.SLDASM",
+      "title": "Pair_m1.5_25T_50T_P.SLDASM",
+      "flag": false
+     }
+    },
+    "components": {
+     "Pinion_m1.5_N25_P.SLDPRT": 2,
+     "Gear_m1.5_N50_P.SLDPRT": 2
+    },
+    "walk": {
+     "f2-component\\Pinion_m1.5_N25_P.SLDPRT": true,
+     "f2-component\\Gear_m1.5_N50_P.SLDPRT": true
+    },
+    "windows": {
+     "f2-component\\Pair_m1.5_25T_50T_P.SLDASM": {
+      "Visible": true,
+      "ActiveView": true
+     },
+     "f2-component\\Pinion_m1.5_N25_P.SLDPRT": {
+      "Visible": false,
+      "ActiveView": false
+     },
+     "f2-component\\Gear_m1.5_N50_P.SLDPRT": {
+      "Visible": false,
+      "ActiveView": false
+     }
+    },
+    "by_path": {
+     "gear": {
+      "path": "f2-component\\Gear_m1.5_N50_P.SLDPRT",
+      "title": "Gear_m1.5_N50_P.SLDPRT",
+      "flag": false,
+      "window": {
+       "Visible": false,
+       "ActiveView": false
+      }
+     },
+     "pinion": {
+      "path": "f2-component\\Pinion_m1.5_N25_P.SLDPRT",
+      "title": "Pinion_m1.5_N25_P.SLDPRT",
+      "flag": false,
+      "window": {
+       "Visible": false,
+       "ActiveView": false
+      }
+     },
+     "no such file": null
+    },
+    "by_file_name": {
+     "gear": null
+    },
+    "assembly": {
+     "path": "f2-component\\Pair_m1.5_25T_50T_P.SLDASM",
+     "title": "Pair_m1.5_25T_50T_P.SLDASM",
+     "flag": false
+    }
+   },
+   "component": {
+    "found": true,
+    "state_before": 2,
+    "asm_before": {
+     "path": "f2-component\\Pair_m1.5_25T_50T_P.SLDASM",
+     "title": "Pair_m1.5_25T_50T_P.SLDASM",
+     "flag": false
+    },
+    "before": {
+     "active": "Pair_m1.5_25T_50T_P.SLDASM",
+     "folder": {
+      "Pinion_m1.5_N25_P.SLDPRT": false,
+      "Gear_m1.5_N50_P.SLDPRT": false,
+      "Pair_m1.5_25T_50T_P.SLDASM": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-component\\Gear_m1.5_N50_P.SLDPRT",
+      "title": "Gear_m1.5_N50_P.SLDPRT",
+      "flag": false
+     },
+     "walk_doc": {
+      "path": "f2-component\\Gear_m1.5_N50_P.SLDPRT",
+      "title": "Gear_m1.5_N50_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "read": {
+     "options": 3,
+     "seconds": 0.885,
+     "form": "plain",
+     "returned": true,
+     "errors": 0,
+     "warnings": 0,
+     "on_disk": true,
+     "size": 2178068,
+     "mtime": 1795014744.6465945,
+     "error_names": [],
+     "warning_names": []
+    },
+    "after": {
+     "active": "Pair_m1.5_25T_50T_P.SLDASM",
+     "folder": {
+      "Pinion_m1.5_N25_P.SLDPRT": false,
+      "Gear_m1.5_N50_P.SLDPRT": false,
+      "Pair_m1.5_25T_50T_P.SLDASM": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-component\\Gear_m1.5_N50_P.SLDPRT",
+      "title": "Gear_m1.5_N50_P.SLDPRT",
+      "flag": false
+     },
+     "walk_doc": {
+      "path": "f2-component\\Gear_m1.5_N50_P.SLDPRT",
+      "title": "Gear_m1.5_N50_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "asm_after": {
+     "path": "f2-component\\Pair_m1.5_25T_50T_P.SLDASM",
+     "title": "Pair_m1.5_25T_50T_P.SLDASM",
+     "flag": false
+    },
+    "state_after": 2,
+    "dialogs": [],
+    "right": [
+     null,
+     "two exports of one document differ beyond FILE_NAME, so a file cannot be told by its text"
+    ],
+    "controls": {
+     "no such file": null,
+     "open alone": {
+      "path": "f2-component\\Gear_m1.5_N50_P.SLDPRT",
+      "title": "Gear_m1.5_N50_P.SLDPRT",
+      "flag": false,
+      "window": {
+       "Visible": true,
+       "ActiveView": true
+      }
+     },
+     "closed": null
+    },
+    "controls_ok": true,
+    "light": {
+     "found": false,
+     "right": [
+      null,
+      "a file was not read"
+     ]
+    }
+   },
+   "beside": {
+    "opened": true,
+    "state_before": 2,
+    "asm_before": {
+     "path": "f2-component\\Pair_m1.5_25T_50T_P.SLDASM",
+     "title": "Pair_m1.5_25T_50T_P.SLDASM",
+     "flag": false
+    },
+    "windows_open": {
+     "gear": {
+      "Visible": true,
+      "ActiveView": true
+     },
+     "assembly": {
+      "Visible": true,
+      "ActiveView": true
+     }
+    },
+    "before": {
+     "active": "Gear_m1.5_N50_P.SLDPRT",
+     "folder": {
+      "Pinion_m1.5_N25_P.SLDPRT": false,
+      "Gear_m1.5_N50_P.SLDPRT": false,
+      "Pair_m1.5_25T_50T_P.SLDASM": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-component\\Gear_m1.5_N50_P.SLDPRT",
+      "title": "Gear_m1.5_N50_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "read": {
+     "options": 3,
+     "seconds": 0.849,
+     "form": "plain",
+     "returned": true,
+     "errors": 0,
+     "warnings": 0,
+     "on_disk": true,
+     "size": 2178145,
+     "mtime": 1795014747.148239,
+     "error_names": [],
+     "warning_names": []
+    },
+    "after": {
+     "active": "Gear_m1.5_N50_P.SLDPRT",
+     "folder": {
+      "Pinion_m1.5_N25_P.SLDPRT": false,
+      "Gear_m1.5_N50_P.SLDPRT": false,
+      "Pair_m1.5_25T_50T_P.SLDASM": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-component\\Gear_m1.5_N50_P.SLDPRT",
+      "title": "Gear_m1.5_N50_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "closed": {
+     "active": "Pair_m1.5_25T_50T_P.SLDASM",
+     "folder": {
+      "Pinion_m1.5_N25_P.SLDPRT": false,
+      "Gear_m1.5_N50_P.SLDPRT": false,
+      "Pair_m1.5_25T_50T_P.SLDASM": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-component\\Gear_m1.5_N50_P.SLDPRT",
+      "title": "Gear_m1.5_N50_P.SLDPRT",
+      "flag": false
+     }
+    },
+    "assembly_open_after": true,
+    "asm_after": {
+     "path": "f2-component\\Pair_m1.5_25T_50T_P.SLDASM",
+     "title": "Pair_m1.5_25T_50T_P.SLDASM",
+     "flag": false
+    },
+    "gear_after_close": {
+     "walk": true,
+     "window": {
+      "Visible": false,
+      "ActiveView": false
+     },
+     "by_path": {
+      "path": "f2-component\\Gear_m1.5_N50_P.SLDPRT",
+      "title": "Gear_m1.5_N50_P.SLDPRT",
+      "flag": false,
+      "window": {
+       "Visible": false,
+       "ActiveView": false
+      }
+     }
+    },
+    "users_turned_on": [],
+    "state_after": 2,
+    "restored": {
+     "active": "Pair_m1.5_25T_50T_P.SLDASM",
+     "folder": {
+      "Pinion_m1.5_N25_P.SLDPRT": false,
+      "Gear_m1.5_N50_P.SLDPRT": false,
+      "Pair_m1.5_25T_50T_P.SLDASM": false
+     },
+     "users": {},
+     "doc": {
+      "path": "f2-component\\Pair_m1.5_25T_50T_P.SLDASM",
+      "title": "Pair_m1.5_25T_50T_P.SLDASM",
+      "flag": false
+     }
+    },
+    "dialogs": [],
+    "assembly_flag_before": false,
+    "assembly_flag_after": false,
+    "export_reasons": [],
+    "right": [
+     null,
+     "two exports of one document differ beyond FILE_NAME, so a file cannot be told by its text"
+    ],
+    "light": {
+     "assembly_open_after": true,
+     "dialogs": [],
+     "beside_right": [
+      null,
+      "two exports of one document differ beyond FILE_NAME, so a file cannot be told by its text"
+     ]
+    }
+   },
+   "alone": {
+    "own": {
+     "Visible": true,
+     "ActiveView": true
+    },
+    "by_path_open_alone": {
+     "path": "f2-component\\Gear_m1.5_N50_P.SLDPRT",
+     "title": "Gear_m1.5_N50_P.SLDPRT",
+     "flag": false,
+     "window": {
+      "Visible": true,
+      "ActiveView": true
+     }
+    },
+    "reads": [
+     {
+      "options": 3,
+      "seconds": 0.801,
+      "form": "plain",
+      "returned": true,
+      "errors": 0,
+      "warnings": 0,
+      "on_disk": true,
+      "size": 2178059,
+      "mtime": 1795014751.4061854,
+      "error_names": [],
+      "warning_names": []
+     },
+     {
+      "options": 3,
+      "seconds": 0.827,
+      "form": "plain",
+      "returned": true,
+      "errors": 0,
+      "warnings": 0,
+      "on_disk": true,
+      "size": 2178152,
+      "mtime": 1795014752.2406027,
+      "error_names": [],
+      "warning_names": []
+     },
+     {
+      "options": 3,
+      "seconds": 0.529,
+      "form": "plain",
+      "returned": true,
+      "errors": 0,
+      "warnings": 0,
+      "on_disk": true,
+      "size": 1082813,
+      "mtime": 1795014754.54965,
+      "error_names": [],
+      "warning_names": []
+     }
+    ],
+    "background": {
+     "Visible": true,
+     "ActiveView": true
+    },
+    "active_now": "Pinion_m1.5_N25_P.SLDPRT",
+    "by_path_closed": null,
+    "control": false
+   },
+   "windows": {
+    "own": [
+     {
+      "Visible": true,
+      "ActiveView": true,
+      "what": "the assembly, active"
+     },
+     {
+      "Visible": true,
+      "ActiveView": true,
+      "what": "the gear opened beside, active"
+     },
+     {
+      "Visible": true,
+      "ActiveView": true,
+      "what": "the assembly, not active"
+     },
+     {
+      "Visible": true,
+      "ActiveView": true,
+      "what": "the gear open alone, active"
+     }
+    ],
+    "component_only": [
+     {
+      "Visible": false,
+      "ActiveView": false,
+      "what": "f2-component\\Pinion_m1.5_N25_P.SLDPRT, a component only"
+     },
+     {
+      "Visible": false,
+      "ActiveView": false,
+      "what": "f2-component\\Gear_m1.5_N50_P.SLDPRT, a component only"
+     },
+     {
+      "Visible": false,
+      "ActiveView": false,
+      "what": "the gear after its window closed"
+     }
+    ],
+    "background": [
+     {
+      "Visible": true,
+      "ActiveView": true,
+      "what": "the spur in its own window, Helical_m2_N20_15R_P.SLDPRT active"
+     },
+     {
+      "Visible": true,
+      "ActiveView": true,
+      "what": "the gear in its own window, Pinion_m1.5_N25_P.SLDPRT active"
+     }
+    ]
+   },
+   "lightweight": {
+    "opened_as": {
+     "path": "f2-component\\Pair_m1.5_25T_50T_P.SLDASM",
+     "title": "Pair_m1.5_25T_50T_P.SLDASM",
+     "flag": false
+    },
+    "component": "Gear_m1.5_N50_P-1",
+    "state_set": 1,
+    "assembly": {
+     "path": "f2-component\\Pair_m1.5_25T_50T_P.SLDASM",
+     "title": "Pair_m1.5_25T_50T_P.SLDASM",
+     "flag": false
+    },
+    "walk": false,
+    "by_path": null,
+    "found": false,
+    "opened": true,
+    "beside_read": {
+     "options": 3,
+     "seconds": 0.809,
+     "form": "plain",
+     "returned": true,
+     "errors": 0,
+     "warnings": 0,
+     "on_disk": true,
+     "size": 2178139,
+     "mtime": 1795014761.3552485,
+     "error_names": [],
+     "warning_names": []
+    },
+    "assembly_open_after": true,
+    "state_after_close": 2,
+    "state_resolved_again": 2,
+    "dialogs": []
+   },
+   "seconds": 59,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {
+  "SAVE_AS_COPY": 2,
+  "SAVE_AS_COPY_evidence": "swSaveAsOptions_e.swSaveAsOptions_Copy from swconst.tlb, Silent read 1 against findings.SAVE_AS_SILENT 1",
+  "STEP_EXPORT_ON_2026": true,
+  "STEP_EXPORT_ON_2026_evidence": "steps 2-4: both exports clean and both files whole",
+  "STEP_EXPORT_NEEDS_ACTIVE_ON_2026": null,
+  "STEP_EXPORT_NEEDS_ACTIVE_ON_2026_evidence": "step 6: two exports of one document differ beyond FILE_NAME, so a file cannot be told by its text",
+  "PART_WINDOW_READ_ON_2026": "IModelDoc2.Visible, True for a document open in its own window",
+  "PART_WINDOW_READ_ON_2026_evidence": "steps 6 and 7: 4 documents in their own window, 2 parts in their own window not active, 3 loaded only as a component; Visible tells them apart",
+  "STEP_EXPORT_FROM_COMPONENT_ON_2026": null,
+  "STEP_EXPORT_FROM_COMPONENT_ON_2026_evidence": "step 7 (a), (c): two exports of one document differ beyond FILE_NAME, so a file cannot be told by its text; lightweight: not reached",
+  "OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_2026": null,
+  "OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_2026_evidence": "step 7 (b), (c): two exports of one document differ beyond FILE_NAME, so a file cannot be told by its text; lightweight: two exports of one document differ beyond FILE_NAME, so a file cannot be told by its text"
+ },
+ "revision": [
+  34,
+  1,
+  1
+ ],
+ "snapshot": "c764130",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": false,
+  "allowance_seconds": 60.0
+ },
+ "fails": [
+  "export (8) a modified part: AssertionError: export (8): the spur's Face Width set to 9 and rebuilt, not saved: SolidWorksError: \"Face Width\" reads '\"Face Width\"= 8' after being set to '\"Face Width\"= 9'."
+ ],
+ "notes": []
+}

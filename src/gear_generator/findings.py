@@ -2443,3 +2443,95 @@ CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2024 = (
 # - Constrained status 5 was not read on 2024: the old Sprocket-9, suppressed in H and unmated (carried as
 #   Sprocket-3), read 2 there (24-1:1505). Nothing in the app reads 5.
 # - Instance numbers differ from 2026's (Sprocket-9 as Sprocket-3); the result names each with its old name.
+
+#
+# ---------------------------------------------------------------------------------------------------------------------
+# F2: Print files (PLAN-PRINTED §3.1; docs/notes-printed/F2-INTERFACES.md §7). Every name below was None on both versions
+# until a reviewed run of probe/f2_probes.py (docs/notes-printed/F2-PROBES.md) set it, in a commit of its own that
+# cites its log lines here; tests/test_findings.py pins each to them (the values and log lines below the list).
+# - SAVE_AS_COPY (an int, expected 2): swSaveAsOptions_e.swSaveAsOptions_Copy read from the running install's
+#   swconst.tlb (probe step 1), beside SAVE_AS_SILENT. One name, as SAVE_AS_SILENT is: an enumeration's value, proposed
+#   by each version's run and set when both agree. While None, Print files refuses on every version (GATE_COPY).
+# - STEP_EXPORT (True): IModelDocExtension.SaveAs(path.step, 0, silent | copy, null, out errors, out warnings) on a
+#   saved part, active, answered True with both codes 0, wrote a file of one closed solid within the frame, raised no
+#   window, and left the document's path, title and save flag as they were, on a spur and on a helical part (steps 2 to
+#   4). While None on a version, Print files refuses there (GATE).
+# - STEP_EXPORT_NEEDS_ACTIVE (True or False): False when a part open in its own window but not active, exported by its
+#   own document object, gives its own file and leaves the active document, its title and every save flag as they
+#   were (step 6). While None the job activates each part before exporting it, and puts the user's active document
+#   back.
+# - STEP_EXPORT_FROM_COMPONENT (True or False): True when a part loaded only as a component of an open assembly, reached
+#   by its path with no activation, exports its own file and marks nothing, and a lightweight component is either not
+#   reached that way or exports right too (step 7 (a), (c)). While None such a part goes by the fallback below when that
+#   is measured, else the press refuses it by name (COMPONENT_ONLY).
+# - OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN (True or False): True when that part, opened in its own window by
+#   Session.open_document (which activates), exported and closed by CloseDoc on its title, leaves the assembly open and
+#   unmarked, its component loaded as it was, under no window, the lightweight case included (step 7 (b), (c)). While
+#   None the fallback is not used.
+# - PART_WINDOW_READ (a route string; F2-0's addition beyond the plan's list, the coordinator's to rule): the read that
+#   tells a part open in its own window from one loaded only as a component (step 7's window reads: IModelDoc2.Visible,
+#   or IModelDoc2.ActiveView not None). While None only the active document counts as open in its own window.
+# There is no STEP_FILE_CHECK (M2): the schema and the length unit a file declares are the user's export settings, read
+# as facts, never pinned.
+#
+# Set from the probe's reruns (docs/notes-printed/F2-PROBES-REVIEW.md, e449465, which allows all six alike on both
+# versions), each from d333ff8: SolidWorks 2026 34.1.1, probe/results/f2-probes-sw2026-20261118-3-rerun-geometry-all-
+# proposed.log ("q26:") with f2-probes-20261118-103547.json; SolidWorks 2024 32.5.0, probe/results/sw2024/f2-probes-sw2024-
+# 20261118-2-rerun-geometry-all-proposed.log ("q24:") with f2-probes-20261118-104015.json. Both runs 0 failed, no STOP
+# (q26:88, q24:88); the two logs have their lines at the same numbers. Pinned in tests/test_findings.py.
+#
+# SAVE_AS_COPY: swSaveAsOptions_e.swSaveAsOptions_Copy read from each install's swconst.tlb, with Silent held to the
+# app's 1 (q26:18-19, q24:18-19). The enumeration has 13 members on 2026 and 12 on 2024; Copy is 2 on both.
+SAVE_AS_COPY = 2
+# STEP_EXPORT: IModelDocExtension.SaveAs(path, 0, 1 | 2, null, out, out) answered a plain True with both codes 0, no
+# window, the document's path, title and flag and the active document unchanged, on the active part: the printed spur
+# (m 1.5, z 20) and helical (m_n 2, z 20, beta 15), unbored and unshifted (q26:20-30, q24:20-30). The files were AP203
+# (CONFIG_CONTROL_DESIGN) in millimetres with one solid: what this machine's export options gave; a user's may give AP214
+# or AP242, which printout.check_step accepts. 2026 wrote the spur's tip vertex 0.001185 mm over d_a / 2 and its face
+# 0.000031 over (2024: 0 and 0.000009). An export onto an existing file overwrote it without a word (q26:34), so the
+# app's own refusal of an existing path (Session.export_step) stands.
+STEP_EXPORT_ON_2026 = True
+STEP_EXPORT_ON_2024 = True
+# STEP_EXPORT_NEEDS_ACTIVE False: the spur, open in its own window, exported by use_open_document's object with the
+# helical active; the active-document label read the helical before, during and after (q26:35-38, q24:35-38), and the
+# file was the spur's own by geometry under the run's own controls (q26:44-46, q24:44-46).
+STEP_EXPORT_NEEDS_ACTIVE_ON_2026 = False
+STEP_EXPORT_NEEDS_ACTIVE_ON_2024 = False
+# PART_WINDOW_READ "Visible" (the word Session.window_read compares; the probe proposed it as the prose "IModelDoc2.Visible,
+# True for a document open in its own window", q26:75, q24:75, the review's must-fix): Visible read True on every document
+# in its own window, active or not, part or assembly, and False on every part loaded only as a resolved component, the
+# gear after its own window closed included (q26:35, :57, :67, :71, :74-75; q24 the same). Not measured: a minimised
+# window, a document an add-in opened hidden, a lightweight component (it has no document to read).
+PART_WINDOW_READ_ON_2026 = "Visible"
+PART_WINDOW_READ_ON_2024 = "Visible"
+# STEP_EXPORT_FROM_COMPONENT True: a resolved component of an assembly opened alone, reached by GetOpenDocumentByName
+# and exported by that object with nothing activated, the assembly and the component (state 2 to 2) unchanged and the
+# file the gear's own (q26:56-63, :69-72, :77; q24 the same). The walk reached the same document (q26:61), but the
+# export by the walk's object (DOCUMENT_BY_PATH_ROUTE "walk", the app's) was not made: the F2 demonstration shows it. A
+# lightweight component is reached by neither route (q26:76), so it is never exported by object; the job refuses it by
+# name (printout.LIGHTWEIGHT).
+STEP_EXPORT_FROM_COMPONENT_ON_2026 = True
+STEP_EXPORT_FROM_COMPONENT_ON_2024 = True
+# OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN True, for a resolved component only: opened beside by Session.open_document,
+# exported, closed by CloseDoc; the assembly left open, unmarked and active again, the component resolved (2 to 2), the
+# file the gear's own (q26:64-67, :73, :79; q24 the same). On a lightweight component the same path resolves it in the
+# user's assembly (1 to 2, q26:76), which is why the job never takes it for one. With STEP_EXPORT_FROM_COMPONENT True the
+# job does not take this path at all; it is set as measured.
+OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_2026 = True
+OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN_ON_2024 = True
+# EXTENT_MEASURED (one name; moved here from printout by the coordinator's ruling on F2-REVIEW's choice B6): whether the
+# size check of printout.check_step (the vertices' largest radius from Z against d_a / 2 and their axial extent against
+# the face, each to printout.EXTENT_TOL 0.01 mm) is made. Borne out on both versions on the printed spur (z 20), the
+# helical (m_n 2, z 20, beta 15) and the 50-tooth spur (q26:23, :28, :70; q24:23, :28, :70: "holds True"), the largest
+# miss 0.001185 mm; larger gears (2026's tip error was 0.0012 mm at z 20 and 0.0002 at z 50) by the F2 demonstration's
+# reducer (F2-DEMONSTRATION-RUNS-REVIEW §4: up to 1.57e-3 mm on 2026, on d_a / 2 to 1e-6 on 2024, z up to 68).
+# The herringbone, skipped until then, is checked since the demonstration measured one on both versions
+# (F2-DEMONSTRATION-RUNS-REVIEW §3, 70a2c42, the coordinator's ruling): its file AP203, millimetres, one closed solid of
+# 480 vertices (26:542, 2:541), its vertices reaching radius 22.70552360820168 on 2026 and 22.705523608201677 on 2024
+# against d_a / 2 22.705524, over 20.0 along Z against the face 20.0, holding to 0.01 mm (26:547-548, 2:546-547), where
+# "26:" is probe/results/f2-demo-sw2026-20261118-1-gates-form-workbook-refusals-userwork-clean.log and "2:"
+# probe/results/sw2024/f2-demo-sw2024-20261118-2-gates-form-workbook-refusals-clean.log (snapshot b3fe4a1). Caveat:
+# one gear, printed, m_n 2, z 20, beta 15, face 20, unshifted, built from the form, with NO GROOVE; a grooved
+# herringbone is not measured (the groove cuts to the root inside the face, so it should move neither the outermost
+# radius nor the axial extent; a slip would be a FILE_CHECK EXTENT refusal, the safe side).
+EXTENT_MEASURED = True

@@ -3653,3 +3653,89 @@ def test_a_whole_component_for_a_remade_lock_is_selected_by_the_count(monkeypatc
     else:
         with pytest.raises(SolidWorksError, match="Sprocket-1 could not be selected for a mate"):
             session._select_target("carried1", True)
+
+
+
+# -- F2 (package B): Session.export_step, IModelDocExtension.SaveAs to STEP as a copy (F2-INTERFACES.md §4) -------------
+#
+# SaveAs as F2's probe ran it on 2026 34.1.1 and 2024 32.5.0 (F2-PROBES.md, 8d2c5fb): True answered plainly, both codes 0,
+# the file on disk, nothing marked. Whether it could answer a tuple is read both ways, as the probe reads it. SAVE_AS_COPY
+# is None in findings.py until the probe's rerun is reviewed, so these tests set it, made up as 2.
+
+
+class StepExtension:
+    def __init__(self, answer=True, errors=0, warnings=0, write=True):
+        self.answer, self.errors, self.warnings, self.write, self.asked = answer, errors, warnings, write, []
+
+    def SaveAs(self, path, version, options, data, errors, warnings):
+        self.asked.append((path, version, options, data))
+        errors.value, warnings.value = self.errors, self.warnings
+        if self.write:
+            with open(path, "w") as handle:
+                handle.write("ISO-10303-21;")
+        return self.answer
+
+
+class StepDoc:
+    def __init__(self, extension):
+        self.Extension, self.GetTitle, self.GetPathName, self.GetType = extension, "Gear.SLDPRT", r"C:\G\Gear.SLDPRT", 1
+
+
+@pytest.fixture
+def step_session(monkeypatch):
+    monkeypatch.setattr(swcom, "_out_long", Out)
+    monkeypatch.setattr(swcom, "_null_dispatch", lambda: None)
+    monkeypatch.setattr(findings, "SAVE_AS_COPY", 2)
+
+    def make(extension):
+        s = swcom.Session(types.SimpleNamespace(ActiveDoc=None), (34, 1, 1), 1)
+        s._build_doc = StepDoc(extension)
+        return s
+    return make
+
+
+def test_export_step_saves_the_build_document_as_a_silent_copy_by_saveas(step_session, tmp_path):
+    ext = StepExtension()
+    path = str(tmp_path / "Gear.step")
+    assert step_session(ext).export_step(path) == (0, 0)
+    assert ext.asked == [(path, 0, findings.SAVE_AS_SILENT | 2, None)] and (tmp_path / "Gear.step").exists()
+
+
+def test_export_step_reads_a_tuple_answer_and_its_codes(step_session, tmp_path):
+    assert step_session(StepExtension(answer=(True, 0, 0))).export_step(str(tmp_path / "a.step")) == (0, 0)
+    with pytest.raises(swcom.StepExportError) as raised:
+        step_session(StepExtension(answer=(True, 256, 0))).export_step(str(tmp_path / "b.step"))
+    assert (raised.value.errors, raised.value.warnings, raised.value.returned) == (256, 0, True)
+
+
+@pytest.mark.parametrize("kw,fields", [
+    (dict(answer=False), (False, 0, 0, True)),
+    (dict(errors=1), (True, 1, 0, True)),
+    (dict(warnings=4), (True, 0, 4, True)),
+    (dict(write=False), (True, 0, 0, False)),
+])
+def test_export_step_raises_with_the_codes_in_its_fields_when_solidworks_did_not_write_a_clean_file(
+        step_session, tmp_path, kw, fields):
+    with pytest.raises(swcom.StepExportError) as raised:
+        step_session(StepExtension(**kw)).export_step(str(tmp_path / "Gear.step"))
+    e = raised.value
+    assert isinstance(e, SolidWorksError)
+    assert (e.returned, e.errors, e.warnings, e.on_disk) == fields
+
+
+def test_export_step_refuses_a_path_that_exists_before_solidworks_is_asked(step_session, tmp_path):
+    path = tmp_path / "Gear.step"
+    path.write_text("the user's")
+    ext = StepExtension()
+    with pytest.raises(SolidWorksError, match="never writes over"):
+        step_session(ext).export_step(str(path))
+    assert ext.asked == [] and path.read_text() == "the user's"
+
+
+def test_export_step_refuses_while_save_as_copy_is_unmeasured(step_session, tmp_path, monkeypatch):
+    ext = StepExtension()
+    session = step_session(ext)
+    monkeypatch.setattr(findings, "SAVE_AS_COPY", None)
+    with pytest.raises(SolidWorksError, match="SAVE_AS_COPY"):
+        session.export_step(str(tmp_path / "Gear.step"))
+    assert ext.asked == []
