@@ -83,7 +83,8 @@ def check_gear(spec: GearboxSpec, gear: Gear, cuts: Optional[Dict[str, Any]] = N
 
     F3 (PLAN-PRINTED §4.1.1; F3-INTERFACES §14, S3): ``variables``, the globals on record of the part the row's gear
     has, read the row as built (``spec.as_built``), so its checks speak of the hole that part was cut with (a blank
-    Bore allowance on a part built before F3 is none) and it plans that hole; None, a row with no part on record."""
+    Bore allowance on a part built before F3 is none); None, a row with no part on record. :func:`plan_parts` plans the
+    job as typed (F3-REVIEW M2)."""
     if gear.kind_word() == "bevel":
         cut = (cuts if cuts is not None else bevel_cuts(spec)).get(gear.id)
         if cut is not None and cut.problem:
@@ -136,8 +137,11 @@ def plan_parts(spec: GearboxSpec, folder: str, part_template: str = "", skip_row
     A gear with an error is not planned, but the others still are: the window
     shows what each good gear will become, and Build waits for the errors.
 
-    F3 (F3-INTERFACES §14, S3): ``built`` maps a gear to the globals on record of its part (``built_globals``), and each
-    such row is checked and planned as built (:func:`check_gear`); a gear not in it, or None, as a row with no part.
+    F3 (F3-INTERFACES §14, S3; the coordinator's ruling on F3-REVIEW M2): ``built`` maps a gear to the globals on record
+    of its part (``built_globals``), and each such row is checked as built (:func:`check_gear`), so its diagnostics speak
+    of the hole that part was cut with, while its job is planned as typed, so two identical rows share one file whether
+    or not one is on record (the job of a typed row that does not work out is planned as built). A gear not in it, or
+    None, as a row with no part.
     """
     out = PartsPlan()
     template = spec.box.part_template or part_template
@@ -151,10 +155,19 @@ def plan_parts(spec: GearboxSpec, folder: str, part_template: str = "", skip_row
             continue
         if gear.row in skip_rows:
             continue                       # its own cell is already an error; it is not built
-        gear_spec, derived, diagnostics = check_gear(spec, gear, cuts, (built or {}).get(gear.id))
+        held = (built or {}).get(gear.id)
+        gear_spec, derived, diagnostics = check_gear(spec, gear, cuts, held)
         out.diagnostics.extend(diagnostics)
         if derived is None:
             continue
+        if held is not None:
+            # F3 (the coordinator's ruling on F3-REVIEW M2): a row on record is checked as built, and its job planned as
+            # typed, so a new row identical to it shares its file; reuse, Update and ruling 1 read each part as built
+            # from its own entry. Only a typed row that does not work out (its hole at the default reaching the root,
+            # say) is planned as built, the part it has.
+            typed_spec, typed_derived, _ = check_gear(spec, gear, cuts)
+            if typed_derived is not None:
+                gear_spec, derived = typed_spec, typed_derived
         stem = gear_spec.stem()
         key = stem.lower()
         if key in jobs:

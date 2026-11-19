@@ -184,7 +184,7 @@ def assess(read: GearboxSpec, read_diagnostics: Sequence[Diagnostic], folder: st
     F3 (PLAN-PRINTED §4.1.1; F3-INTERFACES §14, S3, the rule's tenth caller): ``record``, the record beside the workbook
     (this workbook's: the window passes the one it reads :func:`blank_process` from, None for another workbook's), reads
     each row whose gear's part is on record as built (``build.built_globals``), so the window's checks (the printed rim,
-    the bore against the root) speak of the hole that part was cut with, and its job plans that hole. None, every row as
+    the bore against the root) speak of the hole that part was cut with; its job is planned as typed (F3-REVIEW M2). None, every row as
     a row with no part on record, as before.
     """
     if not str(read.box.process).strip():

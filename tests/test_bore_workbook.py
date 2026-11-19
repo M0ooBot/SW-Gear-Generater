@@ -46,10 +46,16 @@ def fixed(process="printed", **rows):
 
 
 def pre_f3_desk(process="printed"):
-    """RangeBox_Fixed built on the fake with the switch off: every printed part as F1 and F2 left it, no allowance."""
-    assert spur.PRINTED_DEFAULT_IN_PLANS is False
-    desk = Desk()
-    desk.build(fixed(process))
+    """RangeBox_Fixed built on the fake with the switch off, as F2's code built it: every printed part as F1 and F2 left
+    it, no allowance. The switch is turned off for the build alone and put back as it was (F3-REVIEW M1), so the tests
+    hold whether the switch is committed on or off."""
+    was = spur.PRINTED_DEFAULT_IN_PLANS
+    spur.PRINTED_DEFAULT_IN_PLANS = False
+    try:
+        desk = Desk()
+        desk.build(fixed(process))
+    finally:
+        spur.PRINTED_DEFAULT_IN_PLANS = was
     for part in desk.record.current_parts():
         assert "Bore Allowance" not in dict(part.variables)
     return desk
@@ -415,20 +421,23 @@ def test_a_ds_arc_face_is_the_bore_and_its_flat_is_a_face(every_gate):
 # -- the window's checks (F3-INTERFACES §14, S3) -------------------------------------------------------------------------
 
 
-def test_the_windows_checks_and_jobs_read_a_row_on_record_as_built(monkeypatch):
+def test_the_windows_checks_read_a_row_on_record_as_built_and_its_job_is_planned_as_typed(monkeypatch):
+    """S3, as the coordinator ruled on F3-REVIEW M2: given the record, a row on record is checked as built and its job
+    planned as typed; reuse, Update and ruling 1 read each part as built from its own entry."""
     desk = pre_f3_desk()
     monkeypatch.setattr(spur, "PRINTED_DEFAULT_IN_PLANS", True)
-    spec = replace(fixed(), source_path="C:\\B\\RangeBox.xlsx")
+    spec = replace(fixed(), source_path=BOOK)
     plain = assess.assess(spec, [], OUT)
     held = assess.assess(spec, [], OUT, record=desk.record)
     sun = lambda a: next(j for j in a.parts.jobs if "Sun" in j.gear_ids)                  # noqa: E731
     assert globals_of(gearbox._variables_of(sun(plain)))["Bore Allowance"] == "0.2"
-    assert "Bore Allowance" not in globals_of(gearbox._variables_of(sun(held)))
-    assert sun(held).spec.built_allowance == "0" and sun(held).spec.to_dict() == sun(plain).spec.to_dict()
+    assert sun(held).spec == sun(plain).spec and sun(held).plan == sun(plain).plan      # the job as typed
+    assert [d.message for d in held.diagnostics if d.is_error] == [] and held.lay_out_refusal() == ""
+    again = gearbox.plan_gearbox(held, desk.record, exists=desk.disk.exists, read_sidecar=desk.disk.read_sidecar)
+    assert again.build == () and all("Bore Allowance" not in globals_of(r.variables) for r in again.reuse)
     assert build.built_globals(desk.record)["Sun"] == entry_of(desk.record, "Sun").variables
     assert build.built_globals(None) == {}
     # One row's checks, as built and not: a bore whose 0.2 default would reach the root diameter, held at 0 by its part.
-    gear = next(g for g in spec.gears if g.id == "Sun")
     root = sun(plain).derived.df
     close = replace(spec, gears=tuple(replace(g, bore=str(round(root - 0.1, 3))) if g.id == "Sun" else g
                                       for g in spec.gears))
@@ -436,6 +445,58 @@ def test_the_windows_checks_and_jobs_read_a_row_on_record_as_built(monkeypatch):
     errors = lambda d: [x.message for x in d if x.is_error]                              # noqa: E731
     assert any("reaches the root diameter" in m for m in errors(build.check_gear(close, gear)[2]))
     assert errors(build.check_gear(close, gear, variables=[["Bore Diameter", "8"]])[2]) == []
+    # Such a row's typed job does not work out, so its job is the part it has, as built.
+    parts = build.plan_parts(close, OUT, built={"Sun": [["Bore Diameter", gear.bore]]})
+    assert errors(parts.diagnostics) == []
+    (job,) = [j for j in parts.jobs if "Sun" in j.gear_ids]
+    assert job.spec.built_allowance == "0" and "Bore Allowance" not in globals_of(gearbox._variables_of(job))
+
+
+def _with_sun2(spec, **changes):
+    sun = next(g for g in spec.gears if g.id == "Sun")
+    row = max(g.row for g in spec.gears) + 1
+    return replace(spec, gears=spec.gears + (replace(sun, id="Sun2", row=row, **changes),))
+
+
+def test_a_new_row_identical_to_a_row_on_record_shares_its_part_with_the_default_on(monkeypatch):
+    """F3-REVIEW M2: a row typed the same as a row whose part was built before F3 is the same gear, as before F3: one
+    job for both, no "not the same gear", and Build again… reuses the old part for both, as built."""
+    desk = pre_f3_desk()
+    monkeypatch.setattr(spur, "PRINTED_DEFAULT_IN_PLANS", True)
+    spec = replace(_with_sun2(fixed()), source_path=BOOK)
+    parts = build.plan_parts(spec, OUT, built=build.built_globals(desk.record))
+    assert [d.message for d in parts.diagnostics if d.is_error] == []
+    (job,) = [j for j in parts.jobs if "Sun" in j.gear_ids]
+    assert job.gear_ids == ("Sun", "Sun2")
+    a = assess.assess(spec, [], OUT, record=desk.record)
+    assert [d.message for d in a.diagnostics if d.is_error] == []
+    again = gearbox.plan_gearbox(a, desk.record, exists=desk.disk.exists, read_sidecar=desk.disk.read_sidecar)
+    (reused,) = [r for r in again.reuse if "Sun" in r.gear_ids]
+    assert reused.gear_ids == ("Sun", "Sun2") and reused.path == entry_of(desk.record, "Sun").path
+    assert "Bore Allowance" not in globals_of(reused.variables)
+
+
+def test_a_new_row_that_truly_differs_from_a_row_on_record_is_still_not_the_same_gear(monkeypatch):
+    desk = pre_f3_desk()
+    monkeypatch.setattr(spur, "PRINTED_DEFAULT_IN_PLANS", True)
+    for changes in (dict(face_width="12"), dict(bore_allowance="0.3")):
+        spec = replace(_with_sun2(fixed(), **changes), source_path=BOOK)
+        parts = build.plan_parts(spec, OUT, built=build.built_globals(desk.record))
+        said = [d.message for d in parts.diagnostics if d.is_error]
+        assert len(said) == 1 and "Sun2 and Sun would both be" in said[0] and "not the same gear" in said[0], said
+
+
+def test_w9ds_columns_compare_the_allowance_as_built_as_a_number():
+    """F3-REVIEW S3, ruled: a typed 0.3 cleared on a part made new for another reason keeps 0.3 (ruling 1), so its Bore
+    allowance did not change; 0 typed where the part holds none did not either; 0.3 typed there did."""
+    built = {"kind": "spur", "bore": "8", "bore_allowance": "0.3"}
+    held = [["Bore Diameter", "8"], ["Bore Allowance", "0.3"]]
+    assert update._changed_columns(built, {"kind": "spur", "bore": "8"}, held) == []
+    assert update._changed_columns(built, dict(built, bore_allowance="0.30"), held) == []
+    assert update._changed_columns({"kind": "spur", "bore": "8"}, {"kind": "spur", "bore": "8", "bore_allowance": "0"}) == []
+    assert update._changed_columns({"kind": "spur", "bore": "8"},
+                                   {"kind": "spur", "bore": "8", "bore_allowance": "0.3"}) == ["Bore allowance"]
+    assert update._changed_columns(built, {"kind": "spur", "bore": "8"}) == ["Bore allowance"]   # no globals: none
 
 
 # -- the build and its Update against the fake: a D bore takes only calls the app makes (§4.2) ------------------------

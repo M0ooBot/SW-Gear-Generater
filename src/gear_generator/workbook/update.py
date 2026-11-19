@@ -3233,8 +3233,8 @@ _SPEC_COLUMNS = (("name", "Part name"), ("kind", "Kind"), ("teeth_side", "Side")
                  ("face_width", "Face width"), ("bore", "Bore"), ("helix_angle", "Helix angle"), ("hand", "Hand"),
                  ("groove", "Groove"), ("profile_shift", "Profile shift"), ("backlash", "Backlash"),
                  ("fillet", "Fillet"), ("rim", "Rim"), ("start_band", "Start band"), ("end_band", "End band"),
-                 # F3 (§4.4): the bore's three columns, so a part made new by them says *its Drive changed*. Both
-                 # forms are as recorded (``to_dict``), so a blank allowance compares as blank, whatever it was built at.
+                 # F3 (§4.4): the bore's three columns, so a part made new by them says *its Drive changed*. The
+                 # allowance is compared as built, as a number (F3-REVIEW S3, ruled): :func:`_allowance_as_built`.
                  ("bore_allowance", "Bore allowance"), ("drive", "Drive"), ("flat", "Flat"),
                  ("shaft_angle", "shaft angle"), ("mate_teeth", "mate's Teeth"),
                  # F1 (PLAN-PRINTED §6): the Box's Process, which each part's spec carries; a part made new because
@@ -3257,15 +3257,36 @@ def _process_word(text: str) -> str:
     return PROCESS_PRINTED if text.strip().lower() == PROCESS_PRINTED else PROCESS_MACHINED
 
 
-def _changed_columns(built: Mapping[str, Any], wanted: Mapping[str, Any]) -> List[str]:
+def _allowance_as_built(values: Mapping[str, Any], variables: Sequence[Sequence[str]]) -> Optional[float]:
+    """A form's Bore allowance as the part on record holds it (``spec.as_built`` with that part's globals): a typed
+    figure, else the recorded global, else 0; None when it does not read."""
+    try:
+        return as_built(GearSpec.from_dict(dict(values)), variables).bore_allowance_mm()
+    except (InputError, TypeError, ValueError):
+        return None
+
+
+def _changed_columns(built: Mapping[str, Any], wanted: Mapping[str, Any],
+                     variables: Sequence[Sequence[str]] = ()) -> List[str]:
     """The Gears columns whose values differ between two parts' forms (``GearSpec.to_dict``), in sheet order (the Box's
     Process last); a blank and its default compare the same way ``gearbox.same_part`` reads them, as text without
     spaces. F1: a form with no ``process`` was built machined (a part built before F1, or machined after it, whose
-    ``to_dict`` leaves the key out), and the word is read in any case, as ``GearSpec.is_printed`` reads it."""
+    ``to_dict`` leaves the key out), and the word is read in any case, as ``GearSpec.is_printed`` reads it.
+
+    F3 (F3-REVIEW S3, the coordinator's ruling): the Bore allowance is compared as built, as a number, both forms read
+    through ``spec.as_built`` with ``variables``, the globals on record of the built part (none given: a part built
+    with none, as every part before F3). So a typed 0.3 cleared on a part made new for another reason, which keeps 0.3
+    (ruling 1), and 0 typed where the part holds none, say nothing; a figure that does not read compares as text."""
     out = []
     for key, column in _SPEC_COLUMNS:
         default = _COLUMN_DEFAULTS.get(key, "")
         was, now = (str(values.get(key, default) or default) for values in (built, wanted))
+        if key == "bore_allowance":
+            held = [_allowance_as_built(values, variables) for values in (built, wanted)]
+            if None not in held:
+                if abs(held[0] - held[1]) > 1e-9:
+                    out.append(column)
+                continue
         if key == "process":
             was, now = (_process_word(v) for v in (was, now))
         if key == "drive":                  # F3: read in any case, as GearSpec.drive_value reads it
@@ -3288,7 +3309,7 @@ def _why_part_new(entry: Optional[PartEntry], gear: str, again: Any) -> str:
             return WHY_NEW_MISMATCHED
     job = next((j for j in getattr(again, "build", ()) or () if row in j.gear_ids), None)
     if entry is not None and entry.spec and job is not None:
-        columns = _changed_columns(entry.spec, job.spec.to_dict())
+        columns = _changed_columns(entry.spec, job.spec.to_dict(), entry.variables or ())
         if columns:
             return f"its {_names(columns)} changed"
     return WHY_NEW_VALUES
