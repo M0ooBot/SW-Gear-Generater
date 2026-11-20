@@ -8,7 +8,7 @@ points, and where the two differ the revised text below wins. The user answered 
 the user changed stops Update, named (K11); **Build again… carries the user's components and remakes their mates**
 (K5, a stage of its own, W9d); the hub is built by the app from a row (K8). Those now bind. A second review
 (`ISSUE-1-PLAN-REVIEW-2.md`, `16e45dc`) and the coordinating session's rulings on its cost points followed
-(*Changes after the second review*). GitHub issue #1 (`MoZ200701/SW-Gear-Generater`) is the
+(*Changes after the second review*). GitHub issue #1 (`M0ooBot/SW-Gear-Generater`) is the
 source of the four problems. The user's own words on problem 4 set the first requirement:
 
 > "the thing about update cannot add a part is i have the assembly right then i made edits to some of its parts or
